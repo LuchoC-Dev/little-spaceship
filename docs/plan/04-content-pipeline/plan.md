@@ -2,6 +2,19 @@
 
 **Lane:** code · **Owner:** `core-domain` (loader in `game`) · **Depends on:** 02 · **Target:** day 4
 
+## Before you start
+
+**Read, in this order:**
+
+1. `docs/planning/12-architecture.md` — the JSON content section, including the schema example.
+2. `docs/planning/03-game-systems.md` — enemy and wave design: archetype, trajectory, pattern, formation and drop are independent concepts.
+3. `docs/planning/02-mvp-functional-spec.md` — the level 1 enemy roster.
+4. `docs/planning/04-campaign-and-levels.md` — the level's provisional sequence.
+
+**Do not re-decide:** JSON is read with `JsonReader`/`JsonValue`, never with the `Json` serialisation class. That one uses reflection and breaks the web build far from where the mistake was made.
+
+**Coordinate with the art lane:** content ids have to match sprite names. That is synchronisation point 2.
+
 ## Goal
 
 Turn the game's content into data. Enemies, patterns, trajectories, formations and the level timeline stop being code and become JSON that can be balanced without recompiling.
@@ -37,3 +50,8 @@ Phase 02 accepted. Sprite ids agreed with the art lane — this is synchronisati
 **Reflection creeping in.** The convenient way to parse JSON in libGDX is the `Json` class, and it will work on desktop and break the web build. The failure appears far from the cause.
 
 **Over-generalising the schema.** It is easy to build a system able to express content nobody will ever write. Six archetypes and one level is the actual requirement.
+
+
+## Workflow
+
+See [how to run a phase](../how-to-run-a-phase.md). One issue per task, one branch per issue, PR closing it, `reviewer` accepts against the criteria above, then update `status.md` and your agent memory.

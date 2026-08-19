@@ -2,6 +2,18 @@
 
 **Lane:** code · **Owner:** `core-domain` · **Depends on:** 04 · **Target:** day 5
 
+## Before you start
+
+**Read, in this order:**
+
+1. `docs/planning/03-game-systems.md` — power-ups, attachments and economy.
+2. `docs/planning/02-mvp-functional-spec.md` — the MVP power-up and attachment lists.
+3. `docs/planning/10-mvp-initial-values.md` — caps, scoring table and guaranteed drops.
+
+**Do not re-decide:** one attachment slot, the attachment absorbing one hit and being destroyed, picking up at maximum granting points, and no combos or multipliers in the MVP.
+
+**Design detail that matters:** attachment durability is data per attachment, not a constant. The decision exists so a future protective attachment can be tougher without a code change.
+
 ## Goal
 
 The systems that turn a level into a game: weapons and their upgrades, power-ups, the attachment, the bomb and scoring.
@@ -36,3 +48,8 @@ Phase 04 accepted, so these systems can be configured from data.
 **Power-up persistence across a death is the rule that was corrected mid-planning.** The first draft said everything was lost; the confirmed rule is that persistent power-ups survive and each is consumed by its own condition. Implementing the old version is an easy mistake — `08-decisions-and-open-items.md` records the correction.
 
 **The bomb touches everything.** It interacts with collision, damage, scoring and audio in the same tick. Good candidate for a replay test rather than only unit tests.
+
+
+## Workflow
+
+See [how to run a phase](../how-to-run-a-phase.md). One issue per task, one branch per issue, PR closing it, `reviewer` accepts against the criteria above, then update `status.md` and your agent memory.

@@ -2,6 +2,20 @@
 
 **Lane:** code · **Owner:** `game-presentation` · **Depends on:** 02 · **Target:** day 3
 
+## Before you start
+
+**Read, in this order:**
+
+1. `CLAUDE.md` — the web-target pitfalls, which apply from this phase onwards.
+2. `docs/planning/12-architecture.md` — the contracts section, since `game` may only read through `WorldView`.
+3. `docs/planning/10-mvp-initial-values.md` — resolution, scaling and controls.
+
+**Do not re-decide:** logical resolution 480×270 with a 208 px playfield, integer scaling with nearest-neighbour, and a relative rather than positional mouse.
+
+**Working reference:** `spikes/web-viability/` renders at this exact resolution with integer scaling and a checkerboard that exposes any distortion. Reuse the approach; the code is throwaway.
+
+**Blocked by the art lane:** sprite sizes must be fixed before hitboxes are written. That is synchronisation point 1 in the overview.
+
 ## Goal
 
 The first moment where a ship moves on screen and something can hit it. Desktop only, placeholder art, no content pipeline yet — the point is to close the loop from input to pixels.
@@ -35,3 +49,8 @@ Phase 02 accepted. Sprite sizes fixed by the visual direction, since hitboxes de
 **Pointer capture on web is unverified.** It is needed for the relative mouse. If it turns out to be intrusive in the browser, the fallback is a positional mouse, and then keyboard and mouse compete instead of cancelling. That would change a decided rule, so raise it rather than deciding alone.
 
 **Per-frame allocation is silent.** It does not fail a test; it shows up as stutter under load once there are hundreds of entities.
+
+
+## Workflow
+
+See [how to run a phase](../how-to-run-a-phase.md). One issue per task, one branch per issue, PR closing it, `reviewer` accepts against the criteria above, then update `status.md` and your agent memory.

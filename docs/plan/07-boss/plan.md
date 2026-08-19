@@ -2,6 +2,17 @@
 
 **Lane:** code · **Owner:** `core-domain` · **Depends on:** 05 · **Target:** day 6
 
+## Before you start
+
+**Read, in this order:**
+
+1. `docs/planning/04-campaign-and-levels.md` — the level 1 sequence and where the boss sits.
+2. `docs/planning/02-mvp-functional-spec.md` — victory and defeat conditions, and the boss HUD.
+
+**Decide before implementing:** the boss was deliberately left undefined during planning, and so was the strong encounter that hands over the attachment. Both need a decision at the start of this phase, not while coding.
+
+**Do not re-decide:** victory requires surviving with at least one life, the boss health bar shows only during the fight, and music changes on entry.
+
 ## Goal
 
 The level's climax, and the only fight that has to feel different from everything before it.
@@ -44,3 +55,8 @@ The recommendation, given the schedule: **one phase, two alternating patterns, a
 **An undefined boss invites improvisation on the last day.** Decide its design before writing it.
 
 **It is the least reusable content in the level**, so it is also the least valuable to over-build. If the week slips, this is the second thing cut down.
+
+
+## Workflow
+
+See [how to run a phase](../how-to-run-a-phase.md). One issue per task, one branch per issue, PR closing it, `reviewer` accepts against the criteria above, then update `status.md` and your agent memory.
