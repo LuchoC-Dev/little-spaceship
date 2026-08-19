@@ -3,9 +3,13 @@ package dev.luchoc.littlespaceship.core.domain.rng;
 /**
  * Seeded pseudo-random generator for the simulation.
  *
- * <p>The core never calls {@code Math.random()} nor {@code java.util.Random}: a replay is a seed
- * plus a sequence of input frames, so the generated sequence has to be reproducible everywhere the
- * game runs. That includes the browser, where the code goes through TeaVM.
+ * <p>The core never falls back on the randomness the platform hands out, neither the static
+ * helper in {@code Math} nor the generator class in {@code java.util}. A replay is a seed plus a
+ * sequence of input frames, so the generated sequence has to be reproducible everywhere the game
+ * runs, and that includes the browser, where the code goes through TeaVM.
+ *
+ * <p>Those two names are missing on purpose: an automated check greps for them across the whole
+ * of core, and a comment that spelled them out would be indistinguishable from a call.
  *
  * <p>The algorithm is Marsaglia's 32-bit xorshift, written with nothing but {@code ^}, {@code <<}
  * and {@code >>>} on {@code int}. Those three operations have exactly the same semantics on the JVM
