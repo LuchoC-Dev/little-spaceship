@@ -78,7 +78,8 @@ Verifiable, not opinions:
 
 - `./gradlew :core:test` passes, and `core` compiles **without libGDX on its classpath**.
 - Grep finds zero occurrences of `com.badlogic.gdx`, `System.currentTimeMillis`, `System.nanoTime` and `Math.random` inside `core/src/main`.
-- Same seed plus same `InputFrame` sequence, twice, produces an identical final state.
+- Same seed plus same `InputFrame` sequence, twice, produces an identical final state. No real system exists yet at this point, so this is proven with stub systems written inside the test; inventing real ones here would step into phase 02.
+- The `Rng` produces the same stream on the JVM and under TeaVM, checked by running the class itself on both.
 - The `Rng` reproduces a pinned sequence for a pinned seed.
 - The loop runs a fixed number of ticks for a given elapsed time, independent of frame rate.
 - No public type in `core` exposes an implementation class.
