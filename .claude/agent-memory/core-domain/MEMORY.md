@@ -1,0 +1,4 @@
+- [Phase 01 foundations](project_phase-01-foundations.md) — what the core skeleton contains and what was deferred on purpose, with the phase that owns each piece.
+- [Core boundary decisions](project_core-boundary-decisions.md) — how the boundary is shaped and enforced beyond what the architecture document says.
+- [Rng and TeaVM](project_rng-teavm-constraints.md) — why the generator uses only xor and shifts, and what would silently break replays.
+- [Bash heredoc limits](feedback_bash-heredoc-limits.md) — writing Java through heredocs mangles backslashes and truncates long commands.
