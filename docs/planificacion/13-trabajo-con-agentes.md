@@ -68,4 +68,6 @@ Aun así, la primera defensa sigue siendo la frontera de módulos.
 
 ## Idioma
 
-Las definiciones de los agentes están en español, igual que la conversación con ellos. Lo que producen —código, comentarios, logs— va en inglés, como todo el código del proyecto.
+Las definiciones de los agentes están **en inglés**, como todo lo que vive en el repositorio, y lo mismo vale para lo que producen: código, comentarios y logs.
+
+El español queda para dos cosas: la conversación con el usuario, y los documentos de `docs/planificacion/` mientras dure esta etapa. Los agentes leen esos documentos en español y trabajan en inglés; sus definiciones lo advierten.

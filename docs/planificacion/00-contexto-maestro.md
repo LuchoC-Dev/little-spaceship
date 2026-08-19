@@ -41,9 +41,11 @@ La visión completa contempla una campaña de cinco etapas, 3–5 niveles por et
 
 Los documentos de esta etapa de planificación están en **español**, y así se quedan mientras dure.
 
-Al pasar a implementación cambia la política: **todo el código y toda la documentación nueva se escriben en inglés** —ADR incluidos—, y estos documentos de planificación se traducen al inglés como parte del arranque de esa etapa.
+Todo lo demás que vive en el repositorio se escribe **en inglés**: código, comentarios, logs, claves JSON, definiciones de agentes y `CLAUDE.md`.
 
-La única excepción permanente es la conversación con agentes, que sigue en español.
+Al pasar a implementación, también la documentación nueva se escribe en inglés —ADR incluidos—, y estos documentos de planificación se traducen como parte del arranque de esa etapa.
+
+La única excepción permanente es la conversación con el usuario, que sigue en español.
 
 ## Principios rectores
 

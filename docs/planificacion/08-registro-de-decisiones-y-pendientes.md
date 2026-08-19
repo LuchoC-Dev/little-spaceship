@@ -15,7 +15,7 @@
 - Todo el código se escribe en inglés, incluidos comentarios, logs, claves JSON e identificadores de contenido.
 - Repositorio `little-spaceship`, paquete raíz `dev.luchoc.littlespaceship`, Java 17, Gradle con wrapper y JUnit 5.
 - Arquitectura hexagonal, puertos y adaptadores, con la regla de dependencia hacia el dominio. De Clean se toma esa regla y la separación dominio/infraestructura, sin forzar casos de uso dentro del bucle de juego.
-- Idioma: la planificación sigue en español; en implementación todo pasa a inglés y estos documentos se traducen.
+- Idioma: todo lo que vive en el repositorio se escribe en inglés, incluidas las definiciones de agentes y `CLAUDE.md`. Solo `docs/planificacion/` queda en español durante esta etapa, y se traduce al arrancar la implementación. La conversación con el usuario es siempre en español.
 - Juego nuevo, no remake.
 - Shoot 'em up vertical completo por niveles.
 - Single-player y local inicialmente.
