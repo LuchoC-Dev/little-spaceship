@@ -60,11 +60,19 @@ It was considered and discarded. Content —balance JSON, the odd sprite— is t
 
 The boss **does not launch agents by default**. Delegating costs: each agent starts cold and re-reads context the boss already has. Delegation happens when the task is large and isolated, or when it is convenient for its output not to occupy the main context.
 
+## Branches
+
+Work happens on branches, never directly on `main`. Names follow `type/description`, and the branch merges back into `main` once the change is complete.
+
 ## Parallel work
 
-When two agents have to work at the same time, `isolation: worktree` is used: each one gets its own git worktree and they do not step on each other's files.
+Two different situations, two mechanisms.
 
-Even so, the first line of defence remains the module boundary.
+**Several Claude sessions at once.** Each session gets its own **git worktree**. They share the repository and its history but not the working tree, so two sessions cannot overwrite each other's files. Each works on its own branch.
+
+**Subagents launched from one session.** `isolation: worktree` in the agent definition gives that agent an isolated copy of the repository. Use it when the subagent is going to write and another one is writing at the same time.
+
+Either way, the first line of defence remains the module boundary: two agents that own different modules rarely collide even sharing a working tree.
 
 ## Language
 
