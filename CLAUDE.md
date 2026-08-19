@@ -4,7 +4,7 @@ A vertical shoot 'em up built from scratch in Java: pixel-art, level-based, sing
 
 Built on libGDX, shipped to the browser through TeaVM, with a desktop target sharing the same core. It is not a remake, and no code or assets from earlier projects are reused.
 
-Planning lives in `docs/planning/`. Before inventing a game rule, look there: most of it is already decided, and `08-decisions-and-open-items.md` separates what is settled from what is still open.
+`docs/STATUS.md` says where the project stands and what comes next. Planning lives in `docs/planning/`. Before inventing a game rule, look there: most of it is already decided, and `08-decisions-and-open-items.md` separates what is settled from what is still open.
 
 ## Invariants
 
@@ -42,7 +42,9 @@ Every commit goes through the `/git-commit` skill — never a bare `git commit`.
 
 Conventional Commits: `type(scope): description`, present tense, imperative mood, under 72 characters. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 
-Branches follow `type/description`, lowercase, only `a-z 0-9 . _ -`.
+Work happens on branches, never directly on `main`. Branch names follow `type/description`, lowercase, only `a-z 0-9 . _ -`. Merge back into `main` when the change is complete.
+
+When several Claude sessions work in parallel — separate sessions, not subagents — each one gets its own git worktree so they cannot touch each other's files.
 
 Before committing: one logical change per commit, diff matches the stated scope, no secrets, no binaries or local artifacts, no `Co-Authored-By` trailers, relevant tests passing.
 
