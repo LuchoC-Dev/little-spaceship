@@ -2,6 +2,19 @@
 
 **Lane:** art and code · **Owners:** `visual-designer`, `game-presentation` · **Depends on:** 03 · **Target:** days 1-6, integrated on day 5
 
+## Before you start
+
+**Read, in this order:**
+
+1. `docs/planning/02-mvp-functional-spec.md` — what the HUD must show, and the screen flow.
+2. `docs/planning/01-vision-and-scope.md` and `04-campaign-and-levels.md` — identity and tone.
+3. `docs/planning/10-mvp-initial-values.md` — resolution and scaling policy.
+4. `docs/planning/07-references-and-asset-constraints.md` — asset licensing rules, which apply from the first asset.
+
+**Do not re-decide:** there is no HTML and no CSS here. Styling lives in a Skin, layout in tables, typography is a bitmap font. Design by counting pixels.
+
+**This phase gates the schedule.** It is the only one whose output cannot be accelerated by adding agents.
+
 ## Goal
 
 The art of level 1 and everything the player reads on screen. This is the phase that runs in **its own lane from day one**, because producing sprites never requires reading code.
@@ -55,3 +68,8 @@ For integration: phase 03, so there is something to draw into.
 **Licences.** `07-references-and-asset-constraints.md` is explicit — own pixel art first, CC0 when external, CC-BY only with documented attribution. "Free" does not mean redistributable. Record the licence when the asset enters, not at the end.
 
 **Art that lies about size.** A sprite drawn at the wrong scale forces hitbox rework across the code lane. Sizes are fixed on day 1 for exactly this reason.
+
+
+## Workflow
+
+See [how to run a phase](../how-to-run-a-phase.md). One issue per task, one branch per issue, PR closing it, `reviewer` accepts against the criteria above, then update `status.md` and your agent memory.

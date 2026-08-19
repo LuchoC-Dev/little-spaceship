@@ -2,6 +2,19 @@
 
 **Lane:** code · **Owner:** `core-domain` · **Depends on:** 01 · **Target:** day 2
 
+## Before you start
+
+**Read, in this order:**
+
+1. `CLAUDE.md` — the invariants, especially determinism.
+2. `docs/planning/03-game-systems.md` — sections on survival, damage and power-ups. These rules are decided in detail.
+3. `docs/planning/02-mvp-functional-spec.md` — the ship, collision and controls sections.
+4. `docs/planning/10-mvp-initial-values.md` — every number this phase needs.
+
+**Do not re-decide:** the defensive chain and its order, invulnerability after any damage, additive keyboard and mouse, and which enemies die on collision. All confirmed in `08-decisions-and-open-items.md`.
+
+**Watch out:** power-up persistence was corrected mid-planning. The first draft said everything is lost on death; the confirmed rule is the opposite. If a source seems to say otherwise, `08` records the correction.
+
 ## Goal
 
 The rules that decide whether the player lives or dies: movement, collision by layer pairs, and the damage chain. This is the phase where the game's most-decided rules become code.
@@ -39,3 +52,8 @@ Phase 01 accepted: ECS, loop, `Rng` and `InputFrame` in place.
 ## Notes
 
 The values — 2.0 s respawn invulnerability, 1.0 s after absorbed damage, 3 lives, cap of 5 — are in `10-mvp-initial-values.md` and belong in configuration, not in constants scattered through the code.
+
+
+## Workflow
+
+See [how to run a phase](../how-to-run-a-phase.md). One issue per task, one branch per issue, PR closing it, `reviewer` accepts against the criteria above, then update `status.md` and your agent memory.
