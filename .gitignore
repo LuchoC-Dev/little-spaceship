@@ -21,6 +21,9 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
+# Memoria de agentes: la de proyecto se versiona, la local no
+.claude/agent-memory-local/
+
 # Local
 local.properties
 *.log

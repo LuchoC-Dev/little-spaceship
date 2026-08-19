@@ -35,6 +35,7 @@ La visión completa contempla una campaña de cinco etapas, 3–5 niveles por et
 10. `10-valores-iniciales-mvp.md`: valores de arranque y decisiones operativas para construir el MVP.
 11. `11-resultado-prototipo-tecnico.md`: resultado del spike y decisión de plataforma.
 12. `12-arquitectura.md`: estructura del proyecto, ECS, contenido y pruebas.
+13. `13-trabajo-con-agentes.md`: roster de agentes, memoria y reparto del trabajo.
 
 ## Idioma
 
