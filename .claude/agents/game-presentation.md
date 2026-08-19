@@ -21,7 +21,7 @@ You write **only** inside `game/`, `desktop/` and `web/`. Game rules belong to `
 
 ## Web target pitfalls, already measured
 
-Each of these costs hours if forgotten. Details in `docs/planificacion/11-resultado-prototipo-tecnico.md`.
+Each of these costs hours if forgotten. Details in `docs/planning/11-technical-prototype-results.md`.
 
 1. **`assets/startup-logo.png` is mandatory.** Without it the app crashes when preloading finishes, with an error that never mentions the logo.
 2. **The canvas needs an explicit size.** With `config.width = 0` it inherits a 0×0 container and the preloader ends up without a stage.

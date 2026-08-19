@@ -20,7 +20,7 @@ Check your memory before starting. When done, record the defect patterns you hav
 5. `game` does not manipulate the ECS; it reads through `WorldView`.
 6. JSON read with `JsonReader`/`JsonValue`, never with the `Json` serialisation class.
 
-**Game rules.** Check implemented behaviour against `docs/planificacion/02`, `03` and `10`, which are written in Spanish. Defensive priority and power-up persistence are the rules that decay most easily during refactors.
+**Game rules.** Check implemented behaviour against `docs/planning/02-mvp-functional-spec.md`, `03-game-systems.md` and `10-mvp-initial-values.md`. Defensive priority and power-up persistence are the rules that decay most easily during refactors.
 
 **Performance, with judgement.** The cost is in drawing, not simulation — that is measured. Flag per-frame allocations in the render loop, not micro-optimisations of logic that costs fractions of a millisecond.
 

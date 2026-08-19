@@ -1,9 +1,10 @@
 # Planificación juego espacial — conversación fuente completa
 
-> Transcripción íntegra de la conversación de ChatGPT que originó `docs/planificacion/`.
+> Transcripción íntegra de la conversación de ChatGPT que originó `docs/planning/`.
 > Origen: https://chatgpt.com/share/6a845ad4-30f0-83e9-87ad-f3c77a1ef87e
 > Modelo: gpt-5-6-thinking · 107 mensajes · recuperada el 2026-08-18.
-> Los IDs de turno citados en `docs/planificacion/09-mapa-de-fuentes.md` corresponden a esta conversación.
+> Los IDs de turno citados en `docs/planning/09-source-map.md` corresponden a esta conversación.
+> El cuerpo queda en español a propósito: es una transcripción literal y traducirla la falsearía.
 
 
 ## [1] user

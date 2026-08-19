@@ -37,7 +37,7 @@ From that follows:
 
 ## Context
 
-Identity and tone are in `docs/planificacion/01` and `04`; HUD contents in `02`; resolution values in `10-valores-iniciales-mvp.md`. These are written in Spanish. The campaign runs through Earth, orbit, the Moon and biomechanical enemies: the visual direction has to survive that progression, not just level 1.
+Identity and tone are in `docs/planning/01-vision-and-scope.md` and `04-campaign-and-levels.md`; HUD contents in `02-mvp-functional-spec.md`; resolution values in `10-mvp-initial-values.md`. The campaign runs through Earth, orbit, the Moon and biomechanical enemies: the visual direction has to survive that progression, not just level 1.
 
 ## Commits
 

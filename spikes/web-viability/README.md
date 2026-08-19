@@ -86,7 +86,7 @@ El módulo `threadprobe` es TeaVM puro, sin libGDX, para poder medir el modelo d
 cd threadprobe/build/generated/teavm/js && node run.cjs
 ```
 
-Resultado: el target web **no ofrece paralelismo real**. Detalle en `docs/planificacion/11-resultado-prototipo-tecnico.md`.
+Resultado: el target web **no ofrece paralelismo real**. Detalle en `docs/planning/11-technical-prototype-results.md`.
 
 ## Notas encontradas durante el spike
 

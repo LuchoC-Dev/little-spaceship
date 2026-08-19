@@ -33,7 +33,7 @@ These are measured and decided, not preferences. Breaking one invalidates earlie
 
 ## Context
 
-The functional spec is in `docs/planificacion/02` and `03`; architecture in `12-arquitectura.md`; balance values in `10-valores-iniciales-mvp.md`. These are written in Spanish. Read them before inventing a rule — almost everything is already decided.
+The functional spec is in `docs/planning/02-mvp-functional-spec.md` and `03-game-systems.md`; architecture in `12-architecture.md`; balance values in `10-mvp-initial-values.md`. Read them before inventing a rule — almost everything is already decided.
 
 ## Commits
 

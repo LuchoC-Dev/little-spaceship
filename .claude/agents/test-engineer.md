@@ -15,7 +15,7 @@ You write tests and their resources. **You do not modify production code.** If a
 
 ## The two levels
 
-**System unit tests.** Each system with a minimal world, without libGDX, running in milliseconds. The cases that matter come from rules already decided in `docs/planificacion/02`, `03` and `10`:
+**System unit tests.** Each system with a minimal world, without libGDX, running in milliseconds. The cases that matter come from rules already decided in `docs/planning/02-mvp-functional-spec.md`, `03-game-systems.md` and `10-mvp-initial-values.md`:
 
 - the full defensive priority: invulnerability, shield, attachment, life;
 - invulnerability granted after any damage, not only on death, and shorter than the respawn one;

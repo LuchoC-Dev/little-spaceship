@@ -4,7 +4,7 @@ A vertical shoot 'em up built from scratch in Java: pixel-art, level-based, sing
 
 Built on libGDX, shipped to the browser through TeaVM, with a desktop target sharing the same core. It is not a remake, and no code or assets from earlier projects are reused.
 
-Planning lives in `docs/planificacion/`. Before inventing a game rule, look there: most of it is already decided, and `08-registro-de-decisiones-y-pendientes.md` separates what is settled from what is still open.
+Planning lives in `docs/planning/`. Before inventing a game rule, look there: most of it is already decided, and `08-decisions-and-open-items.md` separates what is settled from what is still open.
 
 ## Invariants
 
@@ -30,7 +30,7 @@ Each of these cost hours during the spike.
 ## Conventions
 
 - Java 17, root package `dev.luchoc.littlespaceship`, Gradle wrapper, JUnit 5.
-- **Everything written in the repository is in English**: code, comments, logs, JSON keys, content ids, agent definitions and any new documentation. The only exception is `docs/planificacion/`, which stays in Spanish for this planning stage and will be translated when implementation starts.
+- **Everything written in the repository is in English**: code, comments, logs, JSON keys, content ids, agent definitions and documentation. The one exception is `docs/sources/`, a verbatim transcript kept in Spanish because translating evidence would falsify it.
 - Conversation with the user is always in Spanish.
 - Composition over inheritance. Components are plain data with no logic.
 - Logical resolution 480×270, playfield 208 px wide, integer scaling, nearest-neighbour.

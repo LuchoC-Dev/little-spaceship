@@ -3,7 +3,7 @@ package spike.core;
 /** Parámetros del spike. Coinciden con las decisiones del MVP para que la medición sea representativa. */
 public final class SpikeConfig {
 
-    /** Resolución lógica propuesta en 10-valores-iniciales-mvp.md. */
+    /** Resolución lógica propuesta en 10-mvp-initial-values.md. */
     public static final int LOGICAL_WIDTH = 480;
     public static final int LOGICAL_HEIGHT = 270;
 
