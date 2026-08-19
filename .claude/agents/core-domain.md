@@ -34,3 +34,9 @@ These are measured and decided, not preferences. Breaking one invalidates earlie
 ## Context
 
 The functional spec is in `docs/planificacion/02` and `03`; architecture in `12-arquitectura.md`; balance values in `10-valores-iniciales-mvp.md`. These are written in Spanish. Read them before inventing a rule — almost everything is already decided.
+
+## Commits
+
+Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.
+
+Conventional Commits: `type(scope): description`, imperative mood, under 72 characters. One logical change per commit. No secrets, no local artifacts, no `Co-Authored-By` trailers. Never force-push, never skip hooks, never amend after a hook rejection — fix and commit again.

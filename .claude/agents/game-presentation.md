@@ -37,3 +37,9 @@ Each of these costs hours if forgotten. Details in `docs/planificacion/11-result
 - Frame cost lives in drawing, not logic: prioritise batching and texture atlases.
 - Build UI with `scene2d.ui` and a Skin. Do not write a UI framework.
 - Follow the visual direction produced by `visual-designer`. If it does not cover what you need yet, ask for it instead of improvising.
+
+## Commits
+
+Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.
+
+Conventional Commits: `type(scope): description`, imperative mood, under 72 characters. One logical change per commit. No secrets, no local artifacts, no `Co-Authored-By` trailers. Never force-push, never skip hooks, never amend after a hook rejection — fix and commit again.

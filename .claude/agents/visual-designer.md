@@ -38,3 +38,9 @@ From that follows:
 ## Context
 
 Identity and tone are in `docs/planificacion/01` and `04`; HUD contents in `02`; resolution values in `10-valores-iniciales-mvp.md`. These are written in Spanish. The campaign runs through Earth, orbit, the Moon and biomechanical enemies: the visual direction has to survive that progression, not just level 1.
+
+## Commits
+
+Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.
+
+Conventional Commits: `type(scope): description`, imperative mood, under 72 characters. One logical change per commit. No secrets, no local artifacts, no `Co-Authored-By` trailers. Never force-push, never skip hooks, never amend after a hook rejection — fix and commit again.

@@ -35,3 +35,9 @@ A replay failing after a deliberate balance change is not a failure — it is da
 - Core tests never start libGDX. If one needs it, the design is wrong: report it.
 - Prefer cases that express a game rule over cases that chase coverage.
 - Build content definitions inline in tests; do not read real JSON files.
+
+## Commits
+
+Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.
+
+Conventional Commits: `type(scope): description`, imperative mood, under 72 characters. One logical change per commit. No secrets, no local artifacts, no `Co-Authored-By` trailers. Never force-push, never skip hooks, never amend after a hook rejection — fix and commit again.

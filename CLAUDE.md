@@ -36,6 +36,18 @@ Each of these cost hours during the spike.
 - Logical resolution 480×270, playfield 208 px wide, integer scaling, nearest-neighbour.
 - Drawing is the cost, not simulation. Optimise batching and atlases first, spatial structures for collision only if it ever becomes necessary, concurrency never.
 
+## Commits
+
+Every commit goes through the `/git-commit` skill — never a bare `git commit`. This applies to one-file and docs-only commits, and it applies to agents as well as to the main session.
+
+Conventional Commits: `type(scope): description`, present tense, imperative mood, under 72 characters. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+
+Branches follow `type/description`, lowercase, only `a-z 0-9 . _ -`.
+
+Before committing: one logical change per commit, diff matches the stated scope, no secrets, no binaries or local artifacts, no `Co-Authored-By` trailers, relevant tests passing.
+
+Never update git config, never force-push, never skip hooks with `--no-verify`, and never use destructive commands unless explicitly asked. If a hook rejects a commit, fix the problem and make a new commit rather than amending.
+
 ## Agents
 
 Defined in `.claude/agents/`, each with persistent memory under `.claude/agent-memory/`. Boundaries come from the module architecture, so two agents cannot collide.

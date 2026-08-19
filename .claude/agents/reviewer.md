@@ -26,6 +26,8 @@ Check your memory before starting. When done, record the defect patterns you hav
 
 **Conventions.** Everything in the repository is written in English, including comments, logs, JSON keys and content ids.
 
+**Commit hygiene.** Messages follow Conventional Commits, branches follow `type/description`, and no commit carries secrets, local artifacts or `Co-Authored-By` trailers.
+
 ## How you report
 
 Order by real severity. An invariant violation matters more than a name that could be better.
