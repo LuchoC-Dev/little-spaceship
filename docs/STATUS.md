@@ -25,13 +25,30 @@ The short version lives in `CLAUDE.md`: invariants, web-target pitfalls, convent
 
 ## What comes next
 
-The implementation order is in `docs/planning/12-architecture.md`. Step one:
+The master plan is in `docs/plan/`, starting from [the overview](plan/00-overview.md). Each phase has its own folder with a `plan.md` and a `status.md`.
 
-1. **Gradle skeleton** — `core`, `game`, `desktop`, `web` modules with the wrapper, Java 17, root package `dev.luchoc.littlespaceship`.
-2. **`core` foundations** — the hand-written ECS, the fixed-step loop, `Rng` and `InputFrame`.
-3. **Their tests** — this is where the deterministic replay harness starts.
+| Milestone | Date |
+|---|---|
+| MVP — level 1 playable in the browser with its own art | 26/08/2026 |
+| Finish — polish, game feel, final audio | 09/09/2026 |
 
-Desktop comes before web even though web is the shipping target: it is the shortest path to something playable and the core is identical either way.
+Two lanes run in parallel: **code** and **art**. The art lane starts on day one and never waits for the code, which is the only reason the week is feasible.
+
+Next up: [phase 01, foundations](plan/01-foundations/plan.md).
+
+### Phase state
+
+| # | Phase | State |
+|---|---|---|
+| 01 | Foundations | not started |
+| 02 | Core mechanics | not started |
+| 03 | First playable | not started |
+| 04 | Content pipeline | not started |
+| 05 | Game systems | not started |
+| 06 | Presentation | not started |
+| 07 | Boss | not started |
+| 08 | Audio and polish | not started |
+| 09 | Web, CI and release | not started |
 
 ## Open items that do not block
 
@@ -54,6 +71,8 @@ All of these are in `CLAUDE.md`, but they are worth repeating because they are s
 
 ## How work is organised
 
-Branches, never straight to `main`. Commits go through the `/git-commit` skill. Several parallel Claude sessions each get their own git worktree.
+One issue per task, one branch per issue, merged through a pull request that closes it. Commits go through the `/git-commit` skill. `reviewer` accepts or rejects a phase against the acceptance criteria in its `plan.md`.
+
+Repository: <https://github.com/LuchoC-Dev/little-spaceship> — private. Several parallel Claude sessions each get their own git worktree.
 
 Five agents own different modules, so their boundaries come from the architecture rather than from goodwill. Each keeps its own memory under `.claude/agent-memory/`, and that memory records only what the agent learned that is not already written in `docs/`.
