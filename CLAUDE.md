@@ -4,7 +4,7 @@ A vertical shoot 'em up built from scratch in Java: pixel-art, level-based, sing
 
 Built on libGDX, shipped to the browser through TeaVM, with a desktop target sharing the same core. It is not a remake, and no code or assets from earlier projects are reused.
 
-`docs/STATUS.md` says where the project stands and what comes next. Planning lives in `docs/planning/`. Before inventing a game rule, look there: most of it is already decided, and `08-decisions-and-open-items.md` separates what is settled from what is still open.
+`docs/STATUS.md` says where the project stands; `docs/plan/` holds the master plan, one folder per phase. Planning lives in `docs/planning/`. Before inventing a game rule, look there: most of it is already decided, and `08-decisions-and-open-items.md` separates what is settled from what is still open.
 
 ## Invariants
 
