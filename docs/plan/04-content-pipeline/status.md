@@ -1,6 +1,6 @@
 # Phase 04 — Content pipeline · status
 
-**State:** core side done, review round 1 fixed
+**State:** done, both halves — `core` (reviewed, round 1 fixed) and the `game` loader
 **Updated:** 20/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
@@ -81,14 +81,77 @@ firing patterns are deliberately deferred to phase 05, along with `Weapon` — s
 while implementing" for why. Not an oversight, but also not something the table above should be
 allowed to paper over by omission.
 
-## In progress
+## Done — the JSON loader in `game`
 
-Awaiting a second pass from `reviewer` on the round 1 fixes below.
+`game-presentation`'s half, added once the `core` side above merged into `main` and closing GitHub
+issue #18. Built on branch `feat/first-playable` — the same branch phase 03 is on, since phase 03's
+two blocked acceptance criteria could only be earned once this existed, per the coordinator's
+instructions.
+
+- **`assets/data/*.json`** — `balance.json`, `trajectories.json`, `formations.json`, `enemies.json`,
+  `level-01.json`. Content, not code: the six level 1 archetypes, their four trajectories, three
+  formations and one timeline, copied from the exact ids, radii, trajectory vectors and score values
+  `core-domain` already proved work end to end in `LevelContentIntegrationTest` — not re-invented,
+  since that test is the closest thing this project has to a reviewed content spec. `enemies.json`
+  gives every `"collider"` an explicit `"fragile"`, per review round 1 (B2): `true` for basic, light,
+  shooter and rush, `false` for tank and carrier.
+- **`game/adapter/content/JsonContentSource.java`** — the `ContentSource` implementation. Parses all
+  five files eagerly in the constructor with `JsonReader`/`JsonValue` only (never the reflection-based
+  `Json` class), so a malformed file fails at startup instead of on whichever tick first asks for the
+  broken id. Every failure `core`'s own contracts throw (naming a component, a field, or an id) is
+  caught here and rethrown with the file's path prefixed — the other half of "malformed content fails
+  with a message naming the file and the offending id," which `core` cannot supply on its own since it
+  never knows a file exists.
+- **`game/adapter/content/JsonComponentSpecs.java`** — turns one enemy entry's `"components"` JSON
+  object into `List<ComponentSpec>`, one `MapComponentSpec` per component key, boxing each field as
+  `Float`/`String`/`Boolean` to match what `MapComponentSpec` requires. An unsupported JSON type (a
+  nested object or array) fails naming the component and field rather than guessing a conversion.
+- **`game/adapter/content/JsonBalanceValues.java`** — a record `BalanceValues`, every field required
+  from `balance.json` with no default, same reasoning `core`'s own `ComponentSpec` settled on: a
+  missing balance number silently defaulting is a worse failure than refusing to start.
+- **`LittleSpaceshipGame`** now builds `JsonContentSource` from `Gdx.files.internal("data")` and passes
+  `JsonContentSource.LEVEL_ID` ("level-01") to `Simulation`'s new 4-argument constructor, which is
+  what actually wires `SpawnSystem` into the running pipeline. Without the level id, the 3-argument
+  constructor still works (a player-only sandbox) but no enemy ever spawns.
+- **A real bug this surfaced: `WorldRenderer` was drawing every entity's `x` unmodified.**
+  `core.domain`'s `Transform.x` is measured from the playfield's own left edge, in `[0, 208]` —
+  confirmed against `MotionSystem.PLAYFIELD_WIDTH` clamping the player to that exact range and
+  `SpawnSystem` computing `atX * PLAYFIELD_WIDTH` — while the logical resolution is 480 wide with the
+  playfield centred inside it. This was invisible in phase 03 because the world was always empty; the
+  first entity phase 04 put on screen would have rendered 136 logical units too far left, inside the
+  HUD margin instead of the playfield. Fixed by adding `playfieldLeft` in `WorldRenderer.accept`; `y`
+  needs no equivalent shift since the playfield is the full 270-unit logical height.
+- **`PlaceholderAtlas` grew the six enemy archetypes**, generic alien-hull silhouettes at the exact
+  sizes `docs/design/02-sprite-sizes.md` fixes (`enemy-basic` 13x13 through `enemy-carrier` 39x31),
+  packed into the same one-texture atlas as the ship, so nothing about phase 03's "one texture, no
+  per-frame allocation" property changed.
+- **Verification without a display.** Two headless checks, run against the actual production classes
+  rather than a reimplementation of their logic — full detail and exact output in this phase's other
+  status file, `docs/plan/03-first-playable/status.md`, since what they prove is that phase's blocked
+  acceptance criteria, not this one's:
+  - a small program that builds a real `JsonContentSource` from `assets/data/`, runs a real
+    `Simulation` for 11 simulated seconds, and confirms all seven sprite ids (the player plus the six
+    archetypes) exist in the world with the positions their trajectories predict;
+  - a second program that replaces `Gdx.input`/`Gdx.graphics` with JDK dynamic proxies (no display,
+    no LWJGL, no `Application` needed, since none of the methods exercised touch native code) and
+    calls the real `InputAdapter.sample()` to confirm keyboard-alone, mouse-alone and opposing
+    keyboard+mouse all produce the movement the summing rule predicts, including exact cancellation.
+
+## Acceptance criteria against `plan.md` — updated now that the loader exists
+
+| Criterion | Status | Where |
+|---|---|---|
+| Changing an enemy's stats requires editing JSON only | **met** | `enemies.json` holds every stat; no archetype is hardcoded in `game` or `core` |
+| The same trajectory attaches to two different archetypes from data alone | met (already true on the `core` side) | `SpawnSystemTest.sameTrajectoryReusedAcrossArchetypes`, `LevelContentIntegrationTest.tankOnRushTrajectoryIsADataChange`; `trajectories.json` itself reuses `crawl` for both `enemy-tank` and `enemy-carrier` |
+| Adding a component type is one registration, no loader change | met (`core`-side property, unaffected) | `ComponentFactoryRegistryTest.registeringANewFactoryWorks` |
+| Core tests build definitions inline, never read a file | met (`core`-side property, unaffected) | every test in `core` |
+| Malformed content fails naming the file and the offending id | **met** | `JsonContentSource.inFile` prefixes the file path; `core`'s own exceptions name the component/field/id |
+| All content ids are in English | **met** | every id in `assets/data/*.json` — `ship-basic`, `enemy-basic` through `enemy-carrier`, `slow-descent`/`swoop`/`dive`/`crawl`, `single`/`line-3`/`diagonal`, `level-01` |
+| Trajectories (task 5, half) | still deferred | firing patterns and `Weapon` stay phase 05's, per `core-domain`'s original reasoning below — the loader does not change that |
 
 ## Blocked
 
-Nothing. The JSON loader in `game` is out of scope for `core-domain` by design (see the phase's
-own instructions) and is the next piece of work, not a blocker on this one.
+Nothing. Both halves of this phase are done.
 
 ## Review round 1
 
