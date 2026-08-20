@@ -1,2 +1,4 @@
-- [Gradle/libGDX build gotchas found in phase 03](project_gradle-libgdx-build-gotchas.md) — desktop `run` task, TeaVM `plugins{}` ordering, atlas/wrap tiling traps.
-- [How to check core boundary compliance mechanically](project_core-boundary-check.md) — the one grep that catches an accidental `core.domain` import.
+- [Gradle/libGDX build gotchas found in phase 03](project_gradle-libgdx-build-gotchas.md) — desktop `run` task, TeaVM `plugins{}` ordering, atlas/wrap tiling traps, and the web detour later reverted.
+- [How to check core boundary compliance mechanically](project_core-boundary-check.md) — the one grep that catches an accidental `core.domain` import, including a `{@link}`-only false negative.
+- [Transform coordinate space is playfield-local, not logical](project_transform-coordinate-space.md) — core's x is 0..208 from the playfield's own edge; game must add the left offset before drawing.
+- [Headless verification of libGDX-dependent code](project_headless-libgdx-verification.md) — FileHandle(File) needs no Gdx.app; Gdx.input/Gdx.graphics can be JDK dynamic proxies.
