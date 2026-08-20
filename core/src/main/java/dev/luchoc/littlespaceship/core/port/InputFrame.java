@@ -12,8 +12,16 @@ package dev.luchoc.littlespaceship.core.port;
  * not normalised. Clamping it to the ship's maximum speed is a game rule, so it belongs to the
  * simulation and not to the adapter.
  *
- * @param moveX horizontal intent, positive to the right
- * @param moveY vertical intent, positive upwards
+ * <p>Units are logical units per second, the same unit {@link BalanceValues#playerSpeed()} is
+ * expressed in: a device at full deflection is expected to contribute a vector whose magnitude is
+ * the ship's top speed, not a normalised {@code [-1, 1]} value. This is what makes the simulation's
+ * magnitude clamp meaningful — below that magnitude nothing is scaled up, so an adapter that emits a
+ * smaller vector produces a genuinely slower ship rather than one at full speed with room to spare.
+ * A mouse contributing raw, unscaled pixel deltas would need converting to this unit before reaching
+ * the core.
+ *
+ * @param moveX horizontal intent, in logical units per second, positive to the right
+ * @param moveY vertical intent, in logical units per second, positive upwards
  * @param fire whether the fire control is held
  * @param slow whether the precision control is held, which slows the ship down
  * @param bomb whether the bomb was requested this tick
