@@ -33,7 +33,8 @@ and its limit explicitly, or omit this section.>
 - Commit through the `/git-commit` skill. Several small commits beat one large one.
 - Update the phase's `status.md` on the branch, before review.
 - Push and open a **draft** pull request against `main` closing the issue.
-- Record in your agent memory what you learned that is not already in `docs/`.
+- Record in your agent memory what you learned that is not already in `docs/`,
+  and save the state of the work to engram under `session/<agent-name>`.
 
 ## Watch out for
 <One or two real risks. Not a checklist — the things that would actually go

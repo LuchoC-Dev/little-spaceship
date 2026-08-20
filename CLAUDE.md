@@ -51,6 +51,22 @@ Before committing: one logical change per commit, diff matches the stated scope,
 
 Never update git config, never force-push, never skip hooks with `--no-verify`, and never use destructive commands unless explicitly asked. If a hook rejects a commit, fix the problem and make a new commit rather than amending.
 
+## Session state
+
+Three stores, three different jobs. Keeping them apart is what stops them contradicting each other.
+
+| Where | Holds | Read by |
+|---|---|---|
+| `docs/STATUS.md` and each phase's `status.md` | what is on `main` and what each phase achieved | anyone, versioned |
+| `.claude/agent-memory/<agent>/` | what that agent learned, not written elsewhere | that agent only |
+| engram, topic `session/*` | where the work stands right now: what is in flight, what was just decided, what comes next | whoever resumes |
+
+The third exists for `/clear` and for handing over to a different agent. The project documents say what the project is; they do not say that a review is half-finished or that a decision was taken ten minutes ago.
+
+**When work finishes, save it.** The orchestrating session saves to engram under `session/orchestrator-handoff`, reusing the topic key so it updates instead of piling up. Subagents save to engram too, under their own topic, in addition to their agent memory.
+
+Record what a newcomer could not infer from the repository. Never duplicate what `docs/` already says.
+
 ## Agents
 
 Defined in `.claude/agents/`, each with persistent memory under `.claude/agent-memory/`. Boundaries come from the module architecture, so two agents cannot collide.

@@ -33,7 +33,9 @@ issue  →  branch  →  work  →  PR  →  reviewer  →  merge  →  status
 
 **Merge** once accepted.
 
-**Afterwards**, update the phase table in `docs/STATUS.md`, which describes what is on `main` rather than what a branch claims. Then record in your agent memory what you learned that is not written in `docs/`.
+**Afterwards**, update the phase table in `docs/STATUS.md`, which describes what is on `main` rather than what a branch claims. Then record what you learned that is not written in `docs/` — in your agent memory, and in engram under your own topic key so a later session can find it.
+
+Save the state even when the work stopped halfway. A record saying "the review found two problems and one is unfixed" is worth more than one written only on the days everything went well.
 
 ## Two failures and you stop
 

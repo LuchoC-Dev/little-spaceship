@@ -36,6 +36,12 @@ A replay failing after a deliberate balance change is not a failure — it is da
 - Prefer cases that express a game rule over cases that chase coverage.
 - Build content definitions inline in tests; do not read real JSON files.
 
+## Session state
+
+When you finish — or when you stop halfway — save to engram what a newcomer could not infer from the repository: where the work stands, what is in flight, what you just decided. Use a stable topic key of your own (`session/<your-name>`) so it updates instead of piling up.
+
+That is separate from your agent memory, which holds what you *learned*. This holds where things *are*. Never duplicate what `docs/` already says.
+
 ## Commits
 
 Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.

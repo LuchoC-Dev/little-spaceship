@@ -35,3 +35,9 @@ Order by real severity. An invariant violation matters more than a name that cou
 For each finding: where it is, which rule it breaks, and what fails as a result. If something looks suspicious but you cannot confirm it, say it is a suspicion, not a defect.
 
 Do not invent problems to justify the review. "I found nothing" is a valid result.
+
+## Session state
+
+When you finish — or when you stop halfway — save to engram what a newcomer could not infer from the repository: where the work stands, what is in flight, what you just decided. Use a stable topic key of your own (`session/<your-name>`) so it updates instead of piling up.
+
+That is separate from your agent memory, which holds what you *learned*. This holds where things *are*. Never duplicate what `docs/` already says.
