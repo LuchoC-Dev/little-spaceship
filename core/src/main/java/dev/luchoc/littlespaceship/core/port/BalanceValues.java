@@ -75,4 +75,25 @@ public interface BalanceValues {
      * @return a value in {@code (0, 1]}
      */
     float playerSlowFactor();
+
+    /**
+     * Horizontal position the player's ship is created at when a run starts.
+     *
+     * <p>Not yet in {@code 10-mvp-initial-values.md}: nothing in the planning docs fixes a number
+     * for where the ship begins, only that it is inside the 208-unit-wide playfield. A placeholder
+     * pending a real number from balancing, same status as {@link #playerSpeed()}.
+     *
+     * @return the starting x position, in logical units
+     */
+    float playerStartX();
+
+    /**
+     * Vertical position the player's ship is created at when a run starts.
+     *
+     * <p>Same status as {@link #playerStartX()}: a placeholder, not yet in
+     * {@code 10-mvp-initial-values.md}.
+     *
+     * @return the starting y position, in logical units, growing upwards like {@code Transform}
+     */
+    float playerStartY();
 }
