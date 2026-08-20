@@ -1,7 +1,7 @@
 ---
 name: test-engineer
 description: Writes and maintains the test suite — unit tests for systems and deterministic replays. Use it to cover game rules, catch regressions and build the replay harness.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, Skill
 model: sonnet
 memory: project
 ---

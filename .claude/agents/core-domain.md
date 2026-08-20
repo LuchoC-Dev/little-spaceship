@@ -1,7 +1,7 @@
 ---
 name: core-domain
 description: Implements and modifies the game simulation in the core module — ECS, systems, rules and domain logic. Use it for any work on game rules; never for rendering, audio, input or screens.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, Skill
 model: sonnet
 memory: project
 ---
