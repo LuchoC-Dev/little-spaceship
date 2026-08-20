@@ -7,9 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
-import dev.luchoc.littlespaceship.core.port.BalanceValues;
-import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +17,7 @@ import org.junit.jupiter.api.Test;
 class SystemPipelineTest {
 
     private final List<SystemOrder> executed = new ArrayList<>();
-    private final World world = new World(new NoContent(), new Rng(1), new GameEventQueue());
+    private final World world = new World(new TestContent(), new Rng(1), new GameEventQueue());
 
     /**
      * The order of the stages is a game rule. Collision before damage is what lets the defensive
@@ -140,14 +139,6 @@ class SystemPipelineTest {
         @Override
         public void update(World world, float step, InputFrame input) {
             executed.add(stage);
-        }
-    }
-
-    private static final class NoContent implements ContentSource {
-
-        @Override
-        public BalanceValues balance() {
-            throw new UnsupportedOperationException("no system reads balance values yet");
         }
     }
 }

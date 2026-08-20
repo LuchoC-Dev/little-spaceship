@@ -13,9 +13,8 @@ import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
-import dev.luchoc.littlespaceship.core.port.BalanceValues;
-import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
+import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 class WorldTest {
 
-    private final World world = new World(new NoContent(), new Rng(1), new GameEventQueue());
+    private final World world = new World(new TestContent(), new Rng(1), new GameEventQueue());
 
     @Test
     @DisplayName("an entity starts with no components")
@@ -125,16 +124,8 @@ class WorldTest {
         assertThrows(IllegalArgumentException.class,
             () -> new World(null, new Rng(1), new GameEventQueue()));
         assertThrows(IllegalArgumentException.class,
-            () -> new World(new NoContent(), null, new GameEventQueue()));
+            () -> new World(new TestContent(), null, new GameEventQueue()));
         assertThrows(IllegalArgumentException.class,
-            () -> new World(new NoContent(), new Rng(1), null));
-    }
-
-    private static final class NoContent implements ContentSource {
-
-        @Override
-        public BalanceValues balance() {
-            throw new UnsupportedOperationException("no system reads balance values yet");
-        }
+            () -> new World(new TestContent(), new Rng(1), null));
     }
 }

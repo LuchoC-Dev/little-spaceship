@@ -13,10 +13,9 @@ import dev.luchoc.littlespaceship.core.domain.event.GameEvent;
 import dev.luchoc.littlespaceship.core.domain.system.GameSystem;
 import dev.luchoc.littlespaceship.core.domain.system.SystemOrder;
 import dev.luchoc.littlespaceship.core.domain.system.SystemPipeline;
-import dev.luchoc.littlespaceship.core.port.BalanceValues;
-import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
+import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -84,7 +83,7 @@ class SimulationTest {
     @DisplayName("events reach the sink once the tick is over, in order")
     void drainsEventsAfterTheTick() {
         List<GameEvent> received = new ArrayList<>();
-        Simulation simulation = new Simulation(new FixedContent(), received::add, 1,
+        Simulation simulation = new Simulation(new TestContent(), received::add, 1,
             SystemPipeline.of(new Chatty()));
 
         simulation.tick(GameLoop.STEP, InputFrame.IDLE);
@@ -125,7 +124,7 @@ class SimulationTest {
             () -> new Simulation(null, event -> {
             }, 1));
         assertThrows(IllegalArgumentException.class,
-            () -> new Simulation(new FixedContent(), null, 1));
+            () -> new Simulation(new TestContent(), null, 1));
     }
 
     @Test
@@ -137,7 +136,7 @@ class SimulationTest {
     }
 
     private static Simulation simulation(int seed) {
-        return new Simulation(new FixedContent(), event -> {
+        return new Simulation(new TestContent(), event -> {
         }, seed, SystemPipeline.of(new Spawner(), new Mover()));
     }
 
@@ -241,55 +240,6 @@ class SimulationTest {
         @Override
         public void update(World world, float step, InputFrame input) {
             world.events().emit(new Tick(++ticks));
-        }
-    }
-
-    private static final class FixedContent implements ContentSource {
-
-        @Override
-        public BalanceValues balance() {
-            return new BalanceValues() {
-
-                @Override
-                public int initialLives() {
-                    return 3;
-                }
-
-                @Override
-                public int maxLives() {
-                    return 5;
-                }
-
-                @Override
-                public int initialBombs() {
-                    return 2;
-                }
-
-                @Override
-                public int maxBombs() {
-                    return 3;
-                }
-
-                @Override
-                public int weaponLevels() {
-                    return 4;
-                }
-
-                @Override
-                public float respawnInvulnerability() {
-                    return 2f;
-                }
-
-                @Override
-                public float damageInvulnerability() {
-                    return 1f;
-                }
-
-                @Override
-                public int maxedPickupBonus() {
-                    return 500;
-                }
-            };
         }
     }
 }
