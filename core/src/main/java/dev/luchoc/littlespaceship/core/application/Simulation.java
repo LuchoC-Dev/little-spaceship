@@ -3,6 +3,10 @@ package dev.luchoc.littlespaceship.core.application;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
+import dev.luchoc.littlespaceship.core.domain.system.CleanupSystem;
+import dev.luchoc.littlespaceship.core.domain.system.CollisionSystem;
+import dev.luchoc.littlespaceship.core.domain.system.DamageSystem;
+import dev.luchoc.littlespaceship.core.domain.system.MotionSystem;
 import dev.luchoc.littlespaceship.core.domain.system.SystemPipeline;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.GameEventSink;
@@ -95,11 +99,16 @@ public final class Simulation implements TickHandler {
     /**
      * The systems of the MVP, in the one place they are listed.
      *
-     * <p>Empty for now. Each system joins with the phase that implements it, and where it runs is
-     * decided by the stage it declares and not by its position in this list.
+     * <p>Each system joins with the phase that implements it, and where it runs is decided by the
+     * stage it declares and not by its position in this list. Stages with no system yet — input,
+     * weapon, spawn, lifetime, pickup, score — are simply skipped by {@link SystemPipeline}.
      */
     private static SystemPipeline mvpPipeline() {
-        return SystemPipeline.of();
+        return SystemPipeline.of(
+            new MotionSystem(),
+            new CollisionSystem(),
+            new DamageSystem(),
+            new CleanupSystem());
     }
 
     /**
