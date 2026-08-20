@@ -13,9 +13,19 @@ into `World.collisionHits()`, a plain list cleared and refilled every tick — n
 `GameEventQueue`, which drains only once per tick to an external sink. Conflating the two would let
 a mid-tick internal signal sit in the same queue as end-of-tick presentation events; they have
 different lifetimes on purpose. `DamageSystem` reads `collisionHits()` in the very next stage, same
-tick. If phase 05 adds `WeaponSystem`/`PickupSystem`, they read the same buffer and filter for the
-two pair types nobody consumes yet (`PLAYER_PROJECTILE_VS_ENEMY`, `PICKUP_VS_PLAYER`) — no change
-needed to `CollisionSystem` itself.
+tick.
+
+**Not every future consumer of that buffer can just read it as-is — check `SystemOrder` first.**
+`PickupSystem` (`SystemOrder.PICKUP`, ordinal 7) runs after `COLLISION` (5), so it would see the
+current tick's `PICKUP_VS_PLAYER` hits, same as `DamageSystem` does. `WeaponSystem`
+(`SystemOrder.WEAPON`, ordinal 2) runs *before* `COLLISION`, so reading `PLAYER_PROJECTILE_VS_ENEMY`
+from it would resolve the *previous* tick's hits — one tick late, silently, since nothing about that
+is a compile error or an obviously failing test. An earlier version of this note claimed both systems
+could read the buffer unchanged; that was wrong for `WeaponSystem` and was caught in review, not by a
+test. Whoever adds `WeaponSystem` has to either resolve `PLAYER_PROJECTILE_VS_ENEMY` from a stage
+after `COLLISION` (mirroring what `DamageSystem` does today) or give `SystemOrder` a new stage for it
+— check the *ordinal*, not just "does a consuming system exist yet", before assuming a buffer written
+earlier in the pipeline is readable from a stage that runs before it is refilled.
 
 **Invulnerability, when active, absorbs a hit with zero side effects.** Not just "no life lost" —
 also no enemy destroyed, no projectile consumed. This was a genuine design call, not stated
