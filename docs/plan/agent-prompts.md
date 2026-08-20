@@ -72,6 +72,16 @@ criteria pass and which do not.
 
 Boundaries come from the module architecture. If a task spans two agents, split it rather than granting an exception — the exception in phase 01 was for build scaffolding, which belongs to nobody, and it was worth stating its limit precisely.
 
+## Which model
+
+`core-domain`, `game-presentation`, `test-engineer` and `reviewer` are pinned to Sonnet in their definitions. Most of the work here is execution against a plan that already states the tasks and the acceptance criteria, and that does not need more.
+
+`visual-designer` pins no model and inherits from whoever launches it, because it is launched by hand.
+
+Where a heavier model earns its cost is judgement rather than execution: a phase that has to *decide* something the plan left open, and an audit of work that matters. The phase 01 review is the example — it found a dead accessor that opened a ghost-state path, and proved it by compiling a probe and running it. No grep finds that, and a shallow review is worse than none because it hands out false confidence.
+
+When a task looks like that, the orchestrator says so rather than deciding alone, so it can be launched with the heavier model.
+
 ## Reviews are prompts too
 
 A review prompt has one extra job: **say what has already been checked**. Re-running the greps and the build wastes the audit on the cheap half.

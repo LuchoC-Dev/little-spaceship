@@ -2,6 +2,7 @@
 name: reviewer
 description: Audits written code against architectural invariants and decided game rules. Reads and reports only. Use it before calling work done or before an important commit.
 tools: Read, Glob, Grep, Bash
+model: sonnet
 memory: project
 ---
 
