@@ -2,6 +2,8 @@
 
 Read this once. Every phase follows the same cycle.
 
+To launch an agent by hand, see [writing prompts for agents](agent-prompts.md).
+
 ## Before writing anything
 
 1. Read the phase's `plan.md` in full, including its **Before you start** section.
@@ -27,9 +29,19 @@ issue  →  branch  →  work  →  PR  →  reviewer  →  merge  →  status
 
 **Review.** `reviewer` audits against the acceptance criteria in the plan and the invariants in `CLAUDE.md`, and accepts or rejects. A rejection is normal: it comes back with what failed and why.
 
+**Status.** Update the phase's `status.md` **on the branch, before the PR is reviewed**. It is part of the phase's work, it travels with the code, and it lets the reviewer check whether the status tells the truth. Record what was completed, what is open, and anything the next person needs to know.
+
 **Merge** once accepted.
 
-**Status.** Update the phase's `status.md`: what was completed, what is open, and anything the next person needs to know. Then record in your agent memory what you learned that is not written in `docs/`.
+**Afterwards**, update the phase table in `docs/STATUS.md`, which describes what is on `main` rather than what a branch claims. Then record in your agent memory what you learned that is not written in `docs/`.
+
+## Two failures and you stop
+
+If the same thing fails twice, stop and report. Do not try a third variation.
+
+Two failed attempts almost always mean the problem is not where it looks: a wrong assumption, a decision recorded somewhere you have not read, or a plan that asks for something impossible. A third attempt usually buries the evidence instead of solving it.
+
+Report what you tried, what happened each time, and what you think the real obstacle is.
 
 ## When you are blocked
 

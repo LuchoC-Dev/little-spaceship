@@ -52,7 +52,7 @@ After the MVP: [beyond the MVP](10-beyond-mvp.md), sketched rather than planned.
 
 ## How work flows
 
-The full cycle is in [how to run a phase](how-to-run-a-phase.md). In short:
+The full cycle is in [how to run a phase](how-to-run-a-phase.md), and [writing prompts for agents](agent-prompts.md) covers launching one by hand. In short:
 
 **One issue per task.** Each phase's `plan.md` lists its tasks; each becomes a GitHub issue in the `little-spaceship` repository.
 
