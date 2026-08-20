@@ -1,0 +1,186 @@
+# HUD layout
+
+Every coordinate here is a pixel at the logical resolution of 480x270, and every one of them is
+fixed. There is no responsive layout: the logical resolution never changes, only the integer factor
+it is scaled by.
+
+## Coordinates
+
+Positions are given **y-down from the top-left corner**, because that is how a panel is read.
+libGDX draws y-up, so the renderer converts once, on the way out:
+
+```
+y_gdx = 270 - y_down - height
+```
+
+Doing it anywhere else is how a HUD ends up half-flipped.
+
+## The three regions
+
+```
+ x:0            135 136                      343 344            479
+   +--------------+--+--------------------------+--+--------------+  y:0
+   |              |  |                          |  |              |
+   |  LEFT PLATE  |r |        PLAYFIELD         |r |  RIGHT PLATE |
+   |  player      |u |        208 x 270         |u |  score       |
+   |  state       |l |                          |l |  and threat  |
+   |              |e |                          |e |  boss bar    |
+   |              |  |                          |  |              |
+   +--------------+--+--------------------------+--+--------------+  y:269
+        136 px                  208 px                 136 px
+```
+
+| Region | x range | Fill |
+|---|---|---|
+| Left plate | 0-134 | `N2` |
+| Left rule | 135 | `N3`, 1 px |
+| Playfield | 136-343 | the level |
+| Right rule | 344 | `N3`, 1 px |
+| Right plate | 345-479 | `N2` |
+
+The two rules are the playfield's only frame. They also carry the damage feedback, which is why
+nothing else is allowed to touch them.
+
+**Content columns are 106 px wide:** `x 12-117` on the left, `x 362-467` on the right. That is 17
+characters of `font-mini` or 13 of `font-title`. Every label in this document fits.
+
+## Left plate — player state
+
+| Block | Element | Position | Size |
+|---|---|---|---|
+| Lives | label `LIVES` | 12, 14 | `font-mini`, `N4` |
+| | 5 slots, pitch 12 | 12, 24 | 9x9 each, ends at x 68 |
+| Bombs | label `BOMBS` | 12, 44 | `font-mini`, `N4` |
+| | 3 slots, pitch 12 | 12, 54 | 9x9 each, ends at x 44 |
+| Power | label `POWER` | 12, 74 | `font-mini`, `N4` |
+| | 4 segments, pitch 15 | 12, 84 | 13x7 each, ends at x 69 |
+| State | label `STATE` | 12, 104 | `font-mini`, `N4` |
+| | shield icon | 12, 114 | 13x13 |
+| | invulnerability icon | 28, 114 | 13x13 |
+| | invulnerability timer | 28, 128 | 13x1 |
+| Module | label `MODULE` | 12, 146 | `font-mini`, `N4` |
+| | attachment icon | 12, 156 | 17x17 |
+| | attachment name | 34, 161 | `font-mini`, `N7`, 13 chars max |
+
+Below y 178 the plate carries decoration and **no information**. That space is the Skin's, and
+anything informative that appears there is a defect.
+
+### What each slot looks like
+
+| Element | Filled | Empty |
+|---|---|---|
+| Life slot | ship silhouette, `N6` body, `C1` engine | `N3` outline only |
+| Bomb slot | `W4` core inside an `N6` ring | `N3` outline only |
+| Power segment | `C1` body, `C2` top row | `N2` body, `N3` outline |
+| Shield icon | arc in `N6` over `C1` | not drawn |
+| Invulnerability icon | burst in `W4` over `F1` | not drawn |
+| Invulnerability timer | `F1`, shrinking from the right | `N2` |
+
+Five life slots and three bomb slots are always drawn, filled or empty, because they are the caps
+from `../planning/10-mvp-initial-values.md` and a player who sees three empty slots understands
+there is something to collect. Shield, invulnerability and the whole `MODULE` block appear only
+while held: the spec asks for the attachment *if any*, and an empty frame would be the HUD saying
+more than it was asked to.
+
+## Right plate — score and threat
+
+| Element | Position | Notes |
+|---|---|---|
+| label `SCORE` | 362, 14 | `font-mini`, `N4` |
+| score value | right edge at 467, top 24 | `font-title`, `N7`, 7 digits, zero-padded |
+| label `BOSS` | 362, 44 | `font-mini`, `N4`, only during the fight |
+| boss bar frame | 347, 20 | 8x230, 1 px `N0` outline |
+| boss bar fill | 348, 21 | 6x228 inner area |
+
+The score is zero-padded — `0012500` — so the field never changes width and nothing beside it
+moves.
+
+### The boss bar is vertical, and in the margin
+
+The bar runs down the inner edge of the right plate, next to the playfield. It is anchored at the
+top and shortens downward as the boss takes damage. Filled rows are
+`round(228 * hp / hpMax)`, drawn in `W4` with a 1 px `W3` column on its right edge; the remainder
+is `N2`. Rows lost in a single hit flash `N7` for 2 ticks before going dark.
+
+The obvious alternative — a horizontal bar across the top of the playfield — was rejected. The
+playfield is only 208 px wide, and a bar there would cover 208 px of play space at exactly the
+moment projectile density peaks. A vertical bar sits in margin that is otherwise empty, stays
+adjacent to a boss that enters from the top, and costs the player nothing.
+
+## Invulnerability is shown on the ship, not in the plate
+
+Grace frames last one or two seconds. A widget that appears and disappears that fast in the corner
+of the eye is noise, and the player is looking at their ship anyway.
+
+| Source | Duration | How it reads |
+|---|---|---|
+| Respawn | 2.0 s, 120 ticks | ship alternates 4 ticks drawn, 4 ticks at alpha 0.35 |
+| Damage absorbed by shield or attachment | 1.0 s, 60 ticks | ship alternates 3 ticks tinted `N7`, 3 ticks normal |
+| Invulnerability power-up | its own duration | `C1` aura ring, 21x21, 2-frame loop, plus the `STATE` icon and its timer |
+
+The three are deliberately different. Respawn blinks out, absorbed damage flashes white, the
+power-up glows steadily — so the player can tell "I just got hit" from "I am currently untouchable"
+without reading anything.
+
+Alpha is a batch tint applied at draw time. It is not a colour in the sprite and it does not exist
+in the palette.
+
+## Feedback
+
+`../planning/02-mvp-functional-spec.md` asks for clear feedback on hits and on losing upgrades.
+Every one of them is a change to something already on screen; nothing new appears.
+
+| Event | Feedback |
+|---|---|
+| Life lost | rightmost filled life slot flashes `N7` 6 ticks, then empties; both playfield rules flash `N7` for 2 ticks, then `W3` for 4 |
+| Shield lost | shield icon flashes `N7` 3 ticks, then disappears; a 21x21 break effect plays on the ship |
+| Attachment lost | the whole `MODULE` block flashes `N7` 3 ticks, then hides |
+| Bomb used | leftmost filled bomb slot flashes `N7` 2 ticks, then empties |
+| Weapon level gained | the newly lit segment flashes `F1` for 4 ticks |
+| Pickup collected at maximum | the score value flashes `W4` for 6 ticks |
+
+There is no full-screen flash for damage. The playfield rules are enough, and a white frame over
+208 px of bullets hides exactly what the player needs to see next.
+
+The score has no floating popups. The value flashing on a bonus covers the one case
+— `10-mvp-initial-values.md`'s 500 points for a wasted pickup — where the player would otherwise
+wonder what happened.
+
+## Conformance with the specification
+
+The spec's HUD list, and where each item lives. This table is the acceptance criterion *the HUD
+shows everything it requires and nothing more*, made checkable.
+
+| Required | Where |
+|---|---|
+| Remaining lives | `LIVES`, five slots |
+| Bomb charges | `BOMBS`, three slots |
+| Current score | `SCORE` |
+| Power-up status where applicable | `POWER` for the weapon level, `STATE` for shield and invulnerability; extra life folds into `LIVES` and bomb recharge into `BOMBS` |
+| Equipped attachment, if any | `MODULE`, hidden when there is none |
+| Invulnerability status | on the ship, three distinguishable states |
+| Boss health, only during its fight | vertical bar, drawn only then |
+| Feedback for hits and lost upgrades | the table above |
+
+**Deliberately absent**, because the spec excludes them: minimap, enemy counter, level progress bar,
+detailed statistics, high score, combo or multiplier, timer, weapon-level number, lives counter as a
+numeral, and the player's hitbox.
+
+## Screens
+
+The five screens of the flow are laid out on the full 480x270, not in the plates. They are built
+with `scene2d.ui` over a Skin, and the only thing this document fixes about them is the frame they
+share:
+
+| Element | Value |
+|---|---|
+| Screen background | `N1`, with the level's parallax at 30% behind the menu |
+| Title | `font-title` in `N7`, top-left at 40, 32 |
+| Menu entry | `font-mini`, 10 px line height, 16 px between entries |
+| Entry, selected | `W4`, with a 5x7 `>` marker 12 px to its left |
+| Entry, disabled | `N3` |
+| Button plate | `N2` with a 1 px `N3` frame, 60x12 minimum |
+| Slider track | 80x3, `N2`; knob 5x9, `N6` |
+| Safe area | 24 px from every edge, so nothing sits against the letterbox |
+
+Everything else about the screens belongs to `game-presentation` and to the Skin.
