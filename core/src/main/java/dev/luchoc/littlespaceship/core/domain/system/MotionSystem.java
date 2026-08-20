@@ -29,10 +29,13 @@ import dev.luchoc.littlespaceship.core.port.InputFrame;
 public final class MotionSystem implements GameSystem {
 
     /**
-     * Width of the playfield, in logical units. Confirmed in {@code 10-mvp-initial-values.md} and
-     * verified in the technical prototype; it is a fixed dimension of the logical resolution, not a
-     * balance value that changes with difficulty, so it lives here rather than in {@code
-     * BalanceValues}.
+     * Width of the playfield, in logical units. {@code CLAUDE.md} states it flatly as one of the
+     * project's invariants; {@code 10-mvp-initial-values.md} calls the same number, together with
+     * the 480×270 logical resolution it lives inside, a "proposed starting point" whose "definitive
+     * value is set during the technical prototype" — which {@code 11-technical-prototype-results.md}
+     * records as done, confirming 208 as the starting point. It is a fixed dimension of the logical
+     * resolution, not a balance value that changes with difficulty, so it lives here rather than in
+     * {@code BalanceValues}.
      */
     public static final float PLAYFIELD_WIDTH = 208f;
 
