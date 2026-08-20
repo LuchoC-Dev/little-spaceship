@@ -129,6 +129,38 @@ class SpawnSystemTest {
     }
 
     @Test
+    @DisplayName("a diagonal formation still enters fully off-screen, every slot, not just offsetY 0")
+    void diagonalFormationEntersFullyOffScreen() {
+        List<FormationSlot> diagonal = List.of(
+            new FormationSlot(-15f, 0f), new FormationSlot(0f, -15f), new FormationSlot(15f, -30f));
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("diagonal", diagonal))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(
+                List.of(new SpawnEvent(1f, "enemy-basic", "diagonal", 0.5f, null))));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(3, world.entityCount());
+        float radius = world.colliders().valueAt(0).radius;
+        for (int i = 0; i < world.transforms().size(); i++) {
+            float y = world.transforms().valueAt(i).y;
+            float bottomEdge = y - radius;
+            assertTrue(bottomEdge >= SpawnSystem.PLAYFIELD_HEIGHT,
+                "entity " + i + " has its bottom edge at " + bottomEdge
+                    + ", inside the visible playfield (below " + SpawnSystem.PLAYFIELD_HEIGHT + ")");
+        }
+        // The slot with the lowest offsetY (-30) is the one tangent to the edge; every other slot
+        // must be strictly further above it, or the guarantee would only hold for one slot.
+        float lowestY = Float.POSITIVE_INFINITY;
+        for (int i = 0; i < world.transforms().size(); i++) {
+            lowestY = Math.min(lowestY, world.transforms().valueAt(i).y);
+        }
+        assertEquals(SpawnSystem.PLAYFIELD_HEIGHT + radius, lowestY);
+    }
+
+    @Test
     @DisplayName("a wave instance marked with a drop attaches it to every entity it spawns")
     void designedDropAttachesToSpawnedEntities() {
         TestContent content = baseContent()

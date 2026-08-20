@@ -35,8 +35,11 @@ import java.util.List;
  * ComponentSpec} of the {@link EnemyDefinition} is handed to the {@link ComponentFactoryRegistry},
  * and only then is its {@code Transform} set from the wave's anchor plus the {@link FormationSlot}'s
  * offset — position is spawn-event data, never archetype data, so it is not something a component
- * factory could know. An enemy always enters from just above the top of the playfield, offset by its
- * own collider radius so it starts fully off-screen regardless of its size.
+ * factory could know. Every entity of a wave enters fully off-screen, regardless of its own size and
+ * of the formation's shape: the anchor is pushed up by the formation's lowest {@code offsetY}
+ * ({@link #lowestOffsetY}), so the slot closest to being visible is the one measured against the
+ * playfield edge, and every other slot ends up further above it. A single-slot formation is the
+ * special case of this where the lowest offset is its own, usually zero.
  */
 public final class SpawnSystem implements GameSystem {
 
@@ -84,15 +87,30 @@ public final class SpawnSystem implements GameSystem {
         EnemyDefinition enemy = world.content().enemy(event.enemyId());
         FormationDefinition formation = world.content().formation(event.formationId());
         float anchorX = event.atX() * MotionSystem.PLAYFIELD_WIDTH;
+        float lowestOffsetY = lowestOffsetY(formation.slots());
 
         for (FormationSlot slot : formation.slots()) {
             int entity = world.createEntity();
             attachComponents(world, enemy, entity);
-            positionSpawned(world, entity, anchorX, slot);
+            positionSpawned(world, entity, anchorX, lowestOffsetY, slot);
             if (event.hasDrop()) {
                 world.drops().set(entity, new Drop(event.dropId()));
             }
         }
+    }
+
+    /**
+     * The offset closest to the playfield — the smallest {@code offsetY}, since {@code Transform.y}
+     * grows upwards and a lower value means lower on screen. Measuring the spawn height against this
+     * one slot, rather than against each slot's own offset, is what keeps every other slot of the
+     * same formation above it and therefore also off-screen.
+     */
+    private static float lowestOffsetY(List<FormationSlot> slots) {
+        float lowest = Float.POSITIVE_INFINITY;
+        for (FormationSlot slot : slots) {
+            lowest = Math.min(lowest, slot.offsetY());
+        }
+        return lowest;
     }
 
     private static void attachComponents(World world, EnemyDefinition enemy, int entity) {
@@ -106,11 +124,15 @@ public final class SpawnSystem implements GameSystem {
         }
     }
 
-    private static void positionSpawned(World world, int entity, float anchorX, FormationSlot slot) {
+    private static void positionSpawned(
+        World world, int entity, float anchorX, float lowestOffsetY, FormationSlot slot) {
         Collider collider = world.colliders().get(entity);
         float radius = collider == null ? 0f : collider.radius;
         float x = anchorX + slot.offsetX();
-        float y = PLAYFIELD_HEIGHT + radius + slot.offsetY();
+        // The slot at lowestOffsetY lands exactly at PLAYFIELD_HEIGHT + radius — its own radius
+        // above the edge, tangent to it. Every other slot is further above by however much its
+        // offsetY exceeds lowestOffsetY, so the whole formation clears the edge together.
+        float y = PLAYFIELD_HEIGHT + radius + (slot.offsetY() - lowestOffsetY);
         world.transforms().set(entity, new Transform(x, y));
     }
 }
