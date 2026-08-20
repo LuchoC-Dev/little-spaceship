@@ -33,6 +33,7 @@ Each of these cost hours during the spike.
 - **Everything written in the repository is in English**: code, comments, logs, JSON keys, content ids, agent definitions and documentation. The one exception is `docs/sources/`, a verbatim transcript kept in Spanish because translating evidence would falsify it.
 - Conversation with the user is always in Spanish.
 - Composition over inheritance. Components are plain data with no logic.
+- **Comments carry the why, not the what.** The code already says what it does. Explain a choice only when it is genuinely counter-intuitive and breaking it would fail silently — the class javadoc, once, briefly. An inline comment is for the line that looks like a mistake and is not. A rule that belongs to the project rather than to one class lives in this file or in `docs/`, not repeated in the code. Everything else is defended by tests whose names state the rule.
 - Logical resolution 480×270, playfield 208 px wide, integer scaling, nearest-neighbour.
 - Drawing is the cost, not simulation. Optimise batching and atlases first, spatial structures for collision only if it ever becomes necessary, concurrency never.
 
