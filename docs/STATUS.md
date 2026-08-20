@@ -1,12 +1,12 @@
 # Project status
 
-Last updated: 19/08/2026.
+Last updated: 20/08/2026.
 
 Read this first if you are picking the project up. It says where things stand and what comes next; `CLAUDE.md` says how to work here.
 
 ## Where we are
 
-**Planning is finished. Phase 01 is merged: the simulation core exists, with no game visible yet.**
+**Phases 01 and 02 are merged: the simulation knows whether the player lives or dies, and still draws nothing.**
 
 What exists in the repository:
 
@@ -14,7 +14,7 @@ What exists in the repository:
 - `docs/sources/` — the verbatim ChatGPT transcript the planning came from. Spanish on purpose; it is evidence.
 - `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. It can be deleted once it stops being useful.
 - `.claude/agents/` — five agent definitions with project-scoped persistent memory.
-- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, with 91 tests and no libGDX on its classpath. `game`, `desktop` and `web` exist as empty module skeletons.
+- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision by layer pairs, the defensive chain and cleanup. 129 tests, no libGDX on its classpath. `game`, `desktop` and `web` exist as empty module skeletons.
 
 ## What is settled
 
@@ -35,14 +35,14 @@ The master plan is in `docs/plan/`, starting from [the overview](plan/00-overvie
 
 Two lanes run in parallel: **code** and **art**. The art lane starts on day one and never waits for the code, which is the only reason the week is feasible.
 
-Next up: [phase 02, core mechanics](plan/02-core-mechanics/plan.md), on the code lane. The art lane can start at any time and blocks phase 03.
+Next up: [phase 03, first playable](plan/03-first-playable/plan.md), on the code lane, and [phase 04, content pipeline](plan/04-content-pipeline/plan.md), which depends on 02 rather than on 03. The art lane is under way in pull request #8: the visual direction is written and waiting for review, and its sprite sizes are what phase 03 needs for hitboxes.
 
 ### Phase state
 
 | # | Phase | State |
 |---|---|---|
 | 01 | Foundations | **done** — merged in #2 |
-| 02 | Core mechanics | not started |
+| 02 | Core mechanics | **done** — merged in #10 |
 | 03 | First playable | not started |
 | 04 | Content pipeline | not started |
 | 05 | Game systems | not started |
