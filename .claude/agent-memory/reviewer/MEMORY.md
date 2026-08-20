@@ -1,0 +1,2 @@
+- [Defect patterns in this repo](project_defect-patterns.md) — the five shapes of defect that stay green here; where to look first in a phase review.
+- [Audit techniques](project_audit-techniques.md) — read-only ways to prove a finding without touching the repo or rebuilding.

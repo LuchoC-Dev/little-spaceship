@@ -77,6 +77,18 @@ cd collisionbench/build/generated/teavm/js && node run.cjs   # JavaScript
 
 Compara la estrategia ingenua contra una rejilla uniforme sobre los mismos datos.
 
+## Verificación del Rng entre runtimes
+
+El módulo `rngcheck` compila el `Rng` real del core con TeaVM y lo ejecuta en Node, para comprobar que produce la misma secuencia que sobre la JVM. Si divergiera, los replays grabados en desktop no se reproducirían en el navegador.
+
+```bash
+./gradlew :rngcheck:runJvm              # JVM
+./gradlew :rngcheck:generateJavaScript
+cd rngcheck/build/generated/teavm/js && node run.cjs   # JavaScript
+```
+
+Verificado idéntico el 19/08/2026. Volver a correrlo si se toca el algoritmo.
+
 ## Sonda de concurrencia
 
 El módulo `threadprobe` es TeaVM puro, sin libGDX, para poder medir el modelo de concurrencia en Node sin GPU ni ventanas:
