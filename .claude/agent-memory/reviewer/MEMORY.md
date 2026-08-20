@@ -1,2 +1,3 @@
-- [Defect patterns in this repo](project_defect-patterns.md) — the eight shapes of defect that stay green here; where to look first in a phase review.
+- [Defect patterns in this repo](project_defect-patterns.md) — the ten shapes of defect that stay green here; where to look first in a phase review, first and second round.
 - [Audit techniques](project_audit-techniques.md) — read-only ways to prove a finding without touching the repo or rebuilding.
+- [Review tooling and memory placement](project_review-tooling-and-memory-placement.md) — gh scope errors on this token, and why memory on a phase branch lags main.
