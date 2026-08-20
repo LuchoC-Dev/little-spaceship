@@ -6,7 +6,7 @@ Read this first if you are picking the project up. It says where things stand an
 
 ## Where we are
 
-**Planning is finished. There is no game code yet.**
+**Planning is finished. Phase 01 is merged: the simulation core exists, with no game visible yet.**
 
 What exists in the repository:
 
@@ -14,6 +14,7 @@ What exists in the repository:
 - `docs/sources/` — the verbatim ChatGPT transcript the planning came from. Spanish on purpose; it is evidence.
 - `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. It can be deleted once it stops being useful.
 - `.claude/agents/` — five agent definitions with project-scoped persistent memory.
+- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, with 91 tests and no libGDX on its classpath. `game`, `desktop` and `web` exist as empty module skeletons.
 
 ## What is settled
 
@@ -34,13 +35,13 @@ The master plan is in `docs/plan/`, starting from [the overview](plan/00-overvie
 
 Two lanes run in parallel: **code** and **art**. The art lane starts on day one and never waits for the code, which is the only reason the week is feasible.
 
-Next up: [phase 01, foundations](plan/01-foundations/plan.md).
+Next up: [phase 02, core mechanics](plan/02-core-mechanics/plan.md), on the code lane. The art lane can start at any time and blocks phase 03.
 
 ### Phase state
 
 | # | Phase | State |
 |---|---|---|
-| 01 | Foundations | not started |
+| 01 | Foundations | **done** — merged in #2 |
 | 02 | Core mechanics | not started |
 | 03 | First playable | not started |
 | 04 | Content pipeline | not started |
