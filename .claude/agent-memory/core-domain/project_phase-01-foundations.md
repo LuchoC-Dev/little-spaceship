@@ -19,6 +19,6 @@ Deferred on purpose, with the phase that owns it:
 - Components beyond `Transform`, `Motion`, `Collider`, `Sprite`.
 - Every system: `SystemOrder` declares the ten stages, `Simulation.mvpPipeline()` is empty.
 
-Still unverified: that the `Rng` stream is identical under TeaVM. The algorithm avoids everything known to diverge, but nobody has run it in a browser. Phase 09 confirms it; if a replay ever diverges between desktop and web, look there first.
+The `Rng` stream is identical under TeaVM: verified on 19/08/2026 by compiling the class itself and running it on Node. Integer, float and zero-seed streams match the JVM bit for bit. The re-runnable check is `spikes/web-viability/rngcheck/`, which holds a literal copy of the class — nothing enforces that the copy stays in sync, so re-copy it before trusting a later run.
 
 See [[core-boundary-decisions]] for the boundary shape those additions have to respect.

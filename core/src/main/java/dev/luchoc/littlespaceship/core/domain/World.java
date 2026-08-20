@@ -105,13 +105,6 @@ public final class World {
     }
 
     /**
-     * @return the entity registry, for the systems that create or destroy
-     */
-    public EntityRegistry entities() {
-        return entities;
-    }
-
-    /**
      * @return positions
      */
     public ComponentStore<Transform> transforms() {

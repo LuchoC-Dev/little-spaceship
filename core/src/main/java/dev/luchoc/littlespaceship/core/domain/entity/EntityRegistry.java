@@ -73,7 +73,7 @@ public final class EntityRegistry {
      * harmless rather than corrupting.
      *
      * <p>This does not touch components: the caller removes them. In the simulation that caller is
-     * always {@code World.destroy}, which knows every store.
+     * always {@code World.destroyEntity}, which knows every store.
      *
      * @param entity the handle to destroy
      * @return true when something was actually destroyed
