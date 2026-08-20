@@ -87,9 +87,26 @@ radius. The player ship is 15x17 with a radius of 3.0 — 40% of its width — w
 at the end. The failure it catches — a background using a gameplay colour — is invisible until the
 level runs.
 
-**The mock is the review surface.** Before drawing a sprite, add it to
-`mockups/combat.html` and look at it next to the rest at 1x. A silhouette that reads on its own and
-disappears in a crowd is the normal failure, and the mock is where it shows up cheaply.
+**The mock is the review surface.** Before drawing a sprite, add it to `src/01-sprites.js` and look
+at it at 1x next to the rest. A silhouette that reads on its own and disappears in a crowd is the
+normal failure, and the mock is where it shows up cheaply. The loop is in
+[`mockups/README.md`](../../design/mockups/README.md).
+
+**The sprites still owe the game an identity.** Accepted on 20/08/2026 as a starting point, with
+the explicit note that they have to go further. What the mocks carry are block silhouettes at the
+right footprint — correct size, correct collider, legal colours, and no character. Tasks 6 to 11 are
+where each archetype earns a shape you recognise before you read it.
+
+Two things that pass will fight that pass, and both were seen in the mock rather than guessed:
+
+- **There is one gameplay violet.** V4 is the only alien colour above the gameplay floor, so an
+  enemy has an outline, one hull tone and metal highlights. Enough at 13 px, tight at 23, probably
+  thin on a 119 px boss. Do not widen the palette on that suspicion — draw the tank and the boss
+  first, and if a second violet is genuinely needed it belongs between V3 and V4, where it stays
+  clear of the reserved band.
+- **The carrier is the awkward one.** 39 px wide against a 30 px circle, so its outer 4 px each
+  side have to read as wing. It is the archetype most likely to need its footprint revisited, and
+  changing it means changing task 2 first.
 
 **Where the plan was thin.** It asked for sprite sizes "for hitboxes" without saying that
 `core.domain.component.Collider` is a circle with no offset. That shapes the art: visual mass has to
