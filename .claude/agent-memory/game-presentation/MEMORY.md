@@ -1,0 +1,2 @@
+- [Gradle/libGDX build gotchas found in phase 03](project_gradle-libgdx-build-gotchas.md) — desktop `run` task, TeaVM `plugins{}` ordering, atlas/wrap tiling traps.
+- [How to check core boundary compliance mechanically](project_core-boundary-check.md) — the one grep that catches an accidental `core.domain` import.
