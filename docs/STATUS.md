@@ -15,7 +15,7 @@ What exists in the repository:
 - `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. It can be deleted once it stops being useful.
 - `docs/design/` — the visual direction: the closed `ls32` palette, sprite sizes in pixels per archetype, bitmap typography, HUD layout, legibility rules, and pixel-exact mocks. Synchronisation point 1, settled.
 - `.claude/agents/` — five agent definitions with project-scoped persistent memory.
-- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision by layer pairs, the defensive chain and cleanup. 129 tests, no libGDX on its classpath. `game`, `desktop` and `web` exist as empty module skeletons.
+- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision by layer pairs, the defensive chain, cleanup, the content contracts and the spawner. A run now starts with the player in the world. 167 tests, no libGDX on its classpath. `game`, `desktop` and `web` exist as empty module skeletons.
 
 ## What is settled
 
@@ -36,7 +36,7 @@ The master plan is in `docs/plan/`, starting from [the overview](plan/00-overvie
 
 Two lanes run in parallel: **code** and **art**. The art lane starts on day one and never waits for the code, which is the only reason the week is feasible.
 
-Next up: [phase 03, first playable](plan/03-first-playable/plan.md), on the code lane. Synchronisation point 1 is closed — `docs/design/02-sprite-sizes.md` fixes every hitbox radius in pixels — so nothing blocks it. [Phase 04, content pipeline](plan/04-content-pipeline/plan.md) depends on 02 rather than on 03 and can run beside it. On the art lane, sprite production is what remains of phase 06.
+Next up, on the code lane, is one piece of work that closes two phases at once: the JSON loader in `game`. Phase 04 declared the content contracts in `core` but the parser is `game`'s, and phase 03 currently implements a placeholder `ContentSource` against the older, smaller interface — so the loader is what makes both compile together and what finally puts enemies on screen. On the art lane, sprite production is what remains of phase 06.
 
 ### Phase state
 
@@ -44,8 +44,8 @@ Next up: [phase 03, first playable](plan/03-first-playable/plan.md), on the code
 |---|---|---|
 | 01 | Foundations | **done** — merged in #2 |
 | 02 | Core mechanics | **done** — merged in #10 |
-| 03 | First playable | not started |
-| 04 | Content pipeline | not started |
+| 03 | First playable | **in draft** — #14; desktop, input and renderer built, blocked on the loader before it can be accepted |
+| 04 | Content pipeline | **core side done** — merged in #16; the JSON loader in `game` is what remains |
 | 05 | Game systems | not started |
 | 06 | Presentation | **visual direction done** — merged in #8; art production and integration pending |
 | 07 | Boss | not started |
