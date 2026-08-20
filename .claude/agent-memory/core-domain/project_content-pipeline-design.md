@@ -36,6 +36,30 @@ which is the exact bug the plan calls out avoiding.
 `withDefaults()` therefore has zero effect on a replay — worth remembering before "reordering
 registration calls" gets flagged as a determinism risk it is not.
 
+**Two bugs review round 1 caught, both worth generalising:**
+
+- **A "measure against my own field" positioning formula is wrong the moment the field can vary
+  across a group.** `SpawnSystem` computed each spawned entity's y from *that entity's own*
+  `slot.offsetY()`, which only guarantees "fully off-screen" for a single-slot formation. A formation
+  with slots at different `offsetY` (a `diagonal`) needs the guarantee checked against the group's
+  extremum — the lowest `offsetY` — and every other member measured relative to *that*, not to its
+  own offset. No test caught this because every formation fixture up to that point used `offsetY: 0`
+  for every slot, which makes "measure against your own offset" and "measure against the group's
+  extremum" produce identical numbers. **Whenever a test fixture only ever uses the zero/neutral case
+  of a field a formula depends on, that formula's real behaviour on a non-neutral value is unverified,
+  not merely untested.**
+- **An optional accessor with a default is only safe when the default is actually the common case,
+  and only if "wrong type present" is treated as a failure, never silently folded into "absent".**
+  `ComponentSpec.flag("fragile", false)` shipped with a minority-case default (2 of 6 archetypes
+  are non-fragile) and, worse, `MapComponentSpec`'s optional accessors returned the default on a
+  *wrongly-typed* value too — so a JSON string `"true"` and a JSON boolean `false` were
+  indistinguishable to a caller. Fixed by removing every default entirely: `ComponentSpec` now has
+  no optional accessor, "missing" and "wrong type" are distinct failure messages, and the field the
+  game rule actually depends on (`fragile`) must be explicit in every archetype. Removing the default
+  was simpler to defend than picking a better one, and it was also how the two dead accessors
+  (`number`/`text` with a default, `H3` in the same review) got noticed and removed — nothing in
+  `core` ever called them.
+
 See [[core-deferred-surface]] for the running list of what is deferred and why, and
 [[defensive-chain-and-collision-design]] for the `SystemOrder` ordinal-checking discipline this
 phase's `SpawnSystem` (ordinal 3, before `COLLISION` at 5) had to respect too.
