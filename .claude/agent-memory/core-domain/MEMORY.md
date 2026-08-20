@@ -2,3 +2,4 @@
 - [Core boundary decisions](project_core-boundary-decisions.md) — how the boundary is shaped and enforced beyond what the architecture document says.
 - [Rng and TeaVM](project_rng-teavm-constraints.md) — why the generator uses only xor and shifts, and what would silently break replays.
 - [Bash heredoc limits](feedback_bash-heredoc-limits.md) — writing Java through heredocs mangles backslashes and truncates long commands.
+- [Defensive chain and collision design](project_defensive-chain-and-collision-design.md) — internal collision hits vs GameEvent, invulnerability absorbing hits fully, and the component-removal-mid-iteration hazard.
