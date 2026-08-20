@@ -7,6 +7,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import java.util.List;
 
@@ -14,10 +15,20 @@ import java.util.List;
  * Detects overlaps by layer pair, never everything against everything.
  *
  * <p>Four pairs, confirmed in {@code 12-architecture.md}: player projectile × enemy, enemy
- * projectile × player, enemy × player, pickup × player. Comparison inside a pair is naive — every
- * holder of one layer against every holder of the other — which the {@code collisionbench} benchmark
- * measured at 0.028 ms for the MVP scenario. No spatial structure is introduced ahead of that cost
- * actually mattering.
+ * projectile × player, enemy × player, pickup × player. There is exactly one player, so three of
+ * the four pairs resolve it once through {@link World#playerEntity()} — an O(1) lookup — and then
+ * walk the other layer once, instead of re-scanning the whole collider store per candidate. Only
+ * player projectile × enemy is genuinely many-against-many, so that one stays a naive double
+ * comparison: every holder of one layer against every holder of the other, with no spatial
+ * structure, which is the confirmed decision in {@code 12-architecture.md}.
+ *
+ * <p>The naive comparison was measured, but not on this exact shape: {@code
+ * docs/planning/11-technical-prototype-results.md} times {@code spikes/web-viability/collisionbench},
+ * which keeps each layer in its own flat {@code float[]} and compares bullets × enemies plus the two
+ * "versus player" pairs against a single point — not four independent {@code ComponentStore} scans.
+ * That benchmark is evidence for the decision to stay naive, not a measurement of this class; if the
+ * cost of the remaining many-against-many pair ever needs re-checking once real projectile counts
+ * exist, it has to be measured against {@code ComponentStore}, not read off that table.
  *
  * <p>The result is not a {@code GameEvent}: it is {@link World#collisionHits()}, cleared and refilled
  * here every tick and read by {@code DamageSystem} right after, within the same tick.
@@ -33,16 +44,63 @@ public final class CollisionSystem implements GameSystem {
     public void update(World world, float step, InputFrame input) {
         List<CollisionHit> hits = world.collisionHits();
         hits.clear();
+
+        int player = world.playerEntity();
+        Collider playerCollider = null;
+        Transform playerTransform = null;
+        if (player != EntityId.NONE) {
+            playerCollider = world.colliders().get(player);
+            playerTransform = world.transforms().get(player);
+        }
+
+        detectAgainstPlayer(world, CollisionLayer.ENEMY_PROJECTILE, CollisionPair.ENEMY_PROJECTILE_VS_PLAYER,
+            player, playerCollider, playerTransform, hits);
+        detectAgainstPlayer(world, CollisionLayer.ENEMY, CollisionPair.ENEMY_VS_PLAYER,
+            player, playerCollider, playerTransform, hits);
+        detectAgainstPlayer(world, CollisionLayer.PICKUP, CollisionPair.PICKUP_VS_PLAYER,
+            player, playerCollider, playerTransform, hits);
+
         detectPair(world, CollisionLayer.PLAYER_PROJECTILE, CollisionLayer.ENEMY,
             CollisionPair.PLAYER_PROJECTILE_VS_ENEMY, hits);
-        detectPair(world, CollisionLayer.ENEMY_PROJECTILE, CollisionLayer.PLAYER,
-            CollisionPair.ENEMY_PROJECTILE_VS_PLAYER, hits);
-        detectPair(world, CollisionLayer.ENEMY, CollisionLayer.PLAYER,
-            CollisionPair.ENEMY_VS_PLAYER, hits);
-        detectPair(world, CollisionLayer.PICKUP, CollisionLayer.PLAYER,
-            CollisionPair.PICKUP_VS_PLAYER, hits);
     }
 
+    /**
+     * Tests every holder of {@code layer} against the single, already-resolved player, instead of
+     * re-scanning the collider store to find the player for every candidate. This is what turns the
+     * three "versus player" pairs from O(matches × store size) into O(store size).
+     */
+    private static void detectAgainstPlayer(
+        World world, CollisionLayer layer, CollisionPair pair,
+        int player, Collider playerCollider, Transform playerTransform,
+        List<CollisionHit> hits) {
+        if (player == EntityId.NONE || playerCollider == null || playerTransform == null) {
+            return;
+        }
+        ComponentStore<Collider> colliders = world.colliders();
+        ComponentStore<Transform> transforms = world.transforms();
+        for (int i = 0; i < colliders.size(); i++) {
+            int entity = colliders.entityAt(i);
+            if (entity == player) {
+                continue;
+            }
+            Collider collider = colliders.valueAt(i);
+            if (collider.layer != layer) {
+                continue;
+            }
+            Transform transform = transforms.get(entity);
+            if (transform == null) {
+                continue;
+            }
+            if (overlaps(transform, collider, playerTransform, playerCollider)) {
+                hits.add(new CollisionHit(entity, player, pair));
+            }
+        }
+    }
+
+    /**
+     * The one genuinely many-against-many pair: every holder of {@code layerA} against every holder
+     * of {@code layerB}, naively. Reserved for pairs where neither side is the single player.
+     */
     private static void detectPair(
         World world, CollisionLayer layerA, CollisionLayer layerB, CollisionPair pair,
         List<CollisionHit> hits) {

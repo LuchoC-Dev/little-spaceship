@@ -8,6 +8,7 @@ import dev.luchoc.littlespaceship.core.domain.collision.CollisionHit;
 import dev.luchoc.littlespaceship.core.domain.collision.CollisionPair;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
@@ -28,7 +29,7 @@ class CollisionSystemTest {
     @DisplayName("an enemy overlapping the player is reported as enemy versus player")
     void detectsEnemyVersusPlayer() {
         int enemy = entity(0f, 0f, 3f, CollisionLayer.ENEMY);
-        int player = entity(4f, 0f, 3f, CollisionLayer.PLAYER);
+        int player = playerEntity(4f, 0f, 3f);
 
         system.update(world, STEP, InputFrame.IDLE);
 
@@ -40,7 +41,7 @@ class CollisionSystemTest {
     @DisplayName("two circles farther apart than their combined radius do not overlap")
     void tooFarApartDoesNotOverlap() {
         entity(0f, 0f, 3f, CollisionLayer.ENEMY);
-        entity(100f, 0f, 3f, CollisionLayer.PLAYER);
+        playerEntity(100f, 0f, 3f);
 
         system.update(world, STEP, InputFrame.IDLE);
 
@@ -51,7 +52,7 @@ class CollisionSystemTest {
     @DisplayName("circles exactly touching count as overlapping")
     void exactlyTouchingOverlaps() {
         int enemy = entity(0f, 0f, 3f, CollisionLayer.ENEMY);
-        int player = entity(6f, 0f, 3f, CollisionLayer.PLAYER);
+        int player = playerEntity(6f, 0f, 3f);
 
         system.update(world, STEP, InputFrame.IDLE);
 
@@ -63,7 +64,7 @@ class CollisionSystemTest {
     @DisplayName("an enemy projectile overlapping the player is reported as enemy projectile versus player")
     void detectsEnemyProjectileVersusPlayer() {
         int projectile = entity(0f, 0f, 2f, CollisionLayer.ENEMY_PROJECTILE);
-        int player = entity(3f, 0f, 2f, CollisionLayer.PLAYER);
+        int player = playerEntity(3f, 0f, 2f);
 
         system.update(world, STEP, InputFrame.IDLE);
 
@@ -87,7 +88,7 @@ class CollisionSystemTest {
     @DisplayName("a pickup overlapping the player is reported as pickup versus player")
     void detectsPickupVersusPlayer() {
         int pickup = entity(0f, 0f, 2f, CollisionLayer.PICKUP);
-        int player = entity(3f, 0f, 2f, CollisionLayer.PLAYER);
+        int player = playerEntity(3f, 0f, 2f);
 
         system.update(world, STEP, InputFrame.IDLE);
 
@@ -110,11 +111,11 @@ class CollisionSystemTest {
     @DisplayName("the previous tick's hits do not linger into one with nothing overlapping")
     void hitsDoNotLingerAcrossTicks() {
         entity(0f, 0f, 3f, CollisionLayer.ENEMY);
-        entity(4f, 0f, 3f, CollisionLayer.PLAYER);
+        int player = playerEntity(4f, 0f, 3f);
         system.update(world, STEP, InputFrame.IDLE);
         assertTrue(world.collisionHits().size() > 0);
 
-        world.transforms().set(world.colliders().entityAt(1), new Transform(1000f, 1000f));
+        world.transforms().set(player, new Transform(1000f, 1000f));
         system.update(world, STEP, InputFrame.IDLE);
 
         assertTrue(world.collisionHits().isEmpty());
@@ -124,6 +125,18 @@ class CollisionSystemTest {
         int entity = world.createEntity();
         world.transforms().set(entity, new Transform(x, y));
         world.colliders().set(entity, new Collider(radius, layer));
+        return entity;
+    }
+
+    /**
+     * An entity on the {@link CollisionLayer#PLAYER} layer, with a {@link Player} component
+     * attached too: {@link CollisionSystem} resolves the three "versus player" pairs through {@link
+     * World#playerEntity()}, so a bare {@link CollisionLayer#PLAYER} collider with no {@link Player}
+     * component would never be found.
+     */
+    private int playerEntity(float x, float y, float radius) {
+        int entity = entity(x, y, radius, CollisionLayer.PLAYER);
+        world.players().set(entity, new Player(3, 2, 1));
         return entity;
     }
 }
