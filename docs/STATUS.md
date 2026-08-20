@@ -6,13 +6,14 @@ Read this first if you are picking the project up. It says where things stand an
 
 ## Where we are
 
-**Phases 01 and 02 are merged: the simulation knows whether the player lives or dies, and still draws nothing.**
+**Phases 01 and 02 are merged and the visual direction is settled: the simulation knows whether the player lives or dies, and now there is a written specification of what it should look like. Nothing draws yet.**
 
 What exists in the repository:
 
 - `docs/planning/` — fourteen documents covering vision, MVP spec, game systems, campaign, progression, balance values, architecture and the agent workflow.
 - `docs/sources/` — the verbatim ChatGPT transcript the planning came from. Spanish on purpose; it is evidence.
 - `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. It can be deleted once it stops being useful.
+- `docs/design/` — the visual direction: the closed `ls32` palette, sprite sizes in pixels per archetype, bitmap typography, HUD layout, legibility rules, and pixel-exact mocks. Synchronisation point 1, settled.
 - `.claude/agents/` — five agent definitions with project-scoped persistent memory.
 - `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision by layer pairs, the defensive chain and cleanup. 129 tests, no libGDX on its classpath. `game`, `desktop` and `web` exist as empty module skeletons.
 
@@ -35,7 +36,7 @@ The master plan is in `docs/plan/`, starting from [the overview](plan/00-overvie
 
 Two lanes run in parallel: **code** and **art**. The art lane starts on day one and never waits for the code, which is the only reason the week is feasible.
 
-Next up: [phase 03, first playable](plan/03-first-playable/plan.md), on the code lane, and [phase 04, content pipeline](plan/04-content-pipeline/plan.md), which depends on 02 rather than on 03. The art lane is under way in pull request #8: the visual direction is written and waiting for review, and its sprite sizes are what phase 03 needs for hitboxes.
+Next up: [phase 03, first playable](plan/03-first-playable/plan.md), on the code lane. Synchronisation point 1 is closed — `docs/design/02-sprite-sizes.md` fixes every hitbox radius in pixels — so nothing blocks it. [Phase 04, content pipeline](plan/04-content-pipeline/plan.md) depends on 02 rather than on 03 and can run beside it. On the art lane, sprite production is what remains of phase 06.
 
 ### Phase state
 
@@ -46,7 +47,7 @@ Next up: [phase 03, first playable](plan/03-first-playable/plan.md), on the code
 | 03 | First playable | not started |
 | 04 | Content pipeline | not started |
 | 05 | Game systems | not started |
-| 06 | Presentation | not started |
+| 06 | Presentation | **visual direction done** — merged in #8; art production and integration pending |
 | 07 | Boss | not started |
 | 08 | Audio and polish | not started |
 | 09 | Web, CI and release | not started |
@@ -58,8 +59,7 @@ None of these stop step one. Each is due when its moment arrives:
 - the level 1 boss: phases, patterns and look;
 - what exactly the "strong encounter" is — the fight that hands over the attachment;
 - the level's target duration and the intensity-curve tooling;
-- pointer capture for relative mouse, and browsers other than Chrome;
-- sprite sizes, which the visual direction has to settle before real art is drawn.
+- pointer capture for relative mouse, and browsers other than Chrome.
 
 ## Traps that already cost hours
 
