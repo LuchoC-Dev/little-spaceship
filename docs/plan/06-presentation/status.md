@@ -25,6 +25,14 @@ Two scripts came with it, because "checked on the real thing" needed to be a com
 intention: `palette/check.py` verifies the palette's own rules, and `palette/lint-art.py` verifies a
 drawn PNG against them.
 
+**A mock of the combat screen** — [`mockups/combat.html`](../../design/mockups/combat.html). It
+draws the whole 480x270 screen from the palette, the sprite sizes and the HUD coordinates settled
+above, so the direction can be judged rather than read. Its framebuffer holds palette indices
+instead of colours, which lets it verify its own scene: no pixel outside `ls32`, no background
+colour inside a gameplay sprite, and the measured lightness gap between enemy fire and the
+brightest background pixel actually drawn. R1 to R17 are switches on it — greyscale, dichromacy,
+squint, set map, hitboxes.
+
 ## In progress
 
 Nothing. Art production, tasks 6 to 11, has not started.
@@ -67,6 +75,10 @@ radius. The player ship is 15x17 with a radius of 3.0 — 40% of its width — w
 **For the art lane, tasks 6 to 11.** Run `lint-art.py` on each asset as it is finished rather than
 at the end. The failure it catches — a background using a gameplay colour — is invisible until the
 level runs.
+
+**The mock is the review surface.** Before drawing a sprite, add it to
+`mockups/combat.html` and look at it next to the rest at 1x. A silhouette that reads on its own and
+disappears in a crowd is the normal failure, and the mock is where it shows up cheaply.
 
 **Where the plan was thin.** It asked for sprite sizes "for hitboxes" without saying that
 `core.domain.component.Collider` is a circle with no offset. That shapes the art: visual mass has to
