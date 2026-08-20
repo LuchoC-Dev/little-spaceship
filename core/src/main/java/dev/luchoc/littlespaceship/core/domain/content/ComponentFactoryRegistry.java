@@ -89,10 +89,16 @@ public final class ComponentFactoryRegistry {
      * Every archetype spawned through this registry is an enemy — the content pipeline does not
      * spawn pickups or structures yet — so the layer is fixed here rather than read from a field
      * that would always carry the same value.
+     *
+     * <p>{@code "fragile"} is required, not defaulted. Four of the level 1 roster's six archetypes
+     * are fragile per {@code 02-mvp-functional-spec.md}, so a false default would have been wrong
+     * for the majority and would have silently let a weak enemy survive ramming the player whenever
+     * content simply omitted the field. Requiring it forces every archetype's collider to say which
+     * side of the crash rule it is on.
      */
     private static void attachCollider(World world, int entity, ComponentSpec spec) {
         float radius = spec.number("radius");
-        boolean fragile = spec.flag("fragile", false);
+        boolean fragile = spec.flag("fragile");
         world.colliders().set(entity, new Collider(radius, CollisionLayer.ENEMY, fragile));
     }
 

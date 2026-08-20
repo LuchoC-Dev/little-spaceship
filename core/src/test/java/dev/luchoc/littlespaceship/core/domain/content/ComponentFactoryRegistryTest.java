@@ -53,15 +53,29 @@ class ComponentFactoryRegistryTest {
     }
 
     @Test
-    @DisplayName("collider fragile defaults to false, matching a tank or a carrier")
-    void colliderFragileDefaultsFalse() {
+    @DisplayName("collider fragile can be explicitly false, matching a tank or a carrier")
+    void colliderFragileCanBeFalse() {
         World world = worldOf(new TestContent());
         int entity = world.createEntity();
 
         ComponentFactoryRegistry.withDefaults().attach(world, entity,
-            new MapComponentSpec("collider", Map.of("radius", 10.5f)));
+            new MapComponentSpec("collider", Map.of("radius", 10.5f, "fragile", false)));
 
         assertEquals(false, world.colliders().get(entity).fragile);
+    }
+
+    @Test
+    @DisplayName("collider fragile is required, not defaulted — omitting it fails instead of "
+        + "silently producing a weak enemy that survives ramming the player")
+    void colliderFragileIsRequired() {
+        World world = worldOf(new TestContent());
+        int entity = world.createEntity();
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> ComponentFactoryRegistry.withDefaults().attach(world, entity,
+                new MapComponentSpec("collider", Map.of("radius", 10.5f))));
+
+        assertTrue(e.getMessage().contains("fragile"));
     }
 
     @Test

@@ -1,7 +1,6 @@
 package dev.luchoc.littlespaceship.core.port;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,7 +19,7 @@ class MapComponentSpecTest {
         assertEquals("collider", spec.name());
         assertEquals(5.5f, spec.number("radius"));
         assertEquals("enemy", spec.text("layer"));
-        assertTrue(spec.flag("fragile", false));
+        assertTrue(spec.flag("fragile"));
     }
 
     @Test
@@ -48,22 +47,36 @@ class MapComponentSpecTest {
     }
 
     @Test
-    @DisplayName("optional fields fall back to their default when absent")
-    void optionalFieldsFallBack() {
-        ComponentSpec spec = new MapComponentSpec("motion", Map.of());
+    @DisplayName("a missing required boolean field names the component and the field")
+    void missingRequiredFlagFails() {
+        ComponentSpec spec = new MapComponentSpec("collider", Map.of("radius", 5.5f));
 
-        assertEquals(1f, spec.number("speedScale", 1f));
-        assertEquals("straight", spec.text("trajectory", "straight"));
-        assertFalse(spec.flag("fragile", false));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> spec.flag("fragile"));
+
+        assertTrue(e.getMessage().contains("collider"));
+        assertTrue(e.getMessage().contains("fragile"));
     }
 
     @Test
-    @DisplayName("a field of the wrong type is treated as absent, not cast")
-    void wrongTypeIsAbsent() {
+    @DisplayName("a numeric field present with the wrong type fails naming the value, not silently")
+    void wrongTypeNumberFails() {
         ComponentSpec spec = new MapComponentSpec("collider", Map.of("radius", "not a number"));
 
-        assertThrows(IllegalArgumentException.class, () -> spec.number("radius"));
-        assertEquals(9f, spec.number("radius", 9f));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> spec.number("radius"));
+        assertTrue(e.getMessage().contains("radius"));
+    }
+
+    @Test
+    @DisplayName("a boolean field present as a string fails instead of quietly reading as false")
+    void wrongTypeFlagFails() {
+        ComponentSpec spec = new MapComponentSpec("collider",
+            Map.of("radius", 5.5f, "fragile", "true"));
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> spec.flag("fragile"));
+        assertTrue(e.getMessage().contains("fragile"));
     }
 
     @Test
@@ -74,10 +87,10 @@ class MapComponentSpecTest {
     }
 
     @Test
-    @DisplayName("a null parameter map is treated as empty, not a NullPointerException later")
+    @DisplayName("a null parameter map is treated as empty, failing the same way as an empty one")
     void nullParamsIsEmpty() {
         ComponentSpec spec = new MapComponentSpec("sprite", null);
 
-        assertEquals("fallback", spec.text("id", "fallback"));
+        assertThrows(IllegalArgumentException.class, () -> spec.text("id"));
     }
 }

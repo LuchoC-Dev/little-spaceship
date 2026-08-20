@@ -9,10 +9,18 @@ package dev.luchoc.littlespaceship.core.port;
  * to the game is one factory registration, never a change to this contract or to whoever parses the
  * JSON.
  *
- * <p>Every accessor is typed and every required one fails loudly, naming the field it could not
- * find. That failure crosses into {@code game}'s loader, which is the only place that also knows the
- * file name — the two together are what the content pipeline needs to point at the exact broken
- * line instead of an {@code NullPointerException} somewhere later.
+ * <p>Every accessor is required and typed, and fails loudly, naming the component and the field, on
+ * either a missing key or one present with the wrong type. That failure crosses into {@code game}'s
+ * loader, which is the only place that also knows the file name — the two together are what the
+ * content pipeline needs to point at the exact broken line instead of a
+ * {@code NullPointerException} somewhere later.
+ *
+ * <p>There is no optional accessor with a default. One existed for each type until review found that
+ * a default silently produces the wrong game rule whenever a required field — {@code "fragile"}, for
+ * the collider component — is simply omitted from content, and that nothing in this codebase actually
+ * called the other two. A component that genuinely wants an optional field is free to add one back
+ * once a real archetype needs it; guessing that shape ahead of that need is exactly what this project
+ * avoids.
  */
 public interface ComponentSpec {
 
@@ -31,15 +39,6 @@ public interface ComponentSpec {
     float number(String key);
 
     /**
-     * Reads an optional numeric field.
-     *
-     * @param key the field name
-     * @param defaultValue returned when the field is absent
-     * @return the value, or {@code defaultValue}
-     */
-    float number(String key, float defaultValue);
-
-    /**
      * Reads a required text field.
      *
      * @param key the field name
@@ -49,20 +48,11 @@ public interface ComponentSpec {
     String text(String key);
 
     /**
-     * Reads an optional text field.
+     * Reads a required boolean field.
      *
      * @param key the field name
-     * @param defaultValue returned when the field is absent
-     * @return the value, or {@code defaultValue}
+     * @return the value
+     * @throws IllegalArgumentException if the field is missing or not a boolean
      */
-    String text(String key, String defaultValue);
-
-    /**
-     * Reads an optional boolean field.
-     *
-     * @param key the field name
-     * @param defaultValue returned when the field is absent
-     * @return the value, or {@code defaultValue}
-     */
-    boolean flag(String key, boolean defaultValue);
+    boolean flag(String key);
 }

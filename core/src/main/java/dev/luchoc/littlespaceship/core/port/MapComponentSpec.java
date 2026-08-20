@@ -6,9 +6,12 @@ import java.util.Map;
  * A {@link ComponentSpec} backed by a plain map, for whoever builds one — the loader in {@code game}
  * reading a JSON object, or a core test building content by hand.
  *
- * <p>Values are boxed {@link Number}, {@link String} or {@link Boolean}; anything else at a given key
- * is treated as absent by the typed accessors, which is what keeps a wrongly-typed JSON field failing
- * with a named message instead of a {@link ClassCastException}.
+ * <p>Values are boxed {@link Number}, {@link String} or {@link Boolean}. Every accessor is required:
+ * a missing key and a key present with the wrong type both fail, with different messages, naming the
+ * component and the field either way. Falling back to a default on a wrong-typed value was tried and
+ * rejected — {@code "fragile": "true"} as a JSON string silently read as {@code false} in an earlier
+ * version of this class, which is exactly the class of bug the malformed-content acceptance criterion
+ * exists to catch, not produce.
  */
 public final class MapComponentSpec implements ComponentSpec {
 
@@ -34,39 +37,46 @@ public final class MapComponentSpec implements ComponentSpec {
 
     @Override
     public float number(String key) {
-        Object value = params.get(key);
+        Object value = require(key);
         if (!(value instanceof Number number)) {
-            throw new IllegalArgumentException(
-                "component '" + name + "' is missing required numeric field '" + key + "'");
+            throw wrongType(key, "numeric", value);
         }
         return number.floatValue();
     }
 
     @Override
-    public float number(String key, float defaultValue) {
-        Object value = params.get(key);
-        return value instanceof Number number ? number.floatValue() : defaultValue;
-    }
-
-    @Override
     public String text(String key) {
-        Object value = params.get(key);
+        Object value = require(key);
         if (!(value instanceof String text) || text.isEmpty()) {
-            throw new IllegalArgumentException(
-                "component '" + name + "' is missing required text field '" + key + "'");
+            throw wrongType(key, "text", value);
         }
         return text;
     }
 
     @Override
-    public String text(String key, String defaultValue) {
-        Object value = params.get(key);
-        return value instanceof String text ? text : defaultValue;
+    public boolean flag(String key) {
+        Object value = require(key);
+        if (!(value instanceof Boolean flag)) {
+            throw wrongType(key, "a boolean", value);
+        }
+        return flag;
     }
 
-    @Override
-    public boolean flag(String key, boolean defaultValue) {
-        Object value = params.get(key);
-        return value instanceof Boolean flag ? flag : defaultValue;
+    private Object require(String key) {
+        if (!params.containsKey(key)) {
+            throw new IllegalArgumentException(
+                "component '" + name + "' is missing required field '" + key + "'");
+        }
+        return params.get(key);
+    }
+
+    private IllegalArgumentException wrongType(String key, String expected, Object actual) {
+        return new IllegalArgumentException(
+            "component '" + name + "' field '" + key + "' should be " + expected
+                + ", was " + describe(actual));
+    }
+
+    private static String describe(Object value) {
+        return value == null ? "null" : value + " (" + value.getClass().getSimpleName() + ")";
     }
 }
