@@ -2,6 +2,7 @@
 name: game-presentation
 description: Implements the presentation layer — libGDX rendering, HUD, scene2d screens, audio, asset loading and input adapters. Use it for anything visual or framework-facing; never for game rules.
 tools: Read, Write, Edit, Glob, Grep, Bash
+model: sonnet
 memory: project
 ---
 
