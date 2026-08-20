@@ -36,8 +36,8 @@ For each finding: where it is, which rule it breaks, and what fails as a result.
 
 Do not invent problems to justify the review. "I found nothing" is a valid result.
 
-## Session state
+## Agent memory
 
-When you finish — or when you stop halfway — save to engram what a newcomer could not infer from the repository: where the work stands, what is in flight, what you just decided. Use a stable topic key of your own (`session/<your-name>`) so it updates instead of piling up.
+Record what you learned that the repository has no reason to hold: a tool limitation that cost you time, an operation that behaves differently under TeaVM, where a piece of code turned out to live.
 
-That is separate from your agent memory, which holds what you *learned*. This holds where things *are*. Never duplicate what `docs/` already says.
+**Not phase progress.** That belongs in the phase's `status.md`. When the same fact lives in both, one of them goes stale without anyone noticing — it has already happened here once.
