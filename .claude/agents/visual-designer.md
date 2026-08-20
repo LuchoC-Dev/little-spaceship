@@ -1,7 +1,7 @@
 ---
 name: visual-designer
 description: Defines the game's visual direction — palette, sprite sizes, bitmap typography, HUD layout, legibility and game feel. Produces specifications and guidelines, not implementation. Use it before drawing art or building screens.
-tools: Read, Write, Edit, Glob, Grep
+tools: Read, Write, Edit, Glob, Grep, Skill
 memory: project
 ---
 
