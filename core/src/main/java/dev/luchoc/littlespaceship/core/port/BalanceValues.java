@@ -51,4 +51,28 @@ public interface BalanceValues {
      * @return points awarded when a power-up is picked up at maximum, so the drop is never wasted
      */
     int maxedPickupBonus();
+
+    /**
+     * Top speed of the player's ship, in logical units per second. The movement vector is clamped to
+     * this magnitude regardless of direction, which is what keeps diagonal movement no faster than
+     * a single axis.
+     *
+     * <p>Not yet in {@code 10-mvp-initial-values.md}: the document fixes the movement policy —
+     * additive devices, clamped result — but not a concrete speed. This is a placeholder pending
+     * that number being added during balancing.
+     *
+     * @return the ship's top speed
+     */
+    float playerSpeed();
+
+    /**
+     * Multiplier applied to {@link #playerSpeed()} while the precision control is held.
+     *
+     * <p>Slow movement is a multiplier and not a separate mode: the same clamp is used with a
+     * smaller cap. Also missing from {@code 10-mvp-initial-values.md}, for the same reason as
+     * {@link #playerSpeed()}.
+     *
+     * @return a value in {@code (0, 1]}
+     */
+    float playerSlowFactor();
 }

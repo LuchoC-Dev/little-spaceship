@@ -1,16 +1,24 @@
 package dev.luchoc.littlespaceship.core.domain;
 
+import dev.luchoc.littlespaceship.core.domain.collision.CollisionHit;
+import dev.luchoc.littlespaceship.core.domain.component.Attachment;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
+import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
+import dev.luchoc.littlespaceship.core.domain.component.Player;
+import dev.luchoc.littlespaceship.core.domain.component.Shield;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityRegistry;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.SpriteVisitor;
 import dev.luchoc.littlespaceship.core.port.WorldView;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Everything the simulation knows: which entities exist, what components they hold, and the three
@@ -35,6 +43,24 @@ public final class World {
     private final ComponentStore<Motion> motions = new ComponentStore<>();
     private final ComponentStore<Collider> colliders = new ComponentStore<>();
     private final ComponentStore<Sprite> sprites = new ComponentStore<>();
+    private final ComponentStore<Player> players = new ComponentStore<>();
+    private final ComponentStore<Invulnerable> invulnerabilities = new ComponentStore<>();
+    private final ComponentStore<Shield> shields = new ComponentStore<>();
+    private final ComponentStore<Attachment> attachments = new ComponentStore<>();
+
+    /**
+     * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
+     * after in the same tick. Internal to the domain: it never crosses towards presentation and is
+     * unrelated to {@link #events}, which drains only once the whole tick is over.
+     */
+    private final List<CollisionHit> collisionHits = new ArrayList<>();
+
+    /**
+     * Entities marked for destruction this tick, resolved by {@code CleanupSystem} and nowhere else.
+     * Marking instead of destroying immediately is what keeps every other system safe to iterate a
+     * component store without an entity vanishing under it mid-tick.
+     */
+    private final List<Integer> pendingDestruction = new ArrayList<>();
 
     private final ContentSource content;
     private final Rng rng;
@@ -84,6 +110,10 @@ public final class World {
         motions.remove(entity);
         colliders.remove(entity);
         sprites.remove(entity);
+        players.remove(entity);
+        invulnerabilities.remove(entity);
+        shields.remove(entity);
+        attachments.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -130,6 +160,75 @@ public final class World {
      */
     public ComponentStore<Sprite> sprites() {
         return sprites;
+    }
+
+    /**
+     * @return the player's persistent stats; holds at most one entity
+     */
+    public ComponentStore<Player> players() {
+        return players;
+    }
+
+    /**
+     * @return remaining grace time against damage
+     */
+    public ComponentStore<Invulnerable> invulnerabilities() {
+        return invulnerabilities;
+    }
+
+    /**
+     * @return active shields
+     */
+    public ComponentStore<Shield> shields() {
+        return shields;
+    }
+
+    /**
+     * @return the equipped attachment, if any
+     */
+    public ComponentStore<Attachment> attachments() {
+        return attachments;
+    }
+
+    /**
+     * Finds the player's entity.
+     *
+     * <p>Exactly one entity holds {@link Player} at a time in the MVP; this is a lookup convenience
+     * for the systems that need it, not a claim that a second one could not exist mechanically.
+     *
+     * @return the player's handle, or {@link EntityId#NONE} if no entity holds {@link Player}
+     */
+    public int playerEntity() {
+        return players.size() > 0 ? players.entityAt(0) : EntityId.NONE;
+    }
+
+    /**
+     * @return overlaps detected this tick, for {@code DamageSystem} to resolve right after
+     */
+    public List<CollisionHit> collisionHits() {
+        return collisionHits;
+    }
+
+    /**
+     * Marks an entity to be destroyed once {@code CleanupSystem} runs, at the end of the tick.
+     *
+     * <p>No system destroys an entity directly outside of that stage: doing so mid-tick would reorder
+     * a component store's dense array under whichever system is iterating it.
+     *
+     * @param entity the handle to mark; a dead or stale handle is ignored
+     */
+    public void markForDestruction(int entity) {
+        if (isAlive(entity)) {
+            pendingDestruction.add(entity);
+        }
+    }
+
+    /**
+     * @return entities marked for destruction this tick, resolved and cleared by {@code
+     *     CleanupSystem}
+     */
+    public List<Integer> pendingDestruction() {
+        return pendingDestruction;
     }
 
     /**
