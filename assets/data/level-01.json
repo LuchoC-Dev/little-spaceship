@@ -1,0 +1,10 @@
+{
+  "events": [
+    { "at": 1.0, "spawn": "enemy-basic", "formation": "line-3", "atX": 0.5 },
+    { "at": 3.0, "spawn": "enemy-light", "formation": "diagonal", "atX": 0.2 },
+    { "at": 5.0, "spawn": "enemy-shooter", "formation": "single", "atX": 0.8 },
+    { "at": 7.0, "spawn": "enemy-rush", "formation": "single", "atX": 0.3 },
+    { "at": 9.0, "spawn": "enemy-tank", "formation": "single", "atX": 0.5, "drop": "shield" },
+    { "at": 9.5, "spawn": "enemy-carrier", "formation": "single", "atX": 0.6, "drop": "attachment" }
+  ]
+}

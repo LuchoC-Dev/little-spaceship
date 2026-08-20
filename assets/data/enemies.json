@@ -1,0 +1,58 @@
+{
+  "enemies": [
+    {
+      "id": "enemy-basic",
+      "components": {
+        "motion": { "trajectory": "slow-descent" },
+        "sprite": { "id": "enemy-basic" },
+        "collider": { "radius": 5.5, "fragile": true },
+        "scoreValue": { "points": 100 }
+      }
+    },
+    {
+      "id": "enemy-light",
+      "components": {
+        "motion": { "trajectory": "swoop" },
+        "sprite": { "id": "enemy-light" },
+        "collider": { "radius": 4.5, "fragile": true },
+        "scoreValue": { "points": 150 }
+      }
+    },
+    {
+      "id": "enemy-shooter",
+      "components": {
+        "motion": { "trajectory": "slow-descent" },
+        "sprite": { "id": "enemy-shooter" },
+        "collider": { "radius": 6.5, "fragile": true },
+        "scoreValue": { "points": 200 }
+      }
+    },
+    {
+      "id": "enemy-rush",
+      "components": {
+        "motion": { "trajectory": "dive" },
+        "sprite": { "id": "enemy-rush" },
+        "collider": { "radius": 4.0, "fragile": true },
+        "scoreValue": { "points": 250 }
+      }
+    },
+    {
+      "id": "enemy-tank",
+      "components": {
+        "motion": { "trajectory": "crawl" },
+        "sprite": { "id": "enemy-tank" },
+        "collider": { "radius": 10.5, "fragile": false },
+        "scoreValue": { "points": 500 }
+      }
+    },
+    {
+      "id": "enemy-carrier",
+      "components": {
+        "motion": { "trajectory": "crawl" },
+        "sprite": { "id": "enemy-carrier" },
+        "collider": { "radius": 15.0, "fragile": false },
+        "scoreValue": { "points": 1000 }
+      }
+    }
+  ]
+}
