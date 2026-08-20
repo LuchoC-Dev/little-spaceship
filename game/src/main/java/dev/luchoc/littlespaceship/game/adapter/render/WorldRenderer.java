@@ -14,18 +14,34 @@ import dev.luchoc.littlespaceship.core.port.WorldView;
  * a lambda, which would otherwise allocate a new instance every call. Implementing the interface on
  * a field that already exists is what keeps the whole draw call free of per-entity allocation, the
  * property the visitor pattern exists to protect per {@code 12-architecture.md}.
+ *
+ * <p><b>The coordinate space it draws in is not the logical resolution.</b> {@code core.domain}'s
+ * {@code Transform.x} is measured from the playfield's own left edge, in {@code [0, 208]} —
+ * confirmed against {@code MotionSystem.PLAYFIELD_WIDTH} clamping the player to that exact range and
+ * {@code SpawnSystem} computing a wave's anchor as {@code atX * PLAYFIELD_WIDTH} — while the logical
+ * resolution is 480 wide with the playfield centred inside it. Drawing {@code x} unmodified puts
+ * every entity in the left HUD margin instead of the playfield; {@code playfieldLeft} is the
+ * correction. {@code y} needs no such shift: the playfield is the full 270 logical units tall, so
+ * {@code Transform.y} already lines up with screen space.
  */
 public final class WorldRenderer implements SpriteVisitor {
 
     private final PlaceholderAtlas atlas;
+    private final float playfieldLeft;
 
     private SpriteBatch batch;
 
-    public WorldRenderer(PlaceholderAtlas atlas) {
+    /**
+     * @param atlas resolves a content sprite id to the region that draws it
+     * @param playfieldLeft the playfield's left edge in logical units, added to every entity's
+     *     {@code x} before drawing — see the class javadoc for why this is needed at all
+     */
+    public WorldRenderer(PlaceholderAtlas atlas, float playfieldLeft) {
         if (atlas == null) {
             throw new IllegalArgumentException("the renderer needs an atlas to resolve sprites");
         }
         this.atlas = atlas;
+        this.playfieldLeft = playfieldLeft;
     }
 
     /**
@@ -54,10 +70,11 @@ public final class WorldRenderer implements SpriteVisitor {
             // render loop over an asset that has not arrived, which is exactly this phase's state.
             return;
         }
+        float logicalX = x + playfieldLeft;
         float width = region.getRegionWidth();
         float height = region.getRegionHeight();
         batch.draw(region,
-            x - width / 2f, y - height / 2f,
+            logicalX - width / 2f, y - height / 2f,
             width / 2f, height / 2f,
             width, height,
             1f, 1f,

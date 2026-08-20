@@ -10,26 +10,20 @@ import java.util.Map;
 /**
  * Placeholder art, generated in code into a single texture instead of loaded from disk.
  *
- * <p>Phase 03 has no content pipeline yet — {@code docs/plan/03-first-playable/plan.md} says so
- * explicitly — so there are no real sprite files to load. What matters this phase is that the
- * silhouette sizes and the collider radii already agree, per {@code docs/design/02-sprite-sizes.md}:
- * a placeholder whose size lies would force hitbox rework once real art arrives. Colours come from
- * the closed {@code ls32} palette in {@code docs/design/01-palette.md}.
+ * <p>Phase 04's content pipeline names seven content sprite ids across the level 1 roster; no real
+ * art file exists for any of them yet, so every one is a generated silhouette here. What matters is
+ * that sizes and collider radii already agree with {@code docs/design/02-sprite-sizes.md} —
+ * synchronisation point 1 — since a placeholder whose silhouette lies about size would force hitbox
+ * rework once real art arrives. Colours come from the closed {@code ls32} palette in
+ * {@code docs/design/01-palette.md}: {@code C1}/{@code C2} for the player's engine, the alien hull
+ * ramp {@code V2 -> V3 -> V4} for every enemy, {@code N0} for every outline.
  *
- * <p>Everything a {@link dev.luchoc.littlespaceship.core.port.SpriteId} can resolve to lives in one
- * {@link Texture}, so drawing the world only ever binds one texture. The checkerboard distortion
- * probe is deliberately not here: it needs {@code Repeat} texture wrapping to tile across the
- * playfield, which would bleed into neighbouring regions if it shared this atlas — see
- * {@link CheckerboardBackground}.
+ * <p>Every sprite lives in one {@link Texture}, packed left to right with a 1px gap between entries,
+ * so drawing the world only ever binds one texture. The checkerboard distortion probe is deliberately
+ * not here: it needs {@code Repeat} texture wrapping to tile across the playfield, which would bleed
+ * into neighbouring regions if it shared this atlas — see {@link CheckerboardBackground}.
  */
 public final class PlaceholderAtlas {
-
-    /** {@code docs/design/02-sprite-sizes.md}: the basic player ship, 15x17. */
-    public static final SpriteId SHIP_BASIC = new SpriteId("ship-basic");
-
-    private static final int ATLAS_SIZE = 32;
-    private static final int SHIP_WIDTH = 15;
-    private static final int SHIP_HEIGHT = 17;
 
     // ls32, docs/design/01-palette.md.
     private static final int N0_OUTLINE = 0x0B0E14FF;
@@ -37,41 +31,99 @@ public final class PlaceholderAtlas {
     private static final int N6_HULL_LIGHT = 0xC9D6E8FF;
     private static final int C1_ENGINE = 0x2FBFD4FF;
     private static final int C2_ENGINE_CORE = 0x9DF2FAFF;
+    private static final int V2_ALIEN_DARK = 0x382050FF;
+    private static final int V3_ALIEN_MID = 0x58347AFF;
+    private static final int V4_ALIEN_LIGHT = 0x8E5CB8FF;
+
+    /** Every sprite id and size this placeholder set covers, from {@code docs/design/02-sprite-sizes.md}. */
+    private static final Sprite[] SPRITES = {
+        new Sprite("ship-basic", 15, 17),
+        new Sprite("enemy-basic", 13, 13),
+        new Sprite("enemy-light", 11, 13),
+        new Sprite("enemy-shooter", 15, 15),
+        new Sprite("enemy-rush", 9, 15),
+        new Sprite("enemy-tank", 23, 23),
+        new Sprite("enemy-carrier", 39, 31),
+    };
+
+    private static final int GAP = 1;
 
     private final Texture texture;
     private final Map<String, TextureRegion> regions = new HashMap<>();
 
     public PlaceholderAtlas() {
-        Pixmap pixmap = new Pixmap(ATLAS_SIZE, ATLAS_SIZE, Pixmap.Format.RGBA8888);
+        int atlasWidth = GAP;
+        int atlasHeight = 0;
+        for (Sprite sprite : SPRITES) {
+            atlasWidth += sprite.width + GAP;
+            atlasHeight = Math.max(atlasHeight, sprite.height);
+        }
+        atlasHeight += 2 * GAP;
 
-        drawShip(pixmap, 1, 1);
+        Pixmap pixmap = new Pixmap(atlasWidth, atlasHeight, Pixmap.Format.RGBA8888);
+
+        // First pass: draw every silhouette into the pixmap, remembering where each one landed.
+        int[] originX = new int[SPRITES.length];
+        int cursorX = GAP;
+        for (int i = 0; i < SPRITES.length; i++) {
+            Sprite sprite = SPRITES[i];
+            originX[i] = cursorX;
+            if (sprite.id.equals("ship-basic")) {
+                drawShip(pixmap, cursorX, GAP, sprite.width, sprite.height);
+            } else {
+                drawEnemy(pixmap, cursorX, GAP, sprite.width, sprite.height);
+            }
+            cursorX += sprite.width + GAP;
+        }
 
         texture = new Texture(pixmap);
         texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         pixmap.dispose();
 
-        regions.put(SHIP_BASIC.value(), new TextureRegion(texture, 1, 1, SHIP_WIDTH, SHIP_HEIGHT));
+        // Second pass: regions can only be built against the real texture, not the pixmap.
+        for (int i = 0; i < SPRITES.length; i++) {
+            Sprite sprite = SPRITES[i];
+            regions.put(sprite.id,
+                new TextureRegion(texture, originX[i], GAP, sprite.width, sprite.height));
+        }
     }
 
     /**
      * A simple hull silhouette, correctly sized and centred the way a real sprite would be: the
      * collider in {@code docs/design/02-sprite-sizes.md} is concentric with this box.
      */
-    private static void drawShip(Pixmap pixmap, int originX, int originY) {
-        // Outline.
+    private static void drawShip(Pixmap pixmap, int originX, int originY, int width, int height) {
         setColor(pixmap, N0_OUTLINE);
-        pixmap.drawRectangle(originX, originY, SHIP_WIDTH, SHIP_HEIGHT);
-        // Hull fill.
+        pixmap.drawRectangle(originX, originY, width, height);
         setColor(pixmap, N5_HULL_SHADE);
-        pixmap.fillRectangle(originX + 1, originY + 1, SHIP_WIDTH - 2, SHIP_HEIGHT - 2);
-        // Canopy highlight along the nose.
+        pixmap.fillRectangle(originX + 1, originY + 1, width - 2, height - 2);
         setColor(pixmap, N6_HULL_LIGHT);
-        pixmap.fillRectangle(originX + 5, originY + 2, SHIP_WIDTH - 10, 5);
-        // Engine glow at the tail.
+        pixmap.fillRectangle(originX + 5, originY + 2, width - 10, 5);
         setColor(pixmap, C1_ENGINE);
-        pixmap.fillRectangle(originX + 5, originY + SHIP_HEIGHT - 4, SHIP_WIDTH - 10, 3);
+        pixmap.fillRectangle(originX + 5, originY + height - 4, width - 10, 3);
         setColor(pixmap, C2_ENGINE_CORE);
-        pixmap.fillRectangle(originX + 6, originY + SHIP_HEIGHT - 3, SHIP_WIDTH - 12, 1);
+        pixmap.fillRectangle(originX + 6, originY + height - 3, width - 12, 1);
+    }
+
+    /**
+     * A generic alien hull silhouette shared by every enemy archetype. Placeholders are told apart
+     * by size alone, the same way the real art will eventually be told apart by shape — nothing here
+     * encodes which archetype is which beyond the dimensions {@code docs/design/02-sprite-sizes.md}
+     * already fixes.
+     */
+    private static void drawEnemy(Pixmap pixmap, int originX, int originY, int width, int height) {
+        setColor(pixmap, N0_OUTLINE);
+        pixmap.drawRectangle(originX, originY, width, height);
+        setColor(pixmap, V2_ALIEN_DARK);
+        pixmap.fillRectangle(originX + 1, originY + 1, width - 2, height - 2);
+        setColor(pixmap, V3_ALIEN_MID);
+        int inset = Math.max(1, Math.min(width, height) / 4);
+        pixmap.fillRectangle(originX + inset, originY + inset, width - 2 * inset, height - 2 * inset);
+        setColor(pixmap, V4_ALIEN_LIGHT);
+        int core = Math.max(1, Math.min(width, height) / 6);
+        int centerX = originX + width / 2;
+        int centerY = originY + height / 2;
+        pixmap.fillRectangle(centerX - core, centerY - core, core * 2, core * 2);
     }
 
     private static void setColor(Pixmap pixmap, int rgba8888) {
@@ -94,5 +146,8 @@ public final class PlaceholderAtlas {
 
     public void dispose() {
         texture.dispose();
+    }
+
+    private record Sprite(String id, int width, int height) {
     }
 }
