@@ -43,7 +43,10 @@ class DamageReplayTest {
         }, 7);
         World world = simulation.world();
 
-        int player = world.createEntity();
+        // The player entity already exists from construction; this scenario overrides its state
+        // instead of creating a second one, which is what `world.playerEntity()` would otherwise
+        // resolve to first and leave this scripted player unreachable by DamageSystem.
+        int player = world.playerEntity();
         world.transforms().set(player, new Transform(100f, 50f));
         world.motions().set(player, new Motion(0f, 0f));
         world.colliders().set(player, new Collider(4f, CollisionLayer.PLAYER));

@@ -36,4 +36,44 @@ From the round-2 pass on PR #10, where every finding had been addressed and the 
 
 Related to 10: **`DamageReplayTest` is not a regression net.** It runs the same build twice and compares fingerprints, with no golden value committed, so it proves determinism *within* a build and cannot detect a refactor that changes the outcome. Do not treat "the replay test passes" as evidence that behaviour was preserved across a diff.
 
+## Four more from phase 04 (`feat/content-pipeline`, PR #16), where content became data
+
+This phase's defects are the *data-driven* family: the code is generic and correct, and what leaks is
+a rule that used to be in Java and is now a JSON field nobody validates.
+
+11. **A geometric guarantee in a class javadoc that only holds for the zero case the tests use.**
+    `SpawnSystem` promised every enemy "starts fully off-screen regardless of its size" while adding
+    only the *entity's* radius, not the *formation's* vertical extent — so any slot with a negative
+    `offsetY` spawns on-screen, and the phase's own `diagonal` fixture had two. The tests asserted
+    position only for flat formations. Whenever a javadoc says "always" about a computed position,
+    reconstruct the value by hand for the least flat fixture in the branch, not the first one.
+12. **An optional content field whose default is the minority value of the roster it configures.**
+    `spec.flag("fragile", false)` decides the crash rule for six archetypes, four of which are
+    fragile. Omitting the field in JSON silently inverts a spec rule, with the symptom appearing in
+    `DamageSystem`. For every optional field a factory reads, ask: what fraction of the real content
+    wants the default, and what game rule flips when it is wrong?
+13. **Typed optional accessors that treat "present but wrongly typed" as "absent".** `MapComponentSpec`
+    fails loudly for required fields and silently defaults for optional ones, while its javadoc claims
+    the loud behaviour for all of them. This directly defeats the "fails naming the offending id, not
+    an NPE" criterion, and only for the half nobody tests. Read the *optional* overload, not the
+    required one — the required one is always the correct one.
+14. **An extension seam wired to a `private static final`.** `ComponentFactoryRegistry.register` is
+    public with zero production callers; `SpawnSystem` holds one registry as a private static built
+    from `withDefaults()`, so nothing outside `core` can substitute or extend it. Pattern 2's
+    "accessor with no call site" in its builder form: the seam exists, is tested against a registry
+    the test constructs itself, and no production path can ever be that registry.
+
+Also from phase 04, and worth keeping the calibration honest: **every citation in the branch checked
+out** — `docs/design/04-hud-layout.md:25` for the 270 playfield height, `02-sprite-sizes.md:38` and
+`:77-84` for radii and ids, `10-mvp-initial-values.md:105-115` for the score table, and the
+`SystemOrder` ordinals in `status.md`. After two phases where patterns 6 and 8 both fired, the
+citation check came back clean. Run it anyway; do not assume it will fail.
+
+The criteria-table defect (pattern 7) reappeared exactly once, narrowed to a single row: "all content
+ids are in English" ticked met on the strength of test fixtures, in a branch with no content files.
+The other five rows hedged honestly. Also new in that document: a plan **task** half-built
+(trajectories yes, firing patterns no) with the reason recorded in prose but the task surfaced as
+outstanding nowhere. Check `plan.md`'s task list against the branch, not only its criteria list —
+the criteria table is not a superset of the tasks.
+
 See [[audit-techniques]] for how to confirm these cheaply without touching the repo, and [[review-tooling-and-memory-placement]] for the operational traps around posting the verdict.

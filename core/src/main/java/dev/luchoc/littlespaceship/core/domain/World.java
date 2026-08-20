@@ -4,9 +4,11 @@ import dev.luchoc.littlespaceship.core.domain.collision.CollisionHit;
 import dev.luchoc.littlespaceship.core.domain.component.Attachment;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
+import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
+import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
@@ -47,6 +49,8 @@ public final class World {
     private final ComponentStore<Invulnerable> invulnerabilities = new ComponentStore<>();
     private final ComponentStore<Shield> shields = new ComponentStore<>();
     private final ComponentStore<Attachment> attachments = new ComponentStore<>();
+    private final ComponentStore<ScoreValue> scoreValues = new ComponentStore<>();
+    private final ComponentStore<Drop> drops = new ComponentStore<>();
 
     /**
      * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
@@ -114,6 +118,8 @@ public final class World {
         invulnerabilities.remove(entity);
         shields.remove(entity);
         attachments.remove(entity);
+        scoreValues.remove(entity);
+        drops.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -188,6 +194,20 @@ public final class World {
      */
     public ComponentStore<Attachment> attachments() {
         return attachments;
+    }
+
+    /**
+     * @return points awarded for destroying each entity that carries one
+     */
+    public ComponentStore<ScoreValue> scoreValues() {
+        return scoreValues;
+    }
+
+    /**
+     * @return the designed drop of each entity that carries one
+     */
+    public ComponentStore<Drop> drops() {
+        return drops;
     }
 
     /**

@@ -31,6 +31,10 @@ The pickup is **not wasted**: it turns into points. This avoids the dead drop an
 
 This document fixes the **policy** for player movement (additive devices, clamped result, slow movement as a multiplier — see Controls below) but no concrete number for the ship's top speed or the slow-movement multiplier. Phase 02 needed both to implement the clamp and added them to `BalanceValues` as `playerSpeed()` and `playerSlowFactor()`, with placeholder values (140 logical units/s, ×0.45) that exist only in test fixtures — there is no production `BalanceValues` implementation yet for them to live in instead. **Open, not decided:** replace the placeholders with real numbers once there is a playable build to tune them against, and record the result here.
 
+### Player starting position — missing
+
+Nothing here fixes where the ship starts a run, only that it is inside the 208x270 playfield. Phase 04 needed a concrete point so a run never starts with an empty world, and added `BalanceValues.playerStartX()`/`.playerStartY()` with placeholder values (104, 30 — bottom-centre) that, same as the movement speed above, exist only in test fixtures. **Open, not decided:** replace with real numbers once there is a playable build.
+
 ## Controls
 
 When the mouse is enabled in Options, **keyboard and mouse work simultaneously and additively**. There is no priority device and no switching between one and the other.
