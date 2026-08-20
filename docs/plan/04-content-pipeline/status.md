@@ -1,6 +1,6 @@
 # Phase 04 — Content pipeline · status
 
-**State:** core side done, awaiting review
+**State:** core side done, review round 1 fixed
 **Updated:** 20/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
@@ -12,11 +12,14 @@ The `core` half of the phase: contracts, registry, `SpawnSystem`, the timeline, 
 - **Content contracts in `core.port`.** `ComponentSpec` (a generic name + typed key/value bag) is
   what makes "an enemy is a list of components, not a class" real: `EnemyDefinition.components()`
   returns a `List<ComponentSpec>`, and nothing in `core` needs to know what a `"collider"` or a
-  `"motion"` component is. Also added: `TrajectoryDefinition`, `FormationDefinition` +
-  `FormationSlot`, `SpawnEvent`, `WaveTimeline`. Each has a straightforward record implementation
-  (`Simple*`) that both core tests and, once it exists, the `game` loader can use directly instead
-  of writing their own. `MapComponentSpec` is the same idea for `ComponentSpec` — backed by a plain
-  `Map<String, Object>`, which is what a `JsonValue` object maps onto without reflection.
+  `"motion"` component is. Every accessor is required (no default variant survived review — see
+  "Review round 1"), failing with a message that distinguishes a missing key from one present with
+  the wrong type, both naming the component and the field. Also added: `TrajectoryDefinition`,
+  `FormationDefinition` + `FormationSlot`, `SpawnEvent`, `WaveTimeline`. Each has a straightforward
+  record implementation (`Simple*`) that both core tests and, once it exists, the `game` loader can
+  use directly instead of writing their own. `MapComponentSpec` is the same idea for `ComponentSpec`
+  — backed by a plain `Map<String, Object>`, which is what a `JsonValue` object maps onto without
+  reflection.
 - **`ContentSource` grew `enemy()`, `trajectory()`, `formation()` and `timeline()`.** All four are
   meant to fail by naming the id they could not resolve, never by returning null.
 - **`BalanceValues` grew `playerStartX()`/`.playerStartY()`.** Placeholders, same open status as
@@ -35,10 +38,11 @@ The `core` half of the phase: contracts, registry, `SpawnSystem`, the timeline, 
   `WaveTimeline` with a single advancing cursor — the timeline is validated sorted by
   `SimpleWaveTimeline`'s constructor, which is what makes that cursor correct instead of skipping or
   reordering waves. For each due `SpawnEvent`, resolves the `EnemyDefinition` and `FormationDefinition`
-  and creates one entity per formation slot, positioned at `atX * PLAYFIELD_WIDTH + slot.offsetX`,
-  `PLAYFIELD_HEIGHT + colliderRadius + slot.offsetY` — the radius offset is what makes an enemy of any
-  size enter fully off-screen. `PLAYFIELD_HEIGHT = 270f` is a new constant here, the vertical
-  counterpart to `MotionSystem.PLAYFIELD_WIDTH`, sourced from `docs/design/04-hud-layout.md`'s
+  and creates one entity per formation slot, positioned at `atX * PLAYFIELD_WIDTH + slot.offsetX` on
+  the x axis; the y axis is `PLAYFIELD_HEIGHT + radius + (slot.offsetY() − lowestOffsetY)`, measured
+  against the whole formation's lowest `offsetY`, not each slot's own — see "Review round 1" (B1) for
+  why the simpler per-slot version was wrong. `PLAYFIELD_HEIGHT = 270f` is a new constant here, the
+  vertical counterpart to `MotionSystem.PLAYFIELD_WIDTH`, sourced from `docs/design/04-hud-layout.md`'s
   208x270 playfield figure.
 - **The extra task: the player now exists from tick zero.** `Simulation`'s shared constructor calls a
   private `spawnPlayer` after building `World`, using `BalanceValues.playerStartX/Y()` for position
@@ -59,9 +63,7 @@ The `core` half of the phase: contracts, registry, `SpawnSystem`, the timeline, 
   and collider radii from `02-sprite-sizes.md` and the exact score values from
   `10-mvp-initial-values.md`, runs them through a real `Simulation` for ten seconds, and checks every
   archetype's sprite id appears in the world alongside the player's.
-- **164 tests total (129 inherited, 35 new), all passing.** `DamageReplayTest` was updated to use
-  the now-auto-spawned player (`world.playerEntity()`) instead of creating a second one, which the
-  auto-spawn would otherwise have shadowed in `world.playerEntity()`'s lookup.
+- **167 tests total, all passing** after review round 1's fixes (below).
 
 Acceptance criteria against `plan.md`:
 
@@ -72,16 +74,39 @@ Acceptance criteria against `plan.md`:
 | Adding a component type is one registration, no loader change | met | `ComponentFactoryRegistryTest.registeringANewFactoryWorks` |
 | Core tests build definitions inline, never read a file | met | every test in this phase |
 | Malformed content fails naming the file and the offending id | met for the id half | every `core` failure names an id (enemy, component field, trajectory, timeline index) — see "Notes for whoever comes next" for what the loader still owes |
-| All content ids are in English | met | every id used in tests (`enemy-basic`, `slow-descent`, `line-3`, ...) |
+| All content ids are in English | earned by the loader, not here | every id in this branch lives in a test fixture; no content file exists yet to actually be in English or not — same treatment phase 02 gave an equivalent claim, corrected in review |
+
+Task 5 of the plan ("trajectories and firing patterns") is **half-built**: trajectories are done,
+firing patterns are deliberately deferred to phase 05, along with `Weapon` — see "Decisions taken
+while implementing" for why. Not an oversight, but also not something the table above should be
+allowed to paper over by omission.
 
 ## In progress
 
-Awaiting `reviewer`.
+Awaiting a second pass from `reviewer` on the round 1 fixes below.
 
 ## Blocked
 
 Nothing. The JSON loader in `game` is out of scope for `core-domain` by design (see the phase's
 own instructions) and is the next piece of work, not a blocker on this one.
+
+## Review round 1
+
+`reviewer` accepted the phase on pull request #16, with two real bugs and three honesty findings to
+fix before merge. The reviewer verified every citation in the branch — sprite radii and ids, the HUD
+270 figure, the score table, the `SystemOrder` ordinals — checks out; that had not been true of
+earlier phases. What changed:
+
+| # | Finding | Fix |
+|---|---|---|
+| B1 | `SpawnSystem`'s javadoc guaranteed every enemy enters "fully off-screen regardless of its size", but the y position only accounted for the entity's own collider radius, not the formation's vertical extent. A formation like `diagonal` (offsets 0, −15, −30) put two of its three entities inside the visible playfield the instant they spawned. | `spawnWave` now computes the formation's lowest `offsetY` once and measures the spawn height against *that* slot, so every other slot lands further above it: `y = PLAYFIELD_HEIGHT + radius + (slot.offsetY() − lowestOffsetY)`. Pinned by `SpawnSystemTest.diagonalFormationEntersFullyOffScreen`, which asserts every entity's bottom edge (`y − radius`) clears `PLAYFIELD_HEIGHT` — no test exercised a non-zero `offsetY` before this. |
+| B2 | `"fragile"` defaulted to `false` in `ComponentFactoryRegistry`, but four of the six level 1 archetypes are fragile — omitting the key in content would silently produce a weak enemy that survives ramming the player. Worse: `MapComponentSpec`'s optional accessors returned the default on a *wrongly typed* value too, so `"fragile": "true"` as a JSON string also silently read as `false` — exactly the bug the malformed-content acceptance criterion exists to catch. | Removed every optional accessor from `ComponentSpec`; `flag`, `number` and `text` are all required now, failing with a message that distinguishes "missing" from "wrong type", both naming the component and the field. `attachCollider` calls `spec.flag("fragile")` with no default, so omitting it fails loudly instead of guessing. Pinned by `MapComponentSpecTest.wrongTypeFlagFails`, `ComponentFactoryRegistryTest.colliderFragileIsRequired`. |
+| H1 | "All content ids are in English" was marked met on the strength of test fixtures, in a branch with no content file — the same defect phase 02 shipped and had to correct in review. | Acceptance table now marks it "earned by the loader, not here", matching how the other loader-dependent criteria are already phrased. |
+| H2 | Task 5 ("trajectories and firing patterns") reads as done in the task list with no mention that only half of it was built. | Called out explicitly under the acceptance table: trajectories done, firing patterns deferred to phase 05, with the reason repeated from "Decisions taken while implementing". |
+| H3 | Two `ComponentSpec` accessors (`number(key, default)`, `text(key, default)`) had no consumer anywhere in `core` — the same "no consumer, don't guess" test that correctly killed `PatternDefinition`, not applied to this interface. | Removed both; only `flag`, now required, survived review, and it has a real consumer (`attachCollider`). |
+
+167 tests total (up from 164 — two dead-accessor tests removed, five new ones added for the required
+`flag` accessor, the wrong-type failure path, and the diagonal-formation regression), all passing.
 
 ## Decisions taken while implementing
 
@@ -132,6 +157,9 @@ own instructions) and is the next piece of work, not a blocker on this one.
   - Implement `ContentSource` itself: four maps (or similar) keyed by id, built once at load time,
     handed to `Simulation`'s constructor. `balance()` needs a real `BalanceValues`, including the
     still-placeholder `playerSpeed`, `playerSlowFactor`, `playerStartX`, `playerStartY`.
+  - **Every `"collider"` component in `enemies.json` must include `"fragile"` explicitly** — it is a
+    required field as of review round 1 (B2), not a default. `enemies.json` needs `true` for basic,
+    light, shooter and rush; `false` for tank and carrier.
   - The composition root now needs a level id string (e.g. `"level-01"`) to pass to `Simulation`'s
     4-argument constructor.
 - **`SystemOrder.SPAWN` is ordinal 3, `COLLISION` is 5.** A spawned enemy is visible to `CollisionSystem`
