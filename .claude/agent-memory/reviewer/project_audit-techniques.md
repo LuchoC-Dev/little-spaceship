@@ -5,7 +5,7 @@ metadata:
   type: project
 ---
 
-Techniques that turned suspicions into confirmed findings during the phase 01 audit, all of them non-mutating for the repository.
+Techniques that turned suspicions into confirmed findings during the phase 01 and 02 audits, all of them non-mutating for the repository.
 
 **Why:** the reviewer role changes nothing, and re-running `./gradlew build` is slow and usually already done by the author. These get certainty faster and leave no trace in the working tree.
 
@@ -22,4 +22,11 @@ Techniques that turned suspicions into confirmed findings during the phase 01 au
 - **Check `SystemOrder`'s ordinals whenever a note claims a future system can consume something.** Stage order is the enum's declaration order, and it is not the order the phases are built in. `WEAPON` (2) runs before `COLLISION` (5); `PICKUP` (7) and `SCORE` (8) run after `DAMAGE` (6) and before `CLEANUP` (9).
 - **Check for the module that would hold the other half of a rule.** `find game desktop web -name "*.java"` returning nothing is a fast way to prove that a criterion involving input, rendering or audio cannot yet be met inside `core`, whatever the test claims.
 
-Related: [[defect-patterns]].
+## For a second-round pass, where the question is "did anything change on the way to the fix"
+
+- **Prove behavioural equivalence by iteration order, not by re-running.** `ComponentStore` is a dense array walked by index, so the sequence a detection loop emits is fully determined by insertion/removal history. Two implementations that both walk `colliders` in index order emit the same sequence, whatever their nesting. `git show <base>:<path>` next to the current file is enough to settle it — no build, no probe.
+- **A shared-fixture refactor is audited by diffing the fixture's defaults against the inline fixture it replaced,** field by field. Test count staying flat proves nothing; matching values do. `core.testsupport.TestBalance`'s defaults matched the deleted inline `FixedContent` exactly, which is what made the 68-line deletion a no-op.
+- **A stub that throws is weaker than a stub that works.** When a test swaps `throw new UnsupportedOperationException(...)` for a real fixture, that is strictly stronger coverage, not weaker — the throwing stub was a trap waiting for the first system that read the value.
+- **Verify a corrected citation by opening the line it now points at.** `docs/planning/11-technical-prototype-results.md:84` really does say the 480×270 / 208 px playfield "is confirmed as the starting point", which is what made phase 02's re-pointed `PLAYFIELD_WIDTH` javadoc a genuine fix rather than a differently-wrong citation.
+
+Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
