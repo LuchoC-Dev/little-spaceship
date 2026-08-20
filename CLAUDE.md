@@ -51,21 +51,20 @@ Before committing: one logical change per commit, diff matches the stated scope,
 
 Never update git config, never force-push, never skip hooks with `--no-verify`, and never use destructive commands unless explicitly asked. If a hook rejects a commit, fix the problem and make a new commit rather than amending.
 
-## Session state
+## Where state lives
 
-Three stores, three different jobs. Keeping them apart is what stops them contradicting each other.
+Two stores, and the boundary between them matters more than either.
 
-| Where | Holds | Read by |
-|---|---|---|
-| `docs/STATUS.md` and each phase's `status.md` | what is on `main` and what each phase achieved | anyone, versioned |
-| `.claude/agent-memory/<agent>/` | what that agent learned, not written elsewhere | that agent only |
-| engram, topic `session/*` | where the work stands right now: what is in flight, what was just decided, what comes next | whoever resumes |
+| Where | Holds |
+|---|---|
+| `docs/STATUS.md`, each phase's `status.md`, GitHub issues and PRs | what happened and where the work stands |
+| `.claude/agent-memory/<agent>/` | what that agent learned while working |
 
-The third exists for `/clear` and for handing over to a different agent. The project documents say what the project is; they do not say that a review is half-finished or that a decision was taken ten minutes ago.
+**The repository is the state.** Every phase moves through an issue, a branch, a `status.md` updated before review, and a merged PR, so the state is always versioned and readable by anyone.
 
-**When work finishes, save it.** The orchestrating session saves to engram under `session/orchestrator-handoff`, reusing the topic key so it updates instead of piling up. Subagents save to engram too, under their own topic, in addition to their agent memory.
+**Agent memory is not a second copy of it.** It holds what a repository has no reason to record: a tool limitation that cost an hour, an operation that behaves differently under TeaVM, where a piece of code turned out to live. Never phase progress — that already exists in `status.md`, and when both hold it, one of them silently rots. That has already happened once here.
 
-Record what a newcomer could not infer from the repository. Never duplicate what `docs/` already says.
+If something matters to the project rather than only to the agent, it belongs in `status.md`, not in a memory file.
 
 ## Agents
 

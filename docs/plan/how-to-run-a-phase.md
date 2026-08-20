@@ -33,9 +33,9 @@ issue  →  branch  →  work  →  PR  →  reviewer  →  merge  →  status
 
 **Merge** once accepted.
 
-**Afterwards**, update the phase table in `docs/STATUS.md`, which describes what is on `main` rather than what a branch claims. Then record what you learned that is not written in `docs/` — in your agent memory, and in engram under your own topic key so a later session can find it.
+**Afterwards**, update the phase table in `docs/STATUS.md`, which describes what is on `main` rather than what a branch claims.
 
-Save the state even when the work stopped halfway. A record saying "the review found two problems and one is unfixed" is worth more than one written only on the days everything went well.
+Then record in your agent memory what you learned that is **not** in `docs/`: a tool limitation, an operation that behaves differently under TeaVM, where something turned out to live. Not what the phase achieved — `status.md` already says that, and two copies of the same fact end with one of them stale.
 
 ## Two failures and you stop
 
