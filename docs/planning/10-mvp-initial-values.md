@@ -27,6 +27,10 @@ Invulnerability must be communicated visually in both cases, although the respaw
 
 The pickup is **not wasted**: it turns into points. This avoids the dead drop and keeps the incentive to pick everything up. The proposed initial bonus is 500 points.
 
+### Movement speed — missing
+
+This document fixes the **policy** for player movement (additive devices, clamped result, slow movement as a multiplier — see Controls below) but no concrete number for the ship's top speed or the slow-movement multiplier. Phase 02 needed both to implement the clamp and added them to `BalanceValues` as `playerSpeed()` and `playerSlowFactor()`, with placeholder values (140 logical units/s, ×0.45) that exist only in test fixtures — there is no production `BalanceValues` implementation yet for them to live in instead. **Open, not decided:** replace the placeholders with real numbers once there is a playable build to tune them against, and record the result here.
+
 ## Controls
 
 When the mouse is enabled in Options, **keyboard and mouse work simultaneously and additively**. There is no priority device and no switching between one and the other.
