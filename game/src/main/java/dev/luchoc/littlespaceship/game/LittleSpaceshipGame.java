@@ -10,7 +10,7 @@ import dev.luchoc.littlespaceship.core.application.Simulation;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import dev.luchoc.littlespaceship.core.port.WorldView;
-import dev.luchoc.littlespaceship.game.adapter.content.PlaceholderContentSource;
+import dev.luchoc.littlespaceship.game.adapter.content.JsonContentSource;
 import dev.luchoc.littlespaceship.game.adapter.input.InputAdapter;
 import dev.luchoc.littlespaceship.game.adapter.render.CheckerboardBackground;
 import dev.luchoc.littlespaceship.game.adapter.render.PixelPerfectViewport;
@@ -28,13 +28,11 @@ import dev.luchoc.littlespaceship.game.adapter.render.WorldRenderer;
  * <p>Desktop and web share this class unchanged; only the launcher that constructs the backend
  * differs, per {@code docs/planning/12-architecture.md}.
  *
- * <p><b>Known gap, not a bug in this class:</b> {@link Simulation}'s public constructor assembles an
- * empty world — no system in {@code Simulation.mvpPipeline()} creates the player entity, and no
- * public API lets an adapter create one either, since doing so from here would mean manipulating the
- * ECS directly, which {@code game} never does. Until {@code core} spawns a player entity (tracked as
- * a phase 03 finding, see this phase's {@code status.md}), {@link WorldView#forEachSprite} draws
- * nothing and the ship does not appear on screen, even though input, rendering and scaling are all
- * wired correctly and will pick it up the moment an entity exists.
+ * <p>Content comes from {@link JsonContentSource}, reading {@code assets/data/*.json} — phase 04's
+ * loader, which is what finally gives {@link Simulation}'s 4-argument constructor a level id to
+ * build a wave timeline from. A run now starts with the player already in the world (a phase 04
+ * fix to {@code Simulation} itself) and enemies spawn as {@code level-01.json}'s timeline reaches
+ * them, so nothing about this class works around the empty-world gap phase 03 originally reported.
  */
 public final class LittleSpaceshipGame extends ApplicationAdapter {
 
@@ -89,13 +87,16 @@ public final class LittleSpaceshipGame extends ApplicationAdapter {
 
         atlas = new PlaceholderAtlas();
         checkerboard = new CheckerboardBackground();
-        worldRenderer = new WorldRenderer(atlas);
+        worldRenderer = new WorldRenderer(atlas, PLAYFIELD_LEFT);
         input = new InputAdapter(viewport);
 
-        content = new PlaceholderContentSource();
+        // "data" resolves under the working directory both launchers already agree on: the
+        // desktop `run` task sets it to assets/ (desktop/build.gradle.kts), and gdxTeaVM bundles
+        // the same assets/ tree into the web build's classpath (web/build.gradle.kts, when enabled).
+        content = new JsonContentSource(Gdx.files.internal("data"));
         // No sink yet: HUD and audio, the events' only consumers so far, do not exist until later
         // phases. An event dropped on the floor here is not a bug; it is nothing reacting to it yet.
-        simulation = new Simulation(content, event -> { }, seed);
+        simulation = new Simulation(content, event -> { }, seed, JsonContentSource.LEVEL_ID);
         loop = new GameLoop(simulation);
     }
 
