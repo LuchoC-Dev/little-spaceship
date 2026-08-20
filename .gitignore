@@ -27,3 +27,7 @@ Desktop.ini
 # Local
 local.properties
 *.log
+
+# Python: the design tools under docs/design/palette/ are scripts, not a package
+__pycache__/
+*.pyc

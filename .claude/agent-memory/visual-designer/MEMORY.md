@@ -1,0 +1,2 @@
+- [Palette invariants](project_palette-invariants.md) - the three rules that make legibility mechanical instead of remembered.
+- [HUD and size constraints](project_hud-and-size-constraints.md) - what the existing code decided about hitboxes, anchors and the boss bar.
