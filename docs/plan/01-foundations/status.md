@@ -1,13 +1,13 @@
 # Phase 01 — Foundations · status
 
-**State:** in review
-**Updated:** 19/08/2026
+**State:** done
+**Updated:** 20/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
 
 ## Done
 
-Everything the plan asks for, on the branch `feat/core-foundations`, in draft pull request [#2](https://github.com/LuchoC-Dev/little-spaceship/pull/2), which closes issue #1.
+Everything the plan asks for, merged into `main` through pull request [#2](https://github.com/LuchoC-Dev/little-spaceship/pull/2), which closed issue #1.
 
 - **Gradle skeleton.** Wrapper 9.7.0, root build, and the modules `core`, `game`, `desktop` and `web` with the versions verified in the spike. `core` declares no dependency, so the libGDX invariant is enforced by the compiler.
 - **ECS.** `EntityId` and `EntityRegistry` (int handle with a generation, recycled slots), `ComponentStore` (sparse array for lookup, dense array for iteration), and the components `Transform`, `Motion`, `Collider` and `Sprite`.
@@ -19,9 +19,11 @@ Everything the plan asks for, on the branch `feat/core-foundations`, in draft pu
 
 Every acceptance criterion in `plan.md` passes. The table in the pull request lists them one by one.
 
+The review left three follow-up issues open: [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3), stripping comments before the forbidden-API search; [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4), `PublicContractTest` checking a narrower rule than the criterion claims; [#5](https://github.com/LuchoC-Dev/little-spaceship/issues/5), `rngcheck` living in a throwaway directory. None of them blocks phase 02.
+
 ## In progress
 
-Nothing. Waiting for `reviewer` to accept the pull request.
+Nothing. `reviewer` accepted the phase and the pull request is merged.
 
 ## Blocked
 
@@ -47,4 +49,3 @@ None of these changes a game rule, so none of them belongs in `08-decisions-and-
 - **The tests can build a `Simulation` with systems of their own** through the package-private constructor. That is how the determinism test works without any game rule existing.
 - **Regenerating the pinned `Rng` sequences invalidates every replay.** If `RngTest` fails, the question is whether the algorithm changed on purpose.
 - **`Rng` parity under TeaVM: measured, not just argued.** Verified on 19/08/2026 by compiling the class itself through TeaVM and running it on Node: the integer stream, the float stream and the zero-seed stream are identical to the JVM, bit for bit, and match the pinned sequences. The check lives in `spikes/web-viability/rngcheck/` and can be re-run whenever the algorithm is touched.
-- **Regenerating the pinned sequences invalidates every recorded replay.** If `RngTest` fails, the question to ask first is whether the algorithm changed on purpose.
