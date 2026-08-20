@@ -38,6 +38,12 @@ Each of these costs hours if forgotten. Details in `docs/planning/11-technical-p
 - Build UI with `scene2d.ui` and a Skin. Do not write a UI framework.
 - Follow the visual direction produced by `visual-designer`. If it does not cover what you need yet, ask for it instead of improvising.
 
+## Session state
+
+When you finish — or when you stop halfway — save to engram what a newcomer could not infer from the repository: where the work stands, what is in flight, what you just decided. Use a stable topic key of your own (`session/<your-name>`) so it updates instead of piling up.
+
+That is separate from your agent memory, which holds what you *learned*. This holds where things *are*. Never duplicate what `docs/` already says.
+
 ## Commits
 
 Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.

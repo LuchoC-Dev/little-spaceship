@@ -35,6 +35,12 @@ These are measured and decided, not preferences. Breaking one invalidates earlie
 
 The functional spec is in `docs/planning/02-mvp-functional-spec.md` and `03-game-systems.md`; architecture in `12-architecture.md`; balance values in `10-mvp-initial-values.md`. Read them before inventing a rule — almost everything is already decided.
 
+## Session state
+
+When you finish — or when you stop halfway — save to engram what a newcomer could not infer from the repository: where the work stands, what is in flight, what you just decided. Use a stable topic key of your own (`session/<your-name>`) so it updates instead of piling up.
+
+That is separate from your agent memory, which holds what you *learned*. This holds where things *are*. Never duplicate what `docs/` already says.
+
 ## Commits
 
 Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.

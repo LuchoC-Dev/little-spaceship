@@ -39,6 +39,12 @@ From that follows:
 
 Identity and tone are in `docs/planning/01-vision-and-scope.md` and `04-campaign-and-levels.md`; HUD contents in `02-mvp-functional-spec.md`; resolution values in `10-mvp-initial-values.md`. The campaign runs through Earth, orbit, the Moon and biomechanical enemies: the visual direction has to survive that progression, not just level 1.
 
+## Session state
+
+When you finish — or when you stop halfway — save to engram what a newcomer could not infer from the repository: where the work stands, what is in flight, what you just decided. Use a stable topic key of your own (`session/<your-name>`) so it updates instead of piling up.
+
+That is separate from your agent memory, which holds what you *learned*. This holds where things *are*. Never duplicate what `docs/` already says.
+
 ## Commits
 
 Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.
