@@ -1,4 +1,4 @@
-<title>Combat Screen 480×270</title>
+<title>ls32 Reference Sheet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;1,400&display=swap">
@@ -112,118 +112,146 @@ section{margin-top:var(--s5)}
 .foot{margin-top:var(--s5); padding-top:var(--s2); border-top:1px solid var(--line);
   font-size:.82rem; color:var(--muted)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+.controls{display:flex; flex-wrap:wrap; gap:var(--s4); margin-bottom:var(--s3)}
+.controls .group{margin-bottom:0; min-width:150px}
+
+.sheet-group{margin-bottom:var(--s3)}
+.sheet-group:last-child{margin-bottom:0}
+.group-label{display:block; font-family:var(--mono); font-size:.58rem; font-weight:600;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--accent); margin-bottom:.7rem}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:var(--s2)}
+.card{background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column}
+.art{background:var(--ground); padding:var(--s2); display:flex; align-items:center;
+  justify-content:center; min-height:110px; overflow:auto}
+.art canvas{display:block; image-rendering:pixelated; max-width:100%}
+.meta{padding:.6rem var(--s2) .8rem; display:flex; flex-wrap:wrap; gap:.25rem .5rem;
+  align-items:baseline}
+.meta b{font-family:var(--mono); font-size:.72rem; color:var(--strong); width:100%}
+.meta code{font-family:var(--mono); font-size:.6rem; color:var(--accent-soft);
+  background:var(--panel-2); padding:.05rem .3rem; letter-spacing:.04em}
+.meta small{width:100%; font-size:.76rem; color:var(--muted); line-height:1.45; margin-top:.15rem}
+
+.strip{display:flex; flex-wrap:wrap; gap:var(--s3); align-items:flex-end;
+  background:var(--panel); border:1px solid var(--line); padding:var(--s3); overflow-x:auto}
+.shot{display:flex; flex-direction:column; align-items:center; gap:.5rem}
+.shot canvas{display:block; image-rendering:pixelated}
+.shot span{font-family:var(--mono); font-size:.58rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted)}
+
+.chips{display:grid; grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:1px;
+  background:var(--line); border:1px solid var(--line)}
+.chip{background:var(--panel); padding:.5rem .6rem; display:flex; flex-wrap:wrap;
+  align-items:baseline; gap:.2rem .45rem}
+.chip i{width:100%; height:22px; display:block; margin-bottom:.35rem}
+.chip b{font-family:var(--mono); font-size:.66rem; color:var(--strong)}
+.chip code{font-family:var(--mono); font-size:.56rem; color:var(--muted)}
+.chip small{width:100%; font-family:var(--mono); font-size:.54rem; color:var(--accent);
+  letter-spacing:.06em}
+
+.ramp-row{display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2);
+  padding:.55rem 0; border-bottom:1px solid var(--line)}
+.ramp-row:last-child{border-bottom:0}
+.ramp-row > span{font-family:var(--mono); font-size:.62rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--text); min-width:170px}
+.ramp-strip{display:flex; gap:2px}
+.ramp-strip i{width:32px; height:20px; display:block}
+.ramp-row code{font-family:var(--mono); font-size:.58rem; color:var(--muted)}
+
+.fonts{display:flex; flex-direction:column; gap:var(--s3)}
+.font-block{background:var(--panel); border:1px solid var(--line); padding:var(--s2);
+  display:flex; flex-direction:column; gap:.5rem; overflow-x:auto}
+.font-block b{font-family:var(--mono); font-size:.72rem; color:var(--strong)}
+.font-block small{font-size:.8rem; color:var(--muted)}
+.font-block canvas{display:block; image-rendering:pixelated; margin-top:.4rem}
 </style>
 
 <div class="wrap">
   <p class="eyebrow">little-spaceship &middot; phase 06 &middot; visual direction</p>
-  <h1>Combat screen, level 1</h1>
+  <h1>The sheet you keep open while drawing</h1>
   <p class="lede">
-    Every pixel below is drawn at the logical resolution the game runs at &mdash; <b>480&times;270</b>,
-    with a <b>208 px</b> playfield &mdash; from the 32 colours of <b>ls32</b> and the sprite sizes in
-    <b>02-sprite-sizes.md</b>. Nothing here is illustration: the framebuffer holds palette indices,
-    so the page can prove no pixel escaped the palette and can colour every pixel by the set it
-    belongs to. The switches on the right are the legibility tests from
-    <b>05-legibility-rules.md</b>, run on the real thing instead of described.
+    Not a validation of the direction &mdash; that is what the combat screen is for. This is the
+    working reference: the <b>32 colours</b> with the measurements that make them a system, every
+    sprite at the size it must be drawn at with its collider on top, the six silhouettes in flat
+    black, and both bitmap fonts glyph by glyph. Everything is generated from the same source the
+    game will be drawn from, so this sheet cannot drift away from
+    <b>02-sprite-sizes.md</b>.
   </p>
 
-  <div class="bench">
-    <div class="stage">
-      <div class="screen">
-        <div class="screen-inner" id="inner">
-          <canvas id="stack" width="960" height="540"></canvas>
-          <canvas id="overlay" width="960" height="540"></canvas>
-        </div>
-      </div>
-      <div class="stage-foot">
-        <span id="scene-label">Pressure escalation</span>
-        <span id="scale-note" class="scale-ok">integer scale &times;2</span>
-      </div>
-      <p class="caption" id="scene-note"></p>
+  <div class="panel controls" id="controls">
+    <div class="group" role="radiogroup" aria-label="View">
+      <span>View</span>
+      <div class="opts" id="view-opts"></div>
     </div>
-
-    <div>
-      <div class="panel">
-        <div class="group" role="radiogroup" aria-label="Scene">
-          <span>Scene</span>
-          <div class="opts" id="scene-opts"></div>
-        </div>
-        <div class="group" role="radiogroup" aria-label="View">
-          <span>View</span>
-          <div class="opts" id="view-opts"></div>
-        </div>
-        <div class="group">
-          <span>Overlay</span>
-          <div class="opts" id="toggle-opts"></div>
-        </div>
-        <div class="group" role="radiogroup" aria-label="Zoom">
-          <span>Zoom</span>
-          <div class="opts" id="zoom-opts"></div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="legend" id="legend"></div>
-      </div>
+    <div class="group">
+      <span>Overlay</span>
+      <div class="opts" id="toggle-opts"></div>
+    </div>
+    <div class="group" role="radiogroup" aria-label="Zoom">
+      <span>Zoom</span>
+      <div class="opts" id="zoom-opts"></div>
     </div>
   </div>
 
   <section>
-    <h2>What the scene proves</h2>
+    <h2>Sizes and colliders</h2>
+    <p class="caption">
+      Sprite dimensions are exact and every one of them is odd, so a centred sprite has its axis of
+      symmetry on one pixel column. Radii are what the code collides with: <b>Collider</b> is a
+      circle with no offset, so the visual mass belongs at the centre and anything outside the
+      circle has to read as secondary.
+    </p>
+    <div id="sheet"></div>
+  </section>
+
+  <section>
+    <h2>Silhouettes</h2>
+    <p class="caption">
+      R16, filled with flat black. If two archetypes are hard to tell apart here, they are hard to
+      tell apart in play &mdash; where they are smaller, moving, and surrounded by things trying to
+      kill you.
+    </p>
+    <div class="strip" id="silhouettes"></div>
+  </section>
+
+  <section>
+    <h2>The palette</h2>
+    <p class="caption">
+      Two disjoint sets and a reserved band. <b>L*</b> is CIE lightness: backgrounds stop at 44.9
+      and gameplay starts at 48.1, which is the gap that makes a bullet impossible to lose against
+      any legal background.
+    </p>
+    <div id="palette"></div>
+  </section>
+
+  <section>
+    <h2>Ramps</h2>
+    <p class="caption">
+      Shading moves along a ramp; it does not invent colour. A sprite that needs a tone between two
+      of these is a sprite that needs to be simplified, not a palette that needs a new entry.
+    </p>
+    <div id="ramps"></div>
+  </section>
+
+  <section>
+    <h2>Typography</h2>
+    <p class="caption">
+      Both fonts are drawn for this project, white on transparent, tinted at draw time. Fixed
+      advance in both, which is why every number is tabular for free.
+    </p>
+    <div class="fonts" id="fonts"></div>
+  </section>
+
+  <section>
+    <h2>What the checks say</h2>
     <ul class="checks" id="checks"></ul>
   </section>
 
-  <section>
-    <h2>What to look for</h2>
-    <div class="notes">
-      <div class="note">
-        <span class="rule">R1 &middot; two disjoint sets</span>
-        <h3>Set map</h3>
-        <p>Switch the view to <b>Set map</b>. Everything the background may draw goes flat blue,
-        everything gameplay may draw goes white, enemy fire goes magenta. The three never mix,
-        because the colours to mix them with are not available.</p>
-      </div>
-      <div class="note">
-        <span class="rule">R3 &middot; the value gap</span>
-        <h3>Greyscale</h3>
-        <p>Strip the colour and the bullets are still the brightest things on screen. That is the
-        3.2-point gap between the sets doing the work; hue is the second signal, not the first.</p>
-      </div>
-      <div class="note">
-        <span class="rule">R4 &middot; never hue alone</span>
-        <h3>Protanopia and deuteranopia</h3>
-        <p>Cyan player fire and magenta enemy fire converge under both simulations. What keeps them
-        apart is shape &mdash; elongated against compact &mdash; and value.</p>
-      </div>
-      <div class="note">
-        <span class="rule">R5 &middot; outlines</span>
-        <h3>Squint</h3>
-        <p>Blur the screen until detail is gone. Bullets, ship, enemies survive in that order. If
-        the city survives instead, R7 was broken.</p>
-      </div>
-      <div class="note">
-        <span class="rule">Hitboxes</span>
-        <h3>What actually kills you</h3>
-        <p>The ship&rsquo;s circle is 6 px across a 15 px sprite. Enemy fire collides smaller than it
-        looks, pickups larger, enemies as drawn &mdash; generosity always points at the player.</p>
-      </div>
-      <div class="note">
-        <span class="rule">Boss</span>
-        <h3>Five circles, not one</h3>
-        <p>Switch to the boss scene with hitboxes on. <code>Collider</code> is a circle with no
-        offset, so one circle over 119 px would swallow the gaps the player flies through.</p>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <h2>The palette it is drawn from</h2>
-    <div class="panel" id="palette-panel"></div>
-  </section>
-
   <p class="foot">
-    Generated from <code>docs/design/mockups/combat.html</code>. Silhouettes stand in for art that
-    has not been drawn yet &mdash; what is exact here is the footprint, the palette and the HUD
-    geometry, not the craft. This page keeps the reserved hue band too: nothing in its own interface
-    is magenta.
+    Generated from <code>docs/design/mockups/src/</code> by <code>build.py</code>, verified by
+    <code>check.js</code>. Silhouettes stand in for art that has not been drawn: what is exact here
+    is the footprint, the palette and the metrics.
   </p>
 </div>
 
@@ -1282,115 +1310,229 @@ function checksInto(list, rows) {
 function zoomOptions() { return [[1, '×1', '480 × 270'], [2, '×2', '960 × 540'], [3, '×3', '1440 × 810']]; }
 </script>
 <script>
-const stack = document.getElementById('stack');
-const overlay = document.getElementById('overlay');
-const inner = document.getElementById('inner');
-const octx = overlay.getContext('2d');
+const state = { view: 'normal', zoom: 4, hitbox: true, silhouette: false };
 
-const state = { scene: 'escalation', view: 'normal', zoom: 2, hitboxes: false, squint: false, guides: false, drift: false };
-let scroll = 0, raf = 0;
-
-const SCENE_OPTS = [
-  ['escalation', 'Escalation', 'tank, carrier, mixed fire'],
-  ['boss', 'Boss fight', 'the bar and five colliders'],
-  ['hit', 'Just took a hit', 'blink, flash, a life gone']
-];
 const TOGGLES = [
-  ['hitboxes', 'Hitboxes', 'what actually collides'],
-  ['squint', 'Squint', 'R5 and R7'],
-  ['guides', 'HUD guides', '04-hud-layout.md'],
-  ['drift', 'Scroll', 'R9, velocity separation']
+  ['hitbox', 'Colliders', 'what the code sees'],
+  ['silhouette', 'Silhouettes', 'R16, flat black']
 ];
 
-function setDrift() {
-  cancelAnimationFrame(raf);
-  if (!state.drift) return;
-  const step = () => { scroll = (scroll + 1) % 640; paint(); raf = requestAnimationFrame(step); };
-  raf = requestAnimationFrame(step);
+// Grouped by role rather than by size, because that is how the art lane works through them: the
+// player first, then what it shoots, then what shoots back.
+const SHEET = [
+  ['Player', [
+    { id: 'ship-basic', label: 'Ship', note: 'the 6 px circle is the fuselage, not the wings' },
+    { id: 'icon-module', label: 'Attachment icon', note: 'HUD only, no collider' }
+  ]],
+  ['Player fire', [
+    { id: 'shot-p1', label: 'Shot, level 1-2', note: 'one, then two of them' },
+    { id: 'shot-p2', label: 'Shot, level 3-4', note: 'the wide one joins at level 3' }
+  ]],
+  ['Enemies', [
+    { id: 'enemy-basic', label: 'Basic', note: '' },
+    { id: 'enemy-light', label: 'Fast light', note: '' },
+    { id: 'enemy-shooter', label: 'Evolved / shooter', note: '' },
+    { id: 'enemy-rush', label: 'Super-fast', note: '' },
+    { id: 'enemy-tank', label: 'Tank', note: 'a different class of problem on sight' },
+    { proc: 'carrier', w: 39, h: 31, r: 15, label: 'Heavy carrier', note: 'the outer 4 px each side are wing, and must be drawn as wing' },
+    { proc: 'boss', w: 119, h: 87, label: 'Boss', note: 'five colliders, not one', parts: [[0, 0, 18], [-34, -6, 12], [34, -6, 12], [-44, 18, 14], [44, 18, 14]] }
+  ]],
+  ['Enemy fire', [
+    { id: 'shot-e-small', label: 'Bullet, small', note: 'never smaller than this' },
+    { id: 'shot-e-heavy', label: 'Bullet, heavy', note: '' },
+    { id: 'shot-e-bolt', label: 'Aimed bolt', note: '' }
+  ]],
+  ['Pickups and HUD', [
+    { id: 'pickup-weapon', label: 'Power-up capsule', note: 'collides larger than it looks, on purpose' },
+    { id: 'icon-life', label: 'Life slot', note: '' },
+    { id: 'icon-bomb', label: 'Bomb slot', note: '' },
+    { id: 'icon-shield', label: 'Shield', note: '' },
+    { id: 'icon-invuln', label: 'Invulnerability', note: '' }
+  ]]
+];
+
+const RAMPS = [
+  ['Human metal', [3, 18, 19, 20]],
+  ['Alien hull', [14, 15, 28]],
+  ['Fire and explosion', [10, 11, 23, 24, 25]],
+  ['Player energy', [21, 22]],
+  ['Pickup', [12, 26, 27]],
+  ['Enemy fire — reserved', [29, 30, 31]],
+  ['Night and depth', [5, 6, 7]],
+  ['Structure', [0, 1, 2, 3, 4]]
+];
+
+function fbFor(item) {
+  if (item.proc) return state.silhouette ? proceduralSilhouette(item.proc) : proceduralFb(item.proc);
+  return state.silhouette ? silhouetteFb(item.id) : spriteFb(item.id);
 }
 
-function paint() {
-  blitTo(stack, renderScene(state.scene, scroll), state.view, state.zoom);
-  overlay.width = stack.width; overlay.height = stack.height;
-  paintOverlay();
+function sizeOf(item) {
+  return item.proc ? { w: item.w, h: item.h, r: item.r } : SPRITES[item.id];
 }
 
-function paintOverlay() {
-  const z = state.zoom;
-  octx.clearRect(0, 0, overlay.width, overlay.height);
-  octx.lineWidth = Math.max(1, z * 0.5);
+function card(item) {
+  const size = sizeOf(item);
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
 
-  if (state.guides) {
-    octx.strokeStyle = 'rgba(47,191,212,.55)';
-    octx.setLineDash([z * 2, z * 2]);
-    // Straight out of the tables in 04-hud-layout.md: label, then the widget under it.
-    const boxes = [
-      [12, 14, 30, 7], [12, 24, 57, 9], [12, 44, 30, 7], [12, 54, 33, 9],
-      [12, 74, 30, 7], [12, 84, 57, 7], [12, 104, 30, 7], [12, 114, 29, 13],
-      [12, 146, 36, 7], [12, 156, 17, 17], [34, 161, 48, 7],
-      [362, 14, 30, 7], [412, 24, 56, 11], [362, 44, 24, 7], [347, 20, 8, 230]
-    ];
-    for (const [x, y, w, h] of boxes) octx.strokeRect(x * z + .5, y * z + .5, w * z, h * z);
-    octx.setLineDash([]);
-    octx.strokeStyle = 'rgba(255,201,74,.5)';
-    octx.strokeRect(PLAY_X0 * z + .5, .5, 208 * z, H * z);
-  }
-
-  if (state.hitboxes) {
-    const colour = {
-      player: 'rgba(157,242,250,.95)', enemy: 'rgba(255,201,74,.9)',
-      hostile: 'rgba(255,255,255,.95)', pickup: 'rgba(127,224,138,.95)'
-    };
-    for (const c of colliders(state.scene)) {
-      octx.strokeStyle = colour[c.kind];
-      octx.beginPath();
-      octx.arc((c.x + .5) * z, (c.y + .5) * z, c.r * z, 0, Math.PI * 2);
-      octx.stroke();
+  const canvas = document.createElement('canvas');
+  blitTo(canvas, fbFor(item), state.view, state.zoom);
+  if (state.hitbox) {
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = Math.max(1, state.zoom * 0.4);
+    ctx.strokeStyle = 'rgba(255,201,74,.95)';
+    const cx = ((size.w - 1) / 2 + 0.5) * state.zoom, cy = ((size.h - 1) / 2 + 0.5) * state.zoom;
+    const parts = item.parts || (size.r ? [[0, 0, size.r]] : []);
+    for (const [ox, oy, r] of parts) {
+      ctx.beginPath();
+      ctx.arc(cx + ox * state.zoom, cy + oy * state.zoom, r * state.zoom, 0, Math.PI * 2);
+      ctx.stroke();
     }
   }
+
+  const shell = document.createElement('div');
+  shell.className = 'art';
+  shell.appendChild(canvas);
+  wrap.appendChild(shell);
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const radius = item.parts ? '5 parts' : (size.r ? 'r ' + size.r.toFixed(1) : 'no collider');
+  meta.innerHTML = '<b>' + item.label + '</b><code>' + size.w + '×' + size.h + '</code>' +
+    '<code>' + radius + '</code>' + (item.note ? '<small>' + item.note + '</small>' : '');
+  wrap.appendChild(meta);
+  return wrap;
 }
 
-function draw() {
-  renderOptions(document.getElementById('scene-opts'), SCENE_OPTS,
-    k => state.scene === k, k => { state.scene = k; draw(); }, 'radio');
-  renderOptions(document.getElementById('view-opts'), VIEW_OPTS,
-    k => state.view === k, k => { state.view = k; draw(); }, 'radio');
-  renderOptions(document.getElementById('toggle-opts'), TOGGLES,
-    k => state[k], k => { state[k] = !state[k]; setDrift(); draw(); }, 'toggle');
-  renderOptions(document.getElementById('zoom-opts'), zoomOptions(),
-    z => state.zoom === z, z => { state.zoom = z; draw(); }, 'radio');
-
-  inner.classList.toggle('squint', state.squint);
-  const sc = SCENES[state.scene];
-  document.getElementById('scene-label').textContent = sc.label;
-  document.getElementById('scene-note').textContent = sc.note;
-
-  paint();
-  const rows = validateSprites().map(p => ({ ok: false, text: p })).concat(audit(state.scene).findings);
-  checksInto(document.getElementById('checks'), rows);
-  reportScale(stack, document.getElementById('scale-note'), state.zoom);
+function buildSheet() {
+  const host = document.getElementById('sheet');
+  host.textContent = '';
+  for (const [group, items] of SHEET) {
+    const section = document.createElement('div');
+    section.className = 'sheet-group';
+    const heading = document.createElement('span');
+    heading.className = 'group-label';
+    heading.textContent = group;
+    section.appendChild(heading);
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    for (const item of items) grid.appendChild(card(item));
+    section.appendChild(grid);
+    host.appendChild(section);
+  }
 }
 
-function buildLegend() {
-  const legend = document.getElementById('legend');
-  const items = [['#9DF2FA', 'player'], ['#FFC94A', 'enemy'], ['#FFFFFF', 'enemy fire'], ['#7FE08A', 'pickup']];
-  legend.innerHTML = '<span style="width:100%">Hitbox overlay</span>' + items.map(
-    ([c, label]) => '<span><i style="background:' + c + '"></i>' + label + '</span>').join('');
+function buildSilhouettes() {
+  const host = document.getElementById('silhouettes');
+  host.textContent = '';
+  const ids = ['enemy-basic', 'enemy-light', 'enemy-shooter', 'enemy-rush', 'enemy-tank'];
+  for (const id of ids) {
+    const wrap = document.createElement('div');
+    wrap.className = 'shot';
+    const canvas = document.createElement('canvas');
+    blitTo(canvas, silhouetteFb(id), state.view, 3);
+    wrap.appendChild(canvas);
+    const label = document.createElement('span');
+    label.textContent = id.replace('enemy-', '');
+    wrap.appendChild(label);
+    host.appendChild(wrap);
+  }
+  for (const proc of ['carrier', 'boss']) {
+    const wrap = document.createElement('div');
+    wrap.className = 'shot';
+    const canvas = document.createElement('canvas');
+    blitTo(canvas, proceduralSilhouette(proc), state.view, proc === 'boss' ? 1 : 3);
+    wrap.appendChild(canvas);
+    const label = document.createElement('span');
+    label.textContent = proc;
+    wrap.appendChild(label);
+    host.appendChild(wrap);
+  }
 }
 
 function buildPalette() {
   const groups = [['Background-legal', BACKGROUND], ['Gameplay-only', GAMEPLAY],
     ['Reserved — enemy fire', HOSTILE], ['Shared outline', OUTLINE]];
-  document.getElementById('palette-panel').innerHTML = groups.map(([label, kind]) => {
-    const swatches = PALETTE.map((hex, i) => [hex, i]).filter(([, i]) => CLASSES[i] === kind)
-      .map(([hex, i]) => '<b style="background:' + hex + '" title="' + hex + ' L* ' +
-        LSTAR[i].toFixed(1) + '"><span>' + NAMES[i] + '</span></b>').join('');
-    return '<div class="swatches"><span>' + label + '</span><div class="ramp">' + swatches + '</div></div>';
+  document.getElementById('palette').innerHTML = groups.map(([label, kind]) => {
+    const cells = PALETTE.map((hex, i) => i).filter(i => CLASSES[i] === kind).map(i =>
+      '<div class="chip"><i style="background:' + PALETTE[i] + '"></i>' +
+      '<b>' + NAMES[i] + '</b><code>' + PALETTE[i] + '</code>' +
+      '<small>L* ' + LSTAR[i].toFixed(1) + '</small></div>').join('');
+    return '<div class="sheet-group"><span class="group-label">' + label +
+      '</span><div class="chips">' + cells + '</div></div>';
   }).join('');
 }
 
-buildLegend();
-buildPalette();
+function buildRamps() {
+  document.getElementById('ramps').innerHTML = RAMPS.map(([label, ids]) =>
+    '<div class="ramp-row"><span>' + label + '</span><div class="ramp-strip">' +
+    ids.map(i => '<i style="background:' + PALETTE[i] + '" title="' + NAMES[i] + ' ' +
+      PALETTE[i] + '"></i>').join('') + '</div><code>' +
+    ids.map(i => NAMES[i]).join(' → ') + '</code></div>').join('');
+}
+
+function buildFonts() {
+  const host = document.getElementById('fonts');
+  host.textContent = '';
+  const specs = [
+    ['mini', 'font-mini', '5×7 glyph, 6 px advance, 10 px line, descenders 2 px'],
+    ['title', 'font-title', '7×11 glyph, 8 px advance, digits only in the HUD']
+  ];
+  for (const [which, name, note] of specs) {
+    const wrap = document.createElement('div');
+    wrap.className = 'font-block';
+    const canvas = document.createElement('canvas');
+    blitTo(canvas, fontSheetFb(which), state.view, 4);
+    wrap.innerHTML = '<b>' + name + '</b><small>' + note + '</small>';
+    wrap.appendChild(canvas);
+    host.appendChild(wrap);
+  }
+}
+
+// The sheet is generated from the same tables the game will be drawn from, so the thing worth
+// checking is that those tables are still internally consistent.
+function sheetChecks() {
+  const rows = validateSprites().map(p => ({ ok: false, text: p }));
+  if (!rows.length) {
+    rows.push({ ok: true, text: Object.keys(SPRITES).length + ' sprites match their declared size and use only palette colours' });
+  }
+  const evens = Object.entries(SPRITES).filter(([, s]) => s.w % 2 === 0 || s.h % 2 === 0);
+  rows.push({ ok: evens.length === 0, text: evens.length === 0
+    ? 'every dimension is odd, so a centred sprite has a single-column axis'
+    : evens.map(([id]) => id).join(', ') + ' have an even dimension' });
+
+  for (const [, items] of SHEET) {
+    for (const item of items) {
+      if (item.proc || !SPRITES[item.id] || !SPRITES[item.id].r) continue;
+      const s = SPRITES[item.id];
+      const coverage = (2 * s.r) / Math.min(s.w, s.h);
+      if (item.id === 'ship-basic' || item.id.startsWith('pickup')) continue;
+      rows.push({ ok: coverage >= 0.8, text: item.label + ': collider covers ' +
+        Math.round(coverage * 100) + '% of the smaller dimension' });
+    }
+  }
+  const ship = SPRITES['ship-basic'];
+  rows.push({ ok: true, text: 'ship: collider covers ' + Math.round(200 * ship.r / ship.w) +
+    '% of its width, which is the "smaller than the sprite, not a point" rule as a number' });
+  return rows;
+}
+
+function draw() {
+  renderOptions(document.getElementById('view-opts'), VIEW_OPTS,
+    k => state.view === k, k => { state.view = k; draw(); }, 'radio');
+  renderOptions(document.getElementById('toggle-opts'), TOGGLES,
+    k => state[k], k => { state[k] = !state[k]; draw(); }, 'toggle');
+  renderOptions(document.getElementById('zoom-opts'), [[2, '×2', 'dense'], [4, '×4', 'default'], [6, '×6', 'pixel by pixel']],
+    z => state.zoom === z, z => { state.zoom = z; draw(); }, 'radio');
+
+  buildSheet();
+  buildSilhouettes();
+  buildPalette();
+  buildRamps();
+  buildFonts();
+  checksInto(document.getElementById('checks'), sheetChecks());
+}
+
 draw();
-addEventListener('resize', () => reportScale(stack, document.getElementById('scale-note'), state.zoom));
 </script>

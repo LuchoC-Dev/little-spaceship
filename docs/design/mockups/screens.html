@@ -1,4 +1,4 @@
-<title>Combat Screen 480×270</title>
+<title>Flow Screens 480×270</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;1,400&display=swap">
@@ -112,18 +112,28 @@ section{margin-top:var(--s5)}
 .foot{margin-top:var(--s5); padding-top:var(--s2); border-top:1px solid var(--line);
   font-size:.82rem; color:var(--muted)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+.flow{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:.4rem 1.1rem;
+  counter-reset:step}
+.flow li{counter-increment:step; display:flex; align-items:baseline; gap:.5rem; font-size:.92rem}
+.flow li::before{content:counter(step,decimal-leading-zero); font-family:var(--mono);
+  font-size:.58rem; letter-spacing:.1em; color:var(--accent)}
+.link{background:none; border:0; padding:0; cursor:pointer; color:var(--text);
+  font:inherit; border-bottom:1px solid var(--line)}
+.link:hover{color:var(--strong); border-bottom-color:var(--accent)}
+.flow li span{color:var(--muted)}
 </style>
 
 <div class="wrap">
   <p class="eyebrow">little-spaceship &middot; phase 06 &middot; visual direction</p>
-  <h1>Combat screen, level 1</h1>
+  <h1>Every screen in the flow</h1>
   <p class="lede">
-    Every pixel below is drawn at the logical resolution the game runs at &mdash; <b>480&times;270</b>,
-    with a <b>208 px</b> playfield &mdash; from the 32 colours of <b>ls32</b> and the sprite sizes in
-    <b>02-sprite-sizes.md</b>. Nothing here is illustration: the framebuffer holds palette indices,
-    so the page can prove no pixel escaped the palette and can colour every pixel by the set it
-    belongs to. The switches on the right are the legibility tests from
-    <b>05-legibility-rules.md</b>, run on the real thing instead of described.
+    The six screens of <b>02-mvp-functional-spec.md</b>, drawn at <b>480&times;270</b> from the same
+    palette and the same two bitmap fonts as the game itself. They share one frame, fixed in
+    <b>04-hud-layout.md</b>: the title at <b>40,32</b>, ten-pixel lines, sixteen pixels between
+    entries, <b>W4</b> and a marker for the selected one, and a <b>24 px</b> safe area so nothing
+    sits against the letterbox. What is not here is as deliberate as what is &mdash; no difficulty
+    selector, no continue, no locked modes.
   </p>
 
   <div class="bench">
@@ -135,7 +145,7 @@ section{margin-top:var(--s5)}
         </div>
       </div>
       <div class="stage-foot">
-        <span id="scene-label">Pressure escalation</span>
+        <span id="scene-label">Main menu</span>
         <span id="scale-note" class="scale-ok">integer scale &times;2</span>
       </div>
       <p class="caption" id="scene-note"></p>
@@ -143,8 +153,8 @@ section{margin-top:var(--s5)}
 
     <div>
       <div class="panel">
-        <div class="group" role="radiogroup" aria-label="Scene">
-          <span>Scene</span>
+        <div class="group" role="radiogroup" aria-label="Screen">
+          <span>Screen</span>
           <div class="opts" id="scene-opts"></div>
         </div>
         <div class="group" role="radiogroup" aria-label="View">
@@ -160,70 +170,56 @@ section{margin-top:var(--s5)}
           <div class="opts" id="zoom-opts"></div>
         </div>
       </div>
-      <div class="panel">
-        <div class="legend" id="legend"></div>
-      </div>
     </div>
   </div>
 
   <section>
-    <h2>What the scene proves</h2>
-    <ul class="checks" id="checks"></ul>
+    <h2>The flow</h2>
+    <ol class="flow" id="flow"></ol>
   </section>
 
   <section>
-    <h2>What to look for</h2>
+    <h2>Decisions these screens make</h2>
     <div class="notes">
       <div class="note">
-        <span class="rule">R1 &middot; two disjoint sets</span>
-        <h3>Set map</h3>
-        <p>Switch the view to <b>Set map</b>. Everything the background may draw goes flat blue,
-        everything gameplay may draw goes white, enemy fire goes magenta. The three never mix,
-        because the colours to mix them with are not available.</p>
+        <span class="rule">Selection</span>
+        <h3>Colour and a marker</h3>
+        <p>The selected entry is <b>W4</b> <i>and</i> carries a <b>&gt;</b> twelve pixels to its
+        left. R4 applies to menus too: a player who cannot separate amber from white still sees
+        which line is live.</p>
       </div>
       <div class="note">
-        <span class="rule">R3 &middot; the value gap</span>
-        <h3>Greyscale</h3>
-        <p>Strip the colour and the bullets are still the brightest things on screen. That is the
-        3.2-point gap between the sets doing the work; hue is the second signal, not the first.</p>
+        <span class="rule">Type</span>
+        <h3>Two fonts, no third</h3>
+        <p><b>font-title</b> sets the screen title and the totals. Everything else is
+        <b>font-mini</b> at a fixed six-pixel advance, which is why no column ever shifts as a
+        number changes.</p>
       </div>
       <div class="note">
-        <span class="rule">R4 &middot; never hue alone</span>
-        <h3>Protanopia and deuteranopia</h3>
-        <p>Cyan player fire and magenta enemy fire converge under both simulations. What keeps them
-        apart is shape &mdash; elongated against compact &mdash; and value.</p>
+        <span class="rule">Ground</span>
+        <h3>The city keeps burning</h3>
+        <p>Menu, victory and defeat sit over the level&rsquo;s own parallax, checkered down so it
+        reads as depth rather than content. The pause panel does the same to the frozen playfield.</p>
       </div>
       <div class="note">
-        <span class="rule">R5 &middot; outlines</span>
-        <h3>Squint</h3>
-        <p>Blur the screen until detail is gone. Bullets, ship, enemies survive in that order. If
-        the city survives instead, R7 was broken.</p>
-      </div>
-      <div class="note">
-        <span class="rule">Hitboxes</span>
-        <h3>What actually kills you</h3>
-        <p>The ship&rsquo;s circle is 6 px across a 15 px sprite. Enemy fire collides smaller than it
-        looks, pickups larger, enemies as drawn &mdash; generosity always points at the player.</p>
-      </div>
-      <div class="note">
-        <span class="rule">Boss</span>
-        <h3>Five circles, not one</h3>
-        <p>Switch to the boss scene with hitboxes on. <code>Collider</code> is a circle with no
-        offset, so one circle over 119 px would swallow the gaps the player flies through.</p>
+        <span class="rule">Absence</span>
+        <h3>What is not drawn</h3>
+        <p>No difficulty selector, no checkpoints, no profiles, no continue, no shop, no locked
+        modes and no second ship. Every one of them is an explicit MVP exclusion, and drawing a
+        greyed-out version would promise something the build does not have.</p>
       </div>
     </div>
   </section>
 
   <section>
-    <h2>The palette it is drawn from</h2>
-    <div class="panel" id="palette-panel"></div>
+    <h2>What the checks say</h2>
+    <ul class="checks" id="checks"></ul>
   </section>
 
   <p class="foot">
-    Generated from <code>docs/design/mockups/combat.html</code>. Silhouettes stand in for art that
-    has not been drawn yet &mdash; what is exact here is the footprint, the palette and the HUD
-    geometry, not the craft. This page keeps the reserved hue band too: nothing in its own interface
-    is magenta.
+    Generated from <code>docs/design/mockups/src/</code> by <code>build.py</code>, and verified by
+    <code>check.js</code>. The ship on the selection screen is drawn at &times;3 inside the
+    framebuffer, which is still an integer factor of a logical pixel.
   </p>
 </div>
 
@@ -1287,110 +1283,115 @@ const overlay = document.getElementById('overlay');
 const inner = document.getElementById('inner');
 const octx = overlay.getContext('2d');
 
-const state = { scene: 'escalation', view: 'normal', zoom: 2, hitboxes: false, squint: false, guides: false, drift: false };
-let scroll = 0, raf = 0;
+const state = { screen: 'menu', view: 'normal', zoom: 2, guides: false, squint: false };
 
-const SCENE_OPTS = [
-  ['escalation', 'Escalation', 'tank, carrier, mixed fire'],
-  ['boss', 'Boss fight', 'the bar and five colliders'],
-  ['hit', 'Just took a hit', 'blink, flash, a life gone']
+const SCREEN_OPTS = [
+  ['menu', 'Main menu', 'play, options, quit'],
+  ['ship', 'Ship selection', 'one ship, its stats'],
+  ['options', 'Options', 'volumes and the mouse'],
+  ['pause', 'Pause', 'over a frozen playfield'],
+  ['victory', 'Victory', 'the end-of-level bonus'],
+  ['defeat', 'Defeat', 'retry or menu']
 ];
-const TOGGLES = [
-  ['hitboxes', 'Hitboxes', 'what actually collides'],
-  ['squint', 'Squint', 'R5 and R7'],
-  ['guides', 'HUD guides', '04-hud-layout.md'],
-  ['drift', 'Scroll', 'R9, velocity separation']
+const TOGGLES = [['guides', 'Safe area', '24 px from every edge'], ['squint', 'Squint', 'does the hierarchy hold']];
+
+// The flow the spec describes, so the screens are read as a sequence rather than as six pictures.
+const FLOW = [
+  ['Main menu', 'menu'],
+  ['Ship selection', 'ship'],
+  ['Level 1', null],
+  ['Pause, at any point', 'pause'],
+  ['Victory, with a life left', 'victory'],
+  ['Defeat, with none', 'defeat']
 ];
 
-function setDrift() {
-  cancelAnimationFrame(raf);
-  if (!state.drift) return;
-  const step = () => { scroll = (scroll + 1) % 640; paint(); raf = requestAnimationFrame(step); };
-  raf = requestAnimationFrame(step);
-}
+function draw() {
+  renderOptions(document.getElementById('scene-opts'), SCREEN_OPTS,
+    k => state.screen === k, k => { state.screen = k; draw(); }, 'radio');
+  renderOptions(document.getElementById('view-opts'), VIEW_OPTS,
+    k => state.view === k, k => { state.view = k; draw(); }, 'radio');
+  renderOptions(document.getElementById('toggle-opts'), TOGGLES,
+    k => state[k], k => { state[k] = !state[k]; draw(); }, 'toggle');
+  renderOptions(document.getElementById('zoom-opts'), zoomOptions(),
+    z => state.zoom === z, z => { state.zoom = z; draw(); }, 'radio');
 
-function paint() {
-  blitTo(stack, renderScene(state.scene, scroll), state.view, state.zoom);
+  const sc = SCREENS[state.screen];
+  document.getElementById('scene-label').textContent = sc.label;
+  document.getElementById('scene-note').textContent = sc.note;
+  inner.classList.toggle('squint', state.squint);
+
+  blitTo(stack, renderScreen(state.screen), state.view, state.zoom);
   overlay.width = stack.width; overlay.height = stack.height;
-  paintOverlay();
+  paintGuides();
+  reportScale(stack, document.getElementById('scale-note'), state.zoom);
+  checksInto(document.getElementById('checks'), screenChecks());
 }
 
-function paintOverlay() {
-  const z = state.zoom;
+function paintGuides() {
   octx.clearRect(0, 0, overlay.width, overlay.height);
+  if (!state.guides) return;
+  const z = state.zoom;
   octx.lineWidth = Math.max(1, z * 0.5);
+  octx.setLineDash([z * 2, z * 2]);
+  octx.strokeStyle = 'rgba(255,201,74,.6)';
+  octx.strokeRect(SAFE * z + .5, SAFE * z + .5, (480 - SAFE * 2) * z, (270 - SAFE * 2) * z);
+  octx.setLineDash([]);
+  octx.strokeStyle = 'rgba(47,191,212,.7)';
+  octx.beginPath();
+  octx.moveTo(TITLE_X * z + .5, 0);
+  octx.lineTo(TITLE_X * z + .5, overlay.height);
+  octx.moveTo(0, TITLE_Y * z + .5);
+  octx.lineTo(overlay.width, TITLE_Y * z + .5);
+  octx.stroke();
+}
 
-  if (state.guides) {
-    octx.strokeStyle = 'rgba(47,191,212,.55)';
-    octx.setLineDash([z * 2, z * 2]);
-    // Straight out of the tables in 04-hud-layout.md: label, then the widget under it.
-    const boxes = [
-      [12, 14, 30, 7], [12, 24, 57, 9], [12, 44, 30, 7], [12, 54, 33, 9],
-      [12, 74, 30, 7], [12, 84, 57, 7], [12, 104, 30, 7], [12, 114, 29, 13],
-      [12, 146, 36, 7], [12, 156, 17, 17], [34, 161, 48, 7],
-      [362, 14, 30, 7], [412, 24, 56, 11], [362, 44, 24, 7], [347, 20, 8, 230]
-    ];
-    for (const [x, y, w, h] of boxes) octx.strokeRect(x * z + .5, y * z + .5, w * z, h * z);
-    octx.setLineDash([]);
-    octx.strokeStyle = 'rgba(255,201,74,.5)';
-    octx.strokeRect(PLAY_X0 * z + .5, .5, 208 * z, H * z);
+// The screens have no bullets to measure, so what is worth checking is that they stayed inside the
+// palette and inside the safe area, and that nothing the spec excludes crept back in.
+function screenChecks() {
+  const rows = [];
+  const fb = renderScreen(state.screen);
+
+  let outside = 0;
+  for (let y = 0; y < 270; y++) {
+    for (let x = 0; x < 480; x++) {
+      const inSafe = x >= SAFE && x < 480 - SAFE && y >= SAFE && y < 270 - SAFE;
+      if (!inSafe && ![0, 1, 2, 3].includes(fb.at(x, y))) outside++;
+    }
   }
+  rows.push({ ok: outside === 0, text: outside === 0
+    ? 'nothing but ground and framing sits outside the 24 px safe area'
+    : outside + ' px of content sit outside the safe area' });
 
-  if (state.hitboxes) {
-    const colour = {
-      player: 'rgba(157,242,250,.95)', enemy: 'rgba(255,201,74,.9)',
-      hostile: 'rgba(255,255,255,.95)', pickup: 'rgba(127,224,138,.95)'
-    };
-    for (const c of colliders(state.scene)) {
-      octx.strokeStyle = colour[c.kind];
-      octx.beginPath();
-      octx.arc((c.x + .5) * z, (c.y + .5) * z, c.r * z, 0, Math.PI * 2);
-      octx.stroke();
+  const used = new Set();
+  for (let i = 0; i < fb.d.length; i++) used.add(fb.d[i]);
+  const bad = [...used].filter(c => c < 0 || c >= PALETTE.length);
+  rows.push({ ok: bad.length === 0, text: bad.length === 0
+    ? 'every pixel is one of the 32 colours of ls32'
+    : bad.length + ' pixels are outside the palette' });
+
+  const reserved = [...used].filter(c => CLASSES[c] === HOSTILE);
+  rows.push({ ok: reserved.length === 0, text: reserved.length === 0
+    ? 'the reserved hue band does not appear - there is no enemy fire on a menu'
+    : 'the screen uses ' + reserved.map(c => NAMES[c]).join(', ') + ', which belong to enemy fire' });
+
+  rows.push({ ok: true, text: 'colours in use: ' + [...used].sort((a, b) => a - b).map(c => NAMES[c]).join(' ') });
+  return rows;
+}
+
+function buildFlow() {
+  const list = document.getElementById('flow');
+  list.innerHTML = FLOW.map(([label, key]) => '<li>' + (key
+    ? '<button class="link" type="button" data-screen="' + key + '">' + label + '</button>'
+    : '<span>' + label + '</span>') + '</li>').join('');
+  for (const b of list.children) {
+    const button = b.children && b.children[0];
+    if (button && button.dataset && button.dataset.screen) {
+      button.addEventListener('click', () => { state.screen = button.dataset.screen; draw(); });
     }
   }
 }
 
-function draw() {
-  renderOptions(document.getElementById('scene-opts'), SCENE_OPTS,
-    k => state.scene === k, k => { state.scene = k; draw(); }, 'radio');
-  renderOptions(document.getElementById('view-opts'), VIEW_OPTS,
-    k => state.view === k, k => { state.view = k; draw(); }, 'radio');
-  renderOptions(document.getElementById('toggle-opts'), TOGGLES,
-    k => state[k], k => { state[k] = !state[k]; setDrift(); draw(); }, 'toggle');
-  renderOptions(document.getElementById('zoom-opts'), zoomOptions(),
-    z => state.zoom === z, z => { state.zoom = z; draw(); }, 'radio');
-
-  inner.classList.toggle('squint', state.squint);
-  const sc = SCENES[state.scene];
-  document.getElementById('scene-label').textContent = sc.label;
-  document.getElementById('scene-note').textContent = sc.note;
-
-  paint();
-  const rows = validateSprites().map(p => ({ ok: false, text: p })).concat(audit(state.scene).findings);
-  checksInto(document.getElementById('checks'), rows);
-  reportScale(stack, document.getElementById('scale-note'), state.zoom);
-}
-
-function buildLegend() {
-  const legend = document.getElementById('legend');
-  const items = [['#9DF2FA', 'player'], ['#FFC94A', 'enemy'], ['#FFFFFF', 'enemy fire'], ['#7FE08A', 'pickup']];
-  legend.innerHTML = '<span style="width:100%">Hitbox overlay</span>' + items.map(
-    ([c, label]) => '<span><i style="background:' + c + '"></i>' + label + '</span>').join('');
-}
-
-function buildPalette() {
-  const groups = [['Background-legal', BACKGROUND], ['Gameplay-only', GAMEPLAY],
-    ['Reserved — enemy fire', HOSTILE], ['Shared outline', OUTLINE]];
-  document.getElementById('palette-panel').innerHTML = groups.map(([label, kind]) => {
-    const swatches = PALETTE.map((hex, i) => [hex, i]).filter(([, i]) => CLASSES[i] === kind)
-      .map(([hex, i]) => '<b style="background:' + hex + '" title="' + hex + ' L* ' +
-        LSTAR[i].toFixed(1) + '"><span>' + NAMES[i] + '</span></b>').join('');
-    return '<div class="swatches"><span>' + label + '</span><div class="ramp">' + swatches + '</div></div>';
-  }).join('');
-}
-
-buildLegend();
-buildPalette();
+buildFlow();
 draw();
 addEventListener('resize', () => reportScale(stack, document.getElementById('scale-note'), state.zoom));
 </script>
