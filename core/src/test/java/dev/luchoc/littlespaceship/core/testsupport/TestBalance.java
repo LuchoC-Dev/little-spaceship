@@ -23,6 +23,8 @@ public final class TestBalance implements BalanceValues {
     public int maxedPickupBonus = 500;
     public float playerSpeed = 140f;
     public float playerSlowFactor = 0.45f;
+    public float playerStartX = 104f;
+    public float playerStartY = 30f;
 
     @Override
     public int initialLives() {
@@ -72,5 +74,15 @@ public final class TestBalance implements BalanceValues {
     @Override
     public float playerSlowFactor() {
         return playerSlowFactor;
+    }
+
+    @Override
+    public float playerStartX() {
+        return playerStartX;
+    }
+
+    @Override
+    public float playerStartY() {
+        return playerStartY;
     }
 }
