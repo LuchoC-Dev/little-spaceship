@@ -289,6 +289,16 @@ class SimulationTest {
                 public int maxedPickupBonus() {
                     return 500;
                 }
+
+                @Override
+                public float playerSpeed() {
+                    return 140f;
+                }
+
+                @Override
+                public float playerSlowFactor() {
+                    return 0.45f;
+                }
             };
         }
     }
