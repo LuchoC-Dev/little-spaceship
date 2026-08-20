@@ -29,4 +29,27 @@ Techniques that turned suspicions into confirmed findings during the phase 01 an
 - **A stub that throws is weaker than a stub that works.** When a test swaps `throw new UnsupportedOperationException(...)` for a real fixture, that is strictly stronger coverage, not weaker — the throwing stub was a trap waiting for the first system that read the value.
 - **Verify a corrected citation by opening the line it now points at.** `docs/planning/11-technical-prototype-results.md:84` really does say the 480×270 / 208 px playfield "is confirmed as the starting point", which is what made phase 02's re-pointed `PLAYFIELD_WIDTH` javadoc a genuine fix rather than a differently-wrong citation.
 
+## For a phase that turns rules into data
+
+- **Prove a "never iterates a hash" determinism claim in three greps, not by reasoning.** Grep the
+  registry class for every use of its map (`get` only is the tell), grep the test `ContentSource` for
+  the same, then confirm every ordered walk on the spawn path is over a type whose compact
+  constructor calls `List.copyOf`. That settles replay ordering without running anything.
+- **Audit mutability at the compact constructor, never at the javadoc.** A Java record that reassigns
+  its component through `List.copyOf`/`Map.copyOf` inside `public Foo {}` really is immutable; one
+  that only documents "never null" is not. `PublicContractTest` cannot tell them apart — it checks the
+  declared return *type*, and `java.util.List` passes either way, so mutability across the boundary is
+  a hand check every time.
+- **Find unused boundary API by grepping the method name with its argument shape.** `\.number(|\.text(`
+  over `src/main` then `src/test` separately exposed that two of `ComponentSpec`'s five accessors —
+  precisely the two-argument overloads — have no production caller. Overload arity is the thing to
+  look at; the one-argument form was used everywhere.
+- **Reconstruct spawn geometry on paper against the branch's own fixture.** `y = 270 + 4.5 - 30 =
+  244.5` inside a 0–270 playfield is a stronger finding than any test could have been, took one line
+  of arithmetic, and the fixture that supplies the numbers is in the same PR.
+- **Check whether a JDK API is new to `core/src/main` on this branch** with `git grep -n "List.copyOf"
+  main -- core/src/main`. `core` is what TeaVM compiles, JUnit runs on the JVM, and `web/build.gradle.kts`
+  is still commented out — so a first-time use of `ImmutableCollections` is unverifiable here and is a
+  suspicion to hand forward, not a defect to block on.
+
 Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
