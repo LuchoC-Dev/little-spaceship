@@ -6,15 +6,27 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.luchoc.littlespaceship.core.domain.component.Attachment;
+import dev.luchoc.littlespaceship.core.domain.component.BombState;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
+import dev.luchoc.littlespaceship.core.domain.component.Drop;
+import dev.luchoc.littlespaceship.core.domain.component.Health;
+import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
+import dev.luchoc.littlespaceship.core.domain.component.Pickup;
+import dev.luchoc.littlespaceship.core.domain.component.Player;
+import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
+import dev.luchoc.littlespaceship.core.domain.component.Shield;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.component.Weapon;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -38,26 +50,83 @@ class WorldTest {
     }
 
     /**
-     * Forgetting a store here would leave data hanging from a slot that is about to be handed out
-     * again, and the next entity to land on it would inherit it.
+     * Forgetting a store in {@code World.destroyEntity} would leave data hanging from a slot that
+     * is about to be handed out again, and the next entity to land on it would inherit it — the
+     * exact hazard phase 01 recorded {@code destroyEntity} as the method that has to know every
+     * store.
+     *
+     * <p>A hand-picked list of assertions cannot actually guard that: it is exactly as easy to
+     * forget a store here as it is to forget clearing it in {@code destroyEntity} itself, and this
+     * test drifted that way once already — four stores checked while {@code World} already held
+     * thirteen. Reflection is what closes the gap: {@link #componentStoreFields()} discovers every
+     * {@code ComponentStore} field {@code World} declares, with no list to fall out of sync. The
+     * test then asserts every discovered store was actually populated by {@link
+     * #populateEveryComponent(int)} — so adding a fourteenth store without extending that method
+     * fails loudly, here, instead of silently passing a vacuous "still empty" check — and, after
+     * destruction, that every discovered store is empty.
      */
     @Test
-    @DisplayName("destroying an entity strips every component it had")
-    void destroyStripsEveryComponent() {
+    @DisplayName("destroying an entity strips every component store the world declares")
+    void destroyStripsEveryComponent() throws ReflectiveOperationException {
         int entity = world.createEntity();
-        world.transforms().set(entity, new Transform(1f, 2f));
-        world.motions().set(entity, new Motion(3f, 4f));
-        world.colliders().set(entity, new Collider(5f, CollisionLayer.ENEMY));
-        world.sprites().set(entity, new Sprite(new SpriteId("enemy-basic")));
+        populateEveryComponent(entity);
+
+        List<Field> stores = componentStoreFields();
+        assertTrue(stores.size() >= 13, "World should declare at least as many stores as it did "
+            + "when this guard was rewritten; found " + stores.size());
+        for (Field field : stores) {
+            ComponentStore<?> store = (ComponentStore<?>) field.get(world);
+            assertTrue(store.size() > 0,
+                "'" + field.getName() + "' was not populated by populateEveryComponent — extend it "
+                    + "for the new store before this guard can trust the assertions below");
+        }
 
         assertTrue(world.destroyEntity(entity));
 
         assertFalse(world.isAlive(entity));
         assertEquals(0, world.entityCount());
-        assertEquals(0, world.transforms().size());
-        assertEquals(0, world.motions().size());
-        assertEquals(0, world.colliders().size());
-        assertEquals(0, world.sprites().size());
+        for (Field field : stores) {
+            ComponentStore<?> store = (ComponentStore<?>) field.get(world);
+            assertEquals(0, store.size(),
+                "'" + field.getName() + "' was not cleared by World.destroyEntity");
+        }
+    }
+
+    /**
+     * One component of every type {@code World} stores, all on the same entity. Extend this
+     * whenever a new {@code ComponentStore} field is added to {@code World} — {@link
+     * #destroyStripsEveryComponent()} fails with a clear message if this method falls behind.
+     */
+    private void populateEveryComponent(int entity) {
+        world.transforms().set(entity, new Transform(1f, 2f));
+        world.motions().set(entity, new Motion(3f, 4f));
+        world.colliders().set(entity, new Collider(5f, CollisionLayer.ENEMY));
+        world.sprites().set(entity, new Sprite(new SpriteId("enemy-basic")));
+        world.players().set(entity, new Player(3, 2, 1));
+        world.invulnerabilities().set(entity, new Invulnerable(1f));
+        world.shields().set(entity, new Shield());
+        world.attachments().set(entity, new Attachment(1));
+        world.scoreValues().set(entity, new ScoreValue(100));
+        world.drops().set(entity, new Drop("shield"));
+        world.weapons().set(entity, new Weapon());
+        world.pickups().set(entity, new Pickup("shield"));
+        world.healths().set(entity, new Health(10));
+        world.bombStates().set(entity, new BombState());
+    }
+
+    /**
+     * Every field {@code World} declares whose type is exactly {@code ComponentStore} — generics are
+     * erased, so this finds all of them regardless of the component type each one holds.
+     */
+    private static List<Field> componentStoreFields() {
+        List<Field> fields = new ArrayList<>();
+        for (Field field : World.class.getDeclaredFields()) {
+            if (field.getType() == ComponentStore.class) {
+                field.setAccessible(true);
+                fields.add(field);
+            }
+        }
+        return fields;
     }
 
     @Test
