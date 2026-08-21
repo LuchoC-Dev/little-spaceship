@@ -82,6 +82,11 @@ public final class GameSkin {
         Label.LabelStyle body = new Label.LabelStyle(fontMini, Palette.N4);
         skin.add("body", body);
 
+        // N7, not N4: this is a value, the same convention HudRenderer uses for score and the
+        // attachment label. N4 is for the surrounding label text, which is what "body" is for.
+        Label.LabelStyle statValue = new Label.LabelStyle(fontMini, Palette.N7);
+        skin.add("stat-value", statValue);
+
         TextButton.TextButtonStyle button = new TextButton.TextButtonStyle();
         button.font = fontMini;
         button.fontColor = Palette.N7;
