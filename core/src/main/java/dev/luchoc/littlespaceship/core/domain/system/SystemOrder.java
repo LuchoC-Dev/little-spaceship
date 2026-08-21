@@ -23,6 +23,15 @@ public enum SystemOrder {
     /** Resolves rates of fire and creates projectiles. */
     WEAPON,
 
+    /**
+     * Detonates the bomb when requested: clears fragile enemies and enemy projectiles on screen.
+     * Runs before {@code SPAWN} so a bomb used the instant a wave would appear never reaches a wave
+     * that has not spawned yet — there is nothing on screen for it to touch either way, but placing
+     * it here keeps every stage that reacts to on-screen entities grouped together, after input and
+     * weapon resolution and before anything new enters the world this tick.
+     */
+    BOMB,
+
     /** Advances the level timeline and spawns waves. */
     SPAWN,
 
@@ -32,7 +41,12 @@ public enum SystemOrder {
     /** Detects impacts between layer pairs. */
     COLLISION,
 
-    /** Applies the defensive priority: invulnerability, shield, attachment, life. */
+    /**
+     * Applies the defensive priority against the player — invulnerability, shield, attachment,
+     * life — and resolves what a player projectile did to the enemy it reached. Both are damage
+     * resolution against a collision hit reported the same tick, which is why one system owns both
+     * instead of splitting the second half into a stage of its own.
+     */
     DAMAGE,
 
     /** Resolves power-ups and attachments. */
