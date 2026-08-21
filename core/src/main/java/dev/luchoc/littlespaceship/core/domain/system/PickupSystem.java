@@ -14,6 +14,7 @@ import dev.luchoc.littlespaceship.core.port.AttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Resolves what happens when the player reaches a {@link Pickup}: five fixed power-up kinds, each
@@ -62,6 +63,28 @@ public final class PickupSystem implements GameSystem {
      * attachment type would only need a different content id, never a code change here.
      */
     public static final String KIND_ATTACHMENT = "attachment";
+
+    /**
+     * Every kind {@link #resolvePickup} recognises, so {@code SpawnSystem} can reject an
+     * unrecognised {@code Drop} the moment a wave carrying it spawns, instead of only when a player
+     * happens to reach the pickup it eventually produces — see {@link #isRecognisedKind(String)}.
+     */
+    private static final Set<String> RECOGNISED_KINDS = Set.of(
+        KIND_WEAPON_UPGRADE, KIND_SHIELD, KIND_EXTRA_LIFE, KIND_BOMB_RECHARGE,
+        KIND_INVULNERABILITY, KIND_ATTACHMENT);
+
+    /**
+     * True when {@code kind} is one of the six strings {@link #resolvePickup} would actually accept.
+     * A content author's typo in a level's {@code drop} id would otherwise load clean and only crash
+     * a running level minutes later, the moment a player reaches the pickup it produced — the exact
+     * gap {@code SpawnSystem} closes by calling this before attaching a {@code Drop}.
+     *
+     * @param kind the content id to check, as it would appear on {@code Drop.pickupId}
+     * @return true when a pickup carrying this kind would be resolved, not rejected
+     */
+    static boolean isRecognisedKind(String kind) {
+        return RECOGNISED_KINDS.contains(kind);
+    }
 
     @Override
     public SystemOrder order() {

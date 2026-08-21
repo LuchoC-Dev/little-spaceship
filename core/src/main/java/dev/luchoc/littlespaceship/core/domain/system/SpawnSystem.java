@@ -86,6 +86,9 @@ public final class SpawnSystem implements GameSystem {
     private static void spawnWave(World world, SpawnEvent event) {
         EnemyDefinition enemy = world.content().enemy(event.enemyId());
         FormationDefinition formation = world.content().formation(event.formationId());
+        if (event.hasDrop()) {
+            requireRecognisedDrop(enemy, event);
+        }
         float anchorX = event.atX() * MotionSystem.PLAYFIELD_WIDTH;
         float lowestOffsetY = lowestOffsetY(formation.slots());
 
@@ -96,6 +99,21 @@ public final class SpawnSystem implements GameSystem {
             if (event.hasDrop()) {
                 world.drops().set(entity, new Drop(event.dropId()));
             }
+        }
+    }
+
+    /**
+     * Fails the moment a wave carrying an unrecognised drop id spawns, instead of only when a
+     * player reaches the pickup that {@code Drop} eventually produces. {@code PickupSystem} is the
+     * single place that decides which kinds are real; this only asks it, rather than keeping a
+     * second list of the same six strings that could drift from the one {@code PickupSystem}
+     * resolves against.
+     */
+    private static void requireRecognisedDrop(EnemyDefinition enemy, SpawnEvent event) {
+        if (!PickupSystem.isRecognisedKind(event.dropId())) {
+            throw new IllegalArgumentException(
+                "enemy '" + enemy.id() + "' at " + event.at() + "s drops an unrecognised kind '"
+                    + event.dropId() + "'");
         }
     }
 
