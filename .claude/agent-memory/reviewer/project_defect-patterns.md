@@ -1,6 +1,6 @@
 ---
 name: defect-patterns
-description: The recurring shapes of defect found when auditing this repo — where to look first in a phase review, including second-round passes
+description: The recurring shapes of defect found when auditing this repo — where to look first in a phase review, including second-round, data-driven and seam-defect passes
 metadata:
   type: project
 ---
@@ -75,5 +75,82 @@ The other five rows hedged honestly. Also new in that document: a plan **task** 
 (trajectories yes, firing patterns no) with the reason recorded in prose but the task surfaced as
 outstanding nowhere. Check `plan.md`'s task list against the branch, not only its criteria list —
 the criteria table is not a superset of the tasks.
+
+## Four more from phase 05 (`feat/game-systems`, PR #22), where systems started consuming input and killing at range
+
+This phase's family is the *seam* one: every piece was individually correct and the defect lived in
+the join between two of them, which is why nothing failed and nobody noticed.
+
+15. **An edge-shaped input consumed once per tick, under a loop that replays one frame's input across
+    N ticks.** `GameLoop.advance` feeds the *same* `InputFrame` to every tick a frame produces, and
+    says so in its own javadoc; `InputAdapter` debounces with `isKeyJustPressed`, which is an edge
+    per *render frame*. `BombSystem` spends a charge on every tick where `input.bomb()` is true, so
+    one press costs two charges at 30 fps and up to the whole cap after a stall. Neither layer is
+    wrong on its own and neither owns the tick-level edge. For any new system, ask whether the field
+    it reads from `InputFrame` is a level or an edge, and if it is an edge, whether the consumer is
+    idempotent across a repeated frame. `fire()` is a level and is fine; `bomb()` is the first edge.
+16. **A stage inserted before the detection stage, when all it does is *mark* destruction.**
+    `markForDestruction` does not remove the collider and `CollisionSystem` does not filter
+    `pendingDestruction`, so `BOMB` at ordinal 3 means everything the bomb "cleared" still generates
+    a `CollisionHit` at ordinal 6 and still costs the player a life at 7. The stage javadoc argued
+    its placement against `SPAWN` and never mentioned `COLLISION`. Whenever a stage is added, list
+    what it *marks* rather than destroys, then read forward through every later stage that iterates
+    the same store — the answer is almost never in the javadoc that justified the placement.
+17. **A whole-screen effect with no screen bound, in a world that deliberately spawns off-screen.**
+    `BombSystem.detonate` walks every enemy collider; `SpawnSystem` puts every wave at
+    `y = 270 + radius` and above. The spec says "on screen". The branch's own `BombReplayTest`
+    scores off enemies 93% above the playfield, and its `bombActuallyScoredSomething` guard asserts
+    on exactly that score. Any system whose scope is "the screen" needs a bound: grep it for
+    `PLAYFIELD_HEIGHT`/`PLAYFIELD_WIDTH`, and if neither appears the bound is missing.
+18. **A hand-enumerated completeness test that quietly stopped being complete.**
+    `WorldTest.destroyStripsEveryComponent` sets four components and asserts four stores are empty,
+    while its javadoc claims to be the guard against forgetting a store in `destroyEntity`. `World`
+    now has thirteen. `destroyEntity` was correct anyway — by hand, not by check — and has been
+    since phase 02. Count the stores declared in `World` against the assertions in that test on every
+    phase that adds a component; the drift is invisible and the failure mode (a `Health` left on a
+    recycled slot) is silent.
+
+Calibration from this phase, in both directions: the author's verified/inferred split in `status.md`
+held up on every point I checked, and the criteria table hedged honestly on the two rows that
+deserved it (the completion-bonus reading, the replay's missing golden). But pattern 7's cousin fired
+again — plan **task** 8 (guaranteed drops) is unbuilt, `level-01.json` carries two of the four drops,
+and `status.md` says "the phase's task list is complete". Read the task list against the content
+files, not against the criteria table.
+
+## Round 2 on PR #22: what a *correct* response to a rejection looks like
+
+Recorded because "accept, nothing new" is hard to calibrate and this round is a good reference for
+the shape of an honest fix.
+
+- **A replay fixture rewritten after a fix is not automatically a whitewash.** The test to apply:
+  (a) did the fix make the old scenario *vacuous* rather than *failing* — here the old bomb presses
+  at ticks 65/185 landed on enemies now correctly out of reach, so the run would have scored zero
+  and proved nothing; (b) is the behaviour the old fixture accidentally exposed now pinned
+  somewhere deliberate — here three unit tests, above/exactly-at/inside the 270 edge; (c) did the
+  rewritten fixture gain a non-vacuity assertion. Three yeses is a correct response, not a
+  disappeared failure.
+- **A golden fingerprint is worth what its fields encode, and it usually does not pin the fix that
+  prompted it.** `BombReplayTest`'s `score=200 lives=3 bombs=0 entities=4` would not move if the
+  on-screen bound were deleted (the scripted presses now land on visible enemies either way), and
+  `LevelScoreReplayTest`'s does not encode shield/attachment state. That is fine — the golden is a
+  net for *unintended* drift, the unit tests are the net for the rule — but do not accept "the
+  golden pins the fix" as an argument.
+- **Boxed-`Integer` set lookups in a per-tick O(n^2) loop are within budget here.** `CollisionSystem`
+  builds `Set.of()` when nothing is pending (no allocation) and only boxes at the `contains(int)`
+  call sites. At MVP collider counts that is a few thousand short-lived `Integer`s per tick against
+  ~10 ms of drawing — not a finding under this project's own "drawing is the cost" rule. If it ever
+  matters, ordering the layer filter before the `contains` removes most of it for free.
+- **A log-once `Set<String>` keyed on sprite ids is bounded** as long as every id is either a
+  compile-time constant or composed from a value validated against a closed set — after round 2,
+  `SpawnSystem` rejects an unrecognised `drop` id at spawn time, so `"pickup-" + drop.pickupId`
+  cannot invent new strings. Check the validation, not the `Set`.
+- **A statement of intent inside `status.md` becomes checkable in the next round.** F11 promised
+  "every commit from this point on respects the limit"; one round-2 subject is 75 characters. Cheap
+  to verify (`git log --format='%s' <base>..HEAD | awk '{print length}'`) and exactly the class of
+  claim this repo tends to leave behind.
+- **Pattern 4 again, in its slow form:** `core-domain`'s memory closes by pointing at "the exact
+  `game`-module compile breakage this phase leaves behind", which round 2's `status.md` records as
+  closed. The memory line was true when written and nobody revisits it — diff memory against
+  `status.md` whenever both changed on the branch, in both directions.
 
 See [[audit-techniques]] for how to confirm these cheaply without touching the repo, and [[review-tooling-and-memory-placement]] for the operational traps around posting the verdict.
