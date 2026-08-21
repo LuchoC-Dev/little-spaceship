@@ -7,6 +7,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.component.BombState;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
@@ -195,6 +196,7 @@ public final class Simulation implements TickHandler {
         world.players().set(player,
             new Player(balance.initialLives(), balance.initialBombs(), PLAYER_INITIAL_SHOT_LEVEL));
         world.weapons().set(player, new Weapon());
+        world.bombStates().set(player, new BombState());
     }
 
     /**

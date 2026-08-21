@@ -22,6 +22,10 @@ class BombSystemTest {
 
     private static final float STEP = 1f / 60f;
     private static final InputFrame BOMB_INPUT = new InputFrame(0f, 0f, false, false, true);
+    private static final InputFrame IDLE_INPUT = new InputFrame(0f, 0f, false, false, false);
+
+    /** Well inside the 208x270 playfield, for entities that should count as on screen. */
+    private static final float ON_SCREEN_Y = 100f;
 
     private final TestBalance balance = new TestBalance();
     private final World world = new World(new TestContent(balance), new Rng(1), new GameEventQueue());
@@ -31,8 +35,8 @@ class BombSystemTest {
     @DisplayName("clears fragile enemies and enemy projectiles, spends one bomb")
     void detonatesAndSpendsABomb() {
         int player = spawnPlayer(2);
-        int fragileEnemy = enemy(true);
-        int enemyProjectile = enemyProjectile();
+        int fragileEnemy = enemy(true, ON_SCREEN_Y);
+        int enemyProjectile = enemyProjectile(ON_SCREEN_Y);
 
         system.update(world, STEP, BOMB_INPUT);
 
@@ -45,7 +49,7 @@ class BombSystemTest {
     @DisplayName("a fragile enemy is destroyed outright by the bomb even with health left")
     void fragileEnemyIsDestroyedRegardlessOfHealth() {
         spawnPlayer(2);
-        int enemy = enemy(true);
+        int enemy = enemy(true, ON_SCREEN_Y);
         world.healths().set(enemy, new Health(1000));
 
         system.update(world, STEP, BOMB_INPUT);
@@ -58,7 +62,7 @@ class BombSystemTest {
     @DisplayName("a resistant enemy with enough health survives the bomb, losing bombDamage points")
     void resistantEnemyWithEnoughHealthSurvives() {
         spawnPlayer(2);
-        int tank = enemy(false);
+        int tank = enemy(false, ON_SCREEN_Y);
         Health health = new Health(balance.bombDamage + 10);
         world.healths().set(tank, health);
 
@@ -72,7 +76,7 @@ class BombSystemTest {
     @DisplayName("a resistant enemy whose health is exhausted by the bomb is destroyed")
     void resistantEnemyDestroyedOnceHealthIsExhausted() {
         spawnPlayer(2);
-        int tank = enemy(false);
+        int tank = enemy(false, ON_SCREEN_Y);
         world.healths().set(tank, new Health(balance.bombDamage));
 
         system.update(world, STEP, BOMB_INPUT);
@@ -84,7 +88,7 @@ class BombSystemTest {
     @DisplayName("a resistant enemy with no health is destroyed outright, the same as one point")
     void resistantEnemyWithNoHealthIsDestroyed() {
         spawnPlayer(2);
-        int tank = enemy(false);
+        int tank = enemy(false, ON_SCREEN_Y);
 
         system.update(world, STEP, BOMB_INPUT);
 
@@ -93,10 +97,82 @@ class BombSystemTest {
     }
 
     @Test
+    @DisplayName("an enemy above the playfield, not yet on screen, is untouched by the bomb")
+    void enemyAbovePlayfieldIsUntouched() {
+        spawnPlayer(2);
+        int notYetVisible = enemy(true, SpawnSystem.PLAYFIELD_HEIGHT + 5.5f);
+
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertFalse(world.pendingDestruction().contains(notYetVisible));
+    }
+
+    @Test
+    @DisplayName("an enemy projectile above the playfield is untouched by the bomb")
+    void enemyProjectileAbovePlayfieldIsUntouched() {
+        spawnPlayer(2);
+        int notYetVisible = enemyProjectile(SpawnSystem.PLAYFIELD_HEIGHT + 5.5f);
+
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertFalse(world.pendingDestruction().contains(notYetVisible));
+    }
+
+    @Test
+    @DisplayName("an enemy exactly on the playfield's edge counts as on screen")
+    void enemyExactlyOnTheEdgeCountsAsOnScreen() {
+        spawnPlayer(2);
+        int atTheEdge = enemy(true, SpawnSystem.PLAYFIELD_HEIGHT);
+
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertTrue(world.pendingDestruction().contains(atTheEdge));
+    }
+
+    @Test
+    @DisplayName("an enemy with no transform is untouched instead of crashing the tick")
+    void enemyWithNoTransformIsUntouched() {
+        spawnPlayer(2);
+        int noTransform = world.createEntity();
+        world.colliders().set(noTransform, new Collider(5f, CollisionLayer.ENEMY, true));
+
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertFalse(world.pendingDestruction().contains(noTransform));
+    }
+
+    @Test
+    @DisplayName("holding the bomb control across two ticks spends only one charge")
+    void holdingAcrossTwoTicksSpendsOnlyOneCharge() {
+        int player = spawnPlayer(2);
+        int firstEnemy = enemy(true, ON_SCREEN_Y);
+
+        system.update(world, STEP, BOMB_INPUT);
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertEquals(1, world.players().get(player).bombs,
+            "GameLoop feeds the same InputFrame to every tick of one frame; a held press must not "
+                + "spend a second charge on the tick after the one that already spent it");
+        assertTrue(world.pendingDestruction().contains(firstEnemy));
+    }
+
+    @Test
+    @DisplayName("releasing and pressing again spends a second charge")
+    void releaseThenPressSpendsASecondCharge() {
+        int player = spawnPlayer(2);
+
+        system.update(world, STEP, BOMB_INPUT);
+        system.update(world, STEP, IDLE_INPUT);
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertEquals(0, world.players().get(player).bombs);
+    }
+
+    @Test
     @DisplayName("with no bomb requested, nothing happens")
     void doesNothingWithoutTheBombInput() {
         int player = spawnPlayer(2);
-        int fragileEnemy = enemy(true);
+        int fragileEnemy = enemy(true, ON_SCREEN_Y);
 
         system.update(world, STEP, InputFrame.IDLE);
 
@@ -108,7 +184,7 @@ class BombSystemTest {
     @DisplayName("with no bomb charge left, requesting the bomb does nothing")
     void doesNothingWithNoBombsLeft() {
         int player = spawnPlayer(0);
-        int fragileEnemy = enemy(true);
+        int fragileEnemy = enemy(true, ON_SCREEN_Y);
 
         system.update(world, STEP, BOMB_INPUT);
 
@@ -119,7 +195,7 @@ class BombSystemTest {
     @Test
     @DisplayName("does nothing when there is no player entity")
     void noPlayerIsHarmless() {
-        int fragileEnemy = enemy(true);
+        int fragileEnemy = enemy(true, ON_SCREEN_Y);
 
         system.update(world, STEP, BOMB_INPUT);
 
@@ -133,14 +209,16 @@ class BombSystemTest {
         return player;
     }
 
-    private int enemy(boolean fragile) {
+    private int enemy(boolean fragile, float y) {
         int entity = world.createEntity();
+        world.transforms().set(entity, new Transform(100f, y));
         world.colliders().set(entity, new Collider(5f, CollisionLayer.ENEMY, fragile));
         return entity;
     }
 
-    private int enemyProjectile() {
+    private int enemyProjectile(float y) {
         int entity = world.createEntity();
+        world.transforms().set(entity, new Transform(100f, y));
         world.colliders().set(entity, new Collider(2f, CollisionLayer.ENEMY_PROJECTILE));
         return entity;
     }

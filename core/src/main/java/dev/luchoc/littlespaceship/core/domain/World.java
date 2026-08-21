@@ -2,6 +2,7 @@ package dev.luchoc.littlespaceship.core.domain;
 
 import dev.luchoc.littlespaceship.core.domain.collision.CollisionHit;
 import dev.luchoc.littlespaceship.core.domain.component.Attachment;
+import dev.luchoc.littlespaceship.core.domain.component.BombState;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
@@ -57,6 +58,7 @@ public final class World {
     private final ComponentStore<Weapon> weapons = new ComponentStore<>();
     private final ComponentStore<Pickup> pickups = new ComponentStore<>();
     private final ComponentStore<Health> healths = new ComponentStore<>();
+    private final ComponentStore<BombState> bombStates = new ComponentStore<>();
 
     /**
      * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
@@ -129,6 +131,7 @@ public final class World {
         weapons.remove(entity);
         pickups.remove(entity);
         healths.remove(entity);
+        bombStates.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -238,6 +241,13 @@ public final class World {
      */
     public ComponentStore<Health> healths() {
         return healths;
+    }
+
+    /**
+     * @return the tick-level rising-edge state {@code BombSystem} tracks for the player
+     */
+    public ComponentStore<BombState> bombStates() {
+        return bombStates;
     }
 
     /**
