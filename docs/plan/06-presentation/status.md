@@ -221,3 +221,63 @@ level-outcome signal anywhere in `core.port` (no concrete `GameEvent` exists yet
 from real play until something says the run ended. Not proposed as a contract here because it is a
 game-rule decision — what counts as victory, whether it is an event or a `WorldView` flag — not a
 rendering one.
+
+## Both gaps closed — `core-domain`
+
+Built on `feat/hud-and-screens`, same branch, same PR. Both changes stay inside `core/`.
+
+### `WorldView.player()`
+
+Built almost exactly as proposed, with `attachmentActive()` dropped: `attachmentId()` already
+answers "is anything equipped" (`""` means no) without a second boolean that could disagree with it.
+`PlayerStatus` is a **record**, not an interface with a hidden implementation the way `WorldView`
+itself is — there is no machinery to hide behind an interface here, only values, snapshotted out of
+`World` the instant `player()` is called. That snapshot is what keeps it read-only: nothing handed
+back can be walked to a live component, unlike a getter over `domain.component.Player` would allow.
+`PlayerStatus.NONE` is the value returned when no entity holds `Player`, which cannot happen once a
+`Simulation` exists — the player's ship is created in its constructor — but can happen against a bare
+`World` a test builds directly.
+
+**`invulnerabilitySource()` was a real change to the defensive chain, not just a getter, and it was
+worth making.** `Invulnerable` gained a `source: InvulnerabilitySource` field
+(`core.port.InvulnerabilitySource` — `NONE`/`RESPAWN`/`DAMAGE`/`POWERUP`) alongside `remaining`.
+`DamageSystem.grantInvulnerability` now takes the source and records `RESPAWN` on the life-lost
+branch, `DAMAGE` on the shield/attachment branch; `PickupSystem.applyInvulnerability` records
+`POWERUP`. All three grants were already real code paths — the power-up was already wired in
+`PickupSystem`, not a stub — so this was recording a distinction the simulation already made
+internally, not inventing a fourth state. `core` never reads `source` back to decide behaviour; the
+chain treats every active grace period identically regardless of why it started. It is presentation
+data riding along on a domain component, the same shape `Attachment` already had for `durability`.
+
+**`attachmentId()` needed a field `Attachment` did not have**, exactly as flagged: it carried
+`durability` only. Added a `String id` field, set from `AttachmentDefinition.id()` in
+`PickupSystem.applyAttachment` — the same content id `Pickup.kind` already carried, just not kept
+after the component was built. `core` never reads it back either.
+
+### Level outcome — `core.port.LevelOutcome`, `WorldView.outcome()`
+
+`IN_PROGRESS` / `COMPLETED` / `DEFEATED`. **Not `VICTORY`**: `02-mvp-functional-spec.md` defines
+victory as defeating the boss with at least one life, and the boss is phase 07's — nothing built so
+far can honestly claim that condition. `COMPLETED` reports the only thing a level can honestly finish
+on today: the wave timeline has run out of events (`SpawnSystem` now calls
+`World.markWaveTimelineExhausted()` once its cursor reaches the end, every tick from there on, not
+just the first), no entity carries an `ENEMY`-layer `Collider` anymore, and the player has at least
+one life left. `DEFEATED` needed no new state at all: `DamageSystem` already enforces "a life is
+never taken below zero", so it is exactly `Player.lives <= 0`, checked ahead of `COMPLETED` so a
+life lost on the same tick the timeline empties resolves as a defeat, not a completion.
+
+Computed on demand in `WorldView.outcome()`, not stored as a field systems write to and a stage
+reads — no new `SystemOrder` stage was added, and the fixed system order is unchanged. This is a
+read the same shape as `forEachSprite`: a query over current state, not a new pipeline concern.
+Whether phase 07 folds a real boss-defeat condition into `LevelOutcome.COMPLETED` or needs a fourth
+value is that phase's call once a boss exists to decide it against; this phase deliberately does not
+guess it.
+
+`game` can now delete the F5/F6 debug stand-in and drive `VictoryScreen`/`DefeatScreen` from
+`WorldView.outcome()` each frame, treating `COMPLETED` as the victory case until phase 07 says
+otherwise.
+
+Suite: 236 → 242 (6 new: four `PlayerStatus`/`outcome` cases in `WorldTest`, two `SpawnSystemTest`
+cases for timeline exhaustion; `DamageSystemTest` and `PickupSystemTest` gained extra assertions on
+existing cases for the new `source`/`id` fields rather than new cases — no test file removed, none
+of the 236 rewritten to test something different than before).
