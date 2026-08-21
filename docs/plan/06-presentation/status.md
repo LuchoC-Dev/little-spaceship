@@ -281,3 +281,77 @@ Suite: 236 → 242 (6 new: four `PlayerStatus`/`outcome` cases in `WorldTest`, t
 cases for timeline exhaustion; `DamageSystemTest` and `PickupSystemTest` gained extra assertions on
 existing cases for the new `source`/`id` fields rather than new cases — no test file removed, none
 of the 236 rewritten to test something different than before).
+
+## Tasks 12 to 14, closed — `game-presentation`, second pass
+
+Pulled `core-domain`'s `PlayerStatus`/`LevelOutcome` from the same branch. Both proposed gaps came
+back built exactly as asked, so this pass is wiring, not renegotiation.
+
+**`HudRenderer` now draws from `WorldView.player()`, called fresh every frame.** `PlayerHudState`
+and `game`'s own `InvulnerabilitySource` are deleted; `HudRenderer` takes `core.port.PlayerStatus`
+and `core.port.InvulnerabilitySource` directly. `maxLives`, `maxBombs` and `maxWeaponLevel` stay as
+constructor-time fields read from `BalanceValues` once — they are run-wide caps, and `PlayerStatus`
+only ever reports the current value, matching `04-hud-layout.md`'s "five life slots... are always
+drawn" regardless of how many are filled. The invulnerability timer bar needed the same treatment:
+`PlayerStatus.invulnerabilityRemaining()` is a raw second count, not a fraction, so `HudRenderer`
+also takes the three duration values (`respawnInvulnerability()`, `damageInvulnerability()`,
+`invulnerabilityPickupDuration()`) to turn it into the `[0,1]` the bar shrinks by.
+
+One gap `core-domain`'s contract left honestly open: no `AttachmentDefinition` field carries a
+human-readable name, only an id such as `attachment-missiles`. `HudRenderer.attachmentLabel`
+derives one — strips an `"attachment-"` prefix, uppercases, truncates to the column's 13 characters
+— rather than blocking on a name field nothing in content actually needs yet. Revisit if content
+ever wants a display name distinct from its id.
+
+**`PlayScreen` checks `WorldView.outcome()` right after advancing each tick**, before drawing.
+`DEFEATED` opens `DefeatScreen`; anything else that is not `IN_PROGRESS` (today, only `COMPLETED`)
+opens `VictoryScreen` with the completion bonus computed from the same `PlayerStatus` snapshot the
+outcome was read alongside. **The F5/F6 debug stand-in is gone.** `VictoryScreen` and `DefeatScreen`'s
+javadoc no longer says "not reachable" — it says which `LevelOutcome` opens them and, for
+`VictoryScreen`, why `core` calls it `COMPLETED` rather than `VICTORY` on its own side while the
+screen still reads "VICTORY" (the flow's copy, not the signal's honesty, per `screens.html`).
+
+**The font fix asked for.** `GameSkin`'s two `BitmapFont`s no longer call `setScale(target /
+getLineHeight())` — a fractional factor — paired with `setUseIntegerPositions(false)`. Both now use
+`wholeScale()`, which rounds to the nearest whole multiple of the native line height and never below
+1, and both set `setUseIntegerPositions(true)` and `Nearest` filtering on the font's own texture.
+The default font's native size is already above the 10/13 px targets, so the round-trip lands on
+scale 1 for both — the placeholder is now visibly larger than the design's line heights (labels
+overlap their own slot icons in the HUD at this scale, visible in the verification screenshot below)
+rather than blurred. Confirmed on screen: agree with the reviewer's framing that oversized reads as
+"not the final font" while blurred read as a rendering bug. This is a placeholder-only fix; it does
+not touch anything `03-typography.md` fixes about the real sheets, which stay the art lane's.
+
+### Verified vs inferred
+
+**Verified on the real LWJGL3 window, screenshotting and clicking through it** (same technique as
+the first pass — see `.claude/agent-memory/game-presentation/`): menu renders with visibly sharper,
+larger placeholder text than before the font fix; ship selection reachable; gameplay screen shows
+the HUD reading real values at run start (3 of 5 life slots filled, 2 of 3 bomb slots, 1 of 4 power
+segments, score `0000000`) pulled live from `WorldView.player()`, not a fixed placeholder — confirms
+the wiring reads the simulation, not just that it compiles.
+
+One false alarm during this verification, recorded here rather than in agent memory because it was
+environmental, not a code bug: an early screenshot came back completely black with no menu drawn and
+no exception in the log. Stacked Gradle daemons from repeated `:desktop:run` invocations were the
+cause — once cleared (`Get-Process java | Stop-Process -Force` before each fresh launch, not
+`./gradlew --stop`, which killed the daemon the running game's JVM lived inside), the same build
+rendered correctly. Worth knowing before reading a blank screenshot as a rendering regression.
+
+**Not verified**: reaching `VictoryScreen`/`DefeatScreen` from an actual completed or lost run.
+Doing that through scripted clicks means surviving or losing level 1 for real, which this pass did
+not attempt; the code path (`PlayScreen` reading `outcome()` and switching screen) was checked by
+reading, and `core`'s own 242 tests cover `LevelOutcome`'s two terminal cases directly. Trusting
+`core`'s test suite for the domain-side correctness of *when* the outcome flips, and this pass's own
+review for *what game does once it does*, is a narrower claim than having watched both screens
+appear on the real window — flagged rather than folded into "verified" above.
+
+### Acceptance criteria, updated
+
+- The HUD shows everything the spec requires and nothing more — **earned**, live data now backs the
+  full layout from the first pass. The boss bar is still never drawn, correctly: no boss exists yet.
+- Every screen in the flow is reachable and returns correctly — **six of six reachable in principle**
+  (menu, ship select, options, pause, and victory/defeat via the real outcome signal); victory/defeat
+  specifically are verified by code reading and `core`'s tests, not by an on-screen run to completion,
+  per the note above.
+- Everything else in the criteria list is unchanged from the first pass's assessment.
