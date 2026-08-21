@@ -355,3 +355,76 @@ appear on the real window — flagged rather than folded into "verified" above.
   specifically are verified by code reading and `core`'s tests, not by an on-screen run to completion,
   per the note above.
 - Everything else in the criteria list is unchanged from the first pass's assessment.
+
+## Two bugs found by playing the build, fixed — `game-presentation`, third pass
+
+Same branch, same PR, no `core` change.
+
+### BACK from Options was broken
+
+Precise symptom, precise cause: `ShipSelectScreen`'s BACK builds a fresh `MenuScreen`; `OptionsScreen`'s
+BACK reused the `Screen` instance passed in as `previous` — `this` from `MenuScreen`. `LittleSpaceshipGame.
+setScreen` disposes the outgoing screen (its own javadoc explains why: `Game.setScreen` alone never does,
+and every screen owns a texture or two), so menu -> Options disposed that `MenuScreen` instance while
+Options still held it. BACK then tried to show a screen whose `Stage` was already gone.
+
+The dispose policy was correct; retaining a `Screen` instance across a `setScreen` call is what cannot
+coexist with it. Fixed by having `OptionsScreen`'s constructor take a `Supplier<Screen>` instead of a
+`Screen` — never evaluated until BACK is actually pressed, so it always builds a live screen regardless of
+whether the caller's own instance already went through `setScreen` and got disposed. Checked every other
+`game.setScreen` call site for the same shape (`grep -rn "Screen previous"`, `grep -rn "game.setScreen"`);
+`OptionsScreen` was the only one holding an instance rather than constructing fresh.
+
+### The menus had no keyboard path at all
+
+Nothing in `menu`/`ship select`/`options`/`pause`/`victory`/`defeat` responded to a key; only the mouse
+worked, wrong for a keyboard-first shoot 'em up. `scene2d.ui` gives none of this for free — no up/down/
+enter convention, no visible focused state beyond what a style already reacts to for the mouse pointer.
+
+Added two small classes, `MenuNavigator` (wires arrow/enter on a `Stage`, cycling with wraparound over an
+ordered list) and `KeyboardFocusable` (`setFocused`/`activate`/`adjust`, one instance per entry). Every
+screen in the flow now builds one. Two focus renderings, chosen per widget because neither `Slider` nor
+`CheckBox` has a font-colour style field the way `TextButton` does:
+
+- Buttons (`MenuEntries`): `TextButtonStyle.checkedFontColor` (new, `W4`) plus a `"> "`/`"  "` prefix
+  swap on the label text, so focus differs in colour **and** shape per `05-legibility-rules.md` R4, and
+  the fixed two-character prefix keeps the button's width stable across the swap.
+- Slider/checkbox rows (`OptionsScreen`): a border, the same `n1-panel` drawable `BaseUiScreen`'s own
+  panels already use, toggled on the row's `Table` background.
+
+The mouse path is untouched — `MenuNavigator` only adds an `InputListener` on the `Stage`'s root actor, it
+does not replace anything scene2d's own click handling already does.
+
+### A third, smaller thing: ship select's stats had no values
+
+`SPEED`, `FIRE`, `BOMBS`, `LIVES` were bare header labels — not a legibility problem, the values were
+never read from anywhere. Now reads them from `BalanceValues` (`playerSpeed()`, `weaponFireCooldown()`,
+`initialBombs()/maxBombs()`, `initialLives()/maxLives()`) and draws each in a new `"stat-value"` style
+(`N7`), the same label/value colour split `HudRenderer` already uses for the HUD, rather than the dim
+`N4` the header text uses.
+
+### Verified vs inferred
+
+**Verified on the real LWJGL3 window**, per this agent's own memory on screenshotting/clicking it: menu
+-> Options -> BACK -> Options -> BACK, twice over, mouse-driven, each hop landing on a working, freshly
+built menu, not a black or frozen screen. Ship select's stat row confirmed showing `140`, `0.15s`, `2/3`,
+`3/5` in a clearly brighter tone than the headers above them.
+
+**The full flow driven by keyboard alone**, also on the real window: DOWN moved focus from PLAY to
+OPTIONS with the `> `/highlight following it; ENTER opened Options with MASTER VOLUME focused by default;
+RIGHT bumped its value from 80 to 85 (confirms `KeyboardFocusable.adjust` reaches the same
+`Consumer<Float>` the mouse-driven `Slider.ChangeListener` already used, not a parallel path); DOWN x4
+reached BACK; ENTER returned to a live menu. Also drove ship select's LAUNCH/BACK by keyboard.
+
+One environment note worth recording since it cost real time here: neither `System.Windows.Forms.SendKeys`
+nor `user32.dll`'s `keybd_event` with a zero scan code reached the GLFW window at all, with no error and
+no visible effect — GLFW's Win32 backend keys off the **scan code** bits of `WM_KEYDOWN`'s `lParam`, not
+the virtual-key code, so a synthetic event needs `MapVirtualKey(vk, MAPVK_VK_TO_VSC)` for the scan code
+and `KEYEVENTF_EXTENDEDKEY` for arrow/navigation keys, or GLFW resolves it as an unknown key and silently
+drops it. Recorded in this agent's own memory, not here, since it is a fact about the verification
+environment, not about the project.
+
+Not verified: `VictoryScreen`/`DefeatScreen`'s own keyboard navigation, since reaching them needs a real
+run to complete or fail, unchanged from the second pass's own "not verified" note above — this pass did
+not attempt a full run, only confirmed by reading that they call `MenuEntries.add`/`MenuNavigator` the
+same way every other screen in this pass does.
