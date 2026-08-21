@@ -24,11 +24,17 @@ public enum SystemOrder {
     WEAPON,
 
     /**
-     * Detonates the bomb when requested: clears fragile enemies and enemy projectiles on screen.
-     * Runs before {@code SPAWN} so a bomb used the instant a wave would appear never reaches a wave
-     * that has not spawned yet — there is nothing on screen for it to touch either way, but placing
-     * it here keeps every stage that reacts to on-screen entities grouped together, after input and
-     * weapon resolution and before anything new enters the world this tick.
+     * Detonates the bomb when requested: clears on-screen fragile enemies and enemy projectiles,
+     * damages on-screen resistant ones. Runs before {@code SPAWN} so a bomb used the instant a wave
+     * would appear never reaches a wave that has not spawned yet, and — this is the part that
+     * matters for correctness, not just tidiness — before {@code COLLISION}. {@code BombSystem} only
+     * marks entities for destruction; it does not remove their collider. Running before {@code
+     * COLLISION} is what lets {@code CollisionSystem}'s own rule (skip anything already marked for
+     * destruction this tick, stated on its class) turn that marking into actual protection: an enemy
+     * or an enemy projectile the bomb just cleared never produces a {@code CollisionHit} against the
+     * player in the same tick, so {@code DamageSystem} never consumes a layer or a life for it. Move
+     * {@code BOMB} to run after {@code COLLISION} and this protection is lost regardless of what
+     * {@code CollisionSystem} does — the hits would already be in the list.
      */
     BOMB,
 
@@ -38,7 +44,14 @@ public enum SystemOrder {
     /** Expires projectiles and effects. */
     LIFETIME,
 
-    /** Detects impacts between layer pairs. */
+    /**
+     * Detects impacts between layer pairs. Also the one place that enforces: an entity already
+     * marked for destruction this tick — by {@code BombSystem}, by {@code LifetimeSystem}, by
+     * anything that runs earlier in the pipeline and calls {@code World.markForDestruction} — never
+     * produces a {@code CollisionHit}, regardless of what marked it. Marking alone leaves the
+     * collider in place, so without this rule an entity destroyed earlier in the same tick could
+     * still register a hit against the player before {@code CleanupSystem} ever runs.
+     */
     COLLISION,
 
     /**

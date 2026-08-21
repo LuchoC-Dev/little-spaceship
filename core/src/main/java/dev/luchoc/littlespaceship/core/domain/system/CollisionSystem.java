@@ -9,7 +9,9 @@ import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Detects overlaps by layer pair, never everything against everything.
@@ -32,6 +34,16 @@ import java.util.List;
  *
  * <p>The result is not a {@code GameEvent}: it is {@link World#collisionHits()}, cleared and refilled
  * here every tick and read by {@code DamageSystem} right after, within the same tick.
+ *
+ * <p>An entity already in {@link World#pendingDestruction()} this tick never produces a hit,
+ * regardless of what marked it there — {@code BombSystem}, {@code LifetimeSystem}, or anything
+ * earlier in the pipeline that calls {@code World.markForDestruction}. Marking does not remove a
+ * collider, so without this rule an enemy the bomb just cleared, or a projectile that just expired,
+ * would still overlap the player this same tick and cost a shield, the attachment or a life for
+ * something that visually and logically already stopped existing. This is what actually makes
+ * {@code SystemOrder.BOMB} running before {@code COLLISION} protect the player on the same tick —
+ * see that stage's javadoc — and it generalises to every future source of same-tick destruction, not
+ * only the bomb.
  */
 public final class CollisionSystem implements GameSystem {
 
@@ -45,23 +57,39 @@ public final class CollisionSystem implements GameSystem {
         List<CollisionHit> hits = world.collisionHits();
         hits.clear();
 
+        Set<Integer> destroyed = destroyedThisTick(world);
+
         int player = world.playerEntity();
         Collider playerCollider = null;
         Transform playerTransform = null;
-        if (player != EntityId.NONE) {
+        if (player != EntityId.NONE && !destroyed.contains(player)) {
             playerCollider = world.colliders().get(player);
             playerTransform = world.transforms().get(player);
         }
 
         detectAgainstPlayer(world, CollisionLayer.ENEMY_PROJECTILE, CollisionPair.ENEMY_PROJECTILE_VS_PLAYER,
-            player, playerCollider, playerTransform, hits);
+            player, playerCollider, playerTransform, destroyed, hits);
         detectAgainstPlayer(world, CollisionLayer.ENEMY, CollisionPair.ENEMY_VS_PLAYER,
-            player, playerCollider, playerTransform, hits);
+            player, playerCollider, playerTransform, destroyed, hits);
         detectAgainstPlayer(world, CollisionLayer.PICKUP, CollisionPair.PICKUP_VS_PLAYER,
-            player, playerCollider, playerTransform, hits);
+            player, playerCollider, playerTransform, destroyed, hits);
 
         detectPair(world, CollisionLayer.PLAYER_PROJECTILE, CollisionLayer.ENEMY,
-            CollisionPair.PLAYER_PROJECTILE_VS_ENEMY, hits);
+            CollisionPair.PLAYER_PROJECTILE_VS_ENEMY, destroyed, hits);
+    }
+
+    /**
+     * A lookup of what {@link World#pendingDestruction()} holds this tick, built once per update
+     * instead of once per candidate. Empty in the ordinary case — nothing was marked before {@code
+     * COLLISION} runs unless {@code BOMB} or {@code LIFETIME} did — so the common case allocates
+     * nothing beyond the shared empty set.
+     */
+    private static Set<Integer> destroyedThisTick(World world) {
+        List<Integer> pending = world.pendingDestruction();
+        if (pending.isEmpty()) {
+            return Set.of();
+        }
+        return new HashSet<>(pending);
     }
 
     /**
@@ -72,7 +100,7 @@ public final class CollisionSystem implements GameSystem {
     private static void detectAgainstPlayer(
         World world, CollisionLayer layer, CollisionPair pair,
         int player, Collider playerCollider, Transform playerTransform,
-        List<CollisionHit> hits) {
+        Set<Integer> destroyed, List<CollisionHit> hits) {
         if (player == EntityId.NONE || playerCollider == null || playerTransform == null) {
             return;
         }
@@ -80,7 +108,7 @@ public final class CollisionSystem implements GameSystem {
         ComponentStore<Transform> transforms = world.transforms();
         for (int i = 0; i < colliders.size(); i++) {
             int entity = colliders.entityAt(i);
-            if (entity == player) {
+            if (entity == player || destroyed.contains(entity)) {
                 continue;
             }
             Collider collider = colliders.valueAt(i);
@@ -103,11 +131,14 @@ public final class CollisionSystem implements GameSystem {
      */
     private static void detectPair(
         World world, CollisionLayer layerA, CollisionLayer layerB, CollisionPair pair,
-        List<CollisionHit> hits) {
+        Set<Integer> destroyed, List<CollisionHit> hits) {
         ComponentStore<Collider> colliders = world.colliders();
         ComponentStore<Transform> transforms = world.transforms();
         for (int i = 0; i < colliders.size(); i++) {
             int a = colliders.entityAt(i);
+            if (destroyed.contains(a)) {
+                continue;
+            }
             Collider colliderA = colliders.valueAt(i);
             if (colliderA.layer != layerA) {
                 continue;
@@ -118,6 +149,9 @@ public final class CollisionSystem implements GameSystem {
             }
             for (int j = 0; j < colliders.size(); j++) {
                 int b = colliders.entityAt(j);
+                if (destroyed.contains(b)) {
+                    continue;
+                }
                 Collider colliderB = colliders.valueAt(j);
                 if (colliderB.layer != layerB) {
                     continue;
