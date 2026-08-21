@@ -18,6 +18,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
 import dev.luchoc.littlespaceship.core.testsupport.TestBalance;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import org.junit.jupiter.api.DisplayName;
@@ -38,9 +39,9 @@ class DamageSystemTest {
     @DisplayName("invulnerability absorbs the hit completely: nothing else is touched")
     void invulnerabilityAbsorbsTheHitEntirely() {
         int player = spawnPlayer(3, 2, 1);
-        world.invulnerabilities().set(player, new Invulnerable(1f));
+        world.invulnerabilities().set(player, new Invulnerable(1f, InvulnerabilitySource.RESPAWN));
         world.shields().set(player, new Shield());
-        world.attachments().set(player, new Attachment(1));
+        world.attachments().set(player, new Attachment("attachment", 1));
         int enemy = spawnFragileEnemy();
         hitPlayerByEnemy(player, enemy);
 
@@ -57,7 +58,7 @@ class DamageSystemTest {
     void shieldAbsorbsBeforeAttachmentOrLife() {
         int player = spawnPlayer(3, 2, 1);
         world.shields().set(player, new Shield());
-        world.attachments().set(player, new Attachment(1));
+        world.attachments().set(player, new Attachment("attachment", 1));
         int enemy = spawnFragileEnemy();
         hitPlayerByEnemy(player, enemy);
 
@@ -72,7 +73,7 @@ class DamageSystemTest {
     @DisplayName("with no shield, the attachment absorbs the hit before a life")
     void attachmentAbsorbsBeforeLife() {
         int player = spawnPlayer(3, 2, 1);
-        world.attachments().set(player, new Attachment(1));
+        world.attachments().set(player, new Attachment("attachment", 1));
         int enemy = spawnFragileEnemy();
         hitPlayerByEnemy(player, enemy);
 
@@ -86,7 +87,7 @@ class DamageSystemTest {
     @DisplayName("an attachment with durability left survives one hit")
     void attachmentSurvivesWhileDurabilityRemains() {
         int player = spawnPlayer(3, 2, 1);
-        world.attachments().set(player, new Attachment(2));
+        world.attachments().set(player, new Attachment("attachment", 2));
         int enemy = spawnFragileEnemy();
         hitPlayerByEnemy(player, enemy);
 
@@ -136,6 +137,7 @@ class DamageSystemTest {
         Invulnerable invulnerable = world.invulnerabilities().get(player);
         assertEquals(balance.damageInvulnerability, invulnerable.remaining, 0.0001f);
         assertTrue(balance.damageInvulnerability < balance.respawnInvulnerability);
+        assertEquals(InvulnerabilitySource.DAMAGE, invulnerable.source);
     }
 
     @Test
@@ -149,6 +151,7 @@ class DamageSystemTest {
 
         Invulnerable invulnerable = world.invulnerabilities().get(player);
         assertEquals(balance.respawnInvulnerability, invulnerable.remaining, 0.0001f);
+        assertEquals(InvulnerabilitySource.RESPAWN, invulnerable.source);
     }
 
     @Test
@@ -171,7 +174,7 @@ class DamageSystemTest {
     @DisplayName("a second hit in the same tick is absorbed by the invulnerability the first one granted")
     void aSecondHitInTheSameTickDoesNotChain() {
         int player = spawnPlayer(3, 2, 1);
-        world.attachments().set(player, new Attachment(1));
+        world.attachments().set(player, new Attachment("attachment", 1));
         int firstEnemy = spawnFragileEnemy();
         int secondEnemy = spawnFragileEnemy();
         hitPlayerByEnemy(player, firstEnemy);
@@ -225,7 +228,7 @@ class DamageSystemTest {
     @DisplayName("while invulnerable, neither a weak enemy nor an enemy projectile is consumed")
     void invulnerabilityAlsoProtectsAgainstConsequencesForTheOther() {
         int player = spawnPlayer(3, 2, 1);
-        world.invulnerabilities().set(player, new Invulnerable(1f));
+        world.invulnerabilities().set(player, new Invulnerable(1f, InvulnerabilitySource.RESPAWN));
         int enemy = spawnFragileEnemy();
         hitPlayerByEnemy(player, enemy);
 
@@ -238,7 +241,7 @@ class DamageSystemTest {
     @DisplayName("grace time decays and expires, so a later hit is resolved normally again")
     void invulnerabilityDecaysAndExpires() {
         int player = spawnPlayer(3, 2, 1);
-        world.invulnerabilities().set(player, new Invulnerable(STEP * 1.5f));
+        world.invulnerabilities().set(player, new Invulnerable(STEP * 1.5f, InvulnerabilitySource.RESPAWN));
 
         system.update(world, STEP, InputFrame.IDLE);
         assertTrue(world.invulnerabilities().has(player));

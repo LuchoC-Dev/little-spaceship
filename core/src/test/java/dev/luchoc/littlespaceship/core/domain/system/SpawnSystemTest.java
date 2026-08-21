@@ -16,6 +16,7 @@ import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
 import dev.luchoc.littlespaceship.core.port.FormationSlot;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.LevelOutcome;
 import dev.luchoc.littlespaceship.core.port.MapComponentSpec;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
@@ -288,6 +289,39 @@ class SpawnSystemTest {
             () -> system.update(world, 1f, InputFrame.IDLE));
         assertTrue(e.getMessage().contains("enemy-basic"));
         assertTrue(e.getMessage().contains("radius"));
+    }
+
+    @Test
+    @DisplayName("once the timeline is exhausted and the spawned enemy is destroyed, the run completes")
+    void completesOnceTheTimelineIsExhaustedAndNothingIsAlive() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(
+                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null))));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+        int enemy = world.colliders().entityAt(0);
+        world.destroyEntity(enemy);
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(LevelOutcome.COMPLETED, world.view().outcome());
+    }
+
+    @Test
+    @DisplayName("the run is not complete while an enemy the timeline spawned is still alive")
+    void notCompleteWhileASpawnedEnemySurvives() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(
+                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null))));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(LevelOutcome.IN_PROGRESS, world.view().outcome());
     }
 
     @Test
