@@ -31,6 +31,8 @@ public final class TestBalance implements BalanceValues {
     public float invulnerabilityPickupDuration = 3f;
     public int lifeCompletionBonus = 1000;
     public int bombCompletionBonus = 300;
+    public int weaponProjectileDamage = 10;
+    public int bombDamage = 50;
 
     @Override
     public int initialLives() {
@@ -120,5 +122,15 @@ public final class TestBalance implements BalanceValues {
     @Override
     public int bombCompletionBonus() {
         return bombCompletionBonus;
+    }
+
+    @Override
+    public int weaponProjectileDamage() {
+        return weaponProjectileDamage;
+    }
+
+    @Override
+    public int bombDamage() {
+        return bombDamage;
     }
 }

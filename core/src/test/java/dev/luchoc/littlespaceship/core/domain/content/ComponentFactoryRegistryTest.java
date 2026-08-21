@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
@@ -102,6 +103,20 @@ class ComponentFactoryRegistryTest {
 
         ScoreValue scoreValue = world.scoreValues().get(entity);
         assertEquals(500, scoreValue.points);
+    }
+
+    @Test
+    @DisplayName("the default registry attaches health, rounded to an int, matching the architecture's "
+        + "own tank example")
+    void healthFactoryAttachesPoints() {
+        World world = worldOf(new TestContent());
+        int entity = world.createEntity();
+
+        ComponentFactoryRegistry.withDefaults().attach(world, entity,
+            new MapComponentSpec("health", Map.of("points", 40f)));
+
+        Health health = world.healths().get(entity);
+        assertEquals(40, health.points);
     }
 
     @Test

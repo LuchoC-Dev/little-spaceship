@@ -157,4 +157,30 @@ public interface BalanceValues {
      *     {@code 10-mvp-initial-values.md}
      */
     int bombCompletionBonus();
+
+    /**
+     * Hit points a player projectile subtracts from an enemy's {@code Health} on contact.
+     *
+     * <p>Not in {@code 10-mvp-initial-values.md}: no enemy hit-point value is decided anywhere in
+     * {@code docs/planning/} yet, so there is nothing to balance this number against. A placeholder
+     * pending real numbers, recorded as open the same way {@link #playerSpeed()} is. {@code
+     * 01-vision-and-scope.md} is explicit that difficulty "must not depend only on raising health
+     * and damage" — this value is a fixed per-shot constant for that reason, not a per-level or
+     * per-difficulty dial.
+     *
+     * @return the damage a single player projectile deals, strictly positive
+     */
+    int weaponProjectileDamage();
+
+    /**
+     * Hit points the bomb subtracts from a non-fragile enemy's {@code Health} on detonation — the
+     * "heavy damage to resistant enemies" {@code 02-mvp-functional-spec.md} describes. A fragile
+     * enemy ignores this entirely: it is destroyed outright by the bomb, the same as by ramming,
+     * regardless of any {@code Health} it happens to carry.
+     *
+     * <p>Same placeholder status as {@link #weaponProjectileDamage()}.
+     *
+     * @return the damage the bomb deals to a resistant enemy, strictly positive
+     */
+    int bombDamage();
 }

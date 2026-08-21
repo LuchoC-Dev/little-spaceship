@@ -3,6 +3,7 @@ package dev.luchoc.littlespaceship.core.domain.content;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
@@ -59,10 +60,13 @@ public final class ComponentFactoryRegistry {
     }
 
     /**
-     * Builds the registry with the factories the MVP's content already needs: motion, collider,
-     * sprite, scoreValue. Weapon and health stay unregistered — phase 05 owns the systems that would
-     * consume them, and registering a factory nothing reads would be exactly the guessed shape this
-     * project avoids building ahead of a real consumer.
+     * Builds the registry with the factories the MVP's content needs: motion, collider, sprite,
+     * scoreValue, health. {@code "health"} was added in phase 05, alongside the systems
+     * ({@code WeaponSystem}, {@code BombSystem}) that consume it — {@code 12-architecture.md} named
+     * the component and its {@code {"points": N}} shape from the start, but no phase had it as a
+     * task until the gap was caught in review. {@code "weapon"} — a per-archetype firing pattern for
+     * enemies — stays unregistered: nothing enemy-side fires yet, so registering a factory for it
+     * would still be the guessed shape this project avoids building ahead of a real consumer.
      *
      * @return a registry ready to attach the MVP's archetypes
      */
@@ -71,7 +75,8 @@ public final class ComponentFactoryRegistry {
             .register("motion", ComponentFactoryRegistry::attachMotion)
             .register("collider", ComponentFactoryRegistry::attachCollider)
             .register("sprite", ComponentFactoryRegistry::attachSprite)
-            .register("scoreValue", ComponentFactoryRegistry::attachScoreValue);
+            .register("scoreValue", ComponentFactoryRegistry::attachScoreValue)
+            .register("health", ComponentFactoryRegistry::attachHealth);
     }
 
     /**
@@ -110,5 +115,14 @@ public final class ComponentFactoryRegistry {
     private static void attachScoreValue(World world, int entity, ComponentSpec spec) {
         float points = spec.number("points");
         world.scoreValues().set(entity, new ScoreValue(Math.round(points)));
+    }
+
+    /**
+     * {@code {"points": 40}}, exactly {@code 12-architecture.md}'s own example for a tank. That
+     * {@code 40} is illustrative there, not a decided balance value — see {@link Health}'s javadoc.
+     */
+    private static void attachHealth(World world, int entity, ComponentSpec spec) {
+        float points = spec.number("points");
+        world.healths().set(entity, new Health(Math.round(points)));
     }
 }
