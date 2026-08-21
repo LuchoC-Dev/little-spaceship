@@ -10,13 +10,19 @@ import java.util.Map;
 /**
  * Placeholder art, generated in code into a single texture instead of loaded from disk.
  *
- * <p>Phase 04's content pipeline names seven content sprite ids across the level 1 roster; no real
- * art file exists for any of them yet, so every one is a generated silhouette here. What matters is
- * that sizes and collider radii already agree with {@code docs/design/02-sprite-sizes.md} —
- * synchronisation point 1 — since a placeholder whose silhouette lies about size would force hitbox
- * rework once real art arrives. Colours come from the closed {@code ls32} palette in
- * {@code docs/design/01-palette.md}: {@code C1}/{@code C2} for the player's engine, the alien hull
- * ramp {@code V2 -> V3 -> V4} for every enemy, {@code N0} for every outline.
+ * <p>Phase 04's content pipeline named seven content sprite ids across the level 1 roster; phase 05
+ * added two more (the player's projectiles, {@code shot-p1}/{@code shot-p2}) and six pickup capsules
+ * ({@code pickup-<kind>}, one per {@code PickupSystem} kind, plus {@code pickup-attachment}), none of
+ * which had a placeholder until this pass — they drew as nothing, silently, until {@code
+ * WorldRenderer} started logging a missing id. No real art file exists for any id here yet, so every
+ * one is a generated silhouette. What matters is that sizes and collider radii already agree with
+ * {@code docs/design/02-sprite-sizes.md} — synchronisation point 1 — since a placeholder whose
+ * silhouette lies about size would force hitbox rework once real art arrives. Colours come from the
+ * closed {@code ls32} palette in {@code docs/design/01-palette.md}: {@code C1}/{@code C2} for the
+ * player's engine and its own fire (per {@code 02-sprite-sizes.md}, "player fire is cyan and
+ * elongated"), the alien hull ramp {@code V2 -> V3 -> V4} for every enemy, {@code G2}/{@code G3} for
+ * every pickup ("pickup body"/"pickup highlight" in the palette table, and R17's "green, larger than
+ * any bullet" in {@code 05-legibility-rules.md}), {@code N0} for every outline.
  *
  * <p>Every sprite lives in one {@link Texture}, packed left to right with a 1px gap between entries,
  * so drawing the world only ever binds one texture. The checkerboard distortion probe is deliberately
@@ -34,16 +40,37 @@ public final class PlaceholderAtlas {
     private static final int V2_ALIEN_DARK = 0x382050FF;
     private static final int V3_ALIEN_MID = 0x58347AFF;
     private static final int V4_ALIEN_LIGHT = 0x8E5CB8FF;
+    private static final int G2_PICKUP_BODY = 0x34A75CFF;
+    private static final int G3_PICKUP_HIGHLIGHT = 0x7FE08AFF;
+
+    /**
+     * What a {@link Sprite} entry is drawn as — {@link #drawShip}, {@link #drawEnemy},
+     * {@link #drawProjectile} or {@link #drawPickup} share no silhouette, so dispatch on this rather
+     * than growing a chain of {@code .equals(id)} checks like the one this replaced.
+     */
+    private enum Kind { SHIP, ENEMY, PROJECTILE, PICKUP }
 
     /** Every sprite id and size this placeholder set covers, from {@code docs/design/02-sprite-sizes.md}. */
     private static final Sprite[] SPRITES = {
-        new Sprite("ship-basic", 15, 17),
-        new Sprite("enemy-basic", 13, 13),
-        new Sprite("enemy-light", 11, 13),
-        new Sprite("enemy-shooter", 15, 15),
-        new Sprite("enemy-rush", 9, 15),
-        new Sprite("enemy-tank", 23, 23),
-        new Sprite("enemy-carrier", 39, 31),
+        new Sprite("ship-basic", 15, 17, Kind.SHIP),
+        new Sprite("enemy-basic", 13, 13, Kind.ENEMY),
+        new Sprite("enemy-light", 11, 13, Kind.ENEMY),
+        new Sprite("enemy-shooter", 15, 15, Kind.ENEMY),
+        new Sprite("enemy-rush", 9, 15, Kind.ENEMY),
+        new Sprite("enemy-tank", 23, 23, Kind.ENEMY),
+        new Sprite("enemy-carrier", 39, 31, Kind.ENEMY),
+        // Player projectiles, "Player shot, level 1/3" rows of the sprite sizes table.
+        new Sprite("shot-p1", 3, 9, Kind.PROJECTILE),
+        new Sprite("shot-p2", 5, 11, Kind.PROJECTILE),
+        // The five fixed power-up kinds share one capsule silhouette per PickupSystem.KIND_*,
+        // "Power-up capsule" row.
+        new Sprite("pickup-weapon-upgrade", 11, 11, Kind.PICKUP),
+        new Sprite("pickup-shield", 11, 11, Kind.PICKUP),
+        new Sprite("pickup-extra-life", 11, 11, Kind.PICKUP),
+        new Sprite("pickup-bomb-recharge", 11, 11, Kind.PICKUP),
+        new Sprite("pickup-invulnerability", 11, 11, Kind.PICKUP),
+        // The attachment's own, larger capsule, "Attachment capsule" row.
+        new Sprite("pickup-attachment", 13, 13, Kind.PICKUP),
     };
 
     private static final int GAP = 1;
@@ -68,10 +95,11 @@ public final class PlaceholderAtlas {
         for (int i = 0; i < SPRITES.length; i++) {
             Sprite sprite = SPRITES[i];
             originX[i] = cursorX;
-            if (sprite.id.equals("ship-basic")) {
-                drawShip(pixmap, cursorX, GAP, sprite.width, sprite.height);
-            } else {
-                drawEnemy(pixmap, cursorX, GAP, sprite.width, sprite.height);
+            switch (sprite.kind) {
+                case SHIP -> drawShip(pixmap, cursorX, GAP, sprite.width, sprite.height);
+                case ENEMY -> drawEnemy(pixmap, cursorX, GAP, sprite.width, sprite.height);
+                case PROJECTILE -> drawProjectile(pixmap, cursorX, GAP, sprite.width, sprite.height);
+                case PICKUP -> drawPickup(pixmap, cursorX, GAP, sprite.width, sprite.height);
             }
             cursorX += sprite.width + GAP;
         }
@@ -126,6 +154,40 @@ public final class PlaceholderAtlas {
         pixmap.fillRectangle(centerX - core, centerY - core, core * 2, core * 2);
     }
 
+    /**
+     * A cyan, elongated bolt — "player fire is cyan and elongated", {@code 02-sprite-sizes.md}. Body
+     * in {@code C1}, a one-pixel core in {@code C2} running down the centre so even the smallest
+     * (3x9) projectile still shows the two-tone ramp the real art will carry.
+     */
+    private static void drawProjectile(Pixmap pixmap, int originX, int originY, int width, int height) {
+        setColor(pixmap, N0_OUTLINE);
+        pixmap.drawRectangle(originX, originY, width, height);
+        setColor(pixmap, C1_ENGINE);
+        pixmap.fillRectangle(originX + 1, originY + 1, width - 2, height - 2);
+        setColor(pixmap, C2_ENGINE_CORE);
+        int coreWidth = Math.max(1, width - 4);
+        pixmap.fillRectangle(originX + (width - coreWidth) / 2, originY + 1, coreWidth, height - 2);
+    }
+
+    /**
+     * A green capsule, shared by every pickup id — "the five power-ups share one capsule silhouette"
+     * per {@code 02-sprite-sizes.md}, and R17 in {@code 05-legibility-rules.md} asks for exactly this:
+     * green, larger than any bullet. {@code G2} body, {@code G3} highlight. Telling the six kinds
+     * apart by icon is production art's job, not this placeholder's — every id here draws identically
+     * apart from size.
+     */
+    private static void drawPickup(Pixmap pixmap, int originX, int originY, int width, int height) {
+        setColor(pixmap, N0_OUTLINE);
+        pixmap.drawRectangle(originX, originY, width, height);
+        setColor(pixmap, G2_PICKUP_BODY);
+        pixmap.fillRectangle(originX + 1, originY + 1, width - 2, height - 2);
+        setColor(pixmap, G3_PICKUP_HIGHLIGHT);
+        int core = Math.max(1, Math.min(width, height) / 4);
+        int centerX = originX + width / 2;
+        int centerY = originY + height / 2;
+        pixmap.fillRectangle(centerX - core, centerY - core, core * 2, core * 2);
+    }
+
     private static void setColor(Pixmap pixmap, int rgba8888) {
         pixmap.setColor(
             ((rgba8888 >>> 24) & 0xFF) / 255f,
@@ -148,6 +210,6 @@ public final class PlaceholderAtlas {
         texture.dispose();
     }
 
-    private record Sprite(String id, int width, int height) {
+    private record Sprite(String id, int width, int height, Kind kind) {
     }
 }
