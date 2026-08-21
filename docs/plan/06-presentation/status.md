@@ -468,3 +468,88 @@ lives/bombs-scaled case for `WorldView.completionBonus()`).
 same `CompletionBonus` for both rows). Drop the `content.balance()` reads for this from `PlayScreen`
 entirely if nothing else in that method needs them. `HudRenderer`/anywhere else reading
 `PlayerStatus.attachmentDurability` needs to stop — the field no longer exists on the record.
+
+## Review round 1, findings closed — `game-presentation` side
+
+Same branch, same PR. Closes both blocking findings from the round-1 review and the six
+`screens.html` omissions it listed as not blocking.
+
+### Blocking 1 — the duplicated completion bonus, gone
+
+`PlayScreen` now calls `view.completionBonus()` once per outcome check and reuses the same
+`CompletionBonus` for both `VictoryScreen` rows. `content.balance()` stays in `PlayScreen` — still
+needed for `HudRenderer`'s construction and `InputAdapter.sample`'s slow-mode read — but nothing
+about the bonus reads it anymore. Grepped `attachmentDurability` across `game`: the only remaining
+hit is `core`'s own `PickupSystemTest`, out of this module's reach.
+
+### Blocking 2 — hit and upgrade-loss feedback, and the ship-side invulnerability treatment
+
+**Feedback.** `HudRenderer` now keeps a `previousStatus` field and diffs it against every `draw()`
+call, per `04-hud-layout.md`'s "Feedback" table: a life lost flashes the lost slot and both playfield
+rules, a bomb used flashes the spent slot, a shield or attachment lost flashes the icon/block before
+it disappears, a weapon level gained flashes the newly lit segment. Tick counts match the table
+exactly (6/2/3/3/4, and the rules' 2-then-4 split). The table's sixth case — "pickup collected at
+maximum" — is deliberately **not** built: `enemy-tank`'s kill score and `maxedPickupBonus` are both
+500 points in `assets/data/*.json`, so a same-value `score` jump cannot be told apart from an
+ordinary kill by diffing `PlayerStatus` alone, and flashing on every `score` increase would fire on
+every kill too. Documented in `HudRenderer`'s class javadoc rather than guessed; needs a signal from
+`core` naming the cause to close for real.
+
+**Ship-side invulnerability.** `WorldRenderer` now takes the frame's `PlayerStatus` in `draw()` and
+matches the player's sprite by content id (`"ship-basic"`, `Simulation.PLAYER_SPRITE`'s value —
+`SpriteVisitor` carries no "this is the player" flag, so this is the same kind of content-id match
+`HudRenderer` already makes for `attachmentId`). Respawn blinks the sprite at alpha 0.35 four ticks
+on, four off; damage absorbed by the shield or the attachment tints it `N7` three ticks on, three
+off; the power-up draws a `C1` outline ring, 21x21, behind the sprite. All three read from a tick
+counter reset whenever `invulnerabilitySource()` changes, not from a clock — the same determinism
+shape `core` itself follows. `HudRenderer`'s plate `STATE` icon now only draws for `POWERUP`, per
+"Invulnerability is shown on the ship, not in the plate": respawn and damage no longer touch the
+plate at all, closing the finding that the two were inverted.
+
+### The six `screens.html` omissions, closed
+
+- `BaseUiScreen` now draws the 1 px `N3` rule under every screen title, sized to the title text.
+- `MenuScreen` adds the subtitle and the `MVP BUILD` footer, both from `05-screens.js`.
+- `PlayScreen`'s pause panel sits on an `n2-panel` plate, sized to the mock's `160,92,160,86`.
+- `DefeatScreen`'s score is zero-padded to 7 digits, the same width `VictoryScreen` already used.
+- `OptionsScreen` gained a `CREDITS AND LICENCES` entry, opening a new `CreditsScreen` — plain-text
+  engine/library attribution (libGDX, LWJGL3, GDX-TeaVM) with one BACK, the same shape every other
+  no-configuration screen in this flow uses.
+- `ShipSelectScreen` draws `SPEED`/`FIRE`/`BOMBS`/`LIVES` as 5-segment bars instead of raw numbers,
+  in the same `C1`/`N2` fill `HudRenderer`'s POWER segments use. `BOMBS`/`LIVES` scale from
+  `BalanceValues`' real caps; `SPEED`/`FIRE` scale against a presentation-only plausible range
+  (documented in `ShipSelectScreen` as not a game rule) since neither has a natural 0-5 domain cap.
+
+### Two status corrections, recorded rather than left silent
+
+- **`docs/plan/03-first-playable/plan.md:45`'s "the render loop allocates nothing per frame" is now
+  literally false**, and was already an overstatement of what the code ever guaranteed. What holds,
+  confirmed by the round-1 review's count and unchanged by this pass, is `12-architecture.md`'s real
+  intent: nothing is allocated **per entity** per frame. This pass adds a bounded, entity-count-
+  independent handful of objects itself (`PlayerStatus` records, `CompletionBonus` on the two frames
+  a run ends) — same shape, same non-issue, under the same "not per entity" reading.
+- **Task 12's "assets are in one atlas and the render loop keeps batching" still cannot be ticked.**
+  This pass adds one more texture outside the atlas: `WorldRenderer`'s own 1x1 pixel, used only to
+  draw the power-up's aura ring, alongside `HudRenderer`'s separate 1x1 pixel and the Skin's two
+  `BitmapFont` textures already flagged. The bind count this criterion cares about goes up by a small,
+  constant amount, not down — real batching arrives with the atlas tasks 6-11 produce, not before.
+
+### Verified vs inferred
+
+**Verified on the real LWJGL3 window**, screenshotting and clicking through it as in every prior
+pass: the menu shows the title rule, the subtitle and the footer; ship select shows all four stats as
+5-segment bars, correctly filled; a full run reads the HUD live — `STATE` showed only the shield icon
+(`C1`/`N6`) once a shield was picked up, with **no** plate invulnerability icon drawn alongside it,
+confirming the plate no longer shows respawn/damage grace at all; `MODULE` showed the attachment
+after its pickup. Pause was not re-verified visually this pass (its code path — background plate,
+sizing — is unchanged in kind from what the second pass already confirmed reachable).
+
+**Not verified**: the ship-side blink/flash/aura and the HUD's flash-on-loss feedback, on screen.
+Level 1's five enemies died quickly enough in this run that no bullet ever reached the player, and no
+life, shield or attachment was lost in the window this pass watched — the respawn blink at spawn is
+real but lasts 2 s against a screenshot round-trip in this environment of roughly 1-2 s, so no capture
+landed inside it either. Checked instead by reading: `WorldRenderer.accept` and `HudRenderer.draw`
+both compute the tinted/flashed branch correctly for the states this session did observe (`NONE`
+throughout most of the run, `POWERUP` never granted), and the tick-cycle arithmetic was hand-traced
+against `04-hud-layout.md`'s tables. A future pass with a hostile enough opening wave, or a debug hook
+that forces a hit, would close this gap for real.
