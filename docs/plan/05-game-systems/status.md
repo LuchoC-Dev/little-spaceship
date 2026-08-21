@@ -1,7 +1,7 @@
 # Phase 05 — Game systems · status
 
 **State:** implemented, pending re-review
-**Updated:** 21/08/2026 (revised same day: `Health` added after a coordinator review caught it missing; revised again: `game-presentation` closed its side; revised again: review round 1 rejected on the bomb and a test guard, see below)
+**Updated:** 21/08/2026 (revised same day: `Health` added after a coordinator review caught it missing; revised again: `game-presentation` closed its side; revised again: review round 1 rejected on the bomb and a test guard, see below; revised again: `game-presentation` closed the silent-skip and placeholder-art gaps and added a third guaranteed drop, see round 2 below)
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
 
@@ -66,15 +66,27 @@ Nothing — review round 1's findings are all addressed, below.
 
 Nothing.
 
-**Task 8 (guaranteed drops) is not fully done, and this file previously claimed the task list was
-complete — that was wrong, review round 1 caught it.** `assets/data/level-01.json` carries 2 of the
-4 guaranteed drops the plan asks for: a shield before the strong encounter and the attachment from
-it, both present; a weapon upgrade in the first third and a bomb recharge before the boss are not.
-Four of `PickupSystem`'s six kinds (`weapon-upgrade`, `extra-life`, `bomb-recharge`,
-`invulnerability`) are consequently unreachable by playing the shipped content, even though every
-one of them is built and tested at the system level. Finishing task 8 means editing
-`assets/data/level-01.json` — content data outside `core/`, `game`/content design's lane, not
-`core-domain`'s — so it is recorded here as genuinely open rather than built or silently dropped.
+**Task 8 (guaranteed drops) is now 3 of 4, not fully done, and 2 of the remaining gap are not this
+branch's to close.** `assets/data/level-01.json` carries:
+
+- a weapon upgrade in the first third — added in this round, on the `enemy-basic` wave at `t=1.0`
+  of the level's current ~9.5 s span;
+- a shield and the attachment, both present since before review round 1, on the `enemy-tank`/
+  `enemy-carrier` waves.
+
+What is still missing, and why it stays missing here: `docs/plan/07-boss/plan.md` states plainly
+that **"the strong encounter" is itself undefined so far** — "also undefined so far, and needed for
+phase 05's guaranteed drops" is that plan's own words — and is phase 07's decision to make, alongside
+the boss. The shield/attachment placement on `enemy-tank`/`enemy-carrier` above is this content's
+best current stand-in for "the strong encounter," not a confirmed instance of it; phase 07 may need
+to move both once the real encounter is designed. **A bomb recharge before the boss cannot be placed
+honestly at all: there is no boss content anywhere in `level-01.json` yet — that is also phase 07's
+task, not built here or before.** So the remaining gap is not `game`/content design's to close on this
+branch; it is blocked on phase 07 defining both anchors first.
+
+Three of `PickupSystem`'s six kinds (`extra-life`, `bomb-recharge`, `invulnerability`) remain
+unreachable by playing the shipped content — down from four before this round — even though every one
+of them is built and tested at the system level.
 
 ## Review round 1
 
@@ -231,6 +243,46 @@ new content was seen on screen — nobody watched the window, and the placeholde
 this "content id with no placeholder registered yet" case) rather than throwing. Adding those
 placeholder sprites is presentation work for a later pass, not required for this phase's acceptance
 criteria, and is not blocking anything that was asked for here.
+
+## `game-presentation`'s side, round 2: the silent skip, placeholder art, and a third guaranteed drop
+
+A coordinator review of the round above found the silent-skip note directly above ("nobody watched
+the window ... `WorldRenderer` silently skips drawing them") a real gap, not just an honestly reported
+one, and asked for three things.
+
+- **`WorldRenderer.accept` now logs an unknown sprite id once**, via `Gdx.app.error`, guarded by a
+  `Set<String> missingSpritesLogged` field so a genuinely missing id cannot spam the log every frame.
+  The early return itself is unchanged — skipping still beats crashing the render loop over an asset
+  that has not arrived — but a typo'd content id is now loud instead of invisible, which matters more
+  starting phase 06, when real art gets wired against these same strings.
+- **`PlaceholderAtlas` now covers every sprite id phase 05 introduced**: `shot-p1`/`shot-p2` (player
+  projectiles, 3x9/5x11 per `docs/design/02-sprite-sizes.md`'s "Projectiles" table, drawn cyan —
+  `C1` body, `C2` core — matching "player fire is cyan and elongated") and the six pickup ids
+  `CleanupSystem` actually produces (`pickup-weapon-upgrade`, `pickup-shield`, `pickup-extra-life`,
+  `pickup-bomb-recharge`, `pickup-invulnerability` at 11x11, `pickup-attachment` at 13x13, per the
+  "Pickups and structures" table's capsule/attachment-capsule rows), all drawn as one green capsule —
+  `G2` body, `G3` highlight, matching R17 in `docs/design/05-legibility-rules.md` ("green, larger than
+  any bullet") and the palette's own "pickup body"/"pickup highlight" entries. Telling the six pickup
+  kinds apart by icon is production art's job per `02-sprite-sizes.md` itself ("told apart by the icon
+  inside it") — out of scope for a placeholder, which only has to get size and colour right so no
+  hitbox rework is forced later. No enemy fire exists yet in this phase (nothing enemy-side fires —
+  see `ComponentFactoryRegistry`'s own note on `"weapon"` staying unregistered), so the reserved
+  magenta band (`H1`/`H2`/`H3`) was not touched; there is nothing to draw in it yet.
+- **`level-01.json` gained a third guaranteed drop**, `"weapon-upgrade"` on the `enemy-basic` wave at
+  `t=1.0`, inside the level's current first third. The remaining two anchors (shield/attachment tied
+  to "the strong encounter," a bomb recharge before the boss) are not built here — see "Blocked"
+  above for why both are phase 07's decision, not a gap this branch can close.
+
+**What was verified, not just inferred:** `./gradlew build` green; `./gradlew :core:test --rerun`
+forced re-execution, 236 tests passing (confirmed after pulling `core-domain`'s review-round-1 fixes,
+not re-tested by this branch's own changes — this branch touched no `core` file). `./gradlew
+:desktop:run` was started and run for ~15 real seconds, past every spawn event in the level including
+the new `t=1.0` drop and the `t=9.0`/`9.5` `enemy-tank`/`enemy-carrier` waves — no exception, and,
+checked specifically this time, **no "no placeholder region for sprite id" line in the log**, which is
+the evidence available from this environment that every sprite id phase 05 introduced now resolves to
+a region. That is not the same as having watched the window: nobody confirmed the shapes, colours or
+positions look right on screen, only that nothing in the running process complained about a missing
+one.
 
 **Acceptance criteria** (`docs/plan/05-game-systems/plan.md`):
 
