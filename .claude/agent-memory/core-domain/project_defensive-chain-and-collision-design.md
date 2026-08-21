@@ -16,16 +16,20 @@ different lifetimes on purpose. `DamageSystem` reads `collisionHits()` in the ve
 tick.
 
 **Not every future consumer of that buffer can just read it as-is — check `SystemOrder` first.**
-`PickupSystem` (`SystemOrder.PICKUP`, ordinal 7) runs after `COLLISION` (5), so it would see the
-current tick's `PICKUP_VS_PLAYER` hits, same as `DamageSystem` does. `WeaponSystem`
-(`SystemOrder.WEAPON`, ordinal 2) runs *before* `COLLISION`, so reading `PLAYER_PROJECTILE_VS_ENEMY`
-from it would resolve the *previous* tick's hits — one tick late, silently, since nothing about that
-is a compile error or an obviously failing test. An earlier version of this note claimed both systems
-could read the buffer unchanged; that was wrong for `WeaponSystem` and was caught in review, not by a
-test. Whoever adds `WeaponSystem` has to either resolve `PLAYER_PROJECTILE_VS_ENEMY` from a stage
-after `COLLISION` (mirroring what `DamageSystem` does today) or give `SystemOrder` a new stage for it
-— check the *ordinal*, not just "does a consuming system exist yet", before assuming a buffer written
-earlier in the pipeline is readable from a stage that runs before it is refilled.
+`PickupSystem` (`SystemOrder.PICKUP`) runs after `COLLISION`, so it would see the current tick's
+`PICKUP_VS_PLAYER` hits, same as `DamageSystem` does. `WeaponSystem` (`SystemOrder.WEAPON`) runs
+*before* `COLLISION`, so reading `PLAYER_PROJECTILE_VS_ENEMY` from it would resolve the *previous*
+tick's hits — one tick late, silently, since nothing about that is a compile error or an obviously
+failing test. An earlier version of this note claimed both systems could read the buffer unchanged;
+that was wrong for `WeaponSystem` and was caught in review, not by a test. Phase 05 resolved
+`PLAYER_PROJECTILE_VS_ENEMY` from `DamageSystem` itself (`SystemOrder.DAMAGE`, right after
+`COLLISION`) rather than giving it a stage of its own — `DamageSystem`'s stage is generically "damage
+resolution against a hit reported this tick," not specifically the player's defensive chain, so
+widening its scope kept one system per concern instead of adding a stage nothing else needed. Check
+the *ordinal position relative to `COLLISION`*, not just "does a consuming system exist yet", before
+assuming a buffer written earlier in the pipeline is readable from a stage that runs before it is
+refilled. Ordinal numbers themselves are not stable across phases — phase 05 inserted `BOMB` between
+`WEAPON` and `SPAWN` — so reason about order relative to `COLLISION`, never a hardcoded number.
 
 **Invulnerability, when active, absorbs a hit with zero side effects.** Not just "no life lost" —
 also no enemy destroyed, no projectile consumed. This was a genuine design call, not stated

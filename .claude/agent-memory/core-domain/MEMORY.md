@@ -4,3 +4,4 @@
 - [Bash heredoc limits](feedback_bash-heredoc-limits.md) — writing Java through heredocs mangles backslashes and truncates long commands.
 - [Defensive chain and collision design](project_defensive-chain-and-collision-design.md) — internal collision hits vs GameEvent, invulnerability absorbing hits fully, and the component-removal-mid-iteration hazard.
 - [Content pipeline design](project_content-pipeline-design.md) — generic ComponentSpec over one type per component, why patterns were deferred but trajectories were not, Drop bypassing the registry.
+- [Game systems design](project_game-systems-design.md) — no Health component so weapon/bomb damage is one-hit-kill, ScoreValue-removal-on-award, CleanupSystem spawning pickups from Drop, fixed pickup kind strings.
