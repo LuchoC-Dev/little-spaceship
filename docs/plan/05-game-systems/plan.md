@@ -9,6 +9,13 @@
 1. `docs/planning/03-game-systems.md` — power-ups, attachments and economy.
 2. `docs/planning/02-mvp-functional-spec.md` — the MVP power-up and attachment lists.
 3. `docs/planning/10-mvp-initial-values.md` — caps, scoring table and guaranteed drops.
+4. `docs/planning/12-architecture.md`'s component table and JSON schema section — it already names
+   `Health` (enemies and the boss) and shows it in the tank example (`"health": {"points": 40}`).
+   This phase is the one that has to build it: phase 04 read the same document and modelled
+   fragility as `Collider.fragile` instead, and an earlier draft of this plan did not list
+   `12-architecture.md` among its required reading at all, so the component fell through the gap
+   between the two phases rather than being deferred on purpose. Do not repeat that miss for
+   `Weapon`, `Lifetime` or any other component this document already names.
 
 **Do not re-decide:** one attachment slot, the attachment absorbing one hit and being destroyed, picking up at maximum granting points, and no combos or multipliers in the MVP.
 

@@ -35,6 +35,15 @@ This document fixes the **policy** for player movement (additive devices, clampe
 
 Nothing here fixes where the ship starts a run, only that it is inside the 208x270 playfield. Phase 04 needed a concrete point so a run never starts with an empty world, and added `BalanceValues.playerStartX()`/`.playerStartY()` with placeholder values (104, 30 — bottom-centre) that, same as the movement speed above, exist only in test fixtures. **Open, not decided:** replace with real numbers once there is a playable build.
 
+### Enemy health and weapon/bomb damage — missing
+
+`12-architecture.md` names `Health` as a component ("health points, enemies and boss") and shows `{"points": 40}` as a tank's value in its JSON schema example, but that `40` is illustrative there, not a decided balance number — no enemy hit-point value appears anywhere else in this document. Phase 05 needed `Health` to exist for a weapon upgrade to mean anything beyond more projectiles and for the bomb to be able to damage a tank or a heavy carrier instead of leaving them untouched, so it built the component and added `BalanceValues.weaponProjectileDamage()` and `.bombDamage()`, with placeholder values (10 and 50) that, same as the movement speed and starting position above, exist only in test fixtures. **Open, not decided:**
+
+- per-archetype `Health` points for the level 1 roster (basic, light, shooter, rush, tank, carrier) and the boss;
+- `weaponProjectileDamage` and `bombDamage`.
+
+Per `01-vision-and-scope.md`'s "difficulty through pressure" principle, these are **not** meant to become difficulty dials — difficulty "must not depend only on raising health and damage." They are fixed per-shot/per-detonation constants, tuned once against real gameplay, not values that scale with a difficulty setting that does not exist yet in the MVP anyway.
+
 ## Controls
 
 When the mouse is enabled in Options, **keyboard and mouse work simultaneously and additively**. There is no priority device and no switching between one and the other.
