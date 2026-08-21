@@ -1,0 +1,117 @@
+package dev.luchoc.littlespaceship.core.application;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import dev.luchoc.littlespaceship.core.domain.World;
+import dev.luchoc.littlespaceship.core.domain.component.Player;
+import dev.luchoc.littlespaceship.core.port.ComponentSpec;
+import dev.luchoc.littlespaceship.core.port.FormationSlot;
+import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.MapComponentSpec;
+import dev.luchoc.littlespaceship.core.port.SimpleAttachmentDefinition;
+import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
+import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
+import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
+import dev.luchoc.littlespaceship.core.port.SimpleWaveTimeline;
+import dev.luchoc.littlespaceship.core.port.SpawnEvent;
+import dev.luchoc.littlespaceship.core.testsupport.TestContent;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/**
+ * The level 1 roster from {@code LevelContentIntegrationTest}, run through the real MVP pipeline
+ * with the player firing continuously and weaving across the playfield, for the acceptance
+ * criterion in {@code 05-game-systems/plan.md}: "a full-level replay produces the same final score
+ * twice". Weapon fire, spawning, collision, damage, drops and pickups all run in the same pass, so
+ * this is the broader companion to {@code BombReplayTest}, which isolates the bomb specifically.
+ *
+ * <p>Same limitation as {@code DamageReplayTest} and {@code BombReplayTest}: two runs of the same
+ * build compared against each other, no golden fingerprint recorded anywhere — see issue #12.
+ */
+class LevelScoreReplayTest {
+
+    private static final String LEVEL = "level-01";
+    private static final int TICKS = 900;
+
+    @Test
+    @DisplayName("a scripted run of the level 1 roster reproduces the same final score twice")
+    void levelScoreIsDeterministic() {
+        assertEquals(fingerprintOf(run()), fingerprintOf(run()));
+    }
+
+    private static Simulation run() {
+        Simulation simulation = new Simulation(levelContent(), event -> {
+        }, 5, LEVEL);
+
+        for (int tick = 0; tick < TICKS; tick++) {
+            simulation.tick(GameLoop.STEP, scriptedFrame(tick));
+        }
+        return simulation;
+    }
+
+    /** Fires continuously and weaves across the playfield, with an occasional bomb, so weapon fire,
+     *  ramming and the bomb all get a chance to contribute score in the same run. */
+    private static InputFrame scriptedFrame(int tick) {
+        float moveX = ((tick / 13) % 3) - 1f;
+        float moveY = ((tick / 17) % 3) - 1f;
+        boolean bomb = tick == 400;
+        return new InputFrame(moveX * 140f, moveY * 140f, true, false, bomb);
+    }
+
+    private static String fingerprintOf(Simulation simulation) {
+        World world = simulation.world();
+        Player player = world.players().get(world.playerEntity());
+        return "score=" + player.score + " lives=" + player.lives + " bombs=" + player.bombs
+            + " shotLevel=" + player.shotLevel + " entities=" + world.entityCount();
+    }
+
+    private static TestContent levelContent() {
+        return new TestContent()
+            .withAttachment(new SimpleAttachmentDefinition("attachment", 2))
+            .withTrajectory(new SimpleTrajectoryDefinition("slow-descent", 0f, -18f))
+            .withTrajectory(new SimpleTrajectoryDefinition("swoop", -10f, -40f))
+            .withTrajectory(new SimpleTrajectoryDefinition("dive", 0f, -80f))
+            .withTrajectory(new SimpleTrajectoryDefinition("crawl", 0f, -9f))
+            .withEnemy(new SimpleEnemyDefinition("enemy-basic", List.of(
+                motion("slow-descent"), sprite("enemy-basic"), collider(5.5f, true), score(100f))))
+            .withEnemy(new SimpleEnemyDefinition("enemy-light", List.of(
+                motion("swoop"), sprite("enemy-light"), collider(4.5f, true), score(150f))))
+            .withEnemy(new SimpleEnemyDefinition("enemy-shooter", List.of(
+                motion("slow-descent"), sprite("enemy-shooter"), collider(6.5f, true), score(200f))))
+            .withEnemy(new SimpleEnemyDefinition("enemy-rush", List.of(
+                motion("dive"), sprite("enemy-rush"), collider(4.0f, true), score(250f))))
+            .withEnemy(new SimpleEnemyDefinition("enemy-tank", List.of(
+                motion("crawl"), sprite("enemy-tank"), collider(10.5f, false), score(500f))))
+            .withEnemy(new SimpleEnemyDefinition("enemy-carrier", List.of(
+                motion("crawl"), sprite("enemy-carrier"), collider(15.0f, false), score(1000f))))
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withFormation(new SimpleFormationDefinition("line-3", List.of(
+                new FormationSlot(-20f, 0f), new FormationSlot(0f, 0f), new FormationSlot(20f, 0f))))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(List.of(
+                new SpawnEvent(1.0f, "enemy-basic", "line-3", 0.5f, null),
+                new SpawnEvent(3.0f, "enemy-light", "single", 0.2f, null),
+                new SpawnEvent(5.0f, "enemy-shooter", "single", 0.8f, null),
+                new SpawnEvent(7.0f, "enemy-rush", "single", 0.3f, null),
+                new SpawnEvent(9.0f, "enemy-tank", "single", 0.5f, "shield"),
+                new SpawnEvent(9.5f, "enemy-carrier", "single", 0.6f, "attachment"),
+                new SpawnEvent(12.0f, "enemy-basic", "line-3", 0.5f, null))));
+    }
+
+    private static ComponentSpec motion(String trajectory) {
+        return new MapComponentSpec("motion", Map.of("trajectory", trajectory));
+    }
+
+    private static ComponentSpec sprite(String id) {
+        return new MapComponentSpec("sprite", Map.of("id", id));
+    }
+
+    private static ComponentSpec collider(float radius, boolean fragile) {
+        return new MapComponentSpec("collider", Map.of("radius", radius, "fragile", fragile));
+    }
+
+    private static ComponentSpec score(float points) {
+        return new MapComponentSpec("scoreValue", Map.of("points", points));
+    }
+}
