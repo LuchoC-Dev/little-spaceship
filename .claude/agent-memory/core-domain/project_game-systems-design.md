@@ -1,6 +1,6 @@
 ---
 name: game-systems-design
-description: How phase 05's weapon, bomb, pickup and score systems were shaped, and the gaps left deliberately open by the missing Health component
+description: How phase 05's weapon, bomb, pickup, score and Health systems were shaped, and the fragile/Health split that keeps damage resolution from disagreeing with itself
 metadata:
   type: project
 ---
@@ -9,17 +9,19 @@ Built in phase 05 (`docs/plan/05-game-systems/`). The shape decided here is load
 whoever eventually adds a `Health` component (phase 07's boss, most likely) or a second attachment
 type.
 
-**No `Health` component exists, and every "how much damage" question in this phase resolved to "one
-hit destroys it" as a result.** `core-deferred-surface.md` already flagged that no enemy hit-point
-value exists in `docs/planning/`; phase 05 is the first phase where that gap actually bites, because
-it is the first phase with something that deals damage (`WeaponSystem`, `BombSystem`). Both
-`DamageSystem.resolveEnemyHit` (a player projectile reaching an enemy) and `BombSystem.detonate`
-(the bomb) reuse `Collider.fragile` — the same boolean that already decided "does this enemy survive
-ramming the player" — as their only notion of enemy toughness. A tank or heavy carrier survives a
-bomb completely untouched, not damaged-but-alive, because there is nothing to store partial damage
-in. This is a known, recorded gap (`05-game-systems/status.md`), not a bug to go hunting for. **The
-day a `Health` component is added, both of those call sites need revisiting together** — they are
-the only two places that currently treat "not fragile" as "the bomb/weapon cannot touch it at all."
+**`Health` exists, built mid-phase after a coordinator review caught it missing — see
+[[verify-against-architecture-doc]] for why the first pass got this wrong.** `12-architecture.md`
+already named the component and showed `{"points": 40}` as a tank's illustrative value; nothing in
+`10-mvp-initial-values.md` fixes real per-archetype numbers, which is a genuinely open item, but the
+component's *shape* was never in question. `HealthDamage.apply` (a small package-private helper
+shared by `DamageSystem.resolveEnemyHit` and `BombSystem.detonate`) is the one place damage is
+subtracted from it, so the two systems cannot apply the rule differently. `Collider.fragile` keeps
+its phase 02 meaning — whole-body outcome for ramming and the bomb — and now answers a strictly
+different question from `Health`, which governs sustained weapon damage: the bomb checks `fragile`
+first (outright destruction) and only consults `Health` for a non-fragile target. An entity with no
+`Health` component is treated as having exactly one point everywhere damage is applied, which is
+shorthand for the weakest case of the rule, not a second rule that could disagree with it — this is
+what keeps a missing `"health"` in content from becoming a second, silently different mechanism.
 
 **`ScoreValue` removal on award is what makes double-marking-for-destruction safe.**
 `World.markForDestruction` has no dedupe — nothing stops two systems from marking the same entity
@@ -59,8 +61,8 @@ kind string as the content id. This is what makes attachment durability genuinel
 happens to reuse `"attachment"` as both its `Pickup.kind` and its content id, and a second attachment
 type would only need a different content id, never a branch in `PickupSystem`.
 
-See [[core-deferred-surface]] for what is still unbuilt (`Health` chief among them after this
-phase), [[defensive-chain-and-collision-design]] for the `SystemOrder`-ordinal discipline `BOMB`'s
-insertion had to respect, and `docs/plan/05-game-systems/status.md` for the acceptance-criteria
-table and the exact `game`-module compile breakage this phase leaves behind for
-`game-presentation`.
+See [[core-deferred-surface]] for what is still unbuilt, [[verify-against-architecture-doc]] for
+the process lesson `Health` cost a review round to catch, [[defensive-chain-and-collision-design]]
+for the `SystemOrder`-ordinal discipline `BOMB`'s insertion had to respect, and
+`docs/plan/05-game-systems/status.md` for the acceptance-criteria table and the exact `game`-module
+compile breakage this phase leaves behind for `game-presentation`.

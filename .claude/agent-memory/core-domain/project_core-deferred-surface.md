@@ -16,11 +16,14 @@ The core grew deliberately incomplete: each phase adds only what its own systems
   `CollisionSystem` are natural emitters per `12-architecture.md` (`PlayerHit`, `AttachmentLost`), but
   neither emits anything: nothing in `core` consumes them until `game` builds HUD/audio, and guessing
   event field shapes ahead of that consumer risked getting them wrong.
-- `Health` component — still does not exist. `WeaponSystem` and `BombSystem` (phase 05) both needed
-  "how much damage" answers with no hit-point value anywhere in `docs/planning/`, so both fell back
-  to one-hit-kill against `Collider.fragile` targets — see `game-systems-design.md` for exactly which
-  call sites will need revisiting the day a real `Health` value exists. This is now an active,
-  documented gap (`05-game-systems/status.md`), not just a future mechanic.
+- `Health` component — **built in phase 05**, and this entry was wrong once already: an earlier
+  version of it said "still does not exist" and treated the gap as an undecided future mechanic.
+  It was not undecided — `12-architecture.md`'s component table names it and its JSON schema example
+  gives a tank `"health": {"points": 40}` — it had simply never been built, because phase 04 modelled
+  fragility as `Collider.fragile` instead and this phase's `plan.md` did not list
+  `12-architecture.md` among its required reading. A coordinator review caught the miss mid-phase.
+  See [[core-deferred-surface]]'s own lesson below and `game-systems-design.md` for the
+  `fragile`/`Health` relationship phase 05 settled on.
 - `Weapon` component — **built in phase 05**, holds only the fire cooldown timer; `Player.shotLevel`
   still carries the persistent upgrade level, per phase 02's "persistent state lives on `Player`"
   precedent.
