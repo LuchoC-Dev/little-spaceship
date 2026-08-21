@@ -6,7 +6,7 @@ Read this first if you are picking the project up. It says where things stand an
 
 ## Where we are
 
-**Phases 01 and 02 are merged and the visual direction is settled: the simulation knows whether the player lives or dies, and now there is a written specification of what it should look like. Nothing draws yet.**
+**The game runs. `./gradlew :desktop:run` opens a window with a ship that answers to keyboard and mouse, and enemies that enter from the top and can be hit. Phases 01 to 04 are merged and the visual direction is settled; the art is still placeholder and the level is a fixture, not the designed one.**
 
 What exists in the repository:
 
@@ -15,7 +15,9 @@ What exists in the repository:
 - `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. It can be deleted once it stops being useful.
 - `docs/design/` — the visual direction: the closed `ls32` palette, sprite sizes in pixels per archetype, bitmap typography, HUD layout, legibility rules, and pixel-exact mocks. Synchronisation point 1, settled.
 - `.claude/agents/` — five agent definitions with project-scoped persistent memory.
-- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision by layer pairs, the defensive chain, cleanup, the content contracts and the spawner. A run now starts with the player in the world. 167 tests, no libGDX on its classpath. `game`, `desktop` and `web` exist as empty module skeletons.
+- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision by layer pairs, the defensive chain, cleanup, the content contracts and the spawner. A run starts with the player in the world. 167 tests, no libGDX on its classpath.
+- `game/` and `desktop/` — the LWJGL3 launcher, the input adapter that sums keyboard and relative mouse, an allocation-free renderer reading through `WorldView`, integer-scaled viewport, placeholder art at the sizes the visual direction fixed, and the JSON content loader. No tests yet. `web/` is still an empty skeleton; phase 09 owns it.
+- `assets/data/` — the content as JSON: six archetypes, four trajectories, three formations and one timeline.
 
 ## What is settled
 
@@ -36,7 +38,9 @@ The master plan is in `docs/plan/`, starting from [the overview](plan/00-overvie
 
 Two lanes run in parallel: **code** and **art**. The art lane starts on day one and never waits for the code, which is the only reason the week is feasible.
 
-Next up, on the code lane, is one piece of work that closes two phases at once: the JSON loader in `game`. Phase 04 declared the content contracts in `core` but the parser is `game`'s, and phase 03 currently implements a placeholder `ContentSource` against the older, smaller interface — so the loader is what makes both compile together and what finally puts enemies on screen. On the art lane, sprite production is what remains of phase 06.
+Next up, on the code lane, is [phase 05, game systems](plan/05-game-systems/plan.md): weapons, power-ups, score and the rules that turn a loop into a game. On the art lane, sprite production is what remains of phase 06 — the direction is written, nothing has been drawn.
+
+Two things the running build hides, both tracked and neither blocking: `game` has no test suite at all ([#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19)), and `assets/data/level-01.json` is the pipeline fixture rather than the fourteen-beat level the campaign document describes ([#20](https://github.com/LuchoC-Dev/little-spaceship/issues/20)).
 
 ### Phase state
 
@@ -44,8 +48,8 @@ Next up, on the code lane, is one piece of work that closes two phases at once: 
 |---|---|---|
 | 01 | Foundations | **done** — merged in #2 |
 | 02 | Core mechanics | **done** — merged in #10 |
-| 03 | First playable | **in draft** — #14; desktop, input and renderer built, blocked on the loader before it can be accepted |
-| 04 | Content pipeline | **core side done** — merged in #16; the JSON loader in `game` is what remains |
+| 03 | First playable | **done** — merged in #14 |
+| 04 | Content pipeline | **done** — core in #16, loader in #14 |
 | 05 | Game systems | not started |
 | 06 | Presentation | **visual direction done** — merged in #8; art production and integration pending |
 | 07 | Boss | not started |
