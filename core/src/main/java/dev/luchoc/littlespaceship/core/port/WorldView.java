@@ -34,4 +34,11 @@ public interface WorldView {
      * @return the run's outcome so far
      */
     LevelOutcome outcome();
+
+    /**
+     * Reads the end-of-level bonus the player would earn from lives and bombs currently held.
+     *
+     * @return the completion bonus, split into its lives and bombs components
+     */
+    CompletionBonus completionBonus();
 }

@@ -21,6 +21,8 @@ import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityRegistry;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
+import dev.luchoc.littlespaceship.core.domain.system.ScoreSystem;
+import dev.luchoc.littlespaceship.core.port.CompletionBonus;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
 import dev.luchoc.littlespaceship.core.port.LevelOutcome;
@@ -384,10 +386,19 @@ public final class World {
                 state.shotLevel,
                 shields.has(entity),
                 attachment != null ? attachment.id : "",
-                attachment != null ? attachment.durability : 0,
                 invulnerable != null ? invulnerable.source : InvulnerabilitySource.NONE,
                 invulnerable != null ? invulnerable.remaining : 0f,
                 state.score);
+        }
+
+        @Override
+        public CompletionBonus completionBonus() {
+            int entity = playerEntity();
+            Player state = entity == EntityId.NONE ? null : players.get(entity);
+            if (state == null) {
+                return new CompletionBonus(0, 0);
+            }
+            return ScoreSystem.completionBonus(content.balance(), state);
         }
 
         @Override

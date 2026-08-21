@@ -14,8 +14,6 @@ package dev.luchoc.littlespaceship.core.port;
  * @param weaponLevel current weapon upgrade level, base included
  * @param shieldActive whether the shield defensive layer is currently up
  * @param attachmentId the content id of the equipped attachment, or {@code ""} when none is equipped
- * @param attachmentDurability hits the equipped attachment can still absorb, or {@code 0} when none
- *     is equipped
  * @param invulnerabilitySource why the player currently ignores damage, {@link
  *     InvulnerabilitySource#NONE} when no grace period is active
  * @param invulnerabilityRemaining seconds of grace left, {@code 0} when no grace period is active
@@ -27,7 +25,6 @@ public record PlayerStatus(
     int weaponLevel,
     boolean shieldActive,
     String attachmentId,
-    int attachmentDurability,
     InvulnerabilitySource invulnerabilitySource,
     float invulnerabilityRemaining,
     int score) {
@@ -51,5 +48,5 @@ public record PlayerStatus(
      * World} built directly by a test may have none yet.
      */
     public static final PlayerStatus NONE =
-        new PlayerStatus(0, 0, 0, false, "", 0, InvulnerabilitySource.NONE, 0f, 0);
+        new PlayerStatus(0, 0, 0, false, "", InvulnerabilitySource.NONE, 0f, 0);
 }

@@ -5,6 +5,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
+import dev.luchoc.littlespaceship.core.port.CompletionBonus;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import java.util.List;
 
@@ -59,27 +60,21 @@ public final class ScoreSystem implements GameSystem {
 
     /**
      * The end-of-level bonus per {@code 10-mvp-initial-values.md}: a fixed amount per remaining life
-     * and per remaining bomb, no combos or multipliers involved. A pure function and not a system:
-     * {@code World.outcome()} (phase 06) can now detect {@code LevelOutcome.COMPLETED}, but nothing
-     * yet calls this method to actually award the bonus when that happens — the boss and a real
-     * victory condition are still phase 07's job, and crediting a bonus on today's "timeline ran
-     * dry" signal risks awarding it under a rule phase 07 changes shortly after.
+     * and per remaining bomb, no combos or multipliers involved. A pure function and not a system.
      *
-     * <p>Package-private on purpose. It has no caller yet, and its second parameter is a mutable
-     * {@code domain.component} type nothing outside {@code core} can obtain — {@code WorldView}
-     * exposes {@code PlayerStatus}, a read-only snapshot, not this. Making it public ahead of a real
-     * caller would be exactly the ahead-of-need abstraction the project avoids, and would cross a
-     * mutable domain type where the boundary requires read-only or immutable data. Whatever
-     * eventually awards this bonus belongs in this same package and can call it directly; if it
-     * turns out to need this from outside {@code domain.system}, that need is the point to design
-     * the read-only shape, not now.
+     * <p>Public so {@code World.View.completionBonus()} can call it: that method is the only crossing
+     * this needs, since {@link Player} is a mutable {@code domain.component} type {@code game} can
+     * never obtain, and {@link CompletionBonus} is the read-only shape that carries the same numbers
+     * across the boundary instead. Nothing else outside this package should call this directly —
+     * whoever needs the bonus asks {@code WorldView}, not this system.
      *
      * @param balance where the per-life and per-bomb bonus amounts come from
      * @param player the player's state at the moment the level is completed
-     * @return the total completion bonus
+     * @return the completion bonus, split into its lives and bombs components
      */
-    static int completionBonus(BalanceValues balance, Player player) {
-        return player.lives * balance.lifeCompletionBonus()
-            + player.bombs * balance.bombCompletionBonus();
+    public static CompletionBonus completionBonus(BalanceValues balance, Player player) {
+        return new CompletionBonus(
+            player.lives * balance.lifeCompletionBonus(),
+            player.bombs * balance.bombCompletionBonus());
     }
 }

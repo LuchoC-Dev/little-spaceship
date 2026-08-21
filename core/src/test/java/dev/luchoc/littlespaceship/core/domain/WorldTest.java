@@ -210,7 +210,6 @@ class WorldTest {
         assertEquals(3, status.weaponLevel());
         assertTrue(status.shieldActive());
         assertEquals("attachment", status.attachmentId());
-        assertEquals(2, status.attachmentDurability());
         assertEquals(InvulnerabilitySource.DAMAGE, status.invulnerabilitySource());
         assertEquals(1.5f, status.invulnerabilityRemaining(), 0.0001f);
     }
@@ -228,6 +227,27 @@ class WorldTest {
     @DisplayName("a fresh world with no player and no exhausted timeline is still in progress")
     void outcomeStartsInProgress() {
         assertEquals(dev.luchoc.littlespaceship.core.port.LevelOutcome.IN_PROGRESS, world.view().outcome());
+    }
+
+    @Test
+    @DisplayName("the view reports a zero completion bonus with no player entity")
+    void completionBonusIsZeroWithNoPlayerEntity() {
+        var bonus = world.view().completionBonus();
+
+        assertEquals(0, bonus.livesBonus());
+        assertEquals(0, bonus.bombsBonus());
+    }
+
+    @Test
+    @DisplayName("the view reports the completion bonus for the player's current lives and bombs")
+    void completionBonusReflectsLivesAndBombs() {
+        int player = world.createEntity();
+        world.players().set(player, new Player(3, 2, 1));
+
+        var bonus = world.view().completionBonus();
+
+        assertEquals(3 * 1000, bonus.livesBonus());
+        assertEquals(2 * 300, bonus.bombsBonus());
     }
 
     @Test

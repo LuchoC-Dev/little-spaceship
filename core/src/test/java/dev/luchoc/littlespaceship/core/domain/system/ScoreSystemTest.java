@@ -100,9 +100,10 @@ class ScoreSystemTest {
     void completionBonusScalesByRemainingLivesAndBombs() {
         Player player = new Player(3, 2, 1);
 
-        int bonus = ScoreSystem.completionBonus(balance, player);
+        var bonus = ScoreSystem.completionBonus(balance, player);
 
-        assertEquals(3 * balance.lifeCompletionBonus + 2 * balance.bombCompletionBonus, bonus);
+        assertEquals(3 * balance.lifeCompletionBonus, bonus.livesBonus());
+        assertEquals(2 * balance.bombCompletionBonus, bonus.bombsBonus());
     }
 
     @Test

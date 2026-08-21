@@ -428,3 +428,43 @@ Not verified: `VictoryScreen`/`DefeatScreen`'s own keyboard navigation, since re
 run to complete or fail, unchanged from the second pass's own "not verified" note above — this pass did
 not attempt a full run, only confirmed by reading that they call `MenuEntries.add`/`MenuNavigator` the
 same way every other screen in this pass does.
+
+### Review round 1, finding 1: the completion bonus rule had two implementations (core side)
+
+`PlayScreen` computed `lives * lifeCompletionBonus` / `bombs * bombCompletionBonus` inline instead of
+calling `ScoreSystem.completionBonus`, which was tested and otherwise dead — its only caller was its own
+test. Its javadoc even explained why it had no caller, written by an earlier pass that edited the
+explanation instead of noticing the caller already existed in the wrong module.
+
+Fixed on the `core` side by exposing the rule through the port instead of leaving `game` to restate it:
+
+- `WorldView.completionBonus()`, a new method returning a new record, `CompletionBonus(livesBonus,
+  bombsBonus)`. Reflects the player's current lives/bombs regardless of `LevelOutcome`, the same way
+  `PlayerStatus.score()` already does — whoever reads it decides when the number means something,
+  typically once `outcome()` reports `COMPLETED`.
+- `ScoreSystem.completionBonus` is now `public` (was package-private) and returns `CompletionBonus`
+  instead of a bare `int`. `World.View.completionBonus()` is its only caller inside `core`; nothing
+  outside `domain.system` should call it directly, `WorldView` is the crossing.
+- `World.View.player()` unchanged in shape apart from one removal below.
+
+This makes a second implementation in `game` pointless rather than merely discouraged: `PlayScreen` can
+build `VictoryScreen`'s two rows straight from `completionBonus.livesBonus()` /
+`completionBonus.bombsBonus()`, with no balance values and no multiplication in `game` at all.
+
+**`PlayerStatus.attachmentDurability` had no consumer anywhere in `game` and no row in the HUD layout
+table** (`12-architecture.md` lists only the `Attachment` component's durability, not a HUD element for
+it; `HudRenderer` reads `attachmentId` but never `attachmentDurability`). Applied the same "no consumer,
+don't guess" test phase 04 applied to `PatternDefinition`: removed the field from `PlayerStatus` rather
+than keep guessing it earns a place. `Attachment.durability` itself is untouched and still covered by
+`PickupSystemTest` directly against the domain component — only the port-crossing copy is gone.
+
+`core` still green at 244 tests (242 + 2 new: a zero-bonus-with-no-player case and a
+lives/bombs-scaled case for `WorldView.completionBonus()`).
+
+**What `game-presentation` should call:** in `PlayScreen`, replace the inline
+`content.balance().lifeCompletionBonus() * status.lives()` /
+`content.balance().bombCompletionBonus() * status.bombs()` with
+`view.completionBonus().livesBonus()` / `view.completionBonus().bombsBonus()` (call once, reuse the
+same `CompletionBonus` for both rows). Drop the `content.balance()` reads for this from `PlayScreen`
+entirely if nothing else in that method needs them. `HudRenderer`/anywhere else reading
+`PlayerStatus.attachmentDurability` needs to stop — the field no longer exists on the record.
