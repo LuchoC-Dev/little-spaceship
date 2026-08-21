@@ -3,11 +3,13 @@ package dev.luchoc.littlespaceship.game.adapter.content;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
+import dev.luchoc.littlespaceship.core.port.AttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationSlot;
+import dev.luchoc.littlespaceship.core.port.SimpleAttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
@@ -47,12 +49,14 @@ public final class JsonContentSource implements ContentSource {
     private final Map<String, TrajectoryDefinition> trajectories = new HashMap<>();
     private final Map<String, FormationDefinition> formations = new HashMap<>();
     private final Map<String, WaveTimeline> timelines = new HashMap<>();
+    private final Map<String, AttachmentDefinition> attachments = new HashMap<>();
 
     /**
      * Loads every content file under {@code dataDir}.
      *
      * @param dataDir the directory holding {@code balance.json}, {@code trajectories.json},
-     *     {@code formations.json}, {@code enemies.json} and {@code level-01.json}
+     *     {@code formations.json}, {@code enemies.json}, {@code attachments.json} and
+     *     {@code level-01.json}
      * @throws IllegalArgumentException if any file is missing or malformed, naming the file and
      *     whatever it could not resolve
      */
@@ -65,6 +69,7 @@ public final class JsonContentSource implements ContentSource {
         loadTrajectories(reader, dataDir.child("trajectories.json"));
         loadFormations(reader, dataDir.child("formations.json"));
         loadEnemies(reader, dataDir.child("enemies.json"));
+        loadAttachments(reader, dataDir.child("attachments.json"));
         loadLevel(reader, dataDir.child("level-01.json"), LEVEL_ID);
     }
 
@@ -91,6 +96,11 @@ public final class JsonContentSource implements ContentSource {
     @Override
     public WaveTimeline timeline(String levelId) {
         return require(timelines, levelId, "level timeline");
+    }
+
+    @Override
+    public AttachmentDefinition attachment(String id) {
+        return require(attachments, id, "attachment");
     }
 
     private static <T> T require(Map<String, T> registry, String id, String kind) {
@@ -142,6 +152,17 @@ public final class JsonContentSource implements ContentSource {
                 EnemyDefinition enemy = new SimpleEnemyDefinition(
                     id, JsonComponentSpecs.parse(componentsValue));
                 enemies.put(enemy.id(), enemy);
+            }
+            return null;
+        });
+    }
+
+    private void loadAttachments(JsonReader reader, FileHandle file) {
+        inFile(file, () -> {
+            for (JsonValue entry : reader.parse(file).get("attachments")) {
+                AttachmentDefinition attachment = new SimpleAttachmentDefinition(
+                    entry.getString("id"), entry.getInt("durability"));
+                attachments.put(attachment.id(), attachment);
             }
             return null;
         });

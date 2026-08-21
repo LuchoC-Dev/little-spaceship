@@ -42,7 +42,8 @@
         "motion": { "trajectory": "crawl" },
         "sprite": { "id": "enemy-tank" },
         "collider": { "radius": 10.5, "fragile": false },
-        "scoreValue": { "points": 500 }
+        "scoreValue": { "points": 500 },
+        "health": { "points": 40 }
       }
     },
     {
@@ -51,7 +52,8 @@
         "motion": { "trajectory": "crawl" },
         "sprite": { "id": "enemy-carrier" },
         "collider": { "radius": 15.0, "fragile": false },
-        "scoreValue": { "points": 1000 }
+        "scoreValue": { "points": 1000 },
+        "health": { "points": 80 }
       }
     }
   ]
