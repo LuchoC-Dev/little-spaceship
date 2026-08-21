@@ -54,6 +54,24 @@
 - Integer scaling with nearest-neighbour and letterbox over a fixed logical resolution.
 - The starting numeric values live in `10-mvp-initial-values.md` and in configuration, not in the code.
 
+### Level 1 climax and length
+
+Decided on 21/08/2026 by the project owner, at the start of phase 07. All three were deliberately left
+open during planning and could not be deferred further: the level's timeline cannot be written without
+them, and phase 05's guaranteed drops have nowhere to anchor.
+
+- **The boss has one phase, two alternating attack patterns and a clear tell before each.** This is the
+  recommendation `docs/plan/07-boss/plan.md` makes on schedule grounds, and it is the version taken: a
+  simple, readable boss beats an ambitious one that ships broken. Two phases were the alternative and
+  are the first thing the master plan lists for cutting anyway.
+- **The strong encounter is two heavy carriers at once.** It is built from what already exists — the
+  carrier spawns basic enemies periodically, so two of them produce sustained pressure with no new
+  archetype to draw or balance — and it teaches target prioritisation, which is what
+  `04-campaign-and-levels.md` asks of that moment. Defeating it hands over the attachment.
+- **Level 1 runs four minutes or more, boss included.** Long enough for the full fourteen-beat sequence
+  with its calm, escalation, rest and climax rather than a compressed version of it. The cost is
+  content to produce and balance, and that is accepted.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.
@@ -119,7 +137,6 @@ Resolved by the prototype, as planned: **Gradle**. The gdx-teavm plugin is a Gra
 
 - Rule for losing power-ups on higher difficulties and at the end of the run.
 - Exact behaviour with several simultaneous attachments post-MVP: it should not create conflicts since they are automatic, but it has to be seen with real gameplay.
-- Whether the level 1 boss will have phases and what patterns/aesthetics it will use.
 - Intensity curve tool/format.
 - **Whether invulnerability should also suppress the consequences for the other entity.** The phase 02 implementation reads "invulnerability → shield → attachment → life" as four layers, so an active invulnerability absorbs a hit with no side effect at all: a weak enemy is not destroyed by ramming an invulnerable player, and an enemy projectile is not consumed. `02-mvp-functional-spec.md` states "weak enemies … are destroyed in that crash" with no condition attached, so this is a narrower reading than the letter of the spec, chosen because it is what the four-layer framing implies and what the genre does. It has not been validated against real gameplay. If it reads wrong once there is a playable build, it is a one-line change in `DamageSystem`.
 - **A respawn gap left open by "the ship reappears near where it was destroyed."** Phase 02 implements respawn as never destroying the player entity, so it is already exactly where it died — cheaper than tracking a separate spawn point, and within the letter of the spec. The gap: a slow, non-fragile enemy (tank, heavy carrier) that is overlapping the player at the moment of death is still overlapping when the following invulnerability expires, so the player must actively move away during the grace period or take a second hit immediately. Playable, but not a decided rule — worth checking once there is a playtestable level.
