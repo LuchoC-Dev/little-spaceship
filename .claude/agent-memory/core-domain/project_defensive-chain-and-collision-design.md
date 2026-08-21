@@ -46,4 +46,20 @@ hazard is really about the store, not the entity). `DamageSystem.decayInvulnerab
 expired entities into a side list first and removes them after the loop — the same pattern
 `CleanupSystem` uses for entity destruction, just one level down.
 
-See [[core-boundary-decisions]] and [[core-deferred-surface]] for what else was deferred and why.
+**`World.markForDestruction` does not remove a collider, so `CollisionSystem` has to filter
+`pendingDestruction` itself, or anything marked earlier in the same tick keeps colliding.** This bit
+`BombSystem` in phase 05's review round 1: the bomb marked an enemy for destruction, but
+`CollisionSystem` (which runs right after `BOMB`) had no idea, produced a `CollisionHit` for it
+anyway, and `DamageSystem` consumed a shield/attachment/life for an enemy that had already
+"stopped existing" as far as the bomb was concerned. The fix is in `CollisionSystem`, not in
+`BombSystem`: build a `Set<Integer>` from `World.pendingDestruction()` once per `update()` call
+(empty in the common case, so no allocation when nothing was marked) and skip any candidate — either
+side of any pair, the player included — that appears in it. This is deliberately general, not
+`BOMB`-specific: `LifetimeSystem` also runs before `COLLISION` and also only marks, so a projectile
+it expires gets the same protection for free. **Any future system that marks something for
+destruction before `COLLISION` runs is automatically covered — nothing needs updating in
+`CollisionSystem` itself when a new marker shows up**, which is exactly why the general fix beats a
+`BOMB`-only special case.
+
+See [[core-boundary-decisions]] and [[core-deferred-surface]] for what else was deferred and why, and
+[[game-systems-design]] for the tick-level input-edge lesson from the same review round.

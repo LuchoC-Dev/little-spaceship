@@ -5,9 +5,10 @@ metadata:
   type: project
 ---
 
-Built in phase 05 (`docs/plan/05-game-systems/`). The shape decided here is load-bearing for
-whoever eventually adds a `Health` component (phase 07's boss, most likely) or a second attachment
-type.
+Built in phase 05 (`docs/plan/05-game-systems/`), across three rounds — a first pass, a review
+round that added `Health`, and a second review round that rejected the phase over three defects in
+`BombSystem` plus a test guard that had stopped guarding. The shape decided here is load-bearing for
+whoever eventually adds a boss (phase 07, needs `Health` too) or a second attachment type.
 
 **`Health` exists, built mid-phase after a coordinator review caught it missing — see
 [[verify-against-architecture-doc]] for why the first pass got this wrong.** `12-architecture.md`
@@ -61,8 +62,35 @@ kind string as the content id. This is what makes attachment durability genuinel
 happens to reuse `"attachment"` as both its `Pickup.kind` and its content id, and a second attachment
 type would only need a different content id, never a branch in `PickupSystem`.
 
+**An edge-shaped input needs state inside `core`, tracked per tick — neither `GameLoop` nor the
+adapter can debounce it, and this was the second real defect the phase's own tests did not catch.**
+`GameLoop.advance` feeds one `InputFrame` to every tick of a rendered frame, by contract — that is
+what lets a variable frame time simulate a whole number of fixed steps — so anything that reads
+`InputFrame.bomb()` as "spend one charge" without tracking what it saw last tick spends one charge
+*per tick*, not per press, the moment a frame produces more than one tick (any frame rate below 60,
+or the tick burst after `GameLoop.MAX_FRAME_TIME` lets a stall catch up). The fix is a tiny
+component (`BombState.heldLastTick`) read and written by the one system that consumes the edge,
+never by the loop or the adapter — neither of those layers has tick-granularity visibility. `fire`
+never needed this because it is deliberately level-shaped (sustained fire); the next one-shot input
+this project adds will need the identical pattern, not a shared abstraction built now for a second
+case that does not exist yet.
+
+**A test that claims to guard "every X" needs to discover X mechanically, not enumerate it by
+hand — `WorldTest.destroyStripsEveryComponent` had already drifted from 13 stores to 4 assertions
+once before this was caught.** The fix: reflection over `World.class.getDeclaredFields()`, filtered
+to `ComponentStore`-typed fields, so the set of things to check is derived from `World` itself and
+cannot go stale by omission. That alone is not sufficient — a newly added store would still pass
+vacuously (empty before and after) if nobody populates it — so the test also asserts every
+reflectively-discovered store is non-empty *before* asserting it is empty after destruction; skipping
+the populate step for a new component fails loudly with the store's name, rather than passing
+silently. The same shape (`assertTrue(x.size() >= N, "...")`) already existed in
+`PublicContractTest.inspectsTheBoundary()` and `DeterminismRulesTest.readsTheSources()` before this
+phase — "assert the check is actually exercised" is a recurring pattern in this codebase's
+architecture tests, not new here, just newly applied to `WorldTest`.
+
 See [[core-deferred-surface]] for what is still unbuilt, [[verify-against-architecture-doc]] for
 the process lesson `Health` cost a review round to catch, [[defensive-chain-and-collision-design]]
-for the `SystemOrder`-ordinal discipline `BOMB`'s insertion had to respect, and
+for the `SystemOrder`-ordinal discipline `BOMB`'s insertion had to respect and the
+`pendingDestruction`-filtering rule the second review round added there, and
 `docs/plan/05-game-systems/status.md` for the acceptance-criteria table and the exact `game`-module
 compile breakage this phase leaves behind for `game-presentation`.
