@@ -25,6 +25,15 @@ import dev.luchoc.littlespaceship.core.port.BalanceValues;
  *     held
  * @param playerStartX horizontal position the ship is created at
  * @param playerStartY vertical position the ship is created at
+ * @param weaponFireCooldown seconds between two volleys of the main weapon
+ * @param weaponProjectileSpeed speed of a player projectile once fired
+ * @param pickupRadius radius of a pickup's collider
+ * @param invulnerabilityPickupDuration seconds of invulnerability granted by the invulnerability
+ *     power-up
+ * @param lifeCompletionBonus points awarded per remaining life when the level is completed
+ * @param bombCompletionBonus points awarded per remaining bomb when the level is completed
+ * @param weaponProjectileDamage hit points a player projectile subtracts from an enemy's health
+ * @param bombDamage hit points the bomb subtracts from a resistant enemy's health
  */
 public record JsonBalanceValues(
     int initialLives,
@@ -38,7 +47,15 @@ public record JsonBalanceValues(
     float playerSpeed,
     float playerSlowFactor,
     float playerStartX,
-    float playerStartY) implements BalanceValues {
+    float playerStartY,
+    float weaponFireCooldown,
+    float weaponProjectileSpeed,
+    float pickupRadius,
+    float invulnerabilityPickupDuration,
+    int lifeCompletionBonus,
+    int bombCompletionBonus,
+    int weaponProjectileDamage,
+    int bombDamage) implements BalanceValues {
 
     /**
      * Reads every field from the parsed {@code balance.json} root. Every {@code get*(String)}
@@ -61,6 +78,14 @@ public record JsonBalanceValues(
             root.getFloat("playerSpeed"),
             root.getFloat("playerSlowFactor"),
             root.getFloat("playerStartX"),
-            root.getFloat("playerStartY"));
+            root.getFloat("playerStartY"),
+            root.getFloat("weaponFireCooldown"),
+            root.getFloat("weaponProjectileSpeed"),
+            root.getFloat("pickupRadius"),
+            root.getFloat("invulnerabilityPickupDuration"),
+            root.getInt("lifeCompletionBonus"),
+            root.getInt("bombCompletionBonus"),
+            root.getInt("weaponProjectileDamage"),
+            root.getInt("bombDamage"));
     }
 }

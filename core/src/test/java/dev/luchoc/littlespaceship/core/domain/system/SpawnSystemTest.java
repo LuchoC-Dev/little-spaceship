@@ -177,6 +177,45 @@ class SpawnSystemTest {
     }
 
     @Test
+    @DisplayName("an unrecognised drop id fails the moment the wave spawns, naming the enemy and id")
+    void unrecognisedDropIdFailsAtSpawnTime() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(
+                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, "typo-shiled"))));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> system.update(world, 1f, InputFrame.IDLE));
+
+        assertTrue(e.getMessage().contains("enemy-basic"));
+        assertTrue(e.getMessage().contains("typo-shiled"));
+        // Failing before any entity of the wave is created is what keeps this a load-time-shaped
+        // failure rather than a half-spawned wave left behind for something else to trip over.
+        assertEquals(0, world.entityCount());
+    }
+
+    @Test
+    @DisplayName("every one of PickupSystem's six recognised kinds spawns a wave without failing")
+    void everyRecognisedKindIsAccepted() {
+        for (String kind : List.of(PickupSystem.KIND_WEAPON_UPGRADE, PickupSystem.KIND_SHIELD,
+            PickupSystem.KIND_EXTRA_LIFE, PickupSystem.KIND_BOMB_RECHARGE,
+            PickupSystem.KIND_INVULNERABILITY, PickupSystem.KIND_ATTACHMENT)) {
+            TestContent content = baseContent()
+                .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+                .withTimeline(LEVEL, new SimpleWaveTimeline(
+                    List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, kind))));
+            World world = worldOf(content);
+            SpawnSystem system = new SpawnSystem(LEVEL);
+
+            system.update(world, 1f, InputFrame.IDLE);
+
+            assertEquals(kind, world.drops().valueAt(0).pickupId);
+        }
+    }
+
+    @Test
     @DisplayName("a wave instance with no drop leaves the spawned entity without one")
     void noDropMeansNoDropComponent() {
         TestContent content = baseContent()

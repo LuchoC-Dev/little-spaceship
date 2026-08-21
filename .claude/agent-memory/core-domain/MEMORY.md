@@ -2,5 +2,7 @@
 - [Core boundary decisions](project_core-boundary-decisions.md) — how the boundary is shaped and enforced beyond what the architecture document says.
 - [Rng and TeaVM](project_rng-teavm-constraints.md) — why the generator uses only xor and shifts, and what would silently break replays.
 - [Bash heredoc limits](feedback_bash-heredoc-limits.md) — writing Java through heredocs mangles backslashes and truncates long commands.
-- [Defensive chain and collision design](project_defensive-chain-and-collision-design.md) — internal collision hits vs GameEvent, invulnerability absorbing hits fully, and the component-removal-mid-iteration hazard.
+- [Defensive chain and collision design](project_defensive-chain-and-collision-design.md) — internal collision hits vs GameEvent, invulnerability absorbing hits fully, the component-removal-mid-iteration hazard, and why CollisionSystem must filter pendingDestruction.
 - [Content pipeline design](project_content-pipeline-design.md) — generic ComponentSpec over one type per component, why patterns were deferred but trajectories were not, Drop bypassing the registry.
+- [Game systems design](project_game-systems-design.md) — Health/HealthDamage, fragile-vs-Health split, tick-level input edges need state in core, reflection-based ComponentStore test guards.
+- [Verify against 12-architecture.md](feedback_verify-against-architecture-doc.md) — check its component table and JSON schema before calling a component undecided; a plan's reading list can be incomplete.

@@ -121,6 +121,58 @@ class CollisionSystemTest {
         assertTrue(world.collisionHits().isEmpty());
     }
 
+    @Test
+    @DisplayName("an enemy already marked for destruction this tick produces no hit against the player")
+    void markedEnemyProducesNoHit() {
+        int enemy = entity(0f, 0f, 3f, CollisionLayer.ENEMY);
+        playerEntity(4f, 0f, 3f);
+        world.markForDestruction(enemy);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(world.collisionHits().isEmpty(),
+            "a bomb or LifetimeSystem marking this enemy earlier in the tick must stop it from "
+                + "still hitting the player this same tick");
+    }
+
+    @Test
+    @DisplayName("an enemy projectile already marked for destruction produces no hit against the player")
+    void markedEnemyProjectileProducesNoHit() {
+        int projectile = entity(0f, 0f, 2f, CollisionLayer.ENEMY_PROJECTILE);
+        playerEntity(3f, 0f, 2f);
+        world.markForDestruction(projectile);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(world.collisionHits().isEmpty());
+    }
+
+    @Test
+    @DisplayName("a marked player projectile or enemy produces no player-projectile-versus-enemy hit")
+    void markedEitherSideOfTheManyAgainstManyPairProducesNoHit() {
+        int markedProjectile = entity(0f, 0f, 2f, CollisionLayer.PLAYER_PROJECTILE);
+        entity(3f, 0f, 2f, CollisionLayer.ENEMY);
+        world.markForDestruction(markedProjectile);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(world.collisionHits().isEmpty());
+    }
+
+    @Test
+    @DisplayName("marking one candidate does not stop an unrelated, unmarked overlap from being reported")
+    void markingOneEntityDoesNotSuppressOthers() {
+        int markedEnemy = entity(0f, 0f, 3f, CollisionLayer.ENEMY);
+        int unmarkedEnemy = entity(0f, 0f, 3f, CollisionLayer.ENEMY);
+        int player = playerEntity(4f, 0f, 3f);
+        world.markForDestruction(markedEnemy);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertEquals(List.of(new CollisionHit(unmarkedEnemy, player, CollisionPair.ENEMY_VS_PLAYER)),
+            world.collisionHits());
+    }
+
     private int entity(float x, float y, float radius, CollisionLayer layer) {
         int entity = world.createEntity();
         world.transforms().set(entity, new Transform(x, y));

@@ -96,4 +96,91 @@ public interface BalanceValues {
      * @return the starting y position, in logical units, growing upwards like {@code Transform}
      */
     float playerStartY();
+
+    /**
+     * Seconds between two volleys of the main weapon while the fire control is held.
+     *
+     * <p>Not yet in {@code 10-mvp-initial-values.md}: the document fixes the shot level count and
+     * how a level is told apart visually, but not a rate of fire. A placeholder pending balancing,
+     * same status as {@link #playerSpeed()}.
+     *
+     * @return the cooldown between volleys, strictly positive
+     */
+    float weaponFireCooldown();
+
+    /**
+     * Speed of a player projectile once fired, in logical units per second, positive since {@code
+     * Transform.y} and the player's own position both grow upwards towards where enemies are.
+     *
+     * <p>Same placeholder status as {@link #weaponFireCooldown()}.
+     *
+     * @return the player projectile's speed
+     */
+    float weaponProjectileSpeed();
+
+    /**
+     * Radius of a pickup's collider, in logical units.
+     *
+     * <p>{@code docs/design/02-sprite-sizes.md} states the policy — a pickup's hitbox is larger
+     * than its sprite, "they feel magnetic" — but names no concrete radius for any pickup, unlike
+     * the ships, projectiles and enemies the same document does size. A placeholder pending that
+     * number and pending pickup art existing at all.
+     *
+     * @return the pickup collider's radius
+     */
+    float pickupRadius();
+
+    /**
+     * Seconds of invulnerability granted by the invulnerability power-up.
+     *
+     * <p>Not yet in {@code 10-mvp-initial-values.md}: the document lists invulnerability among the
+     * MVP power-ups but gives no duration for it, only for the two damage-triggered grants ({@link
+     * #respawnInvulnerability()} and {@link #damageInvulnerability()}). A placeholder pending
+     * balancing.
+     *
+     * @return the duration granted by the pickup, strictly positive
+     */
+    float invulnerabilityPickupDuration();
+
+    /**
+     * Points awarded per remaining life when the level is completed.
+     *
+     * @return the per-life completion bonus, from the score table in
+     *     {@code 10-mvp-initial-values.md}
+     */
+    int lifeCompletionBonus();
+
+    /**
+     * Points awarded per remaining bomb when the level is completed.
+     *
+     * @return the per-bomb completion bonus, from the score table in
+     *     {@code 10-mvp-initial-values.md}
+     */
+    int bombCompletionBonus();
+
+    /**
+     * Hit points a player projectile subtracts from an enemy's {@code Health} on contact.
+     *
+     * <p>Not in {@code 10-mvp-initial-values.md}: no enemy hit-point value is decided anywhere in
+     * {@code docs/planning/} yet, so there is nothing to balance this number against. A placeholder
+     * pending real numbers, recorded as open the same way {@link #playerSpeed()} is. {@code
+     * 01-vision-and-scope.md} is explicit that difficulty "must not depend only on raising health
+     * and damage" — this value is a fixed per-shot constant for that reason, not a per-level or
+     * per-difficulty dial.
+     *
+     * @return the damage a single player projectile deals, strictly positive
+     */
+    int weaponProjectileDamage();
+
+    /**
+     * Hit points the bomb subtracts from a non-fragile enemy's {@code Health} on detonation — the
+     * "heavy damage to resistant enemies" {@code 02-mvp-functional-spec.md} describes. A fragile
+     * enemy ignores this entirely: it is destroyed outright by the bomb, the same as by ramming,
+     * regardless of any {@code Health} it happens to carry.
+     *
+     * <p>Same placeholder status as {@link #weaponProjectileDamage()}.
+     *
+     * @return the damage the bomb deals to a resistant enemy, strictly positive
+     */
+    int bombDamage();
 }

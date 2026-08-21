@@ -2,16 +2,20 @@ package dev.luchoc.littlespaceship.core.domain;
 
 import dev.luchoc.littlespaceship.core.domain.collision.CollisionHit;
 import dev.luchoc.littlespaceship.core.domain.component.Attachment;
+import dev.luchoc.littlespaceship.core.domain.component.BombState;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
+import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
+import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.component.Weapon;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityRegistry;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
@@ -51,6 +55,10 @@ public final class World {
     private final ComponentStore<Attachment> attachments = new ComponentStore<>();
     private final ComponentStore<ScoreValue> scoreValues = new ComponentStore<>();
     private final ComponentStore<Drop> drops = new ComponentStore<>();
+    private final ComponentStore<Weapon> weapons = new ComponentStore<>();
+    private final ComponentStore<Pickup> pickups = new ComponentStore<>();
+    private final ComponentStore<Health> healths = new ComponentStore<>();
+    private final ComponentStore<BombState> bombStates = new ComponentStore<>();
 
     /**
      * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
@@ -120,6 +128,10 @@ public final class World {
         attachments.remove(entity);
         scoreValues.remove(entity);
         drops.remove(entity);
+        weapons.remove(entity);
+        pickups.remove(entity);
+        healths.remove(entity);
+        bombStates.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -208,6 +220,34 @@ public final class World {
      */
     public ComponentStore<Drop> drops() {
         return drops;
+    }
+
+    /**
+     * @return the player's firing state
+     */
+    public ComponentStore<Weapon> weapons() {
+        return weapons;
+    }
+
+    /**
+     * @return pickups lying in the playfield, waiting to be collected
+     */
+    public ComponentStore<Pickup> pickups() {
+        return pickups;
+    }
+
+    /**
+     * @return hit points of the entities that need more than one hit to go down
+     */
+    public ComponentStore<Health> healths() {
+        return healths;
+    }
+
+    /**
+     * @return the tick-level rising-edge state {@code BombSystem} tracks for the player
+     */
+    public ComponentStore<BombState> bombStates() {
+        return bombStates;
     }
 
     /**

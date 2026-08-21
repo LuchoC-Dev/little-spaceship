@@ -1,10 +1,13 @@
 package dev.luchoc.littlespaceship.game.adapter.render;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
 import dev.luchoc.littlespaceship.core.port.SpriteVisitor;
 import dev.luchoc.littlespaceship.core.port.WorldView;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Draws the simulation. The only thing this class ever asks the core for is a {@link WorldView}; it
@@ -28,6 +31,14 @@ public final class WorldRenderer implements SpriteVisitor {
 
     private final PlaceholderAtlas atlas;
     private final float playfieldLeft;
+
+    /**
+     * Sprite ids already reported missing from {@link #atlas}, so a gap in placeholder art logs
+     * once per id instead of once per frame — sixty times a second would flood the log and hide the
+     * one line that matters. Not a per-frame allocation: only touched on the cold path where
+     * {@code region} is null, which is rare by construction once real art lands.
+     */
+    private final Set<String> missingSpritesLogged = new HashSet<>();
 
     private SpriteBatch batch;
 
@@ -67,7 +78,13 @@ public final class WorldRenderer implements SpriteVisitor {
         TextureRegion region = atlas.region(sprite);
         if (region == null) {
             // A content id with no placeholder registered yet. Skipping it beats crashing the
-            // render loop over an asset that has not arrived, which is exactly this phase's state.
+            // render loop over an asset that has not arrived, but a silent skip is only right while
+            // nobody could look it up — log it once so a typo'd id is loud instead of invisible once
+            // real art starts being wired against these same strings.
+            if (missingSpritesLogged.add(sprite.value())) {
+                Gdx.app.error("WorldRenderer", "no placeholder region for sprite id '"
+                    + sprite.value() + "', skipping");
+            }
             return;
         }
         float logicalX = x + playfieldLeft;

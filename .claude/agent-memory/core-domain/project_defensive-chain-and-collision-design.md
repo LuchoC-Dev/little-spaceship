@@ -16,16 +16,20 @@ different lifetimes on purpose. `DamageSystem` reads `collisionHits()` in the ve
 tick.
 
 **Not every future consumer of that buffer can just read it as-is — check `SystemOrder` first.**
-`PickupSystem` (`SystemOrder.PICKUP`, ordinal 7) runs after `COLLISION` (5), so it would see the
-current tick's `PICKUP_VS_PLAYER` hits, same as `DamageSystem` does. `WeaponSystem`
-(`SystemOrder.WEAPON`, ordinal 2) runs *before* `COLLISION`, so reading `PLAYER_PROJECTILE_VS_ENEMY`
-from it would resolve the *previous* tick's hits — one tick late, silently, since nothing about that
-is a compile error or an obviously failing test. An earlier version of this note claimed both systems
-could read the buffer unchanged; that was wrong for `WeaponSystem` and was caught in review, not by a
-test. Whoever adds `WeaponSystem` has to either resolve `PLAYER_PROJECTILE_VS_ENEMY` from a stage
-after `COLLISION` (mirroring what `DamageSystem` does today) or give `SystemOrder` a new stage for it
-— check the *ordinal*, not just "does a consuming system exist yet", before assuming a buffer written
-earlier in the pipeline is readable from a stage that runs before it is refilled.
+`PickupSystem` (`SystemOrder.PICKUP`) runs after `COLLISION`, so it would see the current tick's
+`PICKUP_VS_PLAYER` hits, same as `DamageSystem` does. `WeaponSystem` (`SystemOrder.WEAPON`) runs
+*before* `COLLISION`, so reading `PLAYER_PROJECTILE_VS_ENEMY` from it would resolve the *previous*
+tick's hits — one tick late, silently, since nothing about that is a compile error or an obviously
+failing test. An earlier version of this note claimed both systems could read the buffer unchanged;
+that was wrong for `WeaponSystem` and was caught in review, not by a test. Phase 05 resolved
+`PLAYER_PROJECTILE_VS_ENEMY` from `DamageSystem` itself (`SystemOrder.DAMAGE`, right after
+`COLLISION`) rather than giving it a stage of its own — `DamageSystem`'s stage is generically "damage
+resolution against a hit reported this tick," not specifically the player's defensive chain, so
+widening its scope kept one system per concern instead of adding a stage nothing else needed. Check
+the *ordinal position relative to `COLLISION`*, not just "does a consuming system exist yet", before
+assuming a buffer written earlier in the pipeline is readable from a stage that runs before it is
+refilled. Ordinal numbers themselves are not stable across phases — phase 05 inserted `BOMB` between
+`WEAPON` and `SPAWN` — so reason about order relative to `COLLISION`, never a hardcoded number.
 
 **Invulnerability, when active, absorbs a hit with zero side effects.** Not just "no life lost" —
 also no enemy destroyed, no projectile consumed. This was a genuine design call, not stated
@@ -42,4 +46,20 @@ hazard is really about the store, not the entity). `DamageSystem.decayInvulnerab
 expired entities into a side list first and removes them after the loop — the same pattern
 `CleanupSystem` uses for entity destruction, just one level down.
 
-See [[core-boundary-decisions]] and [[core-deferred-surface]] for what else was deferred and why.
+**`World.markForDestruction` does not remove a collider, so `CollisionSystem` has to filter
+`pendingDestruction` itself, or anything marked earlier in the same tick keeps colliding.** This bit
+`BombSystem` in phase 05's review round 1: the bomb marked an enemy for destruction, but
+`CollisionSystem` (which runs right after `BOMB`) had no idea, produced a `CollisionHit` for it
+anyway, and `DamageSystem` consumed a shield/attachment/life for an enemy that had already
+"stopped existing" as far as the bomb was concerned. The fix is in `CollisionSystem`, not in
+`BombSystem`: build a `Set<Integer>` from `World.pendingDestruction()` once per `update()` call
+(empty in the common case, so no allocation when nothing was marked) and skip any candidate — either
+side of any pair, the player included — that appears in it. This is deliberately general, not
+`BOMB`-specific: `LifetimeSystem` also runs before `COLLISION` and also only marks, so a projectile
+it expires gets the same protection for free. **Any future system that marks something for
+destruction before `COLLISION` runs is automatically covered — nothing needs updating in
+`CollisionSystem` itself when a new marker shows up**, which is exactly why the general fix beats a
+`BOMB`-only special case.
+
+See [[core-boundary-decisions]] and [[core-deferred-surface]] for what else was deferred and why, and
+[[game-systems-design]] for the tick-level input-edge lesson from the same review round.

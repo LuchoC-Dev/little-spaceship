@@ -32,6 +32,7 @@ class SystemPipelineTest {
                 SystemOrder.INPUT,
                 SystemOrder.MOTION,
                 SystemOrder.WEAPON,
+                SystemOrder.BOMB,
                 SystemOrder.SPAWN,
                 SystemOrder.LIFETIME,
                 SystemOrder.COLLISION,

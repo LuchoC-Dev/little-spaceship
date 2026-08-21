@@ -75,6 +75,17 @@ class ContentDefinitionsTest {
     }
 
     @Test
+    @DisplayName("an attachment needs an id and a strictly positive durability")
+    void attachmentDefinitionValidates() {
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleAttachmentDefinition("", 1));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleAttachmentDefinition("attachment", 0));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleAttachmentDefinition("attachment", -1));
+    }
+
+    @Test
     @DisplayName("a sorted timeline is accepted as-is")
     void sortedTimelineIsAccepted() {
         List<SpawnEvent> sorted = List.of(

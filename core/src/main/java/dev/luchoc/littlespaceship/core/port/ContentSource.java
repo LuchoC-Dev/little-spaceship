@@ -46,4 +46,11 @@ public interface ContentSource {
      * @throws IllegalArgumentException if no level has that id
      */
     WaveTimeline timeline(String levelId);
+
+    /**
+     * @param id the attachment's content id
+     * @return the attachment definition, never null
+     * @throws IllegalArgumentException if no attachment has that id
+     */
+    AttachmentDefinition attachment(String id);
 }

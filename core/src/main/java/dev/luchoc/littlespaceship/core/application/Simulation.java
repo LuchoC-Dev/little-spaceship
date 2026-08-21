@@ -7,15 +7,22 @@ import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.component.BombState;
+import dev.luchoc.littlespaceship.core.domain.component.Weapon;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
+import dev.luchoc.littlespaceship.core.domain.system.BombSystem;
 import dev.luchoc.littlespaceship.core.domain.system.CleanupSystem;
 import dev.luchoc.littlespaceship.core.domain.system.CollisionSystem;
 import dev.luchoc.littlespaceship.core.domain.system.DamageSystem;
 import dev.luchoc.littlespaceship.core.domain.system.GameSystem;
+import dev.luchoc.littlespaceship.core.domain.system.LifetimeSystem;
 import dev.luchoc.littlespaceship.core.domain.system.MotionSystem;
+import dev.luchoc.littlespaceship.core.domain.system.PickupSystem;
+import dev.luchoc.littlespaceship.core.domain.system.ScoreSystem;
 import dev.luchoc.littlespaceship.core.domain.system.SpawnSystem;
 import dev.luchoc.littlespaceship.core.domain.system.SystemPipeline;
+import dev.luchoc.littlespaceship.core.domain.system.WeaponSystem;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.GameEventSink;
@@ -154,11 +161,16 @@ public final class Simulation implements TickHandler {
     private static SystemPipeline mvpPipeline(String levelId) {
         List<GameSystem> systems = new ArrayList<>();
         systems.add(new MotionSystem());
+        systems.add(new WeaponSystem());
+        systems.add(new BombSystem());
         if (levelId != null) {
             systems.add(new SpawnSystem(levelId));
         }
+        systems.add(new LifetimeSystem());
         systems.add(new CollisionSystem());
         systems.add(new DamageSystem());
+        systems.add(new PickupSystem());
+        systems.add(new ScoreSystem());
         systems.add(new CleanupSystem());
         return SystemPipeline.of(systems.toArray(new GameSystem[0]));
     }
@@ -183,6 +195,8 @@ public final class Simulation implements TickHandler {
         world.sprites().set(player, new Sprite(PLAYER_SPRITE));
         world.players().set(player,
             new Player(balance.initialLives(), balance.initialBombs(), PLAYER_INITIAL_SHOT_LEVEL));
+        world.weapons().set(player, new Weapon());
+        world.bombStates().set(player, new BombState());
     }
 
     /**

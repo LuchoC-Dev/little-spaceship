@@ -6,6 +6,7 @@ import dev.luchoc.littlespaceship.core.domain.collision.CollisionPair;
 import dev.luchoc.littlespaceship.core.domain.component.Attachment;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
+import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
@@ -42,6 +43,16 @@ import java.util.List;
  * carrier is not. An enemy projectile is always consumed on contact. Neither consequence happens
  * while the hit itself was absorbed by invulnerability, since then the collision had no effect at
  * all.
+ *
+ * <p>This system also resolves the other direction: a player projectile reaching an enemy. It
+ * subtracts {@link BalanceValues#weaponProjectileDamage()} from the enemy's {@link Health} and
+ * destroys it once that reaches zero. An enemy with no {@link Health} component is treated as
+ * having exactly one point — shorthand for the weakest case of the same rule, not a second
+ * mechanism that could disagree with it. {@link Collider#fragile} answers a different question
+ * entirely: whether a ramming or the bomb kills this enemy's whole body outright, independent of
+ * how much sustained weapon damage {@link Health} says it can take. No enemy hit-point value is
+ * decided in {@code 10-mvp-initial-values.md} yet; see {@link Health}'s javadoc for the full
+ * account of why this component and its numbers are provisional.
  */
 public final class DamageSystem implements GameSystem {
 
@@ -54,21 +65,31 @@ public final class DamageSystem implements GameSystem {
     public void update(World world, float step, InputFrame input) {
         decayInvulnerability(world, step);
 
-        int player = world.playerEntity();
-        if (player == EntityId.NONE) {
-            return;
-        }
-
-        BalanceValues balance = world.content().balance();
         List<CollisionHit> hits = world.collisionHits();
+        BalanceValues balance = world.content().balance();
+        int player = world.playerEntity();
         for (int i = 0; i < hits.size(); i++) {
             CollisionHit hit = hits.get(i);
-            if (hit.pair() == CollisionPair.ENEMY_VS_PLAYER && hit.second() == player) {
+            if (player != EntityId.NONE && hit.pair() == CollisionPair.ENEMY_VS_PLAYER
+                && hit.second() == player) {
                 resolvePlayerHit(world, balance, player, hit.first(), true);
-            } else if (hit.pair() == CollisionPair.ENEMY_PROJECTILE_VS_PLAYER && hit.second() == player) {
+            } else if (player != EntityId.NONE
+                && hit.pair() == CollisionPair.ENEMY_PROJECTILE_VS_PLAYER && hit.second() == player) {
                 resolvePlayerHit(world, balance, player, hit.first(), false);
+            } else if (hit.pair() == CollisionPair.PLAYER_PROJECTILE_VS_ENEMY) {
+                resolveEnemyHit(world, balance, hit.first(), hit.second());
             }
         }
+    }
+
+    /**
+     * A player projectile reaching an enemy: the projectile is always consumed, the enemy loses
+     * {@link BalanceValues#weaponProjectileDamage()} hit points and is destroyed once none are left.
+     * See the class javadoc for why an enemy with no {@link Health} is treated as having one point.
+     */
+    private static void resolveEnemyHit(World world, BalanceValues balance, int projectile, int enemy) {
+        world.markForDestruction(projectile);
+        HealthDamage.apply(world, enemy, balance.weaponProjectileDamage());
     }
 
     /**
