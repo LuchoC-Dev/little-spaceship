@@ -157,10 +157,11 @@ public final class PlayScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
 
         WorldView drawView = simulation.view();
+        PlayerStatus drawStatus = drawView.player();
         batch.begin();
         checkerboard.draw(batch, PLAYFIELD_LEFT, 0f, PLAYFIELD_WIDTH, LittleSpaceshipGame.LOGICAL_HEIGHT);
-        worldRenderer.draw(drawView, batch);
-        hudRenderer.draw(batch, drawView.player());
+        worldRenderer.draw(drawView, batch, drawStatus);
+        hudRenderer.draw(batch, drawStatus);
         if (paused) {
             batch.setColor(1f, 1f, 1f, 1f);
             batch.draw(dimTexture, 0f, 0f,
@@ -214,6 +215,7 @@ public final class PlayScreen implements Screen {
         batch.dispose();
         atlas.dispose();
         checkerboard.dispose();
+        worldRenderer.dispose();
         hudRenderer.dispose();
         if (pauseStage != null) {
             pauseStage.dispose();
