@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import dev.luchoc.littlespaceship.core.application.GameLoop;
 import dev.luchoc.littlespaceship.core.application.Simulation;
+import dev.luchoc.littlespaceship.core.port.CompletionBonus;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import dev.luchoc.littlespaceship.core.port.LevelOutcome;
@@ -143,9 +144,9 @@ public final class PlayScreen implements Screen {
                 if (outcome == LevelOutcome.DEFEATED) {
                     game.setScreen(new DefeatScreen(game, status.score()));
                 } else {
-                    game.setScreen(new VictoryScreen(game, status.score(),
-                        content.balance().lifeCompletionBonus() * status.lives(),
-                        content.balance().bombCompletionBonus() * status.bombs()));
+                    CompletionBonus bonus = view.completionBonus();
+                    game.setScreen(new VictoryScreen(
+                        game, status.score(), bonus.livesBonus(), bonus.bombsBonus()));
                 }
                 return;
             }
