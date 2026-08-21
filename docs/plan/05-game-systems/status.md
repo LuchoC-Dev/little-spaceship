@@ -1,7 +1,7 @@
 # Phase 05 — Game systems · status
 
-**State:** implemented, pending review
-**Updated:** 21/08/2026 (revised same day: `Health` added after a coordinator review caught it missing; further revised same day: `game-presentation` closed its side, see below)
+**State:** implemented, pending re-review
+**Updated:** 21/08/2026 (revised same day: `Health` added after a coordinator review caught it missing; revised again: `game-presentation` closed its side; revised again: review round 1 rejected on the bomb and a test guard, see below)
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
 
@@ -60,11 +60,42 @@ Update this file when the phase moves. It is the only place phase progress is re
 
 ## In progress
 
-Nothing — the phase's task list is complete.
+Nothing — review round 1's findings are all addressed, below.
 
 ## Blocked
 
 Nothing.
+
+**Task 8 (guaranteed drops) is not fully done, and this file previously claimed the task list was
+complete — that was wrong, review round 1 caught it.** `assets/data/level-01.json` carries 2 of the
+4 guaranteed drops the plan asks for: a shield before the strong encounter and the attachment from
+it, both present; a weapon upgrade in the first third and a bomb recharge before the boss are not.
+Four of `PickupSystem`'s six kinds (`weapon-upgrade`, `extra-life`, `bomb-recharge`,
+`invulnerability`) are consequently unreachable by playing the shipped content, even though every
+one of them is built and tested at the system level. Finishing task 8 means editing
+`assets/data/level-01.json` — content data outside `core/`, `game`/content design's lane, not
+`core-domain`'s — so it is recorded here as genuinely open rather than built or silently dropped.
+
+## Review round 1
+
+`reviewer` rejected the phase on pull request #22, narrowly: five of seven acceptance criteria were
+genuinely earned, and the rejection was the bomb plus one test guard. What changed:
+
+| # | Finding | Fix |
+|---|---|---|
+| F1 | `BombSystem` spent a bomb charge on every tick `input.bomb()` was true. `GameLoop.advance` feeds the *same* `InputFrame` to every tick of one rendered frame; at 30 fps or after a stall's catch-up, one press could reach several ticks and spend several charges. | A new `BombState` component tracks whether the control was held on the previous tick, so `BombSystem` only spends a charge on the tick-level rising edge — the first tick a press is seen, not every tick it stays true. `fire` has no such problem, since it is deliberately level-shaped; `bomb` was the first edge-shaped input the core consumed. `BombSystemTest.holdingAcrossTwoTicksSpendsOnlyOneCharge`/`releaseThenPressSpendsASecondCharge` pin both halves. |
+| F2 | The bomb only marked entities for destruction; `CollisionSystem` never filtered `pendingDestruction`, so an enemy or enemy projectile the bomb "cleared" still produced a `CollisionHit` against the player the same tick, and `DamageSystem` still consumed a shield, the attachment or a life for it. | `CollisionSystem` now skips any entity already in `World.pendingDestruction()` this tick, regardless of what marked it — the general fix, not a `BOMB`-specific one, since the same hazard exists for anything `LifetimeSystem` expires too. `SystemOrder.BOMB` and `.COLLISION`'s javadoc now state why `BOMB` running before `COLLISION` is what makes this protection real, not merely a scheduling nicety. `CollisionSystemTest` gained four tests for the filter. |
+| F3 | `BombSystem.detonate` had no positional bound, so it could destroy a wave that had just spawned fully off screen — proven by the branch's own `BombReplayTest`, which detonated at a tick where the enemy's centre was still 4.75 units above the playfield's top edge. | `detonate` now skips any candidate whose `Transform` falls outside `[0, PLAYFIELD_WIDTH] x [0, PLAYFIELD_HEIGHT]` — a simple centre-in-bounds rule, not a circle/rectangle overlap test, so the exact "barely poking into view" case that motivated the finding is excluded rather than argued about. `BombSystemTest` gained on-screen/off-screen/edge-inclusive tests; `BombReplayTest`'s script now waits until each wave has genuinely descended into the playfield before firing. |
+| F4 | `WorldTest.destroyStripsEveryComponent`'s javadoc claimed to guard every `World` component store against `destroyEntity` forgetting one — the exact hazard phase 01 recorded — but it only asserted four of the thirteen (soon fourteen) stores by hand, and had already silently drifted once. | Rewritten to discover every `ComponentStore` field on `World` by reflection, populate all of them, and assert every discovered one is both non-empty before destruction and empty after. Adding a fifteenth store without extending the populate step now fails the test with a named message, instead of passing vacuously. |
+| F5 | `ScoreSystem.completionBonus` was `public` with zero production callers, and its second parameter is a mutable `domain.component.Player` — machinery nothing outside `core` can obtain, since `WorldView` exposes no player state. | Made package-private. The phase-07 caller this exists for lives in the same package and can call it directly; going public happens when a real cross-boundary need exists, not ahead of one. |
+| F6 | Task 8 (guaranteed drops) was not built — `level-01.json` carries 2 of 4 — while this file's "In progress" section said the task list was complete. | Corrected above, in "In progress"; the gap itself is still open, and building it means editing content data outside `core/`, so it stays `game`/content design's task. |
+| F7 | `PickupSystem.resolvePickup` threw on an unrecognised `Pickup.kind`, but nothing checked a level's `drop` id before that — a typo loaded clean and only crashed a running level minutes later, the moment a player reached the pickup it produced. | `SpawnSystem.spawnWave` now calls a new package-private `PickupSystem.isRecognisedKind(String)` before attaching a `Drop`, and fails immediately, naming the enemy and the bad id, the moment the wave carrying it spawns — not content-load time exactly (a `port` cannot depend on `domain.system`'s machinery to check earlier than that), but the earliest point inside `core` that is architecturally reachable. `SpawnSystemTest` gained coverage for both the rejection and all six real kinds. |
+| F8 | `BombReplayTest` and `LevelScoreReplayTest` compared two runs of the same build against each other, like `DamageReplayTest` (issue #12) — but unlike that one, both fixtures are fully in-test and fully deterministic, so a regression could slip through as long as it broke both runs identically. | Both gained a committed `GOLDEN_FINGERPRINT` constant, computed after every other fix in this table and compared against a live run in addition to the two-runs-agree check. `LevelScoreReplayTest` also gained a `scoredSomething` non-vacuity test and now gives `enemy-tank`/`enemy-carrier` the same `Health` (40/80) `assets/data/enemies.json` does, so `Health` is exercised at level scale instead of silently absent from the one integration-scale fixture that could catch drift in it. |
+| F9 | The per-unit reading of the completion bonus — the reviewer agrees it is the better one — was recorded only in this file, though this file's own template says a decision touching a game rule also belongs in `08-decisions-and-open-items.md`. | Added there, under "Resolved contradictions". |
+| F10 | `.claude/agent-memory/core-domain/project_game-systems-design.md` opened with "load-bearing for whoever eventually adds a `Health` component", written before `Health` existed; the next paragraph already said it did. | Fixed. |
+| F11 | Four commit subjects on this branch exceed `CLAUDE.md`'s 72-character limit. | **Not fixed.** Fixing it means rewriting those commits' messages, which needs an interactive rebase or a force-push to update the already-pushed branch — both explicitly disallowed (`CLAUDE.md`: "never force-push"; this environment does not support `rebase -i` either). Recorded here as a known, deliberately unfixed nit rather than silently ignored; every commit from this point on respects the limit. |
+
+Suite: 236 tests, all green, up from 223 before this round.
 
 ## Decisions taken while implementing
 
@@ -112,28 +143,57 @@ implied by it:
 - **The end-of-level score bonus interprets "1000 and 300 respectively" as per-unit**, not a flat
   amount: `lives * lifeCompletionBonus + bombs * bombCompletionBonus`. `10-mvp-initial-values.md`'s
   wording is ambiguous between the two readings; per-unit is the standard arcade convention and
-  scales with "finishing in good shape," which is the stated intent.
+  scales with "finishing in good shape," which is the stated intent. Now also recorded in
+  `08-decisions-and-open-items.md` (review round 1, F9).
+- **The tick-level rising edge lives in a component (`BombState`), not in `GameLoop` or the
+  adapter.** Neither of those layers can fix it: `GameLoop` genuinely must feed one `InputFrame` to
+  every tick of a frame — that is what makes a variable-length frame simulate a whole number of
+  fixed steps — and an adapter's "just pressed" is inherently a per-render-frame concept, with no
+  visibility into how many ticks that frame will produce. Tracking "was this held last tick" inside
+  the simulation is the only layer that actually sees every tick, so it is the only layer that can
+  detect the edge at the granularity that matters. `fire` needed no such state because it is
+  deliberately level-shaped (sustained fire); `bomb` is the first, and so far only, edge-shaped
+  input the core consumes — the next one-shot input (a boss trigger, say) will need the same
+  pattern, not a shared abstraction invented ahead of that second real case.
+- **`CollisionSystem` filters `pendingDestruction`, rather than moving `BOMB` to run after
+  `COLLISION`.** The reviewer flagged both as defensible; the filter is the one actually used,
+  because moving the stage does not work on its own — `BombSystem` only marks entities, it does not
+  remove their collider, so even running after `COLLISION` would still need `DamageSystem` (or
+  something) to skip a marked entity's hit, which is the same fix one stage later and one layer
+  removed from where the hit was produced. Filtering in `CollisionSystem` also protects against a
+  second case for free: `LifetimeSystem` (`SystemOrder.LIFETIME`, before `COLLISION` too) expiring a
+  projectile the instant before it would have overlapped the player.
+- **"On screen" for the bomb means the entity's `Transform` — its centre — falls inside `[0,
+  PLAYFIELD_WIDTH] x [0, PLAYFIELD_HEIGHT]`, not "any part of its collider overlaps the playfield
+  rectangle."** The generous, collider-overlap reading was considered and rejected: it would still
+  have counted the exact reproduction from review round 1 (a wave a fraction of a unit past the
+  edge) as on screen, since a sliver of the collider genuinely does overlap the boundary at that
+  point. A simple, unambiguous position check is both easier to defend and actually excludes the
+  case the finding was about.
 
 ## Notes for whoever comes next
 
-**`game` no longer compiles as of this phase**, and this is expected, not a regression to chase down
-inside `core`. Extending `BalanceValues` and `ContentSource` — both owned by `core` — broke the two
+**This section described a `game`-compile gap that no longer exists**; kept below, historically, as
+the record of what happened, since `game-presentation`'s own section right after this one explains
+how it closed it. Review round 1 did not touch `BalanceValues` or `ContentSource` further, so
+`./gradlew :game:compileJava` is green again as of this revision — verified, not assumed.
+
+Original note: extending `BalanceValues` and `ContentSource` — both owned by `core` — broke the two
 adapters that implement them:
 
-- `game/.../adapter/content/JsonBalanceValues.java` needs `weaponFireCooldown()`,
+- `game/.../adapter/content/JsonBalanceValues.java` needed `weaponFireCooldown()`,
   `weaponProjectileSpeed()`, `pickupRadius()`, `invulnerabilityPickupDuration()`,
   `lifeCompletionBonus()`, `bombCompletionBonus()`, `weaponProjectileDamage()` and `bombDamage()`.
-- `game/.../adapter/content/JsonContentSource.java` needs `attachment(String id)`, reading an
+- `game/.../adapter/content/JsonContentSource.java` needed `attachment(String id)`, reading an
   `AttachmentDefinition` from content.
 
-This is `game-presentation`'s module, not `core-domain`'s, so it was not touched here. Verified with
-`./gradlew :game:compileJava`, which names exactly these gaps.
+Both were `game-presentation`'s module, not `core-domain`'s, so they were not touched from this side.
 
-**`enemies.json` (owned by `game`/content design, not `core`) needs a `"health"` entry for every
-archetype that should survive more than one hit** — tank and heavy carrier chief among them, per
-`02-mvp-functional-spec.md`'s roster. `ComponentFactoryRegistry` accepts `"health": {"points": N}`
-today; nothing in `core` enforces that a non-fragile archetype actually has one (see "Decisions
-taken" above), so this is a content-authoring task, not a code one.
+**`enemies.json` needed a `"health"` entry for every archetype that should survive more than one
+hit** — tank and heavy carrier, per `02-mvp-functional-spec.md`'s roster — and `game-presentation`
+added it (40/80), matched in `LevelScoreReplayTest`'s fixture as of review round 1 (F8). Nothing in
+`core` enforces that a non-fragile archetype actually has `Health`, on purpose — see "Decisions
+taken" above.
 
 ## `game-presentation`'s side of this phase
 
@@ -180,6 +240,6 @@ criteria, and is not blocking anything that was asked for here.
 | Picking up a maxed power-up increases the score | Met — `PickupSystemTest.maxedPickupIncreasesTheScoreOnceSwept` runs `PickupSystem` then `ScoreSystem` together |
 | The attachment absorbs exactly one hit, disappears, no life lost | Already covered by phase 02's `DamageSystemTest`, unchanged this phase |
 | Attachment durability raised from data, no code change | Met — `PickupSystemTest.attachmentDurabilityComesFromDataNotAConstant`, `ContentDefinitionsTest` |
-| The bomb clears projectiles and damages enemies in the same tick, deterministically | Met — clears projectiles and fragile enemies outright, subtracts `bombDamage` from a resistant enemy's `Health` (`BombSystemTest.resistantEnemyWithEnoughHealthSurvives`/`resistantEnemyDestroyedOnceHealthIsExhausted`, `BombReplayTest`) |
-| Score matches the table in `10-mvp-initial-values.md` | Met for per-enemy and maxed-pickup values (unchanged content-driven `ScoreValue`, `maxedPickupBonus`); the completion bonus's per-unit reading is a decision, not a re-confirmation, see above |
-| A full-level replay produces the same final score twice | Met — `LevelScoreReplayTest`, `BombReplayTest`; same caveat as `DamageReplayTest` (issue #12): proves determinism within this build, not against a golden fingerprint |
+| The bomb clears projectiles and damages enemies in the same tick, deterministically | Met, as of review round 1 — on screen only (`BombSystemTest.enemyAbovePlayfieldIsUntouched`), protects the player the same tick (`CollisionSystemTest`'s marked-entity tests), spends exactly one charge per press (`BombSystemTest.holdingAcrossTwoTicksSpendsOnlyOneCharge`), and damages a resistant enemy's `Health` (`resistantEnemyWithEnoughHealthSurvives`/`resistantEnemyDestroyedOnceHealthIsExhausted`, `BombReplayTest`) |
+| Score matches the table in `10-mvp-initial-values.md` | Met for per-enemy and maxed-pickup values (unchanged content-driven `ScoreValue`, `maxedPickupBonus`); the completion bonus's per-unit reading is a decision, now also recorded in `08-decisions-and-open-items.md` |
+| A full-level replay produces the same final score twice | Met, and now a real regression net as of review round 1: both `LevelScoreReplayTest` and `BombReplayTest` compare a live run against a committed `GOLDEN_FINGERPRINT`, not only against each other. `DamageReplayTest` (issue #12) still lacks one — a smaller, separate fixture, not touched this phase |

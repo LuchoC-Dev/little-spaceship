@@ -98,6 +98,17 @@ Resolved: the attachment disappears when taking damage and when losing a life. I
 
 Durability: the same for all attachments by default, but modelled as data configurable per attachment and not as a constant in code, so that a more resistant protection attachment can be supported later.
 
+### End-of-level completion bonus
+
+`10-mvp-initial-values.md`'s score table says the bonus for remaining lives and bombs is "1000 and
+300 respectively... to reward finishing in good shape". That sentence is ambiguous between a flat
+bonus and one scaled by how much remains, and the second reading is the one that actually rewards
+"finishing in good shape" — a flat bonus would pay the same whether the player has one life left or
+five. Resolved by phase 05 as per-unit: `lives * 1000 + bombs * 300`. Implemented as
+`ScoreSystem.completionBonus(BalanceValues, Player)`, a pure function with no caller yet, since
+nothing in the core detects "the level is complete" before a boss and a victory condition exist
+(phase 07).
+
 ### Build tool
 
 Maven was an initial decision and a user preference. Gradle became the recommendation for libGDX + gdx-teavm.
