@@ -2,6 +2,8 @@ package dev.luchoc.littlespaceship.game.screen;
 
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The end-of-level bonus, per {@code docs/planning/10-mvp-initial-values.md}'s per-life and
@@ -33,7 +35,9 @@ public final class VictoryScreen extends BaseUiScreen {
         Label total = new Label("TOTAL   " + zeroPadded(score + livesBonus + bombsBonus), skin, "title");
         content.add(total).left().padTop(12f).padBottom(20f).row();
 
-        MenuEntries.add(content, skin, "CONTINUE", () -> game.setScreen(new MenuScreen(game)));
+        List<KeyboardFocusable> focusables = new ArrayList<>();
+        MenuEntries.add(content, skin, "CONTINUE", () -> game.setScreen(new MenuScreen(game)), focusables);
+        new MenuNavigator(stage, focusables);
     }
 
     private void addRow(String label, int value) {

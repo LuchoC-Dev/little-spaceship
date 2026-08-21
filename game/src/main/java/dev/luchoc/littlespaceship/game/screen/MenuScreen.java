@@ -2,6 +2,8 @@ package dev.luchoc.littlespaceship.game.screen;
 
 import com.badlogic.gdx.Gdx;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The main menu: Play, Options, Quit — {@code docs/planning/02-mvp-functional-spec.md}'s exact
@@ -14,8 +16,11 @@ public final class MenuScreen extends BaseUiScreen {
     public MenuScreen(LittleSpaceshipGame game) {
         super(game, "LITTLE SPACESHIP");
         content.top().left();
-        MenuEntries.add(content, skin, "PLAY", () -> game.setScreen(new ShipSelectScreen(game)));
-        MenuEntries.add(content, skin, "OPTIONS", () -> game.setScreen(new OptionsScreen(game, this)));
-        MenuEntries.add(content, skin, "QUIT", Gdx.app::exit);
+        List<KeyboardFocusable> focusables = new ArrayList<>();
+        MenuEntries.add(content, skin, "PLAY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
+        MenuEntries.add(content, skin, "OPTIONS",
+            () -> game.setScreen(new OptionsScreen(game, () -> new MenuScreen(game))), focusables);
+        MenuEntries.add(content, skin, "QUIT", Gdx.app::exit, focusables);
+        new MenuNavigator(stage, focusables);
     }
 }

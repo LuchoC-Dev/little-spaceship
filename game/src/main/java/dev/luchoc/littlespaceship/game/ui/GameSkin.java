@@ -87,6 +87,7 @@ public final class GameSkin {
         button.fontColor = Palette.N7;
         button.overFontColor = Palette.W4;
         button.downFontColor = Palette.W4;
+        button.checkedFontColor = Palette.W4;
         button.disabledFontColor = Palette.N3;
         button.up = skin.getDrawable("n2-panel");
         button.down = skin.getDrawable("n2-panel");

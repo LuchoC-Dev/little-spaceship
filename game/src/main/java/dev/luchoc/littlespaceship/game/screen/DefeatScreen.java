@@ -2,6 +2,8 @@ package dev.luchoc.littlespaceship.game.screen;
 
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Retry or menu, nothing else — {@code docs/planning/02-mvp-functional-spec.md}'s Defeat screen.
@@ -24,7 +26,9 @@ public final class DefeatScreen extends BaseUiScreen {
         Label scoreLabel = new Label("SCORE   " + score, skin, "title");
         content.add(scoreLabel).left().padBottom(24f).row();
 
-        MenuEntries.add(content, skin, "RETRY", () -> game.setScreen(new ShipSelectScreen(game)));
-        MenuEntries.add(content, skin, "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)));
+        List<KeyboardFocusable> focusables = new ArrayList<>();
+        MenuEntries.add(content, skin, "RETRY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
+        MenuEntries.add(content, skin, "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)), focusables);
+        new MenuNavigator(stage, focusables);
     }
 }

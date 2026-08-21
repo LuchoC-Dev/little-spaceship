@@ -105,9 +105,11 @@ public final class PlayScreen implements Screen {
 
         Table panel = new Table();
         panel.add(new Label("PAUSED", game.skin(), "title")).padBottom(16f).row();
-        MenuEntries.add(panel, game.skin(), "RESUME", this::resumeGameplay);
-        MenuEntries.add(panel, game.skin(), "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)));
+        java.util.List<KeyboardFocusable> focusables = new java.util.ArrayList<>();
+        MenuEntries.add(panel, game.skin(), "RESUME", this::resumeGameplay, focusables);
+        MenuEntries.add(panel, game.skin(), "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)), focusables);
         root.add(panel).center();
+        new MenuNavigator(pauseStage, focusables);
 
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pm.setColor(new Color(0f, 0f, 0f, 0.55f));
