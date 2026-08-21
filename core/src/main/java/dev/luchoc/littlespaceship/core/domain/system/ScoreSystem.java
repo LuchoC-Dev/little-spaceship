@@ -61,14 +61,21 @@ public final class ScoreSystem implements GameSystem {
      * The end-of-level bonus per {@code 10-mvp-initial-values.md}: a fixed amount per remaining life
      * and per remaining bomb, no combos or multipliers involved. A pure function and not a system,
      * because nothing in the core yet detects "the level is complete" — {@code WorldView.boss()} and
-     * a victory condition are phase 07's job per the project's own deferred-surface notes. Whatever
-     * detects completion calls this once, with the player's state at that moment.
+     * a victory condition are phase 07's job per the project's own deferred-surface notes.
+     *
+     * <p>Package-private on purpose. It has no caller yet, and its second parameter is a mutable
+     * {@code domain.component} type nothing outside {@code core} can obtain — {@code WorldView}
+     * exposes no player state. Making it public ahead of a real caller would be exactly the
+     * ahead-of-need abstraction the project avoids, and would cross a mutable domain type where the
+     * boundary requires read-only or immutable data. Whatever eventually detects level completion
+     * belongs in this same package and can call it directly; if it turns out to need this from
+     * outside {@code domain.system}, that need is the point to design the read-only shape, not now.
      *
      * @param balance where the per-life and per-bomb bonus amounts come from
      * @param player the player's state at the moment the level is completed
      * @return the total completion bonus
      */
-    public static int completionBonus(BalanceValues balance, Player player) {
+    static int completionBonus(BalanceValues balance, Player player) {
         return player.lives * balance.lifeCompletionBonus()
             + player.bombs * balance.bombCompletionBonus();
     }
