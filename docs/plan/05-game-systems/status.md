@@ -277,12 +277,19 @@ one, and asked for three things.
 forced re-execution, 236 tests passing (confirmed after pulling `core-domain`'s review-round-1 fixes,
 not re-tested by this branch's own changes — this branch touched no `core` file). `./gradlew
 :desktop:run` was started and run for ~15 real seconds, past every spawn event in the level including
-the new `t=1.0` drop and the `t=9.0`/`9.5` `enemy-tank`/`enemy-carrier` waves — no exception, and,
-checked specifically this time, **no "no placeholder region for sprite id" line in the log**, which is
-the evidence available from this environment that every sprite id phase 05 introduced now resolves to
-a region. That is not the same as having watched the window: nobody confirmed the shapes, colours or
-positions look right on screen, only that nothing in the running process complained about a missing
-one.
+the new `t=1.0` drop and the `t=9.0`/`9.5` `enemy-tank`/`enemy-carrier` waves — no exception at all, and
+no "no placeholder region for sprite id" line either, for whichever sprite ids that pass actually
+exercised.
+
+**What that does *not* prove, and is inferred from code instead:** the automated run drives no input —
+`fire` is never held and nothing rams the player — so `WeaponSystem` never emits a `shot-p1`/`shot-p2`
+projectile and no enemy is destroyed to produce a `pickup-*` entity either. Both this run and the
+previous round's ~17 s run are silent on those ids not because they resolve, but because neither run
+ever asked the renderer to draw one. That every id `PlaceholderAtlas` now registers
+(`shot-p1`/`shot-p2`, all six `pickup-*` ids) matches the string every producer actually emits
+(`WeaponSystem.SHOT_P1`/`SHOT_P2`, `CleanupSystem`'s `"pickup-" + drop.pickupId`, `PickupSystem.KIND_*`)
+was checked by reading both sides side by side, not by watching one draw on screen. Confirming this at
+runtime needs either driven input or a human playing the build — neither happened here.
 
 **Acceptance criteria** (`docs/plan/05-game-systems/plan.md`):
 
