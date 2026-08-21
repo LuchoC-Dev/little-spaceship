@@ -1,7 +1,7 @@
 # Phase 05 — Game systems · status
 
 **State:** implemented, pending review
-**Updated:** 21/08/2026 (revised same day: `Health` added after a coordinator review caught it missing)
+**Updated:** 21/08/2026 (revised same day: `Health` added after a coordinator review caught it missing; further revised same day: `game-presentation` closed its side, see below)
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
 
@@ -134,6 +134,43 @@ archetype that should survive more than one hit** — tank and heavy carrier chi
 `02-mvp-functional-spec.md`'s roster. `ComponentFactoryRegistry` accepts `"health": {"points": N}`
 today; nothing in `core` enforces that a non-fragile archetype actually has one (see "Decisions
 taken" above), so this is a content-authoring task, not a code one.
+
+## `game-presentation`'s side of this phase
+
+Closed the compile gap `core-domain` left, per the "Notes for whoever comes next" section above.
+`./gradlew :game:compileJava` named exactly two gaps and both are now filled:
+
+- `JsonBalanceValues` gained the eight new record components (`weaponFireCooldown`,
+  `weaponProjectileSpeed`, `pickupRadius`, `invulnerabilityPickupDuration`, `lifeCompletionBonus`,
+  `bombCompletionBonus`, `weaponProjectileDamage`, `bombDamage`), read from `balance.json` with the
+  same no-default `get*(String)` policy the rest of the record already uses. `balance.json` got the
+  matching keys, values copied from the placeholders already recorded in `10-mvp-initial-values.md`
+  for `lifeCompletionBonus`/`bombCompletionBonus`/`weaponProjectileDamage`/`bombDamage` (1000, 300,
+  10, 50), and new placeholders for the four values that document did not have yet — now added there
+  under a new "Weapon and pickup values — missing" subsection, same pattern as `playerSpeed`'s.
+- `JsonContentSource.attachment(String id)` reads a new `assets/data/attachments.json`
+  (`{"attachments": [{"id": ..., "durability": ...}]}`), parsed the same way as
+  `trajectories.json`/`formations.json` — one `SimpleAttachmentDefinition` per entry, looked up by
+  id, unknown id throwing through the same `require` helper every other lookup uses. The MVP ships
+  one entry, `{"id": "attachment", "durability": 1}`, matching `PickupSystem.KIND_ATTACHMENT`.
+- `enemies.json`'s two non-fragile archetypes (`enemy-tank`, `enemy-carrier`) each got a `"health"`
+  entry (40, 80) through the existing `ComponentFactoryRegistry` factory — no loader change needed.
+  The four fragile archetypes were left without one, on purpose: a fragile hit destroys them outright
+  regardless of `Health`, per that component's own javadoc. Recorded as open placeholders in
+  `10-mvp-initial-values.md`'s existing "Enemy health and weapon/bomb damage" section.
+
+**What was verified, not just inferred:** `./gradlew build` is green, including `./gradlew :core:test`
+re-run with `--rerun` to force actual execution rather than trust the up-to-date cache (223 tests,
+all passing). `./gradlew :desktop:run` was started and left running under LWJGL for ~17 real seconds
+with no exception in its log — past the level's first spawn events, including the `enemy-tank`/
+`enemy-carrier` waves with `Health` and their drops, at `t=9.0`/`9.5`s. That is evidence the new
+systems execute inside an actual running build without an exception surfacing, not a claim that the
+new content was seen on screen — nobody watched the window, and the placeholder atlas
+(`PlaceholderAtlas`) has no registered region for `shot-p1`/`shot-p2`/any `pickup-*` id yet, so
+`WorldRenderer` silently skips drawing them (`region == null` early return, already built for exactly
+this "content id with no placeholder registered yet" case) rather than throwing. Adding those
+placeholder sprites is presentation work for a later pass, not required for this phase's acceptance
+criteria, and is not blocking anything that was asked for here.
 
 **Acceptance criteria** (`docs/plan/05-game-systems/plan.md`):
 
