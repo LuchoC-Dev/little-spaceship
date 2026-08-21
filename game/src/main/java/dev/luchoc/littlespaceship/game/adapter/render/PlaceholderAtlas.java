@@ -29,7 +29,7 @@ import java.util.Map;
  * not here: it needs {@code Repeat} texture wrapping to tile across the playfield, which would bleed
  * into neighbouring regions if it shared this atlas — see {@link CheckerboardBackground}.
  */
-public final class PlaceholderAtlas {
+public final class PlaceholderAtlas implements SpriteAtlas {
 
     // ls32, docs/design/01-palette.md.
     private static final int N0_OUTLINE = 0x0B0E14FF;
@@ -202,10 +202,12 @@ public final class PlaceholderAtlas {
      * @param sprite the id the core handed the visitor
      * @return the region to draw, or null if this placeholder set does not cover it yet
      */
+    @Override
     public TextureRegion region(SpriteId sprite) {
         return regions.get(sprite.value());
     }
 
+    @Override
     public void dispose() {
         texture.dispose();
     }

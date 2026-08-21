@@ -29,7 +29,7 @@ import java.util.Set;
  */
 public final class WorldRenderer implements SpriteVisitor {
 
-    private final PlaceholderAtlas atlas;
+    private final SpriteAtlas atlas;
     private final float playfieldLeft;
 
     /**
@@ -47,7 +47,7 @@ public final class WorldRenderer implements SpriteVisitor {
      * @param playfieldLeft the playfield's left edge in logical units, added to every entity's
      *     {@code x} before drawing — see the class javadoc for why this is needed at all
      */
-    public WorldRenderer(PlaceholderAtlas atlas, float playfieldLeft) {
+    public WorldRenderer(SpriteAtlas atlas, float playfieldLeft) {
         if (atlas == null) {
             throw new IllegalArgumentException("the renderer needs an atlas to resolve sprites");
         }
