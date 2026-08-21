@@ -1,7 +1,7 @@
 # Phase 06 — Presentation · status
 
-**State:** visual direction done, art production not started
-**Updated:** 20/08/2026
+**State:** visual direction done; art production started and **stopped on a tooling blocker**
+**Updated:** 21/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the
 `plan.md` next to it says what to do and does not change to reflect progress.
@@ -46,7 +46,48 @@ each page's interface in node without a browser. **Task 13 is partly answered by
 
 ## In progress
 
-Nothing. Art production, tasks 6 to 11, has not started.
+**Art production, tasks 6 to 11 — started 21/08/2026 on `feat/sprite-production`, stopped early.**
+
+The session that opened it had no shell: `build.py`, `check.js`, `lint-art.py`, `git` and `gh` were
+all unavailable. That removes the entire review loop this phase depends on — a sprite cannot be
+regenerated, cannot be validated, and above all cannot be *looked at* at 1x next to the others,
+which is the one check that catches the failure this phase actually produces. Rather than commit a
+few thousand lines of hand-typed pixel grids that nobody had seen, the work was cut to what could
+be established by reading, and the rest was left.
+
+**What is on the branch and is finished:**
+
+- `docs/design/06-boss-presentation.md` — the boss's art structure and its tell, which the
+  21/08/2026 decisions made necessary. The boss is **five sprites matching its five colliders**,
+  not one 119x87 image; the tell is a three-beat charge on the pods (spread) or the arms (sweep),
+  so the part that lights tells the player which way to move and not only when.
+- `01-palette.md` — the alien ramp was **wrong**. It told the artist to shade `V2 -> V3 -> V4`, and
+  V2 and V3 are background-class, so `04-audit.js` rejects them inside an enemy. Every ramp is now
+  written out with the split it must not cross.
+- `02-sprite-sizes.md` — the carrier's "thin, dark wing" was unbuildable as written for the same
+  reason: the gameplay set has no dark colour. The wing is dark because it is **outline-dominant**
+  (`N0 / V4 / V4 / N0`), not because it is a dark tone. **The 39x31 footprint holds and is not
+  being changed**, including under the new two-carriers-at-once encounter.
+- `mockups/src/01-sprites.js` — a `sym()` helper, so wide symmetric sprites are authored as half
+  rows and mirrored, and the redrawn **tank**.
+
+**The one-violet question is answered for 23 px: it holds.** The tank is V4 mass, N5 shoulder
+armour and rib, N6 crest, N0 joints, with the warm iris as the only accent. Nothing wanted a second
+violet. On the boss it also holds, but *conditionally* — see `06-boss-presentation.md`: the boss
+gets away without a mid-dark violet only because its dark regions are the channels the player flies
+through, which are real negative space. Closing those channels would force the palette to widen.
+
+The earlier note below about where a second violet would go was **wrong** and is corrected here: it
+cannot sit between V3 and V4, because anything under `L*` 48.1 is background-class and the audit
+rejects it in a sprite. It would have to sit between V4 and N5, around `L*` 56.
+
+**What is not done:** the player's animation set, the five remaining archetypes, the carrier and
+boss art, explosions, projectile levels 3 and 4, pickups, the attachment, structures, the
+background and the Skin. Tasks 6 to 11 are open.
+
+**What the next session needs:** a shell. Then, before anything else,
+`python docs/design/mockups/build.py && node docs/design/mockups/check.js`, because the tank and the
+`sym()` helper on this branch have never been run.
 
 ## Blocked
 
@@ -102,8 +143,9 @@ Two things that pass will fight that pass, and both were seen in the mock rather
 - **There is one gameplay violet.** V4 is the only alien colour above the gameplay floor, so an
   enemy has an outline, one hull tone and metal highlights. Enough at 13 px, tight at 23, probably
   thin on a 119 px boss. Do not widen the palette on that suspicion — draw the tank and the boss
-  first, and if a second violet is genuinely needed it belongs between V3 and V4, where it stays
-  clear of the reserved band.
+  first. ~~If a second violet is genuinely needed it belongs between V3 and V4.~~ **Corrected on
+  21/08/2026:** it would have to sit between V4 and N5; below `L*` 48.1 it is background-class and
+  cannot appear in a sprite at all. And it was not needed — see "In progress" above.
 - **The carrier is the awkward one.** 39 px wide against a 30 px circle, so its outer 4 px each
   side have to read as wing. It is the archetype most likely to need its footprint revisited, and
   changing it means changing task 2 first.

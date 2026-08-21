@@ -89,6 +89,15 @@ The carrier is the one exception worth explaining. It is 39 px wide and its circ
 its outer 4 px each side are wing and must be drawn as wing: thin, dark, obviously not hull. Its
 mass and its damage-taking silhouette are the central 31x31.
 
+**"Dark" there does not mean a dark colour** — the gameplay set has none, since the darkest gameplay
+colour is V4 at `L*` 48.1, the same tone the hull is made of. The wing is dark because it is
+**outline-dominant**: at 4 px it is drawn `N0 / V4 / V4 / N0`, half of it outline, against a hull
+whose outline is one edge in twenty. That reads as a thin strut at 1x and it is the only way to get
+a dark wing without reaching into the background set, which
+[`01-palette.md`](01-palette.md) forbids and `mockups/src/04-audit.js` rejects. Checked when the
+21/08/2026 decision made the strong encounter **two carriers at once**: the footprint holds, and it
+is not being changed.
+
 Sizes are staged deliberately. The basic enemy is 13 px against the player's 15, so the player never
 looks outgunned by a single unit; the tank at 23 and the carrier at 39 read as a different class of
 problem the moment they enter, before they have done anything.
