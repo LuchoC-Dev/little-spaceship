@@ -112,3 +112,112 @@ Two things that pass will fight that pass, and both were seen in the mock rather
 `core.domain.component.Collider` is a circle with no offset. That shapes the art: visual mass has to
 sit at the centre of the sprite, and anything outside the circle has to read as secondary. It is
 recorded in task 2 as a rule rather than left to be discovered when the first wide enemy is drawn.
+
+## Integration, tasks 12 to 14 — issue #25, `game-presentation`
+
+**State: done in the parts that do not need core, partial where they do.** Built on
+`feat/hud-and-screens`. Verified on the real desktop build with a real GPU, not headless — screenshots
+taken by driving the LWJGL3 window directly, per `CLAUDE.md`'s pitfall about headless Chrome not
+proving anything.
+
+### Task 12 — atlas and batching
+
+`PlaceholderAtlas` now implements a new `SpriteAtlas` interface (`game/adapter/render/`), and a
+second implementation, `PackedSpriteAtlas`, loads a real `TextureAtlas` — `TexturePacker`'s own
+`.atlas`/`.png` pair, read through `TextureAtlas`, no reflection — from `assets/atlas/sprites.atlas`
+if that file exists. `PackedSpriteAtlas.load(assetsRoot)` is the seam: it falls back to
+`PlaceholderAtlas` when the packed file is absent, which is always, right now, since art production
+(tasks 6-11) has not started. **No Gradle packing task was added.** Wiring one against a `src/`
+directory the art lane has not produced yet would be automation with nothing to automate; packing by
+hand and adding the task once PNGs exist costs less. `WorldRenderer` now depends on `SpriteAtlas`,
+not on `PlaceholderAtlas` directly, so nothing about it changes when the real atlas starts loading.
+
+### Task 13 — the six screens
+
+`LittleSpaceshipGame` now extends `Game` and uses libGDX's own `Screen`, not a hand-rolled one —
+`game/screen/`: `MenuScreen`, `ShipSelectScreen`, `OptionsScreen`, `PlayScreen` (gameplay, with the
+pause panel drawn over a frozen frame rather than as a separate screen — the spec's pause freezes
+gameplay, it does not replace it), `VictoryScreen`, `DefeatScreen`. Every screen shares one `Skin`
+(`game/ui/GameSkin`) built once in `LittleSpaceshipGame.create()`, and the same integer-scaled,
+letterboxed viewport gameplay uses — a menu scaled by a different policy than the game it wraps
+would be the one inconsistency a player notices first.
+
+**The Skin's text is a placeholder.** `03-typography.md` fixes two hand-drawn bitmap fonts;
+drawing them is art production (tasks 3 and 11), which has not run. `GameSkin` uses libGDX's bundled
+default font — a real bitmap font, not `FreeTypeFontGenerator`, so nothing new to verify under TeaVM
+— scaled to the two fixed line heights. Every screen asks the Skin for `"font-mini"`/`"font-title"`
+by name, so swapping in the real sheets touches only `GameSkin`.
+
+**Reachability, honestly.** Menu → ship select → play → pause → menu is real, mouse-clickable,
+verified on screen. Options is reachable and its three sliders and mouse toggle work; the mouse
+toggle now actually gates `InputAdapter` (it did not before — mouse input has no "enable/disable"
+switch in it originally, which the functional spec asks for). **Victory and defeat are not reachable
+from real play.** `core.port` has no level-outcome signal — no "boss defeated", no "all lives lost" —
+so nothing in the game can trigger those screens honestly yet. `PlayScreen` opens them from F5/F6 for
+now, documented in that file as a debug-only stand-in to be deleted once `core` reports an outcome.
+This is the one acceptance criterion this pass cannot fully claim: "every screen in the flow is
+reachable and returns correctly" holds for four of six, not six.
+
+**One bug worth recording generally, not just for this project.** `Skin.add(name, resource)` files
+the resource under `resource.getClass()`, but `Skin.getDrawable(name)` looks it up under the
+`Drawable` interface. A `NinePatchDrawable` added the implicit way is invisible to `getDrawable` and
+to every style field a real `.json` skin would populate through it — it throws
+`GdxRuntimeException: No Drawable ... registered with name` only the moment something tries to read
+it, not when it is added, which is what made this take two tries to notice. Add drawables with the
+explicit `add(name, resource, Drawable.class)` overload.
+
+### Task 14 — wiring the HUD
+
+The renderer is built and draws the full left and right plate from `04-hud-layout.md`: lives, bombs,
+weapon level, shield, invulnerability icon and timer, the `MODULE` block (hidden with no attachment),
+zero-padded score, and now the plate fills and the two playfield rules the document's frame table
+asks for. Verified on screen at `PlayScreen`, colours and positions matching the document's tables by
+hand-checking pixel coordinates against the screenshot.
+
+**It draws from a fixed `PlayerHudState`, not from the simulation.** `core.port.WorldView` exposes
+only `forEachSprite`; there is no read-only player status to read lives, bombs, weapon level, shield,
+attachment or invulnerability from. `PlayScreen` builds one `PlayerHudState` from
+`ContentSource.balance()` at `show()` and never updates it — the HUD renders correctly but does not
+react to a hit, a pickup or a shot fired. This is the acceptance criterion "the HUD shows everything
+`02-mvp-functional-spec.md` requires and nothing more" **not yet earned**: the layout is complete,
+the data behind it is not live.
+
+**The boss bar is not drawn at all**, deliberately: it needs a `BossStatus` the plan itself defers to
+phase 07, and the document's own rule — the bar only exists during the boss fight — is satisfied by
+never having a fight to show one for yet.
+
+### The core contract this phase is blocked on
+
+Proposed to `core-domain`, not built here — this phase does not touch `core`:
+
+```java
+// core.port, alongside WorldView
+public interface PlayerStatus {
+    int lives();
+    int bombs();
+    int weaponLevel();       // Player.shotLevel
+    boolean shieldActive();  // presence of the Shield component
+    boolean attachmentActive();
+    int attachmentDurability();
+    String attachmentId();   // NEW FIELD NEEDED: Attachment currently only carries durability,
+                              // not which content id was equipped — PickupSystem.java:194 has the
+                              // AttachmentDefinition right there and drops it before constructing
+                              // Attachment. The HUD needs the id to pick an icon and a name.
+    // one of: NONE, RESPAWN, DAMAGE, POWERUP, plus remaining time or a [0,1] fraction of it —
+    // DamageSystem already tracks the two durations (BalanceValues.respawnInvulnerability(),
+    // .damageInvulnerability()) and the powerup one; the source needs to survive alongside
+    // Invulnerable.remaining, not just the remaining float, or the HUD cannot tell the three states
+    // 04-hud-layout.md asks it to tell apart.
+    InvulnerabilitySource invulnerabilitySource();
+    float invulnerabilityRemaining();
+    int score();
+}
+// WorldView gains: PlayerStatus player();
+```
+
+A second, smaller gap surfaced but is out of this phase's scope to fix: there is no
+level-outcome signal anywhere in `core.port` (no concrete `GameEvent` exists yet at all —
+`GameEvent` is still the empty marker interface from phase 01). Victory and defeat cannot be reached
+from real play until something says the run ended. Not proposed as a contract here because it is a
+game-rule decision — what counts as victory, whether it is an event or a `WorldView` flag — not a
+rendering one.
