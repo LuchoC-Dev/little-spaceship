@@ -23,12 +23,22 @@ import com.badlogic.gdx.graphics.g2d.NinePatch;
  *
  * <p><b>The text in every screen this Skin styles is a placeholder.</b> It uses libGDX's bundled
  * default font — a real bitmap font, not {@code FreeTypeFontGenerator}, so it costs nothing extra
- * under TeaVM — scaled to sit close to the two fixed line heights {@code 03-typography.md} specifies
- * (10 px for {@code font-mini}, 13 px for {@code font-title}). It reads at a glance but its glyph
- * shapes, advance and letter-spacing do not match the design document, and nothing here enforces the
- * fixed 6/8 px advance that document is built around. Swapping it for the real sheets is a change
- * confined to this one class: every screen asks the Skin for {@code "font-mini"}/{@code
+ * under TeaVM. It reads at a glance but its glyph shapes, advance and letter-spacing do not match
+ * {@code docs/design/03-typography.md}'s {@code font-mini}/{@code font-title}, and nothing here
+ * enforces the fixed 6/8 px advance that document is built around. Swapping it for the real sheets
+ * is a change confined to this one class: every screen asks the Skin for {@code "font-mini"}/{@code
  * "font-title"} by name and never touches a {@link BitmapFont} directly.
+ *
+ * <p><b>The scale is snapped to a whole number, never a fraction.</b> The default font's native
+ * line height is well above the 10/13 px {@code 03-typography.md} specifies for {@code
+ * font-mini}/{@code font-title}, so a first pass scaled it down with {@code getData().setScale(10f
+ * / getLineHeight())} — a fractional factor, exactly the "no fractional scaling anywhere" {@code
+ * CLAUDE.md} rules out for sprites, applied to glyphs by mistake. Combined with {@code
+ * setUseIntegerPositions(false)} it put glyphs on half pixels, which reads as a rendering bug rather
+ * than as an unfinished placeholder. {@link #wholeScale} rounds down to the nearest whole multiple —
+ * 1 here, since the native font is already larger than the target — so the placeholder ends up
+ * oversized rather than blurred. Wrong size reads as "not the final font yet"; blurred type reads as
+ * broken, on a project whose own invariant is integer scaling with no exception.
  */
 public final class GameSkin {
 
@@ -42,11 +52,17 @@ public final class GameSkin {
         skin.add("white", new TextureRegion(pixel));
 
         BitmapFont fontMini = new BitmapFont();
-        fontMini.getData().setScale(10f / fontMini.getLineHeight());
-        fontMini.setUseIntegerPositions(false);
+        fontMini.getRegion().getTexture().setFilter(
+            Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        fontMini.getData().setScale(wholeScale(10f, fontMini.getLineHeight()));
+        fontMini.setUseIntegerPositions(true);
+
         BitmapFont fontTitle = new BitmapFont();
-        fontTitle.getData().setScale(13f / fontTitle.getLineHeight());
-        fontTitle.setUseIntegerPositions(false);
+        fontTitle.getRegion().getTexture().setFilter(
+            Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        fontTitle.getData().setScale(wholeScale(13f, fontTitle.getLineHeight()));
+        fontTitle.setUseIntegerPositions(true);
+
         skin.add("font-mini", fontMini, BitmapFont.class);
         skin.add("font-title", fontTitle, BitmapFont.class);
 
@@ -106,6 +122,14 @@ public final class GameSkin {
         skin.add("default", list);
 
         return skin;
+    }
+
+    /**
+     * The nearest whole multiple of the native line height to the target, never below 1 — a
+     * fractional scale is what blurs a nearest-neighbour glyph, per the class javadoc.
+     */
+    private static float wholeScale(float targetHeight, float nativeLineHeight) {
+        return Math.max(1f, Math.round(targetHeight / nativeLineHeight));
     }
 
     private static NinePatchDrawable ninePatch(Color fill, Color border) {
