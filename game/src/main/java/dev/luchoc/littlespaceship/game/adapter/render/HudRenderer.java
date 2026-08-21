@@ -7,23 +7,31 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import dev.luchoc.littlespaceship.core.port.BalanceValues;
+import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
+import dev.luchoc.littlespaceship.core.port.PlayerStatus;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
-import dev.luchoc.littlespaceship.game.adapter.hud.InvulnerabilitySource;
-import dev.luchoc.littlespaceship.game.adapter.hud.PlayerHudState;
 import dev.luchoc.littlespaceship.game.ui.Palette;
 
 /**
  * Draws the two side plates of {@code docs/design/04-hud-layout.md} — everything the player reads
- * about their own ship — from a {@link PlayerHudState}.
+ * about their own ship — from the live {@link PlayerStatus} {@code WorldView.player()} returns.
  *
  * <p>Coordinates in this class are exactly the ones the design document tables give, in its own
  * y-down convention; {@link #yGdx} is the one place the flip to libGDX's y-up space happens, per the
  * document's own warning that doing it anywhere else is how a HUD ends up half-flipped.
  *
  * <p>The boss bar is deliberately not drawn: it needs a boss health signal {@code core.port} does
- * not expose yet (a {@code BossStatus}, out of this phase's scope per the task brief — phase 07's
- * concern) and the document itself says it only ever appears during that fight, so its absence here
- * is the same "only during the fight" rule applied to a fight that cannot happen yet.
+ * not expose yet (a {@code BossStatus}, out of this phase's scope — phase 07's concern) and the
+ * document itself says it only ever appears during that fight, so its absence here is the same
+ * "only during the fight" rule applied to a fight that cannot happen yet.
+ *
+ * <p>{@code maxLives}, {@code maxBombs} and {@code maxWeaponLevel} come from {@link BalanceValues}
+ * at construction, not per frame: they are run-wide caps, and {@link PlayerStatus} only ever reports
+ * the current value, per {@code 04-hud-layout.md}'s "five life slots and three bomb slots are always
+ * drawn". The same source supplies the three invulnerability durations, needed to turn {@link
+ * PlayerStatus#invulnerabilityRemaining()} — a raw second count — into the fraction the timer bar
+ * shrinks by.
  */
 public final class HudRenderer {
 
@@ -36,7 +44,14 @@ public final class HudRenderer {
     private final Texture pixel;
     private final GlyphLayout layout = new GlyphLayout();
 
-    public HudRenderer(Skin skin) {
+    private final int maxLives;
+    private final int maxBombs;
+    private final int maxWeaponLevel;
+    private final float respawnDuration;
+    private final float damageDuration;
+    private final float powerupDuration;
+
+    public HudRenderer(Skin skin, BalanceValues balance) {
         this.fontMini = skin.getFont("font-mini");
         this.fontTitle = skin.getFont("font-title");
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
@@ -44,16 +59,23 @@ public final class HudRenderer {
         pm.fill();
         this.pixel = new Texture(pm);
         pm.dispose();
+
+        this.maxLives = balance.maxLives();
+        this.maxBombs = balance.maxBombs();
+        this.maxWeaponLevel = balance.weaponLevels();
+        this.respawnDuration = balance.respawnInvulnerability();
+        this.damageDuration = balance.damageInvulnerability();
+        this.powerupDuration = balance.invulnerabilityPickupDuration();
     }
 
     /**
      * Draws both plates. The batch must already be between {@code begin()} and {@code end()}, and
      * projected onto the logical 480x270 space {@link LittleSpaceshipGame} uses.
      */
-    public void draw(SpriteBatch batch, PlayerHudState state) {
+    public void draw(SpriteBatch batch, PlayerStatus status) {
         drawFrame(batch);
-        drawLeftPlate(batch, state);
-        drawRightPlate(batch, state);
+        drawLeftPlate(batch, status);
+        drawRightPlate(batch, status);
     }
 
     /** The plates' own fill and the two playfield rules, per the region table in {@code 04-hud-layout.md}. */
@@ -64,26 +86,26 @@ public final class HudRenderer {
         rect(batch, 345, 0, 135, LittleSpaceshipGame.LOGICAL_HEIGHT, Palette.N2);
     }
 
-    private void drawLeftPlate(SpriteBatch batch, PlayerHudState state) {
+    private void drawLeftPlate(SpriteBatch batch, PlayerStatus status) {
         int x = LEFT_COLUMN_X;
 
         label(batch, "LIVES", x, 14);
-        for (int i = 0; i < state.maxLives(); i++) {
-            boolean filled = i < state.lives();
+        for (int i = 0; i < maxLives; i++) {
+            boolean filled = i < status.lives();
             rect(batch, x + i * 12, 24, 9, 9, filled ? Palette.N6 : Palette.N2);
             outline(batch, x + i * 12, 24, 9, 9, filled ? Palette.N0 : Palette.N3);
         }
 
         label(batch, "BOMBS", x, 44);
-        for (int i = 0; i < state.maxBombs(); i++) {
-            boolean filled = i < state.bombs();
+        for (int i = 0; i < maxBombs; i++) {
+            boolean filled = i < status.bombs();
             rect(batch, x + i * 12, 54, 9, 9, filled ? Palette.N6 : Palette.N2);
             outline(batch, x + i * 12, 54, 9, 9, filled ? Palette.W4 : Palette.N3);
         }
 
         label(batch, "POWER", x, 74);
-        for (int i = 0; i < state.maxWeaponLevel(); i++) {
-            boolean filled = i < state.weaponLevel();
+        for (int i = 0; i < maxWeaponLevel; i++) {
+            boolean filled = i < status.weaponLevel();
             rect(batch, x + i * 15, 84, 13, 7, filled ? Palette.C1 : Palette.N2);
             if (filled) {
                 rect(batch, x + i * 15, 84, 13, 2, Palette.C2);
@@ -93,11 +115,11 @@ public final class HudRenderer {
         }
 
         label(batch, "STATE", x, 104);
-        if (state.shieldActive()) {
+        if (status.shieldActive()) {
             rect(batch, x, 114, 13, 13, Palette.C1);
             outline(batch, x, 114, 13, 13, Palette.N6);
         }
-        InvulnerabilitySource source = state.invulnerability();
+        InvulnerabilitySource source = status.invulnerabilitySource();
         if (source != InvulnerabilitySource.NONE) {
             Color iconColor = switch (source) {
                 case POWERUP -> Palette.C1;
@@ -107,24 +129,45 @@ public final class HudRenderer {
             };
             rect(batch, x + 16, 114, 13, 13, iconColor);
             outline(batch, x + 16, 114, 13, 13, Palette.W4);
-            float remainingWidth = 13f * Math.max(0f, Math.min(1f, state.invulnerabilityFraction()));
+            float total = totalDuration(source);
+            float fraction = total > 0f ? status.invulnerabilityRemaining() / total : 0f;
+            float remainingWidth = 13f * Math.max(0f, Math.min(1f, fraction));
             rect(batch, x + 16, 128, 13, 1, Palette.N2);
             rect(batch, x + 16, 128, remainingWidth, 1, Palette.F1);
         }
 
-        if (state.attachmentId() != null) {
+        if (!status.attachmentId().isEmpty()) {
             label(batch, "MODULE", x, 146);
             rect(batch, x, 156, 17, 17, Palette.G2);
             outline(batch, x, 156, 17, 17, Palette.G3);
-            if (state.attachmentName() != null) {
-                value(batch, state.attachmentName(), x + 22, 161, Palette.N7);
-            }
+            value(batch, attachmentLabel(status.attachmentId()), x + 22, 161, Palette.N7);
         }
     }
 
-    private void drawRightPlate(SpriteBatch batch, PlayerHudState state) {
+    /**
+     * A display label from a content id such as {@code "attachment-missiles"}: no {@code
+     * AttachmentDefinition} field carries a human name yet, so this uppercases the id and drops any
+     * {@code "attachment-"} prefix, truncated to the 13-character column {@code 04-hud-layout.md}
+     * fixes. A real display name, if content ever needs one distinct from its id, replaces this
+     * method's body only.
+     */
+    private static String attachmentLabel(String attachmentId) {
+        String label = attachmentId.replace("attachment-", "").replace('-', ' ').toUpperCase();
+        return label.length() > 13 ? label.substring(0, 13) : label;
+    }
+
+    private float totalDuration(InvulnerabilitySource source) {
+        return switch (source) {
+            case RESPAWN -> respawnDuration;
+            case DAMAGE -> damageDuration;
+            case POWERUP -> powerupDuration;
+            case NONE -> 0f;
+        };
+    }
+
+    private void drawRightPlate(SpriteBatch batch, PlayerStatus status) {
         label(batch, "SCORE", RIGHT_COLUMN_X, 14);
-        String score = zeroPadded(state.score(), 7);
+        String score = zeroPadded(status.score(), 7);
         layout.setText(fontTitle, score);
         title(batch, score, RIGHT_COLUMN_RIGHT_EDGE - layout.width, 24, Palette.N7);
     }
