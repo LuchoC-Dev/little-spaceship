@@ -6,6 +6,7 @@ import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
+import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 
 /**
@@ -18,12 +19,12 @@ import dev.luchoc.littlespaceship.core.port.InputFrame;
  *
  * <p>Per {@code 02-mvp-functional-spec.md}, a bomb "removes most threats/projectiles on screen and
  * deals heavy damage to resistant enemies". Every enemy projectile and every {@link
- * Collider#fragile} enemy is destroyed outright — the same one-hit outcome {@code DamageSystem}
- * already applies to a player projectile reaching any enemy, for the identical reason: no {@code
- * Health} value exists yet to size "heavy damage" against a tank or a heavy carrier, so those two
- * survive a bomb untouched rather than receive an invented, unverifiable amount of damage. This is a
- * known, documented gap against the letter of the spec, not an oversight — closing it needs the same
- * missing number this system's javadoc keeps pointing at everywhere else it comes up.
+ * Collider#fragile} enemy is destroyed outright, the same as by ramming — the bomb is whole-body
+ * impact, so {@code fragile} answers the same question here it does everywhere else, regardless of
+ * any {@code Health} the enemy happens to carry. A non-fragile enemy ("resistant") instead loses
+ * {@link BalanceValues#bombDamage()} hit points through the shared {@link HealthDamage}, the same
+ * mechanism {@code DamageSystem} uses for a player projectile — this is what turns "heavy damage to
+ * resistant enemies" from an unimplemented phrase into an actual number, once {@code Health} exists.
  *
  * <p>Detonating destroys entities directly through {@link World#markForDestruction(int)} rather than
  * through a {@code CollisionHit}: a bomb's range is the whole screen, not a shape two colliders can
@@ -53,17 +54,22 @@ public final class BombSystem implements GameSystem {
             return;
         }
         state.bombs--;
-        detonate(world);
+        detonate(world, world.content().balance());
     }
 
-    private static void detonate(World world) {
+    private static void detonate(World world, BalanceValues balance) {
         ComponentStore<Collider> colliders = world.colliders();
         for (int i = 0; i < colliders.size(); i++) {
             int entity = colliders.entityAt(i);
             Collider collider = colliders.valueAt(i);
-            if (collider.layer == CollisionLayer.ENEMY_PROJECTILE
-                || (collider.layer == CollisionLayer.ENEMY && collider.fragile)) {
+            if (collider.layer == CollisionLayer.ENEMY_PROJECTILE) {
                 world.markForDestruction(entity);
+            } else if (collider.layer == CollisionLayer.ENEMY) {
+                if (collider.fragile) {
+                    world.markForDestruction(entity);
+                } else {
+                    HealthDamage.apply(world, entity, balance.bombDamage());
+                }
             }
         }
     }

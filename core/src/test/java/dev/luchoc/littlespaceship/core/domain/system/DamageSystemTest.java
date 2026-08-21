@@ -10,6 +10,7 @@ import dev.luchoc.littlespaceship.core.domain.collision.CollisionPair;
 import dev.luchoc.littlespaceship.core.domain.component.Attachment;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
@@ -286,8 +287,8 @@ class DamageSystemTest {
     }
 
     @Test
-    @DisplayName("a player projectile reaching a heavy enemy destroys it too, the MVP has no health")
-    void playerProjectileDestroysAHeavyEnemyToo() {
+    @DisplayName("a player projectile reaching a heavy enemy with no health destroys it, one point")
+    void playerProjectileDestroysAHeavyEnemyWithNoHealth() {
         int projectile = world.createEntity();
         int enemy = spawnHeavyEnemy();
         world.collisionHits().add(
@@ -296,6 +297,57 @@ class DamageSystemTest {
         system.update(world, STEP, InputFrame.IDLE);
 
         assertTrue(world.pendingDestruction().contains(enemy));
+    }
+
+    @Test
+    @DisplayName("a player projectile subtracts damage from health instead of destroying outright")
+    void playerProjectileSubtractsDamageFromHealth() {
+        int projectile = world.createEntity();
+        int enemy = spawnHeavyEnemy();
+        Health health = new Health(balance.weaponProjectileDamage + 15);
+        world.healths().set(enemy, health);
+        world.collisionHits().add(
+            new CollisionHit(projectile, enemy, CollisionPair.PLAYER_PROJECTILE_VS_ENEMY));
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertFalse(world.pendingDestruction().contains(enemy));
+        assertEquals(15, health.points);
+    }
+
+    @Test
+    @DisplayName("an enemy is destroyed once repeated hits exhaust its health")
+    void enemyIsDestroyedOnceHealthIsExhausted() {
+        int enemy = spawnHeavyEnemy();
+        world.healths().set(enemy, new Health(balance.weaponProjectileDamage * 2));
+
+        world.collisionHits().add(new CollisionHit(world.createEntity(), enemy,
+            CollisionPair.PLAYER_PROJECTILE_VS_ENEMY));
+        system.update(world, STEP, InputFrame.IDLE);
+        assertFalse(world.pendingDestruction().contains(enemy), "one hit should not be enough yet");
+
+        world.collisionHits().add(new CollisionHit(world.createEntity(), enemy,
+            CollisionPair.PLAYER_PROJECTILE_VS_ENEMY));
+        system.update(world, STEP, InputFrame.IDLE);
+        assertTrue(world.pendingDestruction().contains(enemy), "the second hit should exhaust it");
+    }
+
+    @Test
+    @DisplayName("a fragile enemy with health left survives a player projectile: fragile is not weapon-side")
+    void fragileEnemyWithHealthSurvivesAWeaponHit() {
+        int projectile = world.createEntity();
+        int enemy = spawnFragileEnemy();
+        world.healths().set(enemy, new Health(1000));
+        world.collisionHits().add(
+            new CollisionHit(projectile, enemy, CollisionPair.PLAYER_PROJECTILE_VS_ENEMY));
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        // Weapon fire does not consult Collider.fragile at all — only Health decides whether a
+        // weapon hit destroys an enemy. This case makes that explicit: a fragile enemy given a
+        // large Health value survives a single shot, unlike ramming or the bomb, which both key
+        // off fragile directly and ignore Health entirely.
+        assertFalse(world.pendingDestruction().contains(enemy));
     }
 
     @Test

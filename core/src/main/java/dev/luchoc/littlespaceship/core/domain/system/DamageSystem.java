@@ -6,6 +6,7 @@ import dev.luchoc.littlespaceship.core.domain.collision.CollisionPair;
 import dev.luchoc.littlespaceship.core.domain.component.Attachment;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
+import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
@@ -43,15 +44,15 @@ import java.util.List;
  * while the hit itself was absorbed by invulnerability, since then the collision had no effect at
  * all.
  *
- * <p>This system also resolves the other direction: a player projectile reaching an enemy. No
- * {@code Health} component exists yet — no enemy hit-point value is decided anywhere in {@code
- * docs/planning/}, and the MVP roster's "tank" and "heavy carrier" being tougher than a basic enemy
- * is aspirational language in {@code 02-mvp-functional-spec.md}, not a number. Until that number
- * exists, every enemy a player projectile reaches is destroyed in one hit, the projectile included.
- * This is a deliberate simplification, not a guess at a shape nothing consumes yet — {@link
- * Collider#fragile} already draws the "destroyed on contact" line for a body collision, and this
- * reuses the same one-hit outcome for a weapon hit, on every archetype, until real hit points exist
- * to differentiate them.
+ * <p>This system also resolves the other direction: a player projectile reaching an enemy. It
+ * subtracts {@link BalanceValues#weaponProjectileDamage()} from the enemy's {@link Health} and
+ * destroys it once that reaches zero. An enemy with no {@link Health} component is treated as
+ * having exactly one point — shorthand for the weakest case of the same rule, not a second
+ * mechanism that could disagree with it. {@link Collider#fragile} answers a different question
+ * entirely: whether a ramming or the bomb kills this enemy's whole body outright, independent of
+ * how much sustained weapon damage {@link Health} says it can take. No enemy hit-point value is
+ * decided in {@code 10-mvp-initial-values.md} yet; see {@link Health}'s javadoc for the full
+ * account of why this component and its numbers are provisional.
  */
 public final class DamageSystem implements GameSystem {
 
@@ -65,8 +66,8 @@ public final class DamageSystem implements GameSystem {
         decayInvulnerability(world, step);
 
         List<CollisionHit> hits = world.collisionHits();
+        BalanceValues balance = world.content().balance();
         int player = world.playerEntity();
-        BalanceValues balance = player == EntityId.NONE ? null : world.content().balance();
         for (int i = 0; i < hits.size(); i++) {
             CollisionHit hit = hits.get(i);
             if (player != EntityId.NONE && hit.pair() == CollisionPair.ENEMY_VS_PLAYER
@@ -76,18 +77,19 @@ public final class DamageSystem implements GameSystem {
                 && hit.pair() == CollisionPair.ENEMY_PROJECTILE_VS_PLAYER && hit.second() == player) {
                 resolvePlayerHit(world, balance, player, hit.first(), false);
             } else if (hit.pair() == CollisionPair.PLAYER_PROJECTILE_VS_ENEMY) {
-                resolveEnemyHit(world, hit.first(), hit.second());
+                resolveEnemyHit(world, balance, hit.first(), hit.second());
             }
         }
     }
 
     /**
-     * A player projectile reaching an enemy: both are consumed. See the class javadoc for why this
-     * is a one-hit outcome regardless of archetype, until a real {@code Health} value exists.
+     * A player projectile reaching an enemy: the projectile is always consumed, the enemy loses
+     * {@link BalanceValues#weaponProjectileDamage()} hit points and is destroyed once none are left.
+     * See the class javadoc for why an enemy with no {@link Health} is treated as having one point.
      */
-    private static void resolveEnemyHit(World world, int projectile, int enemy) {
+    private static void resolveEnemyHit(World world, BalanceValues balance, int projectile, int enemy) {
         world.markForDestruction(projectile);
-        world.markForDestruction(enemy);
+        HealthDamage.apply(world, enemy, balance.weaponProjectileDamage());
     }
 
     /**

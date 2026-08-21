@@ -7,11 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.testsupport.TestBalance;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,7 +23,8 @@ class BombSystemTest {
     private static final float STEP = 1f / 60f;
     private static final InputFrame BOMB_INPUT = new InputFrame(0f, 0f, false, false, true);
 
-    private final World world = new World(new TestContent(), new Rng(1), new GameEventQueue());
+    private final TestBalance balance = new TestBalance();
+    private final World world = new World(new TestContent(balance), new Rng(1), new GameEventQueue());
     private final BombSystem system = new BombSystem();
 
     @Test
@@ -39,14 +42,54 @@ class BombSystemTest {
     }
 
     @Test
-    @DisplayName("a tank or heavy carrier is not destroyed by the bomb")
-    void doesNotDestroyANonFragileEnemy() {
+    @DisplayName("a fragile enemy is destroyed outright by the bomb even with health left")
+    void fragileEnemyIsDestroyedRegardlessOfHealth() {
+        spawnPlayer(2);
+        int enemy = enemy(true);
+        world.healths().set(enemy, new Health(1000));
+
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertTrue(world.pendingDestruction().contains(enemy),
+            "fragile is a whole-body outcome, independent of Health");
+    }
+
+    @Test
+    @DisplayName("a resistant enemy with enough health survives the bomb, losing bombDamage points")
+    void resistantEnemyWithEnoughHealthSurvives() {
+        spawnPlayer(2);
+        int tank = enemy(false);
+        Health health = new Health(balance.bombDamage + 10);
+        world.healths().set(tank, health);
+
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertFalse(world.pendingDestruction().contains(tank));
+        assertEquals(10, health.points);
+    }
+
+    @Test
+    @DisplayName("a resistant enemy whose health is exhausted by the bomb is destroyed")
+    void resistantEnemyDestroyedOnceHealthIsExhausted() {
+        spawnPlayer(2);
+        int tank = enemy(false);
+        world.healths().set(tank, new Health(balance.bombDamage));
+
+        system.update(world, STEP, BOMB_INPUT);
+
+        assertTrue(world.pendingDestruction().contains(tank));
+    }
+
+    @Test
+    @DisplayName("a resistant enemy with no health is destroyed outright, the same as one point")
+    void resistantEnemyWithNoHealthIsDestroyed() {
         spawnPlayer(2);
         int tank = enemy(false);
 
         system.update(world, STEP, BOMB_INPUT);
 
-        assertFalse(world.pendingDestruction().contains(tank));
+        assertTrue(world.pendingDestruction().contains(tank),
+            "no Health is shorthand for one point, not a second rule the bomb treats differently");
     }
 
     @Test
