@@ -1,6 +1,7 @@
 package dev.luchoc.littlespaceship.core.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
@@ -27,18 +28,48 @@ import org.junit.jupiter.api.Test;
  * twice". Weapon fire, spawning, collision, damage, drops and pickups all run in the same pass, so
  * this is the broader companion to {@code BombReplayTest}, which isolates the bomb specifically.
  *
- * <p>Same limitation as {@code DamageReplayTest} and {@code BombReplayTest}: two runs of the same
- * build compared against each other, no golden fingerprint recorded anywhere — see issue #12.
+ * <p>The tank and the carrier carry the same {@code health} points {@code assets/data/enemies.json}
+ * gives them (40 and 80) rather than none, so this is also the one test that exercises {@code
+ * Health} at level scale — a fixture that omitted it, as an earlier version of this class did, would
+ * never notice a change to that path at all.
+ *
+ * <p>Unlike {@code DamageReplayTest} (issue #12), this fixture is fully built in-test and fully
+ * deterministic, so a committed golden fingerprint costs one constant and turns {@link
+ * #levelScoreIsDeterministic()} into a real regression net. Recompute {@link #GOLDEN_FINGERPRINT}
+ * deliberately, never to silence a failure without reading why it changed.
  */
 class LevelScoreReplayTest {
 
     private static final String LEVEL = "level-01";
     private static final int TICKS = 900;
 
+    /**
+     * Recomputed after the tank and carrier gained {@code health} and the bomb gained its on-screen
+     * bound. If this ever needs recomputing again, print {@link #fingerprintOf(Simulation)} from a
+     * passing {@link #levelScoreIsDeterministic()} run and paste the result here, deliberately,
+     * after reading why it changed.
+     */
+    private static final String GOLDEN_FINGERPRINT =
+        "score=1350 lives=3 bombs=1 shotLevel=1 entities=12";
+
     @Test
     @DisplayName("a scripted run of the level 1 roster reproduces the same final score twice")
     void levelScoreIsDeterministic() {
-        assertEquals(fingerprintOf(run()), fingerprintOf(run()));
+        String first = fingerprintOf(run());
+        String second = fingerprintOf(run());
+
+        assertEquals(first, second);
+        assertEquals(GOLDEN_FINGERPRINT, first);
+    }
+
+    @Test
+    @DisplayName("the scripted run is not a vacuous pass: it actually scored something")
+    void scoredSomething() {
+        World world = run().world();
+        Player player = world.players().get(world.playerEntity());
+
+        assertTrue(player.score > 0,
+            "a run this long, firing continuously, should destroy at least one enemy");
     }
 
     private static Simulation run() {
@@ -83,9 +114,11 @@ class LevelScoreReplayTest {
             .withEnemy(new SimpleEnemyDefinition("enemy-rush", List.of(
                 motion("dive"), sprite("enemy-rush"), collider(4.0f, true), score(250f))))
             .withEnemy(new SimpleEnemyDefinition("enemy-tank", List.of(
-                motion("crawl"), sprite("enemy-tank"), collider(10.5f, false), score(500f))))
+                motion("crawl"), sprite("enemy-tank"), collider(10.5f, false), score(500f),
+                health(40f))))
             .withEnemy(new SimpleEnemyDefinition("enemy-carrier", List.of(
-                motion("crawl"), sprite("enemy-carrier"), collider(15.0f, false), score(1000f))))
+                motion("crawl"), sprite("enemy-carrier"), collider(15.0f, false), score(1000f),
+                health(80f))))
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
             .withFormation(new SimpleFormationDefinition("line-3", List.of(
                 new FormationSlot(-20f, 0f), new FormationSlot(0f, 0f), new FormationSlot(20f, 0f))))
@@ -113,5 +146,9 @@ class LevelScoreReplayTest {
 
     private static ComponentSpec score(float points) {
         return new MapComponentSpec("scoreValue", Map.of("points", points));
+    }
+
+    private static ComponentSpec health(float points) {
+        return new MapComponentSpec("health", Map.of("points", points));
     }
 }

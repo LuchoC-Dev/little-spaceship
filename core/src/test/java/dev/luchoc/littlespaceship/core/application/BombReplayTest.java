@@ -26,20 +26,33 @@ import org.junit.jupiter.api.Test;
  * through the real {@code Simulation} pipeline — the shape of scenario {@code 05-game-systems/plan.md}
  * calls out as a better fit for a replay than for unit tests alone.
  *
- * <p>Same limitation as {@code DamageReplayTest}: this compares two runs of the same build against
- * each other, with no golden fingerprint recorded anywhere. It proves the bomb's interaction across
- * systems is deterministic within a build; it does not catch a refactor that changes the outcome
- * while keeping both runs internally consistent — see issue #12.
+ * <p>Unlike {@code DamageReplayTest} (issue #12), this fixture is fully built in-test and fully
+ * deterministic, so a committed golden fingerprint costs one constant and turns
+ * {@link #bombedRunIsDeterministic()} into a real regression net: a refactor that changes the
+ * outcome fails here even if both of its own runs still agree with each other. Recompute {@link
+ * #GOLDEN_FINGERPRINT} deliberately, never to silence a failure without reading why it changed.
  */
 class BombReplayTest {
 
     private static final String LEVEL = "level-01";
     private static final int TICKS = 600;
 
+    /**
+     * Recomputed after the on-screen bound was added to {@code BombSystem}; if this ever needs
+     * recomputing again, print {@link #fingerprintOf(Simulation)} from a passing {@link
+     * #bombedRunIsDeterministic()} run and paste the result here, deliberately, after reading why it
+     * changed.
+     */
+    private static final String GOLDEN_FINGERPRINT = "score=200 lives=3 bombs=0 entities=4";
+
     @Test
     @DisplayName("a level with the bomb used repeatedly ends with the same score both times")
     void bombedRunIsDeterministic() {
-        assertEquals(fingerprintOf(run()), fingerprintOf(run()));
+        String first = fingerprintOf(run());
+        String second = fingerprintOf(run());
+
+        assertEquals(first, second);
+        assertEquals(GOLDEN_FINGERPRINT, first);
     }
 
     @Test
@@ -63,13 +76,17 @@ class BombReplayTest {
     }
 
     /**
-     * Bomb requested a few ticks after each of the first two waves has spawned — {@code BOMB} runs
-     * before {@code SPAWN} in the fixed order, so a request on the exact tick a wave becomes due
-     * would still find nothing on screen yet. The adapter is what would normally debounce a held
-     * key; a test script can just script the discrete requests directly.
+     * Bomb requested well after each of the first two waves has both spawned and had time to
+     * actually descend onto the playfield — {@code BOMB} runs before {@code SPAWN}, so a request on
+     * the exact tick a wave becomes due would still find it fully off screen (wave 1 spawns at
+     * {@code y = 275.5}, the {@code crawl} trajectory only descends at 9 units/s, and {@code
+     * BombSystem} now skips anything above {@code y = 270}). One press per pulse, exactly one tick
+     * long, since {@code BombSystem}'s rising-edge tracking would otherwise only spend the first
+     * tick of a longer one anyway. The adapter is what would normally debounce a held key; a test
+     * script can just script the discrete requests directly.
      */
     private static InputFrame scriptedFrame(int tick) {
-        boolean bomb = tick == 65 || tick == 185;
+        boolean bomb = tick == 110 || tick == 230;
         return new InputFrame(0f, 0f, false, false, bomb);
     }
 
