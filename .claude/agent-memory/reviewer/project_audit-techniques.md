@@ -52,4 +52,52 @@ Techniques that turned suspicions into confirmed findings during the phase 01 an
   is still commented out — so a first-time use of `ImmutableCollections` is unverifiable here and is a
   suspicion to hand forward, not a defect to block on.
 
+## For a phase that adds systems consuming input or acting at range
+
+- **Trace the input path end to end before trusting any "the adapter debounces it" javadoc.** Three
+  files settle it: `InputAdapter.sample` (level vs edge per key), `LittleSpaceshipGame.render` (one
+  sample per frame, handed to `advance`), and `GameLoop.advance`'s while-loop (the same frame given
+  to every tick). Any system that *spends* something on `input.x()` being true is wrong unless `x` is
+  a level. No build, no probe — three greps.
+- **Reconstruct the exact position at a scripted tick from the branch's own replay fixture.** The
+  strongest form of the "spawn geometry on paper" technique: take the fixture's spawn time, the
+  trajectory's speed, the collider radius, and the tick the test scripts the action on, and multiply.
+  For PR #22: wave due at t=1.0 → tick 60 → y = 270+5.5 = 275.5; crawl −9/s; bomb at tick 65 → 5
+  steps × 0.15 = 0.75 → y = 274.75, bottom edge 269.25 inside a 270-tall playfield. That turned "the
+  bomb probably hits off-screen enemies" into a defect the phase's own test demonstrates.
+- **Count the stores declared in `World` against the assertions in `WorldTest`.** Two greps
+  (`private final ComponentStore` in `World.java`, `assertEquals(0, world.` in `WorldTest.java`).
+  Phase 05: thirteen vs four.
+- **To find what a stage sees that it did not before, read forward through the ordinals, not the
+  javadoc.** A stage that only calls `markForDestruction` leaves its victims fully alive — collider
+  included — for every later stage in the same tick. Check whether `CollisionSystem` filters
+  `pendingDestruction`; it does not.
+- **`grep -P` fails in this Git Bash with "supports only unibyte and UTF-8 locales".** For the
+  English-only sweep use a bracket class instead: `grep -n '[^ -~<TAB>]' file`. Piping that through
+  `sed` in a `while read` loop also produces spurious "couldn't flush stdout: Permission denied"
+  lines on Windows — the matches printed before it are still valid.
+
+## For the round-2 pass that follows a rejection
+
+- **Decide whether a rewritten test fixture is a fix or a cover-up by arithmetic, not by reading the
+  new javadoc.** Recompute the scripted moment under the *new* rule: PR #22's presses moved from
+  ticks 65/185 to 110/230, i.e. 50 ticks after each spawn, so y = 275.5 - 50 x 0.15 = 268 — inside a
+  270-tall playfield by 2 units, therefore the scenario is real and the old one had become vacuous.
+  Same multiplication as the technique that produced the original finding, run forwards.
+- **Read a golden fingerprint as a list of fields and ask which of them the fix moves.** If deleting
+  the fix leaves every field unchanged, the golden guards drift, not the fix — say so rather than
+  crediting it with more than it does.
+- **Verify a reflective "guards everything" test by looking for the populated-before assertion.**
+  Empty-after alone passes vacuously for a store nobody filled. `WorldTest` asserts `store.size() > 0`
+  for every discovered field first, plus a `>= 13` floor — that is the complete shape.
+- **`git log --format='%s' <base>..HEAD | awk '{print length, $0}'`** checks the 72-character subject
+  rule for a whole round in one line; useful whenever `status.md` promises commit hygiene going
+  forward.
+- **A "no error appeared in the manual run" claim is worth reconstructing against the level data.**
+  For PR #22 the level's `line-3` wave anchors at `atX 0.5` -> x = 104, which is the player's exact
+  start x, and `slow-descent` (-18/s) brings it into contact around t = 14 s — so a ~15 s hands-off
+  run may well have rammed the player and produced a pickup after all. The status text under-claims
+  here, which costs nothing, but the reconstruction is what tells you whether an "inferred, not
+  verified" note is being conservative or is simply wrong.
+
 Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
