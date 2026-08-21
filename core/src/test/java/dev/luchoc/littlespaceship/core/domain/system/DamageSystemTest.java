@@ -271,6 +271,49 @@ class DamageSystemTest {
         assertTrue(world.pendingDestruction().isEmpty());
     }
 
+    @Test
+    @DisplayName("a player projectile reaching an enemy destroys both")
+    void playerProjectileDestroysTheEnemyAndItself() {
+        int projectile = world.createEntity();
+        int enemy = spawnFragileEnemy();
+        world.collisionHits().add(
+            new CollisionHit(projectile, enemy, CollisionPair.PLAYER_PROJECTILE_VS_ENEMY));
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(world.pendingDestruction().contains(projectile));
+        assertTrue(world.pendingDestruction().contains(enemy));
+    }
+
+    @Test
+    @DisplayName("a player projectile reaching a heavy enemy destroys it too, the MVP has no health")
+    void playerProjectileDestroysAHeavyEnemyToo() {
+        int projectile = world.createEntity();
+        int enemy = spawnHeavyEnemy();
+        world.collisionHits().add(
+            new CollisionHit(projectile, enemy, CollisionPair.PLAYER_PROJECTILE_VS_ENEMY));
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(world.pendingDestruction().contains(enemy));
+    }
+
+    @Test
+    @DisplayName("a player projectile still destroys an enemy even with no player entity in the world")
+    void playerProjectileWorksWithNoPlayerEntity() {
+        World noPlayerWorld = new World(new TestContent(balance), new Rng(1), new GameEventQueue());
+        int projectile = noPlayerWorld.createEntity();
+        int enemy = noPlayerWorld.createEntity();
+        noPlayerWorld.colliders().set(enemy, new Collider(5f, CollisionLayer.ENEMY, true));
+        noPlayerWorld.collisionHits().add(
+            new CollisionHit(projectile, enemy, CollisionPair.PLAYER_PROJECTILE_VS_ENEMY));
+
+        system.update(noPlayerWorld, STEP, InputFrame.IDLE);
+
+        assertTrue(noPlayerWorld.pendingDestruction().contains(projectile));
+        assertTrue(noPlayerWorld.pendingDestruction().contains(enemy));
+    }
+
     private void hitPlayerByEnemy(int player, int enemy) {
         world.collisionHits().add(new CollisionHit(enemy, player, CollisionPair.ENEMY_VS_PLAYER));
     }

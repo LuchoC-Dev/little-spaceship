@@ -42,6 +42,16 @@ import java.util.List;
  * carrier is not. An enemy projectile is always consumed on contact. Neither consequence happens
  * while the hit itself was absorbed by invulnerability, since then the collision had no effect at
  * all.
+ *
+ * <p>This system also resolves the other direction: a player projectile reaching an enemy. No
+ * {@code Health} component exists yet — no enemy hit-point value is decided anywhere in {@code
+ * docs/planning/}, and the MVP roster's "tank" and "heavy carrier" being tougher than a basic enemy
+ * is aspirational language in {@code 02-mvp-functional-spec.md}, not a number. Until that number
+ * exists, every enemy a player projectile reaches is destroyed in one hit, the projectile included.
+ * This is a deliberate simplification, not a guess at a shape nothing consumes yet — {@link
+ * Collider#fragile} already draws the "destroyed on contact" line for a body collision, and this
+ * reuses the same one-hit outcome for a weapon hit, on every archetype, until real hit points exist
+ * to differentiate them.
  */
 public final class DamageSystem implements GameSystem {
 
@@ -54,21 +64,30 @@ public final class DamageSystem implements GameSystem {
     public void update(World world, float step, InputFrame input) {
         decayInvulnerability(world, step);
 
-        int player = world.playerEntity();
-        if (player == EntityId.NONE) {
-            return;
-        }
-
-        BalanceValues balance = world.content().balance();
         List<CollisionHit> hits = world.collisionHits();
+        int player = world.playerEntity();
+        BalanceValues balance = player == EntityId.NONE ? null : world.content().balance();
         for (int i = 0; i < hits.size(); i++) {
             CollisionHit hit = hits.get(i);
-            if (hit.pair() == CollisionPair.ENEMY_VS_PLAYER && hit.second() == player) {
+            if (player != EntityId.NONE && hit.pair() == CollisionPair.ENEMY_VS_PLAYER
+                && hit.second() == player) {
                 resolvePlayerHit(world, balance, player, hit.first(), true);
-            } else if (hit.pair() == CollisionPair.ENEMY_PROJECTILE_VS_PLAYER && hit.second() == player) {
+            } else if (player != EntityId.NONE
+                && hit.pair() == CollisionPair.ENEMY_PROJECTILE_VS_PLAYER && hit.second() == player) {
                 resolvePlayerHit(world, balance, player, hit.first(), false);
+            } else if (hit.pair() == CollisionPair.PLAYER_PROJECTILE_VS_ENEMY) {
+                resolveEnemyHit(world, hit.first(), hit.second());
             }
         }
+    }
+
+    /**
+     * A player projectile reaching an enemy: both are consumed. See the class javadoc for why this
+     * is a one-hit outcome regardless of archetype, until a real {@code Health} value exists.
+     */
+    private static void resolveEnemyHit(World world, int projectile, int enemy) {
+        world.markForDestruction(projectile);
+        world.markForDestruction(enemy);
     }
 
     /**
