@@ -25,6 +25,12 @@ public final class TestBalance implements BalanceValues {
     public float playerSlowFactor = 0.45f;
     public float playerStartX = 104f;
     public float playerStartY = 30f;
+    public float weaponFireCooldown = 0.15f;
+    public float weaponProjectileSpeed = 220f;
+    public float pickupRadius = 6f;
+    public float invulnerabilityPickupDuration = 3f;
+    public int lifeCompletionBonus = 1000;
+    public int bombCompletionBonus = 300;
 
     @Override
     public int initialLives() {
@@ -84,5 +90,35 @@ public final class TestBalance implements BalanceValues {
     @Override
     public float playerStartY() {
         return playerStartY;
+    }
+
+    @Override
+    public float weaponFireCooldown() {
+        return weaponFireCooldown;
+    }
+
+    @Override
+    public float weaponProjectileSpeed() {
+        return weaponProjectileSpeed;
+    }
+
+    @Override
+    public float pickupRadius() {
+        return pickupRadius;
+    }
+
+    @Override
+    public float invulnerabilityPickupDuration() {
+        return invulnerabilityPickupDuration;
+    }
+
+    @Override
+    public int lifeCompletionBonus() {
+        return lifeCompletionBonus;
+    }
+
+    @Override
+    public int bombCompletionBonus() {
+        return bombCompletionBonus;
     }
 }

@@ -1,9 +1,11 @@
 package dev.luchoc.littlespaceship.core.testsupport;
 
+import dev.luchoc.littlespaceship.core.port.AttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationDefinition;
+import dev.luchoc.littlespaceship.core.port.SimpleAttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.TrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.WaveTimeline;
 import java.util.HashMap;
@@ -25,6 +27,7 @@ public final class TestContent implements ContentSource {
     private final Map<String, TrajectoryDefinition> trajectories = new HashMap<>();
     private final Map<String, FormationDefinition> formations = new HashMap<>();
     private final Map<String, WaveTimeline> timelines = new HashMap<>();
+    private final Map<String, AttachmentDefinition> attachments = new HashMap<>();
 
     public TestContent() {
         this(new TestBalance());
@@ -54,6 +57,16 @@ public final class TestContent implements ContentSource {
         return this;
     }
 
+    public TestContent withAttachment(AttachmentDefinition definition) {
+        attachments.put(definition.id(), definition);
+        return this;
+    }
+
+    /** Convenience for the common case: registers {@code "attachment"} with the given durability. */
+    public TestContent withAttachment(int durability) {
+        return withAttachment(new SimpleAttachmentDefinition("attachment", durability));
+    }
+
     @Override
     public BalanceValues balance() {
         return balance;
@@ -77,6 +90,11 @@ public final class TestContent implements ContentSource {
     @Override
     public WaveTimeline timeline(String levelId) {
         return require(timelines, levelId, "level timeline");
+    }
+
+    @Override
+    public AttachmentDefinition attachment(String id) {
+        return require(attachments, id, "attachment");
     }
 
     private static <T> T require(Map<String, T> registry, String id, String kind) {
