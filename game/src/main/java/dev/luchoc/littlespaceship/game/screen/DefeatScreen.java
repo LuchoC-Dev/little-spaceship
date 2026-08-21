@@ -7,8 +7,10 @@ import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
  * Retry or menu, nothing else — {@code docs/planning/02-mvp-functional-spec.md}'s Defeat screen.
  * There are no checkpoints in the MVP, so there is nothing else to offer.
  *
- * <p>Same caveat as {@link VictoryScreen}: not reachable from a real loss yet, because {@code
- * core.port} exposes no such signal. See that class's javadoc.
+ * <p>{@link PlayScreen} opens this screen when {@code WorldView.outcome()} reports {@code
+ * LevelOutcome.DEFEATED} — {@code Player.lives} reached zero, exactly what
+ * {@code 02-mvp-functional-spec.md} names for a loss, with no caveat needed the way {@link
+ * VictoryScreen}'s outcome has one.
  */
 public final class DefeatScreen extends BaseUiScreen {
 

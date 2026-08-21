@@ -8,11 +8,13 @@ import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
  * per-bomb completion bonus. Retrying is optional per
  * {@code docs/planning/02-mvp-functional-spec.md}, so the only exit is back to the menu.
  *
- * <p><b>Not reachable from real play yet.</b> {@code core.port} exposes no level-complete signal —
- * {@code WorldView} has no notion of "the boss is dead and the run is won" for this screen to be
- * shown from, and inventing one is a core-domain decision, not a rendering one. {@link PlayScreen}
- * reaches this screen through a fixed debug key for now, documented there and in the phase status
- * file, so the screen itself can be reviewed against the mock while that signal does not exist.
+ * <p>{@link PlayScreen} opens this screen when {@code WorldView.outcome()} reports {@code
+ * LevelOutcome.COMPLETED} — the wave timeline ran dry with no enemy left and at least one life
+ * held. That is deliberately not called {@code VICTORY} on the {@code core} side: nothing in the
+ * MVP shipped so far can honestly claim the boss fight the spec's flow describes, since the boss is
+ * phase 07's. This screen still reads "VICTORY", per the flow's own copy in {@code
+ * docs/design/mockups/screens.html} — the caveat is about what the signal proves, not about what
+ * the player is told.
  */
 public final class VictoryScreen extends BaseUiScreen {
 

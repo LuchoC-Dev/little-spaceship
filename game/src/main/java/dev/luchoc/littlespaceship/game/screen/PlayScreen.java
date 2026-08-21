@@ -18,10 +18,11 @@ import dev.luchoc.littlespaceship.core.application.GameLoop;
 import dev.luchoc.littlespaceship.core.application.Simulation;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.LevelOutcome;
+import dev.luchoc.littlespaceship.core.port.PlayerStatus;
+import dev.luchoc.littlespaceship.core.port.WorldView;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
 import dev.luchoc.littlespaceship.game.adapter.content.JsonContentSource;
-import dev.luchoc.littlespaceship.game.adapter.hud.InvulnerabilitySource;
-import dev.luchoc.littlespaceship.game.adapter.hud.PlayerHudState;
 import dev.luchoc.littlespaceship.game.adapter.input.InputAdapter;
 import dev.luchoc.littlespaceship.game.adapter.render.CheckerboardBackground;
 import dev.luchoc.littlespaceship.game.adapter.render.HudRenderer;
@@ -39,17 +40,12 @@ import dev.luchoc.littlespaceship.game.ui.Palette;
  * introduced a screen flow; nothing about the simulation or the drawing changed, only where the
  * loop lives.
  *
- * <p><b>The HUD state is a placeholder.</b> {@link #hudState} is filled from {@code
- * ContentSource.balance()} once at {@link #show()} and never updated per tick: {@code core.port}
- * does not expose a read-only player status yet, which is exactly the gap {@code
- * docs/plan/06-presentation/plan.md} task 14 names and the game-presentation agent's report proposes
- * a contract for. The layout, the slot art and the draw order are all real; the numbers behind them
- * are not live.
- *
- * <p><b>F5/F6 jump to {@link VictoryScreen}/{@link DefeatScreen} directly.</b> Neither screen is
- * reachable through actual play yet, for the same reason: no core signal says the run ended. The
- * keys exist only so the two screens can be reviewed against the mock; they are not part of the
- * flow the spec describes and should be removed once {@code core} reports a run's outcome.
+ * <p>The HUD reads {@link WorldView#player()} once per frame — a fresh snapshot, not cached —
+ * and {@link #render} checks {@link WorldView#outcome()} right after advancing the tick, switching
+ * to {@link VictoryScreen} or {@link DefeatScreen} the moment it leaves {@link
+ * LevelOutcome#IN_PROGRESS}. Both signals arrived from {@code core-domain} after this class first
+ * shipped with a fixed placeholder state and a debug-key stand-in for the two end screens; neither
+ * survives in this version.
  */
 public final class PlayScreen implements Screen {
 
@@ -73,8 +69,6 @@ public final class PlayScreen implements Screen {
     private Simulation simulation;
     private GameLoop loop;
 
-    private PlayerHudState hudState;
-
     private boolean paused;
     private Stage pauseStage;
     private Texture dimTexture;
@@ -93,18 +87,12 @@ public final class PlayScreen implements Screen {
         atlas = PackedSpriteAtlas.load(Gdx.files.internal(""));
         checkerboard = new CheckerboardBackground();
         worldRenderer = new WorldRenderer(atlas, PLAYFIELD_LEFT);
-        hudRenderer = new HudRenderer(game.skin());
         input = new InputAdapter(viewport);
 
         content = new JsonContentSource(Gdx.files.internal("data"));
+        hudRenderer = new HudRenderer(game.skin(), content.balance());
         simulation = new Simulation(content, event -> { }, game.seed(), JsonContentSource.LEVEL_ID);
         loop = new GameLoop(simulation);
-
-        hudState = new PlayerHudState(
-            content.balance().initialLives(), content.balance().maxLives(),
-            content.balance().initialBombs(), content.balance().maxBombs(),
-            1, content.balance().weaponLevels(),
-            false, InvulnerabilitySource.NONE, 0f, null, null, 0);
 
         buildPauseStage();
     }
@@ -143,28 +131,33 @@ public final class PlayScreen implements Screen {
             }
         }
         if (!paused) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
-                game.setScreen(new VictoryScreen(game, hudState.score(),
-                    content.balance().lifeCompletionBonus() * hudState.lives(),
-                    content.balance().bombCompletionBonus() * hudState.bombs()));
-                return;
-            }
-            if (Gdx.input.isKeyJustPressed(Input.Keys.F6)) {
-                game.setScreen(new DefeatScreen(game, hudState.score()));
-                return;
-            }
             InputFrame frame = input.sample(delta, content.balance(), game.settings().mouseEnabled());
             loop.advance(delta, frame);
+
+            WorldView view = simulation.view();
+            LevelOutcome outcome = view.outcome();
+            if (outcome != LevelOutcome.IN_PROGRESS) {
+                PlayerStatus status = view.player();
+                if (outcome == LevelOutcome.DEFEATED) {
+                    game.setScreen(new DefeatScreen(game, status.score()));
+                } else {
+                    game.setScreen(new VictoryScreen(game, status.score(),
+                        content.balance().lifeCompletionBonus() * status.lives(),
+                        content.balance().bombCompletionBonus() * status.bombs()));
+                }
+                return;
+            }
         }
 
         ScreenUtils.clear(Palette.N0.r, Palette.N0.g, Palette.N0.b, 1f);
         viewport.apply();
         batch.setProjectionMatrix(camera.combined);
 
+        WorldView drawView = simulation.view();
         batch.begin();
         checkerboard.draw(batch, PLAYFIELD_LEFT, 0f, PLAYFIELD_WIDTH, LittleSpaceshipGame.LOGICAL_HEIGHT);
-        worldRenderer.draw(simulation.view(), batch);
-        hudRenderer.draw(batch, hudState);
+        worldRenderer.draw(drawView, batch);
+        hudRenderer.draw(batch, drawView.player());
         if (paused) {
             batch.setColor(1f, 1f, 1f, 1f);
             batch.draw(dimTexture, 0f, 0f,
