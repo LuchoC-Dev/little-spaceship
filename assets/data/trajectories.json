@@ -1,0 +1,8 @@
+{
+  "trajectories": [
+    { "id": "slow-descent", "vx": 0, "vy": -18 },
+    { "id": "swoop", "vx": -10, "vy": -40 },
+    { "id": "dive", "vx": 0, "vy": -80 },
+    { "id": "crawl", "vx": 0, "vy": -9 }
+  ]
+}

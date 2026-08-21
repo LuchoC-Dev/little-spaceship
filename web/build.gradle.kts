@@ -1,6 +1,8 @@
-// TeaVM launcher. Sources arrive in phase 03, owned by game-presentation; the
-// gdxTeaVM block below is wired but stays commented out until WebLauncher
-// exists, because the plugin needs a real main class to configure a target.
+// TeaVM launcher. Owned by phase 09 (docs/plan/09-web-ci-release/plan.md), which brings the web
+// target back deliberately. Phase 03 built and verified this block once, then reverted it on
+// explicit direction: its own task list says "Desktop only," and this comment previously claiming
+// otherwise is what led phase 03 to build WebLauncher anyway — do not repeat that mistake by
+// trusting a comment over the plan it sits next to.
 val gdxVersion: String by rootProject.extra
 
 plugins {

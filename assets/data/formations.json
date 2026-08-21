@@ -1,0 +1,26 @@
+{
+  "formations": [
+    {
+      "id": "single",
+      "slots": [
+        { "offsetX": 0, "offsetY": 0 }
+      ]
+    },
+    {
+      "id": "line-3",
+      "slots": [
+        { "offsetX": -20, "offsetY": 0 },
+        { "offsetX": 0, "offsetY": 0 },
+        { "offsetX": 20, "offsetY": 0 }
+      ]
+    },
+    {
+      "id": "diagonal",
+      "slots": [
+        { "offsetX": -15, "offsetY": 0 },
+        { "offsetX": 0, "offsetY": -15 },
+        { "offsetX": 15, "offsetY": -30 }
+      ]
+    }
+  ]
+}
