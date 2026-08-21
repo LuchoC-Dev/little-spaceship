@@ -104,12 +104,17 @@ public final class PlayScreen implements Screen {
         root.setFillParent(true);
         pauseStage.addActor(root);
 
+        // Plate behind the panel, per docs/design/mockups/src/05-screens.js's pause screen: N2 fill,
+        // N3 frame, so the panel reads as a surface over the frozen playfield instead of text
+        // floating on it.
         Table panel = new Table();
+        panel.setBackground(game.skin().getDrawable("n2-panel"));
+        panel.pad(16f);
         panel.add(new Label("PAUSED", game.skin(), "title")).padBottom(16f).row();
         java.util.List<KeyboardFocusable> focusables = new java.util.ArrayList<>();
         MenuEntries.add(panel, game.skin(), "RESUME", this::resumeGameplay, focusables);
         MenuEntries.add(panel, game.skin(), "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)), focusables);
-        root.add(panel).center();
+        root.add(panel).width(160f).height(86f).center();
         new MenuNavigator(pauseStage, focusables);
 
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);

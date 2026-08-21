@@ -23,12 +23,26 @@ public final class DefeatScreen extends BaseUiScreen {
         Label subtitle = new Label("THE SHIP WAS LOST OVER THE CITY.", skin, "body");
         content.add(subtitle).left().padBottom(20f).row();
 
-        Label scoreLabel = new Label("SCORE   " + score, skin, "title");
+        Label scoreLabel = new Label("SCORE   " + zeroPadded(score), skin, "title");
         content.add(scoreLabel).left().padBottom(24f).row();
 
         List<KeyboardFocusable> focusables = new ArrayList<>();
         MenuEntries.add(content, skin, "RETRY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
         MenuEntries.add(content, skin, "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)), focusables);
         new MenuNavigator(stage, focusables);
+    }
+
+    /**
+     * Zero-padded to 7 digits, the same width {@link VictoryScreen} pads its own score to per
+     * {@code docs/design/mockups/src/05-screens.js} — both end screens show the same field, so
+     * neither can disagree with the other about its width.
+     */
+    private static String zeroPadded(int value) {
+        String raw = Integer.toString(Math.max(0, value));
+        StringBuilder sb = new StringBuilder();
+        for (int i = raw.length(); i < 7; i++) {
+            sb.append('0');
+        }
+        return sb.append(raw).toString();
     }
 }

@@ -3,8 +3,10 @@ package dev.luchoc.littlespaceship.game.screen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -52,6 +54,14 @@ public abstract class BaseUiScreen extends ScreenAdapter {
             Label titleLabel = new Label(title, skin, "title");
             root.top().left();
             root.add(titleLabel).padTop(TITLE_Y).padLeft(TITLE_X).row();
+
+            // The 1 px N3 rule docs/design/mockups/src/05-screens.js draws under every screen's
+            // title, sized to the title's own width so it reads as an underline rather than a
+            // divider that happens to sit near the text.
+            GlyphLayout titleLayout = new GlyphLayout(skin.getFont("font-title"), title);
+            Image rule = new Image(skin.newDrawable("white", Palette.N3));
+            root.add(rule).width(titleLayout.width).height(1f)
+                .padLeft(TITLE_X).padTop(4f).left().row();
         }
 
         content = new Table();

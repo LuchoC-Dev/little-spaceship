@@ -49,6 +49,9 @@ public final class OptionsScreen extends BaseUiScreen {
         content.add(mouseRow).left().padTop(8f).padBottom(16f).row();
         focusables.add(rowFocusable(mouseRow, () -> mouseToggle.setChecked(!mouseToggle.isChecked())));
 
+        MenuEntries.add(content, skin, "CREDITS AND LICENCES",
+            () -> game.setScreen(new CreditsScreen(game, () -> new OptionsScreen(game, previousFactory))),
+            focusables);
         MenuEntries.add(content, skin, "BACK", () -> game.setScreen(previousFactory.get()), focusables);
         new MenuNavigator(stage, focusables);
     }
