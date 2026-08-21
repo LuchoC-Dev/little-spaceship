@@ -95,6 +95,15 @@ instructions.
   since that test is the closest thing this project has to a reviewed content spec. `enemies.json`
   gives every `"collider"` an explicit `"fragile"`, per review round 1 (B2): `true` for basic, light,
   shooter and rush, `false` for tank and carrier.
+
+  **`level-01.json` is not level 1.** It is six events in 9.5 seconds, one enemy of each archetype in
+  a row, and it exists to prove the pipeline loads and spawns end to end. The designed level is the
+  fourteen-beat sequence in `docs/planning/04-campaign-and-levels.md`: initial calm, isolated basics,
+  light and fast, combined formations, tanks and shifts in priority, super-fast, carriers, shooters,
+  high-pressure combinations, the difficult encounter that hands over the attachment, a brief rest,
+  the final escalation, the boss. None of that is here, and it cannot be written yet: the level's
+  target duration and the intensity-curve tooling are open items in `docs/STATUS.md`. Tracked in
+  issue #20 - do not read this file as the level being done.
 - **`game/adapter/content/JsonContentSource.java`** — the `ContentSource` implementation. Parses all
   five files eagerly in the constructor with `JsonReader`/`JsonValue` only (never the reflection-based
   `Json` class), so a malformed file fails at startup instead of on whichever tick first asks for the
@@ -145,7 +154,7 @@ instructions.
 | The same trajectory attaches to two different archetypes from data alone | met (already true on the `core` side) | `SpawnSystemTest.sameTrajectoryReusedAcrossArchetypes`, `LevelContentIntegrationTest.tankOnRushTrajectoryIsADataChange`; `trajectories.json` itself reuses `crawl` for both `enemy-tank` and `enemy-carrier` |
 | Adding a component type is one registration, no loader change | met (`core`-side property, unaffected) | `ComponentFactoryRegistryTest.registeringANewFactoryWorks` |
 | Core tests build definitions inline, never read a file | met (`core`-side property, unaffected) | every test in `core` |
-| Malformed content fails naming the file and the offending id | **met** | `JsonContentSource.inFile` prefixes the file path; `core`'s own exceptions name the component/field/id |
+| Malformed content fails naming the file and the offending id | **met by construction, untested** | `JsonContentSource.inFile` prefixes the file path and `core`'s own exceptions name the component, field or id, so both halves of the message exist. Nothing exercises them: `game` has no test suite at all, and an error path is exactly what running the game once does not reach. Tracked in issue #19 |
 | All content ids are in English | **met** | every id in `assets/data/*.json` — `ship-basic`, `enemy-basic` through `enemy-carrier`, `slow-descent`/`swoop`/`dive`/`crawl`, `single`/`line-3`/`diagonal`, `level-01` |
 | Trajectories (task 5, half) | still deferred | firing patterns and `Weapon` stay phase 05's, per `core-domain`'s original reasoning below — the loader does not change that |
 
