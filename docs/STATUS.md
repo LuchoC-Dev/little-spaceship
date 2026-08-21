@@ -60,9 +60,7 @@ Three things the running build hides, all tracked and none blocking: `game` has 
 
 None of these stop step one. Each is due when its moment arrives:
 
-- the level 1 boss: phases, patterns and look;
-- what exactly the "strong encounter" is — the fight that hands over the attachment;
-- the level's target duration and the intensity-curve tooling;
+- the intensity-curve tooling — the level's length and climax are now decided, the tool to shape the curve is not;
 - pointer capture for relative mouse, and browsers other than Chrome.
 
 ## Traps that already cost hours
