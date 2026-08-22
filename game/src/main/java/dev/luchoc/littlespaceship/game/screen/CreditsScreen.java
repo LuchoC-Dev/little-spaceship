@@ -28,7 +28,7 @@ public final class CreditsScreen extends BaseUiScreen {
         addLine("No third-party art or audio is used in this build.");
 
         List<KeyboardFocusable> focusables = new ArrayList<>();
-        MenuEntries.add(content, skin, "BACK", () -> game.setScreen(previousFactory.get()), focusables);
+        MenuEntries.add(content, game, skin, "BACK", () -> game.setScreen(previousFactory.get()), focusables);
         new MenuNavigator(stage, focusables);
     }
 

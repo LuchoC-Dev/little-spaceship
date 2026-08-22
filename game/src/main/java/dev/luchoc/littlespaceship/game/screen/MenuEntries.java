@@ -5,6 +5,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
+import dev.luchoc.littlespaceship.game.adapter.audio.Sfx;
 import java.util.List;
 
 /**
@@ -18,6 +20,13 @@ import java.util.List;
  * "> " prefix on the label so the focused entry differs in shape as well as colour, per
  * {@code 05-legibility-rules.md} R4. Both mechanisms coexist without conflict: a mouse hover and a
  * keyboard focus simply agree on which entry looks selected when they happen to be the same one.
+ *
+ * <p><b>This is also where every screen's audio gets unlocked.</b> {@link
+ * dev.luchoc.littlespaceship.game.adapter.audio.AudioSystem#unlock()} is called here, once per
+ * activation but idempotent, because a click or an Enter key press reaching this method is by
+ * construction a real user gesture — the exact thing a browser waits for before it allows audio to
+ * play at all. Every menu entry in the game goes through {@link #add}, so this is the one place
+ * that needs to know the rule exists.
  */
 final class MenuEntries {
 
@@ -28,14 +37,14 @@ final class MenuEntries {
      * Adds a button and registers it with {@code focusables} so a {@link MenuNavigator} built from
      * that list afterwards can reach it with the keyboard.
      */
-    static TextButton add(
-            Table table, Skin skin, String label, Runnable action, List<KeyboardFocusable> focusables) {
+    static TextButton add(Table table, LittleSpaceshipGame game, Skin skin, String label,
+            Runnable action, List<KeyboardFocusable> focusables) {
         TextButton button = new TextButton("  " + label, skin);
         button.getLabel().setAlignment(com.badlogic.gdx.utils.Align.left);
         button.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                action.run();
+                activate(game, action);
             }
         });
         table.add(button).left().padBottom(16f).row();
@@ -49,9 +58,15 @@ final class MenuEntries {
 
             @Override
             public void activate() {
-                action.run();
+                MenuEntries.activate(game, action);
             }
         });
         return button;
+    }
+
+    private static void activate(LittleSpaceshipGame game, Runnable action) {
+        game.audio().unlock();
+        game.audio().playSfx(Sfx.UI_SELECT);
+        action.run();
     }
 }

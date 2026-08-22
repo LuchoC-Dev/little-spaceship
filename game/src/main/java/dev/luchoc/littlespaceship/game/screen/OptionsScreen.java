@@ -34,8 +34,10 @@ public final class OptionsScreen extends BaseUiScreen {
         content.top().left();
         List<KeyboardFocusable> focusables = new ArrayList<>();
 
-        addSlider(content, "MASTER VOLUME", settings.masterVolume(), settings::masterVolume, focusables);
-        addSlider(content, "MUSIC VOLUME", settings.musicVolume(), settings::musicVolume, focusables);
+        addSlider(content, "MASTER VOLUME", settings.masterVolume(),
+            value -> { settings.masterVolume(value); game.audio().refreshVolume(); }, focusables);
+        addSlider(content, "MUSIC VOLUME", settings.musicVolume(),
+            value -> { settings.musicVolume(value); game.audio().refreshVolume(); }, focusables);
         addSlider(content, "EFFECTS VOLUME", settings.effectsVolume(), settings::effectsVolume, focusables);
 
         CheckBox mouseToggle = new CheckBox(" MOUSE CONTROL", skin);
@@ -49,10 +51,10 @@ public final class OptionsScreen extends BaseUiScreen {
         content.add(mouseRow).left().padTop(8f).padBottom(16f).row();
         focusables.add(rowFocusable(mouseRow, () -> mouseToggle.setChecked(!mouseToggle.isChecked())));
 
-        MenuEntries.add(content, skin, "CREDITS AND LICENCES",
+        MenuEntries.add(content, game, skin, "CREDITS AND LICENCES",
             () -> game.setScreen(new CreditsScreen(game, () -> new OptionsScreen(game, previousFactory))),
             focusables);
-        MenuEntries.add(content, skin, "BACK", () -> game.setScreen(previousFactory.get()), focusables);
+        MenuEntries.add(content, game, skin, "BACK", () -> game.setScreen(previousFactory.get()), focusables);
         new MenuNavigator(stage, focusables);
     }
 
