@@ -54,6 +54,22 @@
 - Integer scaling with nearest-neighbour and letterbox over a fixed logical resolution.
 - The starting numeric values live in `10-mvp-initial-values.md` and in configuration, not in the code.
 
+### Enemy fire, and how the level gets balanced
+
+Decided on 22/08/2026 by the project owner, once level 1 was written and the gaps became visible.
+
+- **Enemy weapons get built before the MVP.** Nothing but the boss shoots today: `WeaponSystem` arms
+  the player, and enemy firing patterns were deferred through phases 04, 05 and 07 without anyone
+  deciding they were out of scope. The consequence is that `enemy-shooter` — the "evolved basic" the
+  spec describes as the archetype that shoots — reads as a larger, slower basic, and the only danger
+  in the level is collision. The palette already reserves a value and hue no background may repeat
+  for enemy bullets, and `05-legibility-rules.md` is built around them, so the presentation side is
+  specified and waiting.
+- **Enemy health is tuned by playing, not by arithmetic.** At the placeholder numbers a heavy carrier
+  dies in about 1.2 s against the 32 s the timeline reserves for the strong encounter. The numbers
+  have been open since phase 04 and the level now states how long each stretch should last, so there
+  is something to calibrate against — but the calibration happens with the game in hand.
+
 ### Level 1 climax and length
 
 Decided on 21/08/2026 by the project owner, at the start of phase 07. All three were deliberately left
