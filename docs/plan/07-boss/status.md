@@ -2,7 +2,9 @@
 
 **State:** `core` half done — boss (six parts, keel gap closed), the carrier's periodic spawn, the
 strong encounter and the victory condition. Content (`assets/data/*.json`) and rendering (health bar,
-tell) are not built here; see "Notes for whoever comes next".
+tell) are not built here; see "Notes for whoever comes next". The content half landed afterwards —
+see "Content lane — level 1 written" at the end of this file; rendering and the two
+`JsonContentSource` parsing gaps are still open.
 **Updated:** 22/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the
@@ -240,3 +242,133 @@ phase needed one, since the boss's own fire goes through `BossSystem` directly r
 archetype pipeline. The carrier's periodic spawn, previously listed here as the same kind of gap, is
 now built — see "Done" above. The structure collider gap is recorded as open above, in "Decisions
 taken while implementing", for the reason given there.
+
+---
+
+# Content lane — level 1 written (`level-designer`, 22/08/2026)
+
+Appended, not edited into the sections above: everything before this line is `core-domain`'s and
+stays as written. This section covers `assets/data/level-01.json`, `formations.json` and the
+carrier's `spawner` entry — issue #20's "replace the test fixture deliberately".
+
+## What replaced the fixture
+
+What shipped before was six events in 9.5 seconds, one of each archetype in a row, copied from a test
+fixture. What ships now is **92 events across 297 seconds, then the boss at 302 s**. The boss's
+entrance takes 5.4 s at the numbers below, so the fight starts around **5:07** and the level runs
+roughly **5:45–6:00** end to end depending on how fast the core dies. That clears the four-minute
+floor decided in `08-decisions-and-open-items.md` and lands at the top of the provisional 5–6 min
+table in `10-mvp-initial-values.md`.
+
+## The curve, stretch by stretch
+
+Each stretch is named by what it is *for*. Whoever balances this later should tune inside a stretch's
+intention, not across it — that is the whole reason this table exists.
+
+| Time | Stretch | What it is for |
+|---|---|---|
+| 0:00–0:08 | **Calm** | Nothing spawns. The setting, the ship's handling and the background do the talking. Eight seconds is the low end of the spec's 5–10; the level is long enough already. |
+| 0:08–0:34 | **Basics, isolated** | Three lone `enemy-basic` at different columns, then three `line-3` walls, then one `column-3`. Teaches the shot, the kill, and that a column can be occupied. The **weapon upgrade** lands at 0:21 on the centre of a three-wide wall. |
+| 0:35–0:58 | **Fast light** | `enemy-light` alone first, entering high and right so its `swoop` drift to the left is legible on its own before anything else moves. Then `diagonal`, its mirror, then `vee-5`. Teaches leading a target that does not fall straight. |
+| 0:59–1:24 | **First combination** | Basics and lights interleaved: a slow wall to shoot through while fast movers arrive from a different side. The pair of `column-3` at atX 0.15/0.85 (1:11) is the first time both edges are busy at once and the centre is the only answer. |
+| 1:26–1:47 | **Tank, priority shift** | One tank alone in empty space — at `crawl` it lives about 30 s, so it is still there when the next waves arrive, which *is* the lesson. Then two tanks framing atX 0.3/0.7, leaving the centre lane as the read. |
+| 1:52–2:14 | **Super-fast** | One `enemy-rush` alone, far from where the player is likely standing, then `column-3` triples (three darts down one lane 0.27 s apart), then rush pressure over a standing tank. Second **weapon upgrade** at 2:14 on the leading dart. |
+| 2:18–2:40 | **Heavy carrier, alone** | A single carrier and nothing else for 13 s. This is the teaching beat for the spawner: the player must see one carrier make enemies before two of them mean anything. Light side pressure only after the lesson has landed. |
+| 2:46–2:57 | **Evolved basic / shooter** | Singles, then `line-3`. The lightest stretch of the second half on purpose — it is a breath before the peak, and see the caveat below about what this archetype currently does. |
+| 3:03–3:22 | **Pre-encounter peak** | Everything learned, at once, for twenty seconds: shooters, rush columns at both edges, a five-wide wall, two tanks, lights across the top. **Extra life** at 3:03. The **shield** lands at 3:21 on a lone basic in the centre, in a deliberate hole in the wave pattern — a guaranteed drop has to be collectable, not thrown at a fast target near an edge. |
+| 3:28–4:00 | **The strong encounter** | Two carriers, formation `pair`, **attachment on slot 0**. Their spawn lanes are their own columns, so damaging a carrier means standing where its children appear; the 49 px gap between them is the escape. Two rush columns straight down that gap at 3:35 and 3:44, and a pair of lights at 3:51/3:53, keep it from becoming a shooting gallery once the carriers are the only thing left. |
+| 4:00–4:16 | **Rest** | One lone basic at 4:05 carrying the **bomb recharge**, and nothing else for 11 s either side. Longer than the spec's 5–10 s because what follows is 40 s with no let-up. |
+| 4:16–4:57 | **Final escalation** | No new archetype, no new lesson: recombination at a higher rate, alternating edges, twenty-four waves in 41 s. Third **weapon upgrade** at 4:24 — a power spike aimed straight into the climax, so the player reaches the boss at maximum. It peaks on a carrier under fire (4:47) while lights, rushes and a final tank arrive. |
+| 5:02 | **Boss** | Five seconds after the last wave. Deliberately short: the escalation should crash into the boss, not fade out before it. |
+
+## Guaranteed drops (`10-mvp-initial-values.md`'s four)
+
+| Drop | At | Carried by | Why there |
+|---|---|---|---|
+| `weapon-upgrade` | 0:21 | centre slot of a `line-3` of basics | first third, and the earliest point at which "more projectiles" is legible against a static wall |
+| `shield` | 3:21 | a lone basic, centre | before the strong encounter, in a quiet hole so it cannot be missed |
+| `attachment` | 3:28 | slot 0 of the two-carrier `pair` | the encounter itself; `dropSlot` is what keeps two carriers from handing over two attachments |
+| `bomb-recharge` | 4:05 | a lone basic, centre, alone in the rest | before the boss, and it doubles as the signal that something big is coming |
+
+Three drops beyond the guaranteed four, placed for pacing: `weapon-upgrade` at 2:14 and 4:24 (so the
+weapon reaches level 3 mid-level and level 4 immediately before the boss, rather than maxing at 2:20
+and flattening everything after it) and `extra-life` at 3:03, on the peak that will cost the most
+lives.
+
+## Numbers chosen here
+
+- **`enemy-carrier`'s `spawner`: `enemy-basic`, interval `4.0`, offset `(0, -24)`.**
+  - `4.0 s` because a carrier that is never shot lives about 30 s crossing at `crawl`, so one alone
+    yields six or seven children — enough to read the rule — while two in lockstep yield one every two
+    seconds, which is sustained pressure without becoming a wall.
+  - `offsetX 0` is the deliberate part: children come down the carrier's own column, the same column
+    the player has to occupy to damage it. That tension is the encounter.
+  - `offsetY -24` clears the carrier's radius-15 collider by 3.5 px against the child's own 5.5, so a
+    child is never born inside its parent's silhouette, and `slow-descent` (-18) pulls it away from
+    `crawl` (-9) immediately, so the two separate on their own.
+- **Boss:** `entersAt 302`, `combatY 175`, `entranceSpeed 25` (a 5.4 s descent), `patternCooldown 1.3`
+  (a 2.05 s cycle with the fixed 0.75 s tell), `spreadProjectileSpeed 95`, `sweepProjectileSpeed 140`,
+  health 1800/500/500, points 1500/500/500.
+  - **`combatY 175` is a pacing number, not an art one.** `BossSystem`'s spread and sweep ratios are
+    fixed, so where a projectile leaves the playfield is decided entirely by how high the boss sits. At
+    `combatY 175` a spread shot crosses the side edge at y≈41 and a sweep shot at y≈25 — inside the
+    band the player actually flies in. Twenty units higher and both patterns exit the sides above the
+    player's head, and the fight becomes unloseable. This is the single most fragile number in the file.
+  - Spread fans outward from the pods and sweep converges inward from the arms, so the two patterns
+    punish opposite places: spread makes the centre safe, sweep makes it lethal. That is the whole
+    read the player has to learn, and it is why they alternate.
+  - Points sum to exactly 5000, `10-mvp-initial-values.md`'s figure for the boss — remembering that
+    `corePoints` is awarded twice, once for the core and once for `core-keel`.
+
+## Formations added
+
+`formations.json` gained five: `line-5`, `column-3`, `diagonal-mirror`, `vee-5` and `pair`. None
+needs code — `JsonContentSource` reads any slot list — and all five are used. `pair` (±44) exists
+because the strong encounter needs a two-slot formation and none existed; its 88 px separation leaves
+a 49 px lane between the two carriers and about 40 px outside each. Every formation was checked
+against the 208 px playfield at every `atX` used: no slot's collider crosses an edge.
+
+## What was verified, and what was not
+
+- **Verified**: every `spawn`, `formation` and `drop` id resolves; the timeline is sorted; every `atX`
+  is in [0, 1]; every `dropSlot` names a slot its formation has; every drop kind is one of
+  `PickupSystem`'s six; every spawned collider fits inside the playfield at its anchor; the boss block
+  carries all thirteen `BossDefinition` fields and enters after the last wave.
+- **Not verified: nothing was played.** `:game:compileJava` still fails on
+  `JsonContentSource is not abstract and does not override abstract method boss(String)` — the known,
+  documented blocker above — so the content cannot be loaded through `JsonContentSource` this session,
+  let alone run. Everything above is arithmetic and static checking, not playtesting.
+
+## What `game-presentation` must add before any of this loads
+
+Two parsing gaps, both in `game/adapter/content/JsonContentSource.java`:
+
+1. **`loadLevel` does not read `dropSlot`.** It calls `SpawnEvent`'s five-argument constructor, which
+   defaults the slot to 0. Until it reads the sixth field, the four drops written on slot 1 land on
+   slot 0 instead — harmless-looking, but it silently discards issue #23's whole point.
+2. **The boss block is a `"boss"` object at the top of `level-01.json`**, sibling to `"events"`, with
+   keys named exactly after `BossDefinition`'s accessors. A separate file was the alternative; one
+   level with one boss did not justify a second file. `JsonContentSource` ignores unknown top-level
+   keys today, so the file loads clean without it — and the level then has no boss at all and can
+   never complete, which is worse than a parse error. Worth failing loudly on a missing boss block for
+   a level that expects one.
+
+## Open items recorded, not guessed
+
+Added to `10-mvp-initial-values.md`: the boss's thirteen numbers, the carrier's four spawner numbers,
+and the one that actually threatens this level's pacing — **the strong encounter's carriers currently
+die in about three seconds**. At the placeholder `weaponProjectileDamage` of 10 and
+`weaponFireCooldown` of 0.15, a single stream does about 67 damage per second against a carrier's
+placeholder 80 hit points. The timeline reserves a 32-second window for the encounter, and only enemy
+health decides whether it fills it. The same arithmetic makes the tank (40 hp) a sub-second obstacle
+rather than the priority shift the 1:26 stretch is built around. Those are balance numbers, not pacing
+ones, so they are recorded there rather than changed here.
+
+## A gap this lane did not close
+
+**`enemy-shooter` does not shoot.** No enemy `"weapon"` component factory exists — `core-domain`
+records the same gap above. So beat 9 of `04-campaign-and-levels.md`'s sequence currently reads as
+"a larger, slower basic worth more points" rather than as the pressure it is meant to introduce, and
+the 2:46–2:57 stretch will need rewriting, not just retuning, once enemies can fire. It is written to
+be replaced: the shooter waves sit in their own contiguous stretch rather than being scattered
+through the level.

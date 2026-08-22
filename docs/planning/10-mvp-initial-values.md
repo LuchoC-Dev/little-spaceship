@@ -53,6 +53,53 @@ units/s), `pickupRadius` (6.0, larger than a pickup's sprite per `02-sprite-size
 and `invulnerabilityPickupDuration` (3.0 s). **Open, not decided:** replace with real numbers once
 there is a playable build to tune them against, and record the result here.
 
+### Boss numbers — missing
+
+`BossDefinition` needs thirteen values and this document had no boss row when phase 07 wrote them.
+`level-01.json` carries a starting set so the fight exists at all: `entersAt 302`, `coreHealth 1800`,
+`podHealth 500`, `armHealth 500`, `corePoints 1500`, `podPoints 500`, `armPoints 500`,
+`entranceSpeed 25`, `combatY 175`, `patternCooldown 1.3`, `spreadProjectileSpeed 95`,
+`sweepProjectileSpeed 140`. **Open, not decided**, with two things worth knowing before they are
+retuned:
+
+- The fight ends when the core dies, and `core-keel` carries the core's own health, so its length is
+  governed by `2 * coreHealth` divided by whatever damage the player lands on the central column —
+  not by the total the health bar shows. 1800 was chosen against an assumed 80 effective damage per
+  second at weapon level 3, for a fight of roughly 45 s inside the 60–90 s the pacing table asks for.
+  It moves the moment `weaponProjectileDamage` stops being a placeholder.
+- `combatY` decides where the boss's projectiles leave the playfield, because `BossSystem`'s spread
+  and sweep angles are fixed ratios. At 175 both patterns cross the side edges inside the band the
+  player flies in (spread at y≈41, sweep at y≈25). Raising it makes the fight progressively harmless
+  rather than progressively easier. Treat it as a pattern parameter, not as a camera framing choice.
+- The points sum to exactly 5000, this document's figure for the boss, counting `corePoints` twice —
+  once for the core, once for `core-keel`.
+
+### Heavy carrier's spawner — missing
+
+`Spawner` needs four values per holder and this document had none. `enemies.json` gives
+`enemy-carrier`: `enemyId enemy-basic`, `interval 4.0`, `offsetX 0`, `offsetY -24`. **Open, not
+decided.** The reasoning behind each is recorded in `docs/plan/07-boss/status.md`; the one that is a
+design choice rather than a tuning knob is `offsetX 0`, which puts a carrier's children in the same
+column the player must occupy to damage it.
+
+### Enemy health against the level's own pacing — the encounter does not last
+
+Recorded here by the content lane, because it is a balance number that a pacing decision now depends
+on. At the placeholder `weaponProjectileDamage` of 10 and `weaponFireCooldown` of 0.15, one stream of
+player fire does about 67 damage per second. Against the placeholder health in `enemies.json` that
+makes a heavy carrier (80 hp) die in about 1.2 s and a tank (40 hp) in under one.
+
+`level-01.json` reserves a 32-second window for the strong encounter — two carriers whose whole reason
+for existing is the sustained pressure their spawners produce — and a 21-second stretch built around a
+tank surviving long enough to force a priority shift. Neither survives contact with these numbers:
+the encounter would be over before its first pair of children spawns. **Open, not decided:** the
+non-fragile archetypes' health has to be set against how long their stretch is meant to last, not
+picked in isolation. As an order of magnitude at the current damage figures, a carrier that is meant
+to take ~15 s of sustained fire needs roughly 1000 hit points, and a tank that is meant to be flown
+around rather than deleted needs a few hundred. Those are not proposals — they are the shape of the
+arithmetic, so that whoever tunes damage and health knows the pacing constraint they are tuning
+against.
+
 ## Controls
 
 When the mouse is enabled in Options, **keyboard and mouse work simultaneously and additively**. There is no priority device and no switching between one and the other.
@@ -105,6 +152,11 @@ It does save the **preferences**: master volume, music, effects and mouse enabli
 | Boss | 60-90 s |
 | **Total** | **5-6 min** |
 
+As built in `level-01.json` (phase 07, content lane): calm 0:00-0:08, body 0:08-3:22, strong encounter
+3:28-4:00, rest 4:00-4:16, final escalation 4:16-4:57, boss entering at 5:02 and its entrance taking
+5.4 s. Total between 5:45 and 6:00 depending on how fast the core dies. The per-stretch intention
+behind those figures is in `docs/plan/07-boss/status.md`, and it is what any retuning should preserve.
+
 ## Guaranteed drops
 
 So that the MVP feels designed and not random, level 1 guarantees:
@@ -115,6 +167,13 @@ So that the MVP feels designed and not random, level 1 guarantees:
 - a bomb recharge before the boss.
 
 The rest of the drops are placed in the wave design as suits the pacing.
+
+Where they landed in `level-01.json`: the weapon upgrade at 0:21 on the centre of a three-wide wall of
+basics, the shield at 3:21 on a lone basic in a deliberate quiet hole, the attachment on slot 0 of the
+two-carrier encounter at 3:28, and the bomb recharge at 4:05 on the only enemy of the rest. Three more
+are placed for pacing rather than guaranteed: weapon upgrades at 2:14 and 4:24 — the second is a power
+spike aimed straight into the boss — and an extra life at 3:03, on the level's hardest wave before the
+encounter.
 
 ## Score
 
