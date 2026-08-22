@@ -1,10 +1,9 @@
 # Phase 07 — Boss · status
 
-**State:** `core` half done — boss (six parts, keel gap closed), the carrier's periodic spawn, the
-strong encounter and the victory condition. Content (`assets/data/*.json`) and rendering (health bar,
-tell) are not built here; see "Notes for whoever comes next". The content half landed afterwards —
-see "Content lane — level 1 written" at the end of this file; rendering and the two
-`JsonContentSource` parsing gaps are still open.
+**State:** all three lanes done. `core` (boss, spawner, victory condition), content (level 1's real
+curve plus the boss/carrier numbers, "Content lane — level 1 written" below), and now rendering —
+`JsonContentSource`'s two parsing gaps closed, the boss wired to the screen. See "Rendering lane —
+the boss on screen" at the end of this file.
 **Updated:** 22/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the
@@ -372,3 +371,105 @@ records the same gap above. So beat 9 of `04-campaign-and-levels.md`'s sequence 
 the 2:46–2:57 stretch will need rewriting, not just retuning, once enemies can fire. It is written to
 be replaced: the shooter waves sit in their own contiguous stretch rather than being scattered
 through the level.
+
+---
+
+# Rendering lane — the boss on screen (`game-presentation`, 22/08/2026)
+
+Appended, not edited into the sections above. Closes the two `JsonContentSource` gaps and wires
+`BossStatus`/the tell to the screen — issue #27's remaining half.
+
+## The loader
+
+`ContentSource.boss(String)`/`.hasBoss(String)` are implemented in `JsonContentSource` (a new
+`Map<String, BossDefinition> bosses`, populated from an optional `"boss"` object read in the same
+pass as `"events"` — one file, not two, since `level-01.json` already carries it that way).
+
+Both gaps `level-designer` found are closed:
+
+- **`dropSlot` is read.** `loadLevel` now calls `SpawnEvent`'s six-argument constructor with
+  `entry.getInt("dropSlot", 0)`, so the strong encounter's attachment lands on slot 0 as authored
+  instead of silently defaulting there regardless of what the file says.
+- **An unrecognised key now fails, naming the file and the key.** A new `requireOnlyKeys` helper
+  walks a `JsonValue` object's own children (its public `child`/`next`/`name` fields — no new
+  dependency, `JsonReader`/`JsonValue` only, per `CLAUDE.md`'s web-target rule) and throws if any key
+  is not on an explicit allow-list. Applied to three places: the level file's two top-level keys
+  (`"boss"`, `"events"`), each event entry's six keys, and the boss block's thirteen. This is
+  deliberately scoped to what this phase touches, not every content file — `balance.json`,
+  `enemies.json`, `trajectories.json`, `formations.json` and `attachments.json` keep the old
+  "unknown key ignored" behaviour, since widening the check there risks breaking content nobody
+  audited this pass and wasn't the reported gap. A follow-up issue could extend it once someone
+  checks every existing file's keys against its schema.
+- Verified directly, not inferred: a throwaway program loaded the real `assets/data` through
+  `JsonContentSource` (`hasBoss("level-01")` true, `boss("level-01")` returns the thirteen numbers
+  `level-designer` wrote), then loaded a copy of `level-01.json` with `combatY` typo'd to `combatYY`
+  and confirmed it fails with `level-01.json: boss block has an unrecognised key 'combatYY'` — file
+  name and offending key both present, per the acceptance criterion. `./gradlew build` passes, core's
+  266 tests included, unaffected by anything in this lane.
+
+## The boss on screen
+
+- **`WorldRenderer` draws the tell.** `BossSystem` steps a charging pod's/arm's `Sprite.frame` 1→3
+  and back to 0; `WorldRenderer.accept` now reads that frame and overlays beat 1 as a `W4` tint, beat
+  2 as `F1`, beat 3 as a 1 px `N7` outline traced around the part's region (reusing the existing
+  `pixel` texture, the same trick `drawAura` already uses for the power-up ring) — no new texture, no
+  new per-frame allocation. `boss-core` never receives a nonzero frame, so it never overlays.
+- **`HudRenderer` draws the boss bar**, exactly `04-hud-layout.md`'s geometry (frame `347,20` 8x230,
+  fill `348,21` 6x228, `round(228*hp/hpMax)` filled rows in `W4` with a 1 px `W3` right-edge column,
+  anchored top so the fill shrinks from the bottom as `hp` falls) and its "Feedback" note — the row
+  strip lost in the most recent hit flashes `N7` for 2 ticks before going dark, tracked the same
+  frame-over-frame diff way the life/bomb/shield flashes already are. Drawn only while
+  `BossStatus.present()`, per "only during the fight"; the bar never reacts to the tell (a separate
+  channel, per `06-boss-presentation.md`'s explicit warning), only to `hp` changing. `PlayScreen`
+  passes `WorldView.bossStatus()` into `HudRenderer.draw`'s new third parameter.
+- **Placeholder art added for `boss-core`/`boss-pod`/`boss-arm`/`boss-shot`** in `PlaceholderAtlas`,
+  sized exactly per `06-boss-presentation.md` (47x87, 25x25, 31x45) and `BossSystem.PROJECTILE_RADIUS`
+  (4x4), reusing the existing generic enemy/projectile silhouette generators. This is scaffolding for
+  visual verification, not visual direction: the real art is `boss-core`/`boss-pod`/`boss-arm` on
+  `feat/sprite-production`, unmerged; once that lands, `PackedSpriteAtlas` picks it up automatically
+  and these four placeholder entries are simply deleted.
+- **Not done: mirroring the right-hand pod/arm at draw time.** `06-boss-presentation.md` asks for it
+  (one sprite, mirrored), but `SpriteVisitor.accept` carries no per-side flag and the placeholder
+  silhouette is symmetric anyway, so there is nothing to verify against yet. Left for whoever wires
+  the real, asymmetric art.
+- **Not done: the music-change hook.** `BossStatus.present`'s false→true/true→false edge is exactly
+  what `docs/plan/07-boss/status.md`'s "Notes for whoever comes next" names as the signal, but no
+  audio playback code exists anywhere in `game` in this worktree — that lane runs in parallel on
+  `feat/audio`, which this session was explicitly told not to touch. Wiring actual playback here
+  would mean inventing audio machinery with no consumer, the thing this project avoids; `feat/audio`
+  is the natural place to read this same `WorldView.bossStatus().present()` edge once it exists.
+
+## What was verified live, and what was not
+
+Verified with a real LWJGL3 window on a real GPU (not headless), per this agent's own memory on why
+that matters here — screenshots taken, not just "it didn't crash":
+
+- **The tell reads correctly and unmistakably.** Screenshotted mid-fight with a temporarily
+  low-health boss (local-only edit to `assets/data/level-01.json`, reverted before commit — `git
+  status` on it is clean): one capture shows both **arms** traced in a white outline (sweep's tell),
+  a later capture shows both **pods** traced in white (spread's tell) — confirms the pattern alternates
+  and that "pods for spread, arms for sweep" actually renders as designed, not just as asserted by
+  `core`'s tests. Did not separately catch beats 1/2 (`W4`/`F1` tint) on screen — same code path,
+  reasoned correct by inspection, but not eyeballed; the 0.9 s screenshot cadence against a 0.25 s
+  beat is why.
+- **The boss health bar renders and shrinks.** Present with the `BOSS` label only once the boss
+  exists, orange (`W4`) fill visibly shorter in a later capture at a higher score than an earlier one
+  at the same run.
+- **Victory was reached twice**, through the real menu → ship select → play flow, holding fire via a
+  simulated held key, not a debug shortcut: both runs ended on the `VICTORY` screen with the correct
+  score breakdown (`5100` + `3000` lives bonus + `600` bombs bonus = `8700`), proving
+  `LevelOutcome.COMPLETED` reaches `PlayScreen`'s branch and `VictoryScreen` renders correctly for a
+  boss level, not only for the pre-boss "wave timeline empty" rule.
+- **Defeat was not reached this session.** `PlayScreen`'s `DEFEATED` branch is unmodified code from
+  an earlier phase and was not touched by this lane; `core.application.BossReplayTest
+  .defeatIsDeterministic` already proves the boss can kill the player and `LevelOutcome.DEFEATED` is
+  reached deterministically on the `core` side. Forcing a live defeat would have meant either
+  reducing the player to one life and hoping a sweep shot lines up, or hand-tracing the boss's fixed
+  projectile ratios to engineer a guaranteed hit — judged not worth the time against the stop rule,
+  given the rendering path for `DEFEATED` is identical, pre-existing code to the `COMPLETED` path just
+  verified.
+- **Not attempted: a full, real-time run of the actual ~5:45 level.** Every screenshot above used a
+  temporary, drastically shortened local copy of `level-01.json` (never committed) specifically to
+  reach the boss in seconds rather than five minutes. The real level's own pacing, its escalation, and
+  whether the strong encounter's carriers survive their 32 s window (the balance gap `level-designer`
+  already flagged as open) were not exercised live.
