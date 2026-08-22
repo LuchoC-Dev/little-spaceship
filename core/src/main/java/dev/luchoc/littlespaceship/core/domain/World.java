@@ -14,6 +14,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
+import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
@@ -66,6 +67,7 @@ public final class World {
     private final ComponentStore<Pickup> pickups = new ComponentStore<>();
     private final ComponentStore<Health> healths = new ComponentStore<>();
     private final ComponentStore<BombState> bombStates = new ComponentStore<>();
+    private final ComponentStore<Spawner> spawners = new ComponentStore<>();
 
     /**
      * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
@@ -168,6 +170,7 @@ public final class World {
         pickups.remove(entity);
         healths.remove(entity);
         bombStates.remove(entity);
+        spawners.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -284,6 +287,13 @@ public final class World {
      */
     public ComponentStore<BombState> bombStates() {
         return bombStates;
+    }
+
+    /**
+     * @return periodic-spawn state for the entities that carry one, such as the heavy carrier
+     */
+    public ComponentStore<Spawner> spawners() {
+        return spawners;
     }
 
     /**

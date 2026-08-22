@@ -6,6 +6,7 @@ import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
+import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
@@ -61,12 +62,16 @@ public final class ComponentFactoryRegistry {
 
     /**
      * Builds the registry with the factories the MVP's content needs: motion, collider, sprite,
-     * scoreValue, health. {@code "health"} was added in phase 05, alongside the systems
+     * scoreValue, health, spawner. {@code "health"} was added in phase 05, alongside the systems
      * ({@code WeaponSystem}, {@code BombSystem}) that consume it — {@code 12-architecture.md} named
      * the component and its {@code {"points": N}} shape from the start, but no phase had it as a
-     * task until the gap was caught in review. {@code "weapon"} — a per-archetype firing pattern for
-     * enemies — stays unregistered: nothing enemy-side fires yet, so registering a factory for it
-     * would still be the guessed shape this project avoids building ahead of a real consumer.
+     * task until the gap was caught in review. {@code "spawner"} was added in phase 07, for the same
+     * reason: named in {@code 12-architecture.md}'s component table from the start, built only once
+     * the strong encounter (two heavy carriers) needed the periodic spawn it names. {@code "weapon"}
+     * — a per-archetype firing pattern for enemies — stays unregistered: nothing enemy-side fires yet
+     * except the boss, which does not go through this registry at all (see {@code BossSystem}), so
+     * registering a factory for it would still be the guessed shape this project avoids building
+     * ahead of a real consumer.
      *
      * @return a registry ready to attach the MVP's archetypes
      */
@@ -76,7 +81,8 @@ public final class ComponentFactoryRegistry {
             .register("collider", ComponentFactoryRegistry::attachCollider)
             .register("sprite", ComponentFactoryRegistry::attachSprite)
             .register("scoreValue", ComponentFactoryRegistry::attachScoreValue)
-            .register("health", ComponentFactoryRegistry::attachHealth);
+            .register("health", ComponentFactoryRegistry::attachHealth)
+            .register("spawner", ComponentFactoryRegistry::attachSpawner);
     }
 
     /**
@@ -124,5 +130,18 @@ public final class ComponentFactoryRegistry {
     private static void attachHealth(World world, int entity, ComponentSpec spec) {
         float points = spec.number("points");
         world.healths().set(entity, new Health(Math.round(points)));
+    }
+
+    /**
+     * Reads which archetype to spawn, how often, and at what offset from the holder — the exact
+     * fields {@link Spawner}'s constructor needs, so {@code level-designer} can tune the carrier's
+     * encounter (interval, offset, even a different spawned archetype) purely in content.
+     */
+    private static void attachSpawner(World world, int entity, ComponentSpec spec) {
+        String enemyId = spec.text("enemyId");
+        float interval = spec.number("interval");
+        float offsetX = spec.number("offsetX");
+        float offsetY = spec.number("offsetY");
+        world.spawners().set(entity, new Spawner(enemyId, interval, offsetX, offsetY));
     }
 }

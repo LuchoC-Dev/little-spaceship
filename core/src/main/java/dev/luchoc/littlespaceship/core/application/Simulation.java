@@ -22,6 +22,7 @@ import dev.luchoc.littlespaceship.core.domain.system.MotionSystem;
 import dev.luchoc.littlespaceship.core.domain.system.PickupSystem;
 import dev.luchoc.littlespaceship.core.domain.system.ScoreSystem;
 import dev.luchoc.littlespaceship.core.domain.system.SpawnSystem;
+import dev.luchoc.littlespaceship.core.domain.system.SpawnerSystem;
 import dev.luchoc.littlespaceship.core.domain.system.SystemPipeline;
 import dev.luchoc.littlespaceship.core.domain.system.WeaponSystem;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
@@ -166,6 +167,12 @@ public final class Simulation implements TickHandler {
         systems.add(new BombSystem());
         if (levelId != null) {
             systems.add(new SpawnSystem(levelId));
+        }
+        // Stateless and level-independent, unlike SpawnSystem/BossSystem: it only ever reacts to a
+        // Spawner component that already exists on some entity, wherever that entity came from, so it
+        // is registered unconditionally the same way CollisionSystem or DamageSystem are.
+        systems.add(new SpawnerSystem());
+        if (levelId != null) {
             systems.add(new BossSystem(levelId));
         }
         systems.add(new LifetimeSystem());

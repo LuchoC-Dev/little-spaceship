@@ -120,6 +120,23 @@ class ComponentFactoryRegistryTest {
     }
 
     @Test
+    @DisplayName("the default registry attaches a spawner, for the heavy carrier's periodic spawn")
+    void spawnerFactoryAttachesFields() {
+        World world = worldOf(new TestContent());
+        int entity = world.createEntity();
+
+        ComponentFactoryRegistry.withDefaults().attach(world, entity,
+            new MapComponentSpec("spawner",
+                Map.of("enemyId", "enemy-basic", "interval", 4f, "offsetX", 0f, "offsetY", -10f)));
+
+        dev.luchoc.littlespaceship.core.domain.component.Spawner spawner = world.spawners().get(entity);
+        assertEquals("enemy-basic", spawner.enemyId);
+        assertEquals(4f, spawner.interval);
+        assertEquals(0f, spawner.offsetX);
+        assertEquals(-10f, spawner.offsetY);
+    }
+
+    @Test
     @DisplayName("an unregistered component name fails, naming it, instead of doing nothing silently")
     void unknownComponentFails() {
         World world = worldOf(new TestContent());

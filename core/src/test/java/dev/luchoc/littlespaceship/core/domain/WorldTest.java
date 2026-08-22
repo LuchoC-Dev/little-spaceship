@@ -19,6 +19,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
+import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
@@ -73,7 +74,7 @@ class WorldTest {
         populateEveryComponent(entity);
 
         List<Field> stores = componentStoreFields();
-        assertTrue(stores.size() >= 13, "World should declare at least as many stores as it did "
+        assertTrue(stores.size() >= 14, "World should declare at least as many stores as it did "
             + "when this guard was rewritten; found " + stores.size());
         for (Field field : stores) {
             ComponentStore<?> store = (ComponentStore<?>) field.get(world);
@@ -113,6 +114,7 @@ class WorldTest {
         world.pickups().set(entity, new Pickup("shield"));
         world.healths().set(entity, new Health(10));
         world.bombStates().set(entity, new BombState());
+        world.spawners().set(entity, new Spawner("enemy-basic", 1f, 0f, 0f));
     }
 
     /**

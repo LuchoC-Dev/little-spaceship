@@ -42,6 +42,27 @@ public enum SystemOrder {
     SPAWN,
 
     /**
+     * Ticks down every entity's {@code Spawner} — the heavy carrier's periodic basic-enemy spawn —
+     * and creates a child the instant one is due. Added in phase 07, after {@code SPAWN} and before
+     * {@code BOSS}: a carrier spawned by {@code SPAWN} this very tick already exists by the time this
+     * stage runs, so a carrier placed at the very start of a level can begin spawning children from
+     * its very first eligible tick, the same way a boss spawned this tick is already positioned by
+     * the time {@code BOSS} runs right after.
+     *
+     * <p>A spawn inside a spawn is exactly the kind of nested, same-tick ordering phase 02's own
+     * review found a real instance of (finding F4, {@code docs/plan/02-core-mechanics/status.md}: a
+     * system reading a buffer from a stage that runs before the stage refilling it resolves stale,
+     * previous-tick data instead of the current tick's). This stage avoids the same class of mistake
+     * two ways. First, it never mutates the very store it iterates — a spawned child never itself
+     * carries a fresh {@code Spawner}, so {@code World#spawners()}'s dense array is never reordered
+     * mid-loop, the hazard {@code ComponentStore}'s own documentation warns about. Second, iteration
+     * is a plain index walk over that dense array — never a {@code HashMap} or a {@code Set} — so
+     * which carrier's child is created first, when several are due the same tick, is exactly the
+     * carriers' own creation order and nothing else, which is what keeps a replay reproducible.
+     */
+    SPAWNER,
+
+    /**
      * Advances the boss encounter: entrance, the pattern state machine and its fire. Added in phase
      * 07, after {@code SPAWN} and before {@code LIFETIME} — the boss is a second, independent
      * timeline running alongside the wave one, not a wave itself, so it does not share {@code
