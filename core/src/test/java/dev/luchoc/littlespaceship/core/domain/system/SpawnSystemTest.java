@@ -162,7 +162,7 @@ class SpawnSystemTest {
     }
 
     @Test
-    @DisplayName("a wave instance marked with a drop attaches it to every entity it spawns")
+    @DisplayName("a wave instance marked with a drop attaches it to its single-slot formation")
     void designedDropAttachesToSpawnedEntities() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
@@ -175,6 +175,40 @@ class SpawnSystemTest {
 
         assertEquals(1, world.drops().size());
         assertEquals("shield", world.drops().valueAt(0).pickupId);
+    }
+
+    @Test
+    @DisplayName("a drop on a multi-slot formation attaches to exactly the slot named, not every slot")
+    void designedDropAttachesToExactlyOneSlot() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("pair",
+                List.of(new FormationSlot(-20f, 0f), new FormationSlot(20f, 0f))))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(
+                List.of(new SpawnEvent(1f, "enemy-basic", "pair", 0.5f, "attachment", 1))));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(2, world.colliders().size());
+        assertEquals(1, world.drops().size());
+        int dropped = world.drops().entityAt(0);
+        assertEquals(20f + 0.5f * MotionSystem.PLAYFIELD_WIDTH, world.transforms().get(dropped).x);
+    }
+
+    @Test
+    @DisplayName("a drop naming a slot outside its formation fails at spawn time")
+    void dropSlotOutsideFormationFails() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(
+                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, "shield", 1))));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> system.update(world, 1f, InputFrame.IDLE));
+        assertTrue(e.getMessage().contains("single"));
     }
 
     @Test
