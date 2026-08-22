@@ -30,100 +30,170 @@ const SPRITES = {
     '.....kcCck.....',
     '......kCk......'
   ] },
-  'enemy-basic': { w: 13, h: 13, r: 5.5, art: [
-    '....kkkkk....',
-    '...kvvvvvk...',
-    '..kvvvvvvvk..',
-    '.kvvvlllvvvk.',
-    'kvvvlOOOlvvvk',
-    'kvvlOOOOOlvvk',
-    'kvvvlOOOlvvvk',
-    'kvvvvlllvvvvk',
-    '.kvvvvvvvvvk.',
-    '..kvvvkvvvk..',
-    '...kvk.kvk...',
-    '...kOk.kOk...',
-    '....k...k....'
-  ] },
-  'enemy-light': { w: 11, h: 13, r: 4.5, art: [
-    '.....k.....',
-    '....kvk....',
-    '....kvk....',
-    '...kvvvk...',
-    '...kvlvk...',
-    '..kvvlvvk..',
-    '..kvlOlvk..',
-    '.kvvlOlvvk.',
-    'kvvvlllvvvk',
-    'kvk.kvk.kvk',
-    'kOk.kvk.kOk',
-    '..k.kvk.k..',
-    '....kOk....'
-  ] },
-  'enemy-shooter': { w: 15, h: 15, r: 6.5, art: [
-    '.....kkkkk.....',
-    '....kvvvvvk....',
-    '...kvvvvvvvk...',
-    '..kvvvlllvvvk..',
-    '.kvvvlOOOlvvvk.',
-    'kvvvlOOfOOlvvvk',
-    'kvvvlOOOOOlvvvk',
-    'kvvvvlOOOlvvvvk',
-    'kvvvvvlllvvvvvk',
-    '.kvvvvvvvvvvvk.',
-    '..kvvvvvvvvvk..',
-    '.kvk.kvvvk.kvk.',
-    '.kOk..kvk..kOk.',
-    '..k...kOk...k..',
-    '......k.k......'
-  ] },
-  'enemy-rush': { w: 9, h: 15, r: 4.0, art: [
-    '....k....',
-    '...kvk...',
-    '...kvk...',
-    '...kvk...',
-    '..kvvvk..',
-    '..kvlvk..',
-    '..kvlvk..',
-    '.kvvlvvk.',
-    '.kvvlvvk.',
-    'kvvvlvvvk',
-    'kvk.k.kvk',
-    'kOk.k.kOk',
-    '.k..k..k.',
-    '...kOk...',
-    '....O....'
-  ] },
-  // The tank is where the one-violet constraint was tested, because it is the first sprite wide
-  // enough for a flat hull to show. It holds: V4 is the mass, N5 the shoulder armour and the rib
-  // that separates the two, N6 only the top-lit crest. The interior shadow is N0 and there is no
-  // darker violet to miss, because at 23 px the black reads as a panel joint rather than a hole in
-  // the shading. Its contour is the point — hard shoulders, a tapering chin and long legs, so it
-  // is not a large enemy-basic when four other things are on screen.
+  // The six archetypes, redrawn 22/08/2026. The first pass gave them a shared vocabulary -- a
+  // rounded violet mass, a ringed orange eye, yellow legs -- so basic and shooter were one enemy in
+  // a crowd and light and rush were another. Three rules fix that and they are what the next
+  // archetype has to obey too:
+  //
+  //   1. One primitive each, and no two share it: pod, fork, anvil, needle, bunker, wing.
+  //      This is the silhouette test from 05-legibility-rules.md turned into a drawing rule.
+  //   2. The ringed iris belongs to the boss and to nothing else. An ordinary enemy gets a bare
+  //      warm muzzle of 1 to 7 px with no ring around it, so the eye stops being the feature the
+  //      player looks for and the outline starts being it.
+  //   3. The warm mark IS the threat: where it sits and how much of it there is says how the enemy
+  //      hurts you. The carrier has none, which is the only way to draw "this one never shoots".
+  //
+  // Every one of them is the alien ramp and nothing else: N0 outline and interior, V4 mass, N5 rim
+  // and armour, N6 on top-facing edges only.
+  'enemy-basic': { w: 13, h: 13, r: 5.5, art: sym([
+    '....kkk',
+    '...klll',
+    '..kslll',
+    '.ksvvvv',
+    'ksvvvvv',
+    'ksvvvvv',
+    'ksvvvvv',
+    'ksvvvvv',
+    'ksvvvvv',
+    '.ksvvvv',
+    '..kvvvv',
+    '...ksOO',
+    '....kkk'
+  ]) },
+  // The fork. Its prongs are 3 px, which is the widest rule 3 in 02-sprite-sizes.md allows outside
+  // the circle, and they carry the two muzzles: this is the enemy whose shot is "simple but
+  // different", and two muzzles say that before it fires.
+  'enemy-light': { w: 11, h: 13, r: 4.5, art: sym([
+    '....kk',
+    '...kll',
+    '..kslv',
+    '.ksvvv',
+    'ksvvvv',
+    'ksvvvv',
+    'ksvvvv',
+    'ksvvvv',
+    'ksvvvv',
+    'kvvvkk',
+    'kvk...',
+    'kOk...',
+    'kkk...'
+  ]) },
+  // The anvil. A wide lit plate over a narrow neck and one fat barrel: the only archetype whose
+  // widest point is its top row, and the only one with a single large muzzle. That muzzle is the
+  // whole reason it is not a bigger basic -- it is the one that fires fast, and it is drawn as a
+  // gun rather than as a face.
+  'enemy-shooter': { w: 15, h: 15, r: 6.5, art: sym([
+    '..kkkkkk',
+    '.kllllll',
+    'ksvvvvvv',
+    'ksvvvvvv',
+    'kkkkkvvv',
+    '....kvvv',
+    '....ksvv',
+    '....ksvv',
+    '....ksvv',
+    '....kvvv',
+    '....kkvv',
+    '.....kso',
+    '.....kOO',
+    '......kO',
+    '......kk'
+  ]) },
+  // The needle. Vertical everywhere except one barb, tip downward because it kills by arriving.
+  // Nothing else in the set is 3 px wide over two thirds of its height, which is what separates it
+  // from the fork at a glance: the fork is wide and split, this is thin and whole.
+  'enemy-rush': { w: 9, h: 15, r: 4.0, art: sym([
+    '...kk',
+    '..kll',
+    '..ksl',
+    '.kksv',
+    'kksvv',
+    '.kkvv',
+    '..ksv',
+    '..ksv',
+    '..ksv',
+    '..ksv',
+    '..ksv',
+    '..kvv',
+    '...kO',
+    '...ko',
+    '....k'
+  ]) },
+  // The bunker. Redrawn from the 21/08 version, which validated clean but read friendly: a domed
+  // outline and a big ringed eye are what a mascot is made of. What replaces them is a chamfer
+  // instead of a dome, a flat 23 px waist, two stubby legs, and a horizontal gun slit where the
+  // eye was. A slit is a mouth-height band rather than a face, and it is 7 px of W4 -- more warm
+  // pixels than any other archetype, which is the reading "this one hits hard" wants.
+  //
+  // It is also where the one-violet constraint was tested, because it is the first sprite wide
+  // enough for a flat hull to show. It holds: V4 is the mass, N5 the rim and the armour plate, N6
+  // only the top-lit crest, and the interior shadow is N0, which at 23 px reads as a panel joint
+  // rather than as a hole in the shading.
   'enemy-tank': { w: 23, h: 23, r: 10.5, art: sym([
-    '.........kkk',
-    '........klll',
-    '.......kllll',
-    '......klssss',
-    '.....klsvvvv',
-    '....klsvvvvv',
-    'ksssksvvvvvv',
-    'ksOsksvvvvoo',
-    'ksssksvvvoOf',
-    'ksssksvvvvoo',
-    'ksssksvvvvvv',
-    'kkkkksvvvvvv',
-    '.ksvvvvvvvvv',
-    '..ksvvvvvvvv',
-    '...ksvvvvvvv',
-    '....ksvvvvvv',
-    '.....ksvvvvv',
-    '......ksvvvv',
-    '......kvkkkk',
-    '......kvk...',
-    '......kOk...',
-    '......kOk...',
-    '.......O....'
+    '.....kkkkkkk',
+    '....klllllll',
+    '...klsvvvvvv',
+    '..klsvvvvvvv',
+    '.klsvvvvvvvv',
+    'klsvvvvvvvvv',
+    'ksvvvvvvvvvv',
+    'ksvvvvvvvvvv',
+    'ksvvkkssssss',
+    'ksvvkksoOOOO',
+    'ksvvkkssssss',
+    'ksvvvvvvvvvv',
+    'ksvvvvvvvvvv',
+    'ksvvvvvvvvvv',
+    'ksvvvvvvvvvv',
+    'ksvvvvvvvvvv',
+    'ksvvvvvvvvvv',
+    'ksvvvvvvvvvv',
+    'kkkkkkvvvvvv',
+    '......kvvkkk',
+    '......kvvk..',
+    '......kvvk..',
+    '......kkkk..'
+  ]) },
+  // The wing, and the only archetype with no warm pixel anywhere: it never shoots, it opens a bay
+  // and lets basics out, so the thing to look at is the bay. Its 4 px wingtips are the case
+  // 02-sprite-sizes.md sets out -- drawn N0/V4/V4/N0, half of them outline, which is what makes a
+  // wing read dark when the gameplay set has no dark colour. The collider covers the central 31 px
+  // exactly, so everything the player can damage is inside the hull edge.
+  //
+  // Two of these arrive together in the strong encounter, so its interior is deliberately quiet:
+  // one nacelle each side, one dorsal ridge, one bay. Detail here doubles on screen.
+  'enemy-carrier': { w: 39, h: 31, r: 15.0, art: sym([
+    '.............kkkkkkk',
+    '...........kllllllll',
+    '.........klsvvvvvvvv',
+    '.......klsvvvvvvvvvv',
+    '.....klsvvvvvvvvvvvv',
+    '....klsvvvvvvvvvvvvv',
+    '....ksvvvvvvvvvvvvvv',
+    '....ksvvvvvvvvvvvvvv',
+    '....kllllkvvvvvvvssl',
+    '....ksssskvvvvvvvssl',
+    '....ksssskvvvvvvvssl',
+    '....ksssskvvvvvvvssl',
+    'kkkkksssskvvvvvvvssl',
+    'kkvvksssskvvvvvvvssl',
+    'kkvvksssskvvvvvvvssl',
+    'kkvvksssskvvvvvvvssl',
+    'kkvvksssskvvvvvvvssl',
+    'kkvvksssskvvvvvvvssl',
+    'kkvvksssskvvvvvvvssl',
+    'kkkkksssskvvvvvvvssl',
+    '....kkkkkkvvvvvvvssl',
+    '....ksvvvvvvvvvvvvvv',
+    '....ksvvvvvvvvvvvvvv',
+    '.....ksvvvvvvvllllll',
+    '.....ksvvvvvvvkkkkkk',
+    '......ksvvvvvvkkkkkk',
+    '.......ksvvvvvkkkkkk',
+    '........ksvvvvkkkkkk',
+    '.........ksvvvkkkkkk',
+    '..........ksvvkkkkkk',
+    '...........kkkkkkkkk'
   ]) },
   'shot-p1': { w: 3, h: 9, r: 1.5, art: [
     'kck', 'kCk', 'kCk', 'kCk', 'kCk', 'kCk', 'kCk', 'kck', '.k.'
@@ -226,11 +296,58 @@ const SPRITES = {
   ] }
 };
 
+// Sprites whose collider is meant to match what the player aims at. The player ship and every
+// projectile are excluded because their radius is deliberately far smaller than their art -- rule 4
+// of 02-sprite-sizes.md applies generosity in one direction only, and measuring them here would
+// only report the generosity back as an error.
+const AIMED_AT = ['enemy-', 'structure-', 'boss-'];
+
+// How far a sprite may hang past its own collider. The original wording, "85% of opaque pixels fall
+// within the radius", cannot be met by anything elongated: enemy-rush is 15 px tall against a 4 px
+// radius and tops out near 53% however it is drawn. What the rule was protecting is not the
+// fraction, it is that no *mass* sits outside the circle -- shoot it and nothing happens.
+//
+// So it is measured on the hull rather than on the outline, in two ways at once, because either
+// alone lets something through: a row may carry at most three hull pixels past the radius on a
+// side, and no hull pixel may sit more than three pixels past it. Outline is exempt on purpose;
+// 02-sprite-sizes.md already argues that a 4 px wing drawn half in N0 reads as a strut, and that
+// argument is only true if the black is allowed to be the part that sticks out.
+const MAX_OVERHANG = 3, MAX_DEPTH = 3;
+
+function overhang(s) {
+  const cx = (s.w - 1) / 2, cy = (s.h - 1) / 2;
+  let worst = 0, worstRow = -1, deepest = 0, deepRow = -1;
+  s.art.forEach((line, y) => {
+    let left = 0, right = 0;
+    [...line].forEach((ch, x) => {
+      if (ch === '.' || ch === 'k') return;
+      const past = Math.hypot(x - cx, y - cy) - s.r;
+      if (past > deepest) { deepest = past; deepRow = y; }
+      if (past <= 1) return;
+      if (x < cx) left++; else right++;
+    });
+    const most = Math.max(left, right);
+    if (most > worst) { worst = most; worstRow = y; }
+  });
+  return { worst, worstRow, deepest, deepRow };
+}
+
 // Every sprite must match the size it declares, and every character must be a palette colour.
 // A silhouette that lies about its footprint is the exact failure this mock exists to catch.
 function validateSprites() {
   const problems = [];
   for (const [id, s] of Object.entries(SPRITES)) {
+    if (s.r !== undefined && AIMED_AT.some(p => id.startsWith(p))) {
+      const { worst, worstRow, deepest, deepRow } = overhang(s);
+      if (worst > MAX_OVERHANG) {
+        problems.push(id + ': row ' + worstRow + ' puts ' + worst + ' hull pixels past the '
+          + 'collider, over the ' + MAX_OVERHANG + ' a wingtip is allowed');
+      }
+      if (deepest > MAX_DEPTH) {
+        problems.push(id + ': row ' + deepRow + ' has hull ' + deepest.toFixed(1)
+          + ' px past the collider, over the ' + MAX_DEPTH + ' px limit');
+      }
+    }
     if (s.art.length !== s.h) {
       problems.push(id + ': declares height ' + s.h + ' and has ' + s.art.length + ' rows');
     }

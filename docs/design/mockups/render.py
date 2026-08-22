@@ -6,8 +6,13 @@ gets seen by whoever is drawing it. No third-party libraries on purpose: PIL is
 not installed here and the web target's toolchain must not grow a dependency for
 a design-time script.
 
-    python render.py            every sprite, 6x, on a dark ground
-    python render.py tank 12    one sprite by id fragment, at 12x
+    python render.py              every sprite, 6x, on a dark ground
+    python render.py tank 12      one sprite by id fragment, at 12x
+    python render.py enemy 8 flat every match filled flat, for the silhouette test
+
+The flat mode is the silhouette test of docs/design/05-legibility-rules.md, which asks for every
+archetype filled with one colour and looked at side by side. It fills with N4 rather than the N0 the
+rule names, because a black shape on the dark ground this sheet uses is a shape you cannot see.
 """
 import re, sys, zlib, struct, pathlib
 
@@ -66,6 +71,7 @@ def main():
     art = sprites()
     wanted = sys.argv[1] if len(sys.argv) > 1 else None
     scale = int(sys.argv[2]) if len(sys.argv) > 2 else 6
+    flat = len(sys.argv) > 3 and sys.argv[3] == "flat"
     if wanted:
         art = {k: v for k, v in art.items() if wanted in k}
     if not art:
@@ -90,11 +96,12 @@ def main():
                 for x, ch in enumerate(row):
                     index = chars.get(ch, -1)
                     if index >= 0:
-                        canvas[oy + y][ox + x] = colours[index]
+                        canvas[oy + y][ox + x] = colours[4] if flat else colours[index]
 
     big = [[canvas[y // scale][x // scale] for x in range(width * scale)]
            for y in range(height * scale)]
-    out = HERE / ("sprites.png" if not wanted else "sprite-%s.png" % wanted)
+    stem = "sprites" if not wanted else "sprite-%s" % wanted
+    out = HERE / ((stem + "-flat.png") if flat else (stem + ".png"))
     png(out, big, width * scale, height * scale)
     print("%s - %d sprites, %dx%d at %dx" % (out.name, len(cells), width, height, scale))
 

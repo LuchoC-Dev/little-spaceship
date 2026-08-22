@@ -14,10 +14,24 @@ ship that visibly wobbles when it crosses a half-pixel.
 radius and a layer — there is no offset field and no rectangle. So the hitbox is always concentric
 with the sprite, and the art has to be drawn around that: the visual mass belongs at the centre.
 
-**3. Collidable mass sits inside the circle.** At least 85% of a colliding sprite's opaque pixels
-fall within its radius. Anything outside must be at most 3 px thin and read as secondary —
-wingtips, antennae, exhaust. A player who shoots a wing and sees nothing happen is looking at a
-bug, whether or not the code has one.
+**3. Collidable mass sits inside the circle.** Anything outside must be thin and read as secondary
+— wingtips, antennae, exhaust. A player who shoots a wing and sees nothing happen is looking at a
+bug, whether or not the code has one. Two numbers, both measured on **hull pixels only**, since the
+outline is thin by definition and is what a wingtip is mostly made of:
+
+- a row may put at most **3** hull pixels past the radius on either side;
+- no hull pixel sits more than **3 px** past the radius.
+
+This replaces the original wording, "at least 85% of opaque pixels fall within the radius", which
+was corrected on 22/08/2026 when the enemies were drawn against it. That figure is unreachable for
+anything elongated and always was: `enemy-rush` is 15 px tall against a 4.0 radius and peaks near
+53% however it is drawn, and the player ship reaches 24% by design. The fraction was never the
+thing being protected — the absence of thick mass outside the circle was.
+
+`mockups/src/01-sprites.js` measures both numbers and `check.js` reports them, for ids beginning
+`enemy-`, `structure-` and `boss-`. The player ship and projectiles are exempt, because rule 4 makes
+their colliders deliberately unlike their art and measuring them would report the generosity back
+as an error.
 
 **4. Generosity always favours the player.** It is applied by ratio, in one direction only:
 
@@ -83,11 +97,18 @@ The six from `../planning/02-mvp-functional-spec.md`, in the order the level int
 | Tank | 23x23 | 10.5 | 91% | `enemy-tank` |
 | Heavy carrier | 39x31 | 15.0 | 97% of its height | `enemy-carrier` |
 
-Coverage is the collider's diameter against the sprite's **smaller** dimension.
+Coverage is the collider's diameter against the sprite's **smaller** dimension. It is a description
+of the table, not a rule — rule 3 above is the rule, and it is the one the checker enforces.
 
 The carrier is the one exception worth explaining. It is 39 px wide and its circle is 30 across, so
 its outer 4 px each side are wing and must be drawn as wing: thin, dark, obviously not hull. Its
 mass and its damage-taking silhouette are the central 31x31.
+
+Drawn, the wing came out `N0 / N0 / V4 / V4` rather than the `N0 / V4 / V4 / N0` proposed below.
+The reason is rule 3, measured: with hull in the second column the outermost violet sits 3.3 px past
+a 15.0 radius and the checker rejects it, and with hull in the third and fourth it sits 2.0 px past
+and passes. It also looks better — a black leading edge reads as a swept strut, where a violet one
+read as a small bar floating beside the ship.
 
 **"Dark" there does not mean a dark colour** — the gameplay set has none, since the darkest gameplay
 colour is V4 at `L*` 48.1, the same tone the hull is made of. The wing is dark because it is
