@@ -53,7 +53,8 @@
         "sprite": { "id": "enemy-carrier" },
         "collider": { "radius": 15.0, "fragile": false },
         "scoreValue": { "points": 1000 },
-        "health": { "points": 80 }
+        "health": { "points": 80 },
+        "spawner": { "enemyId": "enemy-basic", "interval": 4.0, "offsetX": 0, "offsetY": -24 }
       }
     }
   ]
