@@ -5,11 +5,13 @@ import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import dev.luchoc.littlespaceship.core.port.AttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
+import dev.luchoc.littlespaceship.core.port.BossDefinition;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationSlot;
 import dev.luchoc.littlespaceship.core.port.SimpleAttachmentDefinition;
+import dev.luchoc.littlespaceship.core.port.SimpleBossDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
@@ -18,9 +20,12 @@ import dev.luchoc.littlespaceship.core.port.SpawnEvent;
 import dev.luchoc.littlespaceship.core.port.TrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.WaveTimeline;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The {@link ContentSource} the plan's phase 04 left to {@code game}: reads
@@ -50,6 +55,7 @@ public final class JsonContentSource implements ContentSource {
     private final Map<String, FormationDefinition> formations = new HashMap<>();
     private final Map<String, WaveTimeline> timelines = new HashMap<>();
     private final Map<String, AttachmentDefinition> attachments = new HashMap<>();
+    private final Map<String, BossDefinition> bosses = new HashMap<>();
 
     /**
      * Loads every content file under {@code dataDir}.
@@ -101,6 +107,16 @@ public final class JsonContentSource implements ContentSource {
     @Override
     public AttachmentDefinition attachment(String id) {
         return require(attachments, id, "attachment");
+    }
+
+    @Override
+    public boolean hasBoss(String levelId) {
+        return bosses.containsKey(levelId);
+    }
+
+    @Override
+    public BossDefinition boss(String levelId) {
+        return require(bosses, levelId, "level boss");
     }
 
     private static <T> T require(Map<String, T> registry, String id, String kind) {
@@ -168,20 +184,80 @@ public final class JsonContentSource implements ContentSource {
         });
     }
 
+    /**
+     * Reads {@code level-01.json}'s two top-level blocks: the optional {@code "boss"} object and the
+     * required {@code "events"} array. {@code hasBoss}/{@code boss} answer false/throw for a level
+     * whose file carries no {@code "boss"} key at all — a legitimate case per {@link ContentSource}'s
+     * own contract — but any key on either object this schema does not name fails loudly through
+     * {@link #requireOnlyKeys}, closing the gap {@code level-designer} found: an unrecognised key used
+     * to load clean and silently leave the level with no boss, which is worse than a parse error.
+     */
     private void loadLevel(JsonReader reader, FileHandle file, String levelId) {
         inFile(file, () -> {
+            JsonValue root = reader.parse(file);
+            requireOnlyKeys(root, "level file", "boss", "events");
+            JsonValue bossValue = root.get("boss");
+            if (bossValue != null) {
+                bosses.put(levelId, parseBoss(bossValue));
+            }
             List<SpawnEvent> events = new ArrayList<>();
-            for (JsonValue entry : reader.parse(file).get("events")) {
+            for (JsonValue entry : root.get("events")) {
+                requireOnlyKeys(entry, "spawn event", "at", "spawn", "formation", "atX", "drop", "dropSlot");
                 events.add(new SpawnEvent(
                     entry.getFloat("at"),
                     entry.getString("spawn"),
                     entry.getString("formation"),
                     entry.getFloat("atX"),
-                    entry.getString("drop", null)));
+                    entry.getString("drop", null),
+                    entry.getInt("dropSlot", 0)));
             }
             timelines.put(levelId, new SimpleWaveTimeline(events));
             return null;
         });
+    }
+
+    /**
+     * Parses the {@code "boss"} block, keys named exactly after {@link BossDefinition}'s accessors —
+     * see {@code docs/plan/07-boss/status.md}'s "Notes for whoever comes next" for the field list.
+     */
+    private static BossDefinition parseBoss(JsonValue value) {
+        requireOnlyKeys(value, "boss block",
+            "id", "entersAt", "coreHealth", "podHealth", "armHealth",
+            "corePoints", "podPoints", "armPoints",
+            "entranceSpeed", "combatY", "patternCooldown",
+            "spreadProjectileSpeed", "sweepProjectileSpeed");
+        return new SimpleBossDefinition(
+            value.getString("id"),
+            value.getFloat("entersAt"),
+            value.getInt("coreHealth"),
+            value.getInt("podHealth"),
+            value.getInt("armHealth"),
+            value.getInt("corePoints"),
+            value.getInt("podPoints"),
+            value.getInt("armPoints"),
+            value.getFloat("entranceSpeed"),
+            value.getFloat("combatY"),
+            value.getFloat("patternCooldown"),
+            value.getFloat("spreadProjectileSpeed"),
+            value.getFloat("sweepProjectileSpeed"));
+    }
+
+    /**
+     * Rejects a key {@code value} carries that {@code allowedKeys} does not name. This is the other
+     * half of "malformed content fails naming the file and the offending id": {@code core}'s own
+     * constructors already reject a missing or invalid field, but nothing before this rejected an
+     * unrecognised one — a typo'd or stale key used to load clean and silently do nothing, which for
+     * a top-level block like {@code "boss"} means the level loads with no boss and can never be
+     * completed, the worst kind of failure because nothing reports it.
+     */
+    private static void requireOnlyKeys(JsonValue value, String context, String... allowedKeys) {
+        Set<String> allowed = new HashSet<>(Arrays.asList(allowedKeys));
+        for (JsonValue child = value.child; child != null; child = child.next) {
+            if (!allowed.contains(child.name)) {
+                throw new IllegalArgumentException(
+                    context + " has an unrecognised key '" + child.name + "'");
+            }
+        }
     }
 
     /**
