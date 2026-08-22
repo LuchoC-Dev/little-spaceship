@@ -68,7 +68,7 @@ class BossSystemTest {
         assertEquals(0, world.colliders().size());
 
         system.update(world, 0.6f, InputFrame.IDLE);
-        assertEquals(5, world.colliders().size());
+        assertEquals(6, world.colliders().size());
         BossStatus status = world.view().bossStatus();
         assertTrue(status.present());
         assertEquals(status.hpMax(), status.hp());
@@ -115,7 +115,7 @@ class BossSystemTest {
         // Every part but the core is marked for destruction with it: a defeated boss does not linger
         // as a headless husk. Actual removal is CleanupSystem's job, not exercised in this isolated
         // BossSystem test, so what is checked here is the marking, not the collider count.
-        assertEquals(4, world.pendingDestruction().size());
+        assertEquals(5, world.pendingDestruction().size());
     }
 
     @Test

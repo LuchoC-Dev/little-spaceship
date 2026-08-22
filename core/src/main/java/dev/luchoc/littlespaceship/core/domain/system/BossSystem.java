@@ -14,7 +14,7 @@ import dev.luchoc.littlespaceship.core.port.InputFrame;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
 
 /**
- * Level 1's climax: a five-part boss with one phase and two alternating, tell-then-fire attack
+ * Level 1's climax: a six-part boss with one phase and two alternating, tell-then-fire attack
  * patterns, per the decision recorded in {@code 08-decisions-and-open-items.md} under "Level 1
  * climax and length".
  *
@@ -23,11 +23,22 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * ticks. A fresh {@code Simulation} always builds a fresh {@code BossSystem}, so this state is
  * exactly as reproducible as everything else the composition root creates once per run.
  *
- * <p><b>Footprint is an art fact, not content.</b> Five parts, their offsets and their radii are
- * fixed in {@code docs/design/02-sprite-sizes.md} and hardcoded here as constants — the same
- * treatment {@code Simulation} already gives the player's collider radius — rather than read from
- * {@link BossDefinition}, which carries only what genuinely varies with balancing: hit points,
- * timing and projectile speed.
+ * <p><b>Footprint is an art fact, not content.</b> Six parts, their offsets and their radii are
+ * fixed in {@code docs/design/02-sprite-sizes.md}/{@code 06-boss-presentation.md} and hardcoded here
+ * as constants — the same treatment {@code Simulation} already gives the player's collider radius —
+ * rather than read from {@link BossDefinition}, which carries only what genuinely varies with
+ * balancing: hit points, timing and projectile speed.
+ *
+ * <p><b>The sixth part, {@code core-keel}.</b> The original five colliders left a 25 px gap below the
+ * core's own circle — the keel, exactly where a player shooting up into the boss aims first — through
+ * which a projectile visibly passed with nothing registering. Found by {@code visual-designer}
+ * drawing the parts against {@code 02-sprite-sizes.md}'s map, fixed here per
+ * {@code 06-boss-presentation.md}'s proposal: one more entity, radius 13.0 at offset (0, −27), plus
+ * moving the arms from offset y −18 to −22. The keel carries its own {@link Health} and {@link
+ * ScoreValue} — the core's own numbers, since it reads as part of the core rather than as a
+ * fourth kind of part — and no {@link Sprite}: it draws nothing of its own, it only extends where a
+ * hit against the core's existing drawn sprite actually registers. It dies with the core exactly like
+ * a pod or an arm; its own death, on its own, ends nothing.
  *
  * <p><b>The pattern state machine.</b> Fixed order, no randomness: spread and sweep alternate every
  * cycle, never chosen. Each cycle is a cooldown, then a three-beat, 0.75 s tell — the timing fixed in
@@ -40,29 +51,40 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * sweep, per that same design document, so the part that lights carries the dodge direction.
  *
  * <p><b>Defeat.</b> The core is the only part whose death ends the fight: once it is destroyed,
- * whatever pods or arms remain are destroyed with it — a boss does not linger as a headless
+ * whatever keel, pods or arms remain are destroyed with it — a boss does not linger as a headless
  * husk — and {@link World#markBossDefeated()} is called, which is what {@code WorldView.outcome()}
- * requires for {@code LevelOutcome.COMPLETED} on a boss level. A pod or an arm can die earlier, on
- * its own, without ending anything; a pattern whose charging parts are both already dead simply
- * fires nothing and still completes its cycle, so the fight never stalls waiting on a part that is
- * gone.
+ * requires for {@code LevelOutcome.COMPLETED} on a boss level. The keel, a pod or an arm can die
+ * earlier, on its own, without ending anything; a pattern whose charging parts are both already dead
+ * simply fires nothing and still completes its cycle, so the fight never stalls waiting on a part
+ * that is gone.
  *
  * <p><b>Damage and score need nothing new.</b> Every part is an ordinary {@code ENEMY}-layer,
  * non-fragile {@link Collider} carrying {@link Health} and {@link ScoreValue}, so {@code
  * DamageSystem}, {@code BombSystem} and {@code ScoreSystem} already resolve a hit against it, a bomb
- * detonation, and the points it awards with no boss-specific code at all.
+ * detonation, and the points it awards with no boss-specific code at all — {@code core-keel} included,
+ * even though it draws nothing: nothing downstream of {@code Collider}/{@code Health}/{@code
+ * ScoreValue} needs a {@link Sprite} to exist.
  */
 public final class BossSystem implements GameSystem {
 
-    // Footprint, from docs/design/02-sprite-sizes.md — synchronisation point, not balance.
+    // Footprint, from docs/design/02-sprite-sizes.md and 06-boss-presentation.md — synchronisation
+    // point, not balance.
     private static final float CORE_RADIUS = 18.0f;
     private static final float POD_RADIUS = 12.0f;
     private static final float ARM_RADIUS = 14.0f;
 
+    /** Closes the keel gap under the core; see the class javadoc. No {@code Sprite} of its own. */
+    private static final float CORE_KEEL_RADIUS = 13.0f;
+
     private static final float POD_OFFSET_X = 34f;
     private static final float POD_OFFSET_Y = 6f;
     private static final float ARM_OFFSET_X = 44f;
-    private static final float ARM_OFFSET_Y = -18f;
+
+    /** Moved from −18 to −22 alongside adding {@code core-keel}; see the class javadoc. */
+    private static final float ARM_OFFSET_Y = -22f;
+
+    private static final float CORE_KEEL_OFFSET_X = 0f;
+    private static final float CORE_KEEL_OFFSET_Y = -27f;
 
     private static final SpriteId CORE_SPRITE = new SpriteId("boss-core");
     private static final SpriteId POD_SPRITE = new SpriteId("boss-pod");
@@ -101,12 +123,12 @@ public final class BossSystem implements GameSystem {
     private static final float SWEEP_VY_RATIO = -0.65f;
 
     /**
-     * The core's spawn height: tangent to the playfield edge as seen through the lowest part, the
-     * arm, exactly {@code SpawnSystem.lowestOffsetY}'s trick applied to the boss's own five fixed
-     * offsets instead of a formation's slots.
+     * The core's spawn height: comfortably above the playfield edge as seen through the lowest part
+     * — the keel, now that it sits below the arms — exactly {@code SpawnSystem.lowestOffsetY}'s trick
+     * applied to the boss's own six fixed offsets instead of a formation's slots.
      */
     private static final float CORE_SPAWN_Y =
-        SpawnSystem.PLAYFIELD_HEIGHT + (ARM_RADIUS - ARM_OFFSET_Y);
+        SpawnSystem.PLAYFIELD_HEIGHT + (CORE_KEEL_RADIUS - CORE_KEEL_OFFSET_Y);
 
     private enum Phase { AWAITING, ENTRANCE, FIGHT, DEFEATED }
 
@@ -121,6 +143,7 @@ public final class BossSystem implements GameSystem {
     private Phase phase = Phase.AWAITING;
 
     private int core = EntityId.NONE;
+    private int coreKeel = EntityId.NONE;
     private int podLeft = EntityId.NONE;
     private int podRight = EntityId.NONE;
     private int armLeft = EntityId.NONE;
@@ -202,6 +225,8 @@ public final class BossSystem implements GameSystem {
         coreY = CORE_SPAWN_Y;
 
         core = createPart(world, coreX, coreY, CORE_SPRITE, CORE_RADIUS, def.coreHealth(), def.corePoints());
+        coreKeel = createPart(world, coreX + CORE_KEEL_OFFSET_X, coreY + CORE_KEEL_OFFSET_Y, null,
+            CORE_KEEL_RADIUS, def.coreHealth(), def.corePoints());
         podLeft = createPart(world, coreX - POD_OFFSET_X, coreY + POD_OFFSET_Y, POD_SPRITE, POD_RADIUS,
             def.podHealth(), def.podPoints());
         podRight = createPart(world, coreX + POD_OFFSET_X, coreY + POD_OFFSET_Y, POD_SPRITE, POD_RADIUS,
@@ -212,12 +237,19 @@ public final class BossSystem implements GameSystem {
             def.armHealth(), def.armPoints());
     }
 
+    /**
+     * @param sprite what to draw, or {@code null} for a part with no drawn sprite of its own —
+     *     {@code core-keel}, which only exists to extend where a hit against the core's own drawn
+     *     sprite registers
+     */
     private static int createPart(
         World world, float x, float y, SpriteId sprite, float radius, int health, int points) {
         int entity = world.createEntity();
         world.transforms().set(entity, new Transform(x, y));
         world.colliders().set(entity, new Collider(radius, CollisionLayer.ENEMY, false));
-        world.sprites().set(entity, new Sprite(sprite));
+        if (sprite != null) {
+            world.sprites().set(entity, new Sprite(sprite));
+        }
         world.healths().set(entity, new Health(health));
         world.scoreValues().set(entity, new ScoreValue(points));
         return entity;
@@ -241,6 +273,7 @@ public final class BossSystem implements GameSystem {
 
     private void positionParts(World world) {
         setPosition(world, core, coreX, coreY);
+        setPosition(world, coreKeel, coreX + CORE_KEEL_OFFSET_X, coreY + CORE_KEEL_OFFSET_Y);
         setPosition(world, podLeft, coreX - POD_OFFSET_X, coreY + POD_OFFSET_Y);
         setPosition(world, podRight, coreX + POD_OFFSET_X, coreY + POD_OFFSET_Y);
         setPosition(world, armLeft, coreX - ARM_OFFSET_X, coreY + ARM_OFFSET_Y);
@@ -346,6 +379,7 @@ public final class BossSystem implements GameSystem {
      * World#markBossDefeated()} is what lets {@code WorldView.outcome()} report victory.
      */
     private void handleCoreDeath(World world) {
+        markDefeatedPart(world, coreKeel);
         markDefeatedPart(world, podLeft);
         markDefeatedPart(world, podRight);
         markDefeatedPart(world, armLeft);
@@ -367,9 +401,9 @@ public final class BossSystem implements GameSystem {
      * makes the bar shorten the instant a part dies, not only while it is merely damaged.
      */
     private void reportStatus(World world, BossDefinition def) {
-        int hp = healthOf(world, core) + healthOf(world, podLeft) + healthOf(world, podRight)
-            + healthOf(world, armLeft) + healthOf(world, armRight);
-        int hpMax = def.coreHealth() + 2 * def.podHealth() + 2 * def.armHealth();
+        int hp = healthOf(world, core) + healthOf(world, coreKeel) + healthOf(world, podLeft)
+            + healthOf(world, podRight) + healthOf(world, armLeft) + healthOf(world, armRight);
+        int hpMax = 2 * def.coreHealth() + 2 * def.podHealth() + 2 * def.armHealth();
         world.setBossStatus(hp, hpMax);
     }
 
