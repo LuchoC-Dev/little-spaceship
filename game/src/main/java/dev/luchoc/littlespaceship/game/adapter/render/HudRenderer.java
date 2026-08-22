@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
+import dev.luchoc.littlespaceship.core.port.BossStatus;
 import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
 import dev.luchoc.littlespaceship.core.port.PlayerStatus;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
@@ -21,10 +22,11 @@ import dev.luchoc.littlespaceship.game.ui.Palette;
  * y-down convention; {@link #yGdx} is the one place the flip to libGDX's y-up space happens, per the
  * document's own warning that doing it anywhere else is how a HUD ends up half-flipped.
  *
- * <p>The boss bar is deliberately not drawn: it needs a boss health signal {@code core.port} does
- * not expose yet (a {@code BossStatus}, out of this phase's scope — phase 07's concern) and the
- * document itself says it only ever appears during that fight, so its absence here is the same
- * "only during the fight" rule applied to a fight that cannot happen yet.
+ * <p>The boss bar reads {@link BossStatus}, drawn only while {@link BossStatus#present()} is true —
+ * "only during the fight", per {@code 04-hud-layout.md}. It never reacts to the tell: {@code
+ * docs/design/06-boss-presentation.md} is explicit that the bar and the tell are different channels,
+ * so this widget only ever moves in response to {@link BossStatus#hp()} changing, never a part's
+ * frame.
  *
  * <p>{@code maxLives}, {@code maxBombs} and {@code maxWeaponLevel} come from {@link BalanceValues}
  * at construction, not per frame: they are run-wide caps, and {@link PlayerStatus} only ever reports
@@ -61,6 +63,19 @@ public final class HudRenderer {
     private static final int RULE_FLASH_W3_TICKS = 4;
     private static final int RULE_FLASH_TOTAL_TICKS = RULE_FLASH_N7_TICKS + RULE_FLASH_W3_TICKS;
 
+    /** Boss bar geometry, {@code 04-hud-layout.md}'s right-plate table. */
+    private static final int BOSS_BAR_X = 347;
+    private static final int BOSS_BAR_Y = 20;
+    private static final int BOSS_BAR_WIDTH = 8;
+    private static final int BOSS_BAR_HEIGHT = 230;
+    private static final int BOSS_FILL_X = 348;
+    private static final int BOSS_FILL_Y = 21;
+    private static final int BOSS_FILL_WIDTH = 6;
+    private static final int BOSS_FILL_HEIGHT = 228;
+
+    /** "Rows lost in a single hit flash N7 for 2 ticks before going dark." */
+    private static final int BOSS_ROW_LOSS_FLASH_TICKS = 2;
+
     private final BitmapFont fontMini;
     private final BitmapFont fontTitle;
     private final Texture pixel;
@@ -96,6 +111,17 @@ public final class HudRenderer {
     private int weaponGainedTicks;
     private int ruleFlashTicks;
 
+    /**
+     * {@code null} until the first {@link #draw} call, the same guard {@link #previousStatus} uses —
+     * without it, the boss's very first status (going from {@link BossStatus#NONE}, hp 0, to its
+     * starting total) would read as hp increasing, never decreasing, so no false flash risk exists
+     * there; the guard exists for symmetry and so a mid-run screen swap never crashes on null.
+     */
+    private BossStatus previousBossStatus;
+    private int bossRowLossStart;
+    private int bossRowLossHeight;
+    private int bossRowLossTicks;
+
     public HudRenderer(Skin skin, BalanceValues balance) {
         this.fontMini = skin.getFont("font-mini");
         this.fontTitle = skin.getFont("font-title");
@@ -112,15 +138,18 @@ public final class HudRenderer {
     }
 
     /**
-     * Draws both plates. The batch must already be between {@code begin()} and {@code end()}, and
-     * projected onto the logical 480x270 space {@link LittleSpaceshipGame} uses.
+     * Draws both plates, including the boss bar. The batch must already be between {@code begin()}
+     * and {@code end()}, and projected onto the logical 480x270 space {@link LittleSpaceshipGame}
+     * uses.
      */
-    public void draw(SpriteBatch batch, PlayerStatus status) {
+    public void draw(SpriteBatch batch, PlayerStatus status, BossStatus bossStatus) {
         updateFeedback(status);
+        updateBossFeedback(bossStatus);
         drawFrame(batch);
         drawLeftPlate(batch, status);
-        drawRightPlate(batch, status);
+        drawRightPlate(batch, status, bossStatus);
         decrementFeedback();
+        decrementBossFeedback();
     }
 
     /**
@@ -176,6 +205,42 @@ public final class HudRenderer {
         if (ruleFlashTicks > 0) {
             ruleFlashTicks--;
         }
+    }
+
+    /**
+     * Starts the row-loss flash when {@code hp} drops without the fight resetting ({@code hpMax}
+     * unchanged) — a boss just spawning (hp jumping up from {@link BossStatus#NONE}) or a level with
+     * no boss (both snapshots equal to {@code NONE}) never triggers it, since neither is a drop.
+     */
+    private void updateBossFeedback(BossStatus status) {
+        if (previousBossStatus == null) {
+            previousBossStatus = status;
+            return;
+        }
+        if (status.present() && previousBossStatus.present() && status.hpMax() == previousBossStatus.hpMax()) {
+            int oldFilled = bossFilledPixels(previousBossStatus);
+            int newFilled = bossFilledPixels(status);
+            if (newFilled < oldFilled) {
+                bossRowLossStart = newFilled;
+                bossRowLossHeight = oldFilled - newFilled;
+                bossRowLossTicks = BOSS_ROW_LOSS_FLASH_TICKS;
+            }
+        }
+        previousBossStatus = status;
+    }
+
+    private void decrementBossFeedback() {
+        if (bossRowLossTicks > 0) {
+            bossRowLossTicks--;
+        }
+    }
+
+    private static int bossFilledPixels(BossStatus status) {
+        if (status.hpMax() <= 0) {
+            return 0;
+        }
+        int filled = Math.round(BOSS_FILL_HEIGHT * (float) status.hp() / status.hpMax());
+        return Math.max(0, Math.min(BOSS_FILL_HEIGHT, filled));
     }
 
     /**
@@ -280,11 +345,43 @@ public final class HudRenderer {
         return label.length() > 13 ? label.substring(0, 13) : label;
     }
 
-    private void drawRightPlate(SpriteBatch batch, PlayerStatus status) {
+    private void drawRightPlate(SpriteBatch batch, PlayerStatus status, BossStatus bossStatus) {
         label(batch, "SCORE", RIGHT_COLUMN_X, 14);
         String score = zeroPadded(status.score(), 7);
         layout.setText(fontTitle, score);
         title(batch, score, RIGHT_COLUMN_RIGHT_EDGE - layout.width, 24, Palette.N7);
+
+        if (bossStatus.present()) {
+            drawBossBar(batch, bossStatus);
+        }
+    }
+
+    /**
+     * The vertical bar in the right margin, per {@code 04-hud-layout.md}'s "The boss bar is
+     * vertical, and in the margin": anchored at the top, its filled length shrinking as {@code hp}
+     * falls. Filled rows are {@code round(228 * hp / hpMax)} in {@code W4} with a 1 px {@code W3}
+     * column on the right edge; the row strip just lost in the most recent hit flashes {@code N7}
+     * for {@link #BOSS_ROW_LOSS_FLASH_TICKS} ticks before going dark, per that document's "Feedback"
+     * note.
+     */
+    private void drawBossBar(SpriteBatch batch, BossStatus status) {
+        label(batch, "BOSS", RIGHT_COLUMN_X, 44);
+
+        rect(batch, BOSS_BAR_X, BOSS_BAR_Y, BOSS_BAR_WIDTH, BOSS_BAR_HEIGHT, Palette.N0);
+
+        int filled = bossFilledPixels(status);
+        if (filled > 0) {
+            rect(batch, BOSS_FILL_X, BOSS_FILL_Y, BOSS_FILL_WIDTH - 1, filled, Palette.W4);
+            rect(batch, BOSS_FILL_X + BOSS_FILL_WIDTH - 1, BOSS_FILL_Y, 1, filled, Palette.W3);
+        }
+        int emptyHeight = BOSS_FILL_HEIGHT - filled;
+        if (emptyHeight > 0) {
+            rect(batch, BOSS_FILL_X, BOSS_FILL_Y + filled, BOSS_FILL_WIDTH, emptyHeight, Palette.N2);
+        }
+        if (bossRowLossTicks > 0) {
+            rect(batch, BOSS_FILL_X, BOSS_FILL_Y + bossRowLossStart, BOSS_FILL_WIDTH,
+                bossRowLossHeight, Palette.N7);
+        }
     }
 
     private void label(SpriteBatch batch, String text, int x, int yDown) {

@@ -166,7 +166,7 @@ public final class PlayScreen implements Screen {
         batch.begin();
         checkerboard.draw(batch, PLAYFIELD_LEFT, 0f, PLAYFIELD_WIDTH, LittleSpaceshipGame.LOGICAL_HEIGHT);
         worldRenderer.draw(drawView, batch, drawStatus);
-        hudRenderer.draw(batch, drawStatus);
+        hudRenderer.draw(batch, drawStatus, drawView.bossStatus());
         if (paused) {
             batch.setColor(1f, 1f, 1f, 1f);
             batch.draw(dimTexture, 0f, 0f,
