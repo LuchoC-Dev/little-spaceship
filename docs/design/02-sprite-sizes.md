@@ -177,8 +177,20 @@ Pickup radii exceed the sprite on purpose — 12 px of collision on an 11 px cap
 power-up you flew through is the kind of unfairness a player remembers, and nothing about the game
 depends on it being precise.
 
-The five power-ups share one capsule silhouette and are told apart by the **icon inside it**, which
-is the same icon the HUD uses. Learn it once, read it everywhere.
+The five power-ups share one capsule silhouette and are told apart by the **mark inside it**: five
+pixels square, white, the only thing that changes between them.
+
+It is the same *mark* the HUD uses and not the same pixels, which is a correction made on 22/08/2026
+while drawing both. `04-hud-layout.md` gives the life slot a ship silhouette, the bomb slot a W4
+core inside an N6 ring and the invulnerability icon a burst over F1; none of those survives being
+redrawn at 5x5, and forcing them to would cost the HUD its detail rather than gain the capsule any.
+What carries over is the shape family — a cross for a life, a filled round thing for a bomb, a
+shield for a shield, a burst for invulnerability, escorts for the attachment — and that is enough
+for "learn it once", which was the point of the rule.
+
+The marks stay white rather than borrowing each HUD element's accent colour. White on G2 is the
+highest contrast available inside a green capsule, and legibility outranks the tidiness of having
+the hues agree.
 
 ## Explosions
 
