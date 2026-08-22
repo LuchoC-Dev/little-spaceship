@@ -23,6 +23,7 @@ import dev.luchoc.littlespaceship.core.port.LevelOutcome;
 import dev.luchoc.littlespaceship.core.port.PlayerStatus;
 import dev.luchoc.littlespaceship.core.port.WorldView;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
+import dev.luchoc.littlespaceship.game.adapter.audio.AudioDirector;
 import dev.luchoc.littlespaceship.game.adapter.content.JsonContentSource;
 import dev.luchoc.littlespaceship.game.adapter.input.InputAdapter;
 import dev.luchoc.littlespaceship.game.adapter.render.CheckerboardBackground;
@@ -69,6 +70,7 @@ public final class PlayScreen implements Screen {
     private ContentSource content;
     private Simulation simulation;
     private GameLoop loop;
+    private AudioDirector audioDirector;
 
     private boolean paused;
     private Stage pauseStage;
@@ -94,6 +96,7 @@ public final class PlayScreen implements Screen {
         hudRenderer = new HudRenderer(game.skin(), content.balance());
         simulation = new Simulation(content, event -> { }, game.seed(), JsonContentSource.LEVEL_ID);
         loop = new GameLoop(simulation);
+        audioDirector = new AudioDirector(game.audio());
 
         buildPauseStage();
     }
@@ -112,8 +115,8 @@ public final class PlayScreen implements Screen {
         panel.pad(16f);
         panel.add(new Label("PAUSED", game.skin(), "title")).padBottom(16f).row();
         java.util.List<KeyboardFocusable> focusables = new java.util.ArrayList<>();
-        MenuEntries.add(panel, game.skin(), "RESUME", this::resumeGameplay, focusables);
-        MenuEntries.add(panel, game.skin(), "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)), focusables);
+        MenuEntries.add(panel, game, game.skin(), "RESUME", this::resumeGameplay, focusables);
+        MenuEntries.add(panel, game, game.skin(), "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)), focusables);
         root.add(panel).width(160f).height(86f).center();
         new MenuNavigator(pauseStage, focusables);
 
@@ -143,6 +146,7 @@ public final class PlayScreen implements Screen {
             loop.advance(delta, frame);
 
             WorldView view = simulation.view();
+            audioDirector.update(view, view.player());
             LevelOutcome outcome = view.outcome();
             if (outcome != LevelOutcome.IN_PROGRESS) {
                 PlayerStatus status = view.player();
