@@ -157,6 +157,22 @@ against this map.
 | Attachment capsule | 13x13 | 7.0 | `pickup-module` |
 | Destructible structure | 31x39 | 15.0 | `structure-*` |
 
+**The structure's collider does not cover its sprite, and no drawing fixes that.** A 39 px tall
+sprite on a 15.0 radius has its topmost and bottommost rows 4.5 px past the circle whatever shape is
+drawn in it, and a tower — which is what a destructible structure in a burning city is — puts its
+heaviest mass exactly there. Measured on `structure-tower` as drawn, the base corners sit 7.8 px
+outside. Found 22/08/2026 while drawing it, which is why `check.js` measures `enemy-` only.
+
+Two ways out, for whoever owns the collider:
+
+| Option | Cost |
+|---|---|
+| Two colliders, radius 11.0 at offsets 0, +10 and 0, -10 | one more entity per structure; covers the sprite to within 2 px |
+| Drop the sprite to 31x31 | the structure stops reading as a building |
+
+The first is recommended. The boss has the same problem for the same reason and is written up in
+[`06-boss-presentation.md`](06-boss-presentation.md).
+
 Pickup radii exceed the sprite on purpose — 12 px of collision on an 11 px capsule. Missing a
 power-up you flew through is the kind of unfairness a player remembers, and nothing about the game
 depends on it being precise.
@@ -180,11 +196,17 @@ Sized against what they replace, always larger so the destruction covers its cau
 Not a specification — a budget, so the atlas can be planned and so a sprite is not drawn with
 sixteen frames when the game shows four. Art production may adjust it with a reason.
 
+It was adjusted on 22/08/2026, downwards. The ship's idle and thrust were two frames each; they are
+one hull frame and a separate two-frame exhaust, because what actually moves when a ship idles is
+its flame, and 15x17 of hull redrawn to animate a 5x7 flame is four times the atlas for the same
+animation. The tilt is drawn for one side only and mirrored, which is the same decision the boss
+already took.
+
 | Animation | Frames |
 |---|---|
-| Ship idle | 2 |
-| Ship tilt, each side | 2 held, 1 transition |
-| Ship thrust | 2, looping with idle |
+| Ship idle | 1, plus the exhaust below |
+| Ship tilt, each side | 1 held, 1 transition, drawn once and mirrored |
+| Ship exhaust | 2, looping, drawn as its own 5x7 sprite under the hull |
 | Ship hit | 1, a full N7 silhouette |
 | Enemy idle | 2 |
 | Explosion, small | 5 |
