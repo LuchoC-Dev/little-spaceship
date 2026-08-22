@@ -38,21 +38,23 @@ The core grew deliberately incomplete: each phase adds only what its own systems
   `WeaponSystem`, the same way `Simulation` hardcodes the player's sprite id and collider radius from
   a synchronisation-point document. Nothing in the MVP asks for a second weapon pattern, so there is
   still no real second case to generalise a content contract against.
-- `Lifetime`, `Spawner` components — `Lifetime` stays deferred even though `LifetimeSystem` now
-  exists (phase 05): it expires projectiles by playfield position, not by a timer, so it never needed
-  the component. `Spawner` **still has no consumer as of phase 07**, and this is now a known,
-  flagged gap rather than a quiet omission: the heavy carrier's "spawns basic enemies periodically"
-  from `02-mvp-functional-spec.md`'s roster, and the shooter's own higher rate of fire, are both still
-  unbuilt — phase 07's strong encounter (two carriers) only needed their health and collision to exist,
-  not their periodic spawn, so it did not build `Spawner` either. Tracked as a follow-up in
-  `docs/plan/07-boss/status.md`.
+- `Lifetime` component — still deferred even though `LifetimeSystem` now exists (phase 05): it
+  expires projectiles by playfield position, not by a timer, so it never needed the component.
+- `Spawner` component — **built in phase 07**, later in the same phase than the report that first
+  flagged it as an unbuilt gap: the coordinator came back mid-phase and said the strong encounter's
+  own reason for existing (two heavy carriers producing "sustained pressure" instead of two large,
+  stationary targets) depended on it, so the initial "no consumer yet" call was corrected before the
+  PR closed rather than left as a follow-up issue. `enemy-shooter`'s higher rate of fire is still
+  unbuilt — no `"weapon"` factory for enemies exists — since nothing in phase 07 needed one.
 - `ScoreValue`, `Drop` components — built in phase 04, **now read** (phase 05): `ScoreValue` by
   `ScoreSystem`, `Drop` by `CleanupSystem`, which turns it into an actual `Pickup` entity read in
   turn by `PickupSystem`.
 - `SystemOrder` stages with no system registered yet: only `INPUT` — every other stage is filled as
   of phase 05. `BOMB` is a new stage phase 05 inserted between `WEAPON` and `SPAWN`; `BOSS` is a new
   stage phase 07 inserted between `SPAWN` and `LIFETIME` (a second, independent per-tick timeline
-  alongside the wave one, not a wave itself, so it does not share `SPAWN`'s stage).
+  alongside the wave one, not a wave itself, so it does not share `SPAWN`'s stage). `SPAWNER` is a
+  second stage phase 07 inserted, between `SPAWN` and `BOSS` specifically — ticks down every entity's
+  `Spawner` component and creates a child when one is due, the heavy carrier's periodic spawn.
 
 See [[core-boundary-decisions]], [[defensive-chain-and-collision-design]] for the boundary shape
 those additions have to respect, [[game-systems-design]] for the damage/scoring/pickup shape phase

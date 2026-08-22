@@ -1,6 +1,6 @@
 ---
 name: boss-fight-design
-description: How phase 07's five-part boss avoided a new component/store, and the record-constructor trick used to fix issue #23 without breaking existing call sites
+description: How phase 07's boss avoided a new component/store, the record-constructor trick for issue #23, a shared-vs-independent-Health tradeoff, and a mid-phase scope correction on the carrier
 metadata:
   type: project
 ---
@@ -37,5 +37,26 @@ error says. The same check is worth repeating any time a `core.port` interface i
 `core` grows a method — `BalanceValues`, by contrast, was deliberately *not* touched this phase
 precisely because it has more implementers across the boundary and none of the new boss numbers were
 generic enough to belong there; they went on the new `BossDefinition` instead.
+
+**A component sharing its `Health` object reference across two entities looks tempting and is a trap.**
+Closing the boss's keel gap needed a sixth collider (`core-keel`) covering the same region the core's
+own drawn sprite occupies. The instinct was to give it the *same* `Health` object as the core, so a
+hit on either reduces one shared number — but `HealthDamage.apply` marks for destruction whichever
+single entity it was called with, not "whoever holds this `Health` object". A shared reference would
+leave the core entity itself technically alive forever if the keel happened to absorb the killing
+blow, silently breaking any `!world.isAlive(core)` check downstream without a second, entity-specific
+bookkeeping layer to compensate. Giving the keel its own independent `Health`/`ScoreValue` — treating
+it as a sixth ordinary part rather than a second hitbox for the same part — needed no special case at
+all and is the pattern to reach for first the next time "two colliders, one logical thing" comes up.
+
+**A report can be wrong mid-phase, and the fix is to correct it, not to defend the original call.**
+This phase's first report said the carrier's `Spawner` component had "no real consumer" and was left
+unbuilt. The coordinator came back and pointed out the strong encounter (two carriers) was *chosen*
+specifically because a carrier spawning basics produces sustained pressure — without `Spawner`, the
+encounter is just two large, slow enemies, and the reason for picking it stops being true. The
+original call was reasonable given what was known at the time (no consumer existed *yet* in the
+code), but "no consumer" was the wrong test — the consumer was the design decision itself, one layer
+up from the code. Building it was cheap once flagged. Worth re-checking, before deferring anything as
+"no real consumer", whether an already-made design decision is quietly depending on it.
 
 Related: [[core-deferred-surface]], [[content-pipeline-design]], [[rng-teavm-constraints]].
