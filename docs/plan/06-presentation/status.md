@@ -112,3 +112,444 @@ Two things that pass will fight that pass, and both were seen in the mock rather
 `core.domain.component.Collider` is a circle with no offset. That shapes the art: visual mass has to
 sit at the centre of the sprite, and anything outside the circle has to read as secondary. It is
 recorded in task 2 as a rule rather than left to be discovered when the first wide enemy is drawn.
+
+## Integration, tasks 12 to 14 — issue #25, `game-presentation`
+
+**State: done in the parts that do not need core, partial where they do.** Built on
+`feat/hud-and-screens`. Verified on the real desktop build with a real GPU, not headless — screenshots
+taken by driving the LWJGL3 window directly, per `CLAUDE.md`'s pitfall about headless Chrome not
+proving anything.
+
+### Task 12 — atlas and batching
+
+`PlaceholderAtlas` now implements a new `SpriteAtlas` interface (`game/adapter/render/`), and a
+second implementation, `PackedSpriteAtlas`, loads a real `TextureAtlas` — `TexturePacker`'s own
+`.atlas`/`.png` pair, read through `TextureAtlas`, no reflection — from `assets/atlas/sprites.atlas`
+if that file exists. `PackedSpriteAtlas.load(assetsRoot)` is the seam: it falls back to
+`PlaceholderAtlas` when the packed file is absent, which is always, right now, since art production
+(tasks 6-11) has not started. **No Gradle packing task was added.** Wiring one against a `src/`
+directory the art lane has not produced yet would be automation with nothing to automate; packing by
+hand and adding the task once PNGs exist costs less. `WorldRenderer` now depends on `SpriteAtlas`,
+not on `PlaceholderAtlas` directly, so nothing about it changes when the real atlas starts loading.
+
+### Task 13 — the six screens
+
+`LittleSpaceshipGame` now extends `Game` and uses libGDX's own `Screen`, not a hand-rolled one —
+`game/screen/`: `MenuScreen`, `ShipSelectScreen`, `OptionsScreen`, `PlayScreen` (gameplay, with the
+pause panel drawn over a frozen frame rather than as a separate screen — the spec's pause freezes
+gameplay, it does not replace it), `VictoryScreen`, `DefeatScreen`. Every screen shares one `Skin`
+(`game/ui/GameSkin`) built once in `LittleSpaceshipGame.create()`, and the same integer-scaled,
+letterboxed viewport gameplay uses — a menu scaled by a different policy than the game it wraps
+would be the one inconsistency a player notices first.
+
+**The Skin's text is a placeholder.** `03-typography.md` fixes two hand-drawn bitmap fonts;
+drawing them is art production (tasks 3 and 11), which has not run. `GameSkin` uses libGDX's bundled
+default font — a real bitmap font, not `FreeTypeFontGenerator`, so nothing new to verify under TeaVM
+— scaled to the two fixed line heights. Every screen asks the Skin for `"font-mini"`/`"font-title"`
+by name, so swapping in the real sheets touches only `GameSkin`.
+
+**Reachability, honestly.** Menu → ship select → play → pause → menu is real, mouse-clickable,
+verified on screen. Options is reachable and its three sliders and mouse toggle work; the mouse
+toggle now actually gates `InputAdapter` (it did not before — mouse input has no "enable/disable"
+switch in it originally, which the functional spec asks for). **Victory and defeat are not reachable
+from real play.** `core.port` has no level-outcome signal — no "boss defeated", no "all lives lost" —
+so nothing in the game can trigger those screens honestly yet. `PlayScreen` opens them from F5/F6 for
+now, documented in that file as a debug-only stand-in to be deleted once `core` reports an outcome.
+This is the one acceptance criterion this pass cannot fully claim: "every screen in the flow is
+reachable and returns correctly" holds for four of six, not six.
+
+**One bug worth recording generally, not just for this project.** `Skin.add(name, resource)` files
+the resource under `resource.getClass()`, but `Skin.getDrawable(name)` looks it up under the
+`Drawable` interface. A `NinePatchDrawable` added the implicit way is invisible to `getDrawable` and
+to every style field a real `.json` skin would populate through it — it throws
+`GdxRuntimeException: No Drawable ... registered with name` only the moment something tries to read
+it, not when it is added, which is what made this take two tries to notice. Add drawables with the
+explicit `add(name, resource, Drawable.class)` overload.
+
+### Task 14 — wiring the HUD
+
+The renderer is built and draws the full left and right plate from `04-hud-layout.md`: lives, bombs,
+weapon level, shield, invulnerability icon and timer, the `MODULE` block (hidden with no attachment),
+zero-padded score, and now the plate fills and the two playfield rules the document's frame table
+asks for. Verified on screen at `PlayScreen`, colours and positions matching the document's tables by
+hand-checking pixel coordinates against the screenshot.
+
+**It draws from a fixed `PlayerHudState`, not from the simulation.** `core.port.WorldView` exposes
+only `forEachSprite`; there is no read-only player status to read lives, bombs, weapon level, shield,
+attachment or invulnerability from. `PlayScreen` builds one `PlayerHudState` from
+`ContentSource.balance()` at `show()` and never updates it — the HUD renders correctly but does not
+react to a hit, a pickup or a shot fired. This is the acceptance criterion "the HUD shows everything
+`02-mvp-functional-spec.md` requires and nothing more" **not yet earned**: the layout is complete,
+the data behind it is not live.
+
+**The boss bar is not drawn at all**, deliberately: it needs a `BossStatus` the plan itself defers to
+phase 07, and the document's own rule — the bar only exists during the boss fight — is satisfied by
+never having a fight to show one for yet.
+
+### The core contract this phase is blocked on
+
+Proposed to `core-domain`, not built here — this phase does not touch `core`:
+
+```java
+// core.port, alongside WorldView
+public interface PlayerStatus {
+    int lives();
+    int bombs();
+    int weaponLevel();       // Player.shotLevel
+    boolean shieldActive();  // presence of the Shield component
+    boolean attachmentActive();
+    int attachmentDurability();
+    String attachmentId();   // NEW FIELD NEEDED: Attachment currently only carries durability,
+                              // not which content id was equipped — PickupSystem.java:194 has the
+                              // AttachmentDefinition right there and drops it before constructing
+                              // Attachment. The HUD needs the id to pick an icon and a name.
+    // one of: NONE, RESPAWN, DAMAGE, POWERUP, plus remaining time or a [0,1] fraction of it —
+    // DamageSystem already tracks the two durations (BalanceValues.respawnInvulnerability(),
+    // .damageInvulnerability()) and the powerup one; the source needs to survive alongside
+    // Invulnerable.remaining, not just the remaining float, or the HUD cannot tell the three states
+    // 04-hud-layout.md asks it to tell apart.
+    InvulnerabilitySource invulnerabilitySource();
+    float invulnerabilityRemaining();
+    int score();
+}
+// WorldView gains: PlayerStatus player();
+```
+
+A second, smaller gap surfaced but is out of this phase's scope to fix: there is no
+level-outcome signal anywhere in `core.port` (no concrete `GameEvent` exists yet at all —
+`GameEvent` is still the empty marker interface from phase 01). Victory and defeat cannot be reached
+from real play until something says the run ended. Not proposed as a contract here because it is a
+game-rule decision — what counts as victory, whether it is an event or a `WorldView` flag — not a
+rendering one.
+
+## Both gaps closed — `core-domain`
+
+Built on `feat/hud-and-screens`, same branch, same PR. Both changes stay inside `core/`.
+
+### `WorldView.player()`
+
+Built almost exactly as proposed, with `attachmentActive()` dropped: `attachmentId()` already
+answers "is anything equipped" (`""` means no) without a second boolean that could disagree with it.
+`PlayerStatus` is a **record**, not an interface with a hidden implementation the way `WorldView`
+itself is — there is no machinery to hide behind an interface here, only values, snapshotted out of
+`World` the instant `player()` is called. That snapshot is what keeps it read-only: nothing handed
+back can be walked to a live component, unlike a getter over `domain.component.Player` would allow.
+`PlayerStatus.NONE` is the value returned when no entity holds `Player`, which cannot happen once a
+`Simulation` exists — the player's ship is created in its constructor — but can happen against a bare
+`World` a test builds directly.
+
+**`invulnerabilitySource()` was a real change to the defensive chain, not just a getter, and it was
+worth making.** `Invulnerable` gained a `source: InvulnerabilitySource` field
+(`core.port.InvulnerabilitySource` — `NONE`/`RESPAWN`/`DAMAGE`/`POWERUP`) alongside `remaining`.
+`DamageSystem.grantInvulnerability` now takes the source and records `RESPAWN` on the life-lost
+branch, `DAMAGE` on the shield/attachment branch; `PickupSystem.applyInvulnerability` records
+`POWERUP`. All three grants were already real code paths — the power-up was already wired in
+`PickupSystem`, not a stub — so this was recording a distinction the simulation already made
+internally, not inventing a fourth state. `core` never reads `source` back to decide behaviour; the
+chain treats every active grace period identically regardless of why it started. It is presentation
+data riding along on a domain component, the same shape `Attachment` already had for `durability`.
+
+**`attachmentId()` needed a field `Attachment` did not have**, exactly as flagged: it carried
+`durability` only. Added a `String id` field, set from `AttachmentDefinition.id()` in
+`PickupSystem.applyAttachment` — the same content id `Pickup.kind` already carried, just not kept
+after the component was built. `core` never reads it back either.
+
+### Level outcome — `core.port.LevelOutcome`, `WorldView.outcome()`
+
+`IN_PROGRESS` / `COMPLETED` / `DEFEATED`. **Not `VICTORY`**: `02-mvp-functional-spec.md` defines
+victory as defeating the boss with at least one life, and the boss is phase 07's — nothing built so
+far can honestly claim that condition. `COMPLETED` reports the only thing a level can honestly finish
+on today: the wave timeline has run out of events (`SpawnSystem` now calls
+`World.markWaveTimelineExhausted()` once its cursor reaches the end, every tick from there on, not
+just the first), no entity carries an `ENEMY`-layer `Collider` anymore, and the player has at least
+one life left. `DEFEATED` needed no new state at all: `DamageSystem` already enforces "a life is
+never taken below zero", so it is exactly `Player.lives <= 0`, checked ahead of `COMPLETED` so a
+life lost on the same tick the timeline empties resolves as a defeat, not a completion.
+
+Computed on demand in `WorldView.outcome()`, not stored as a field systems write to and a stage
+reads — no new `SystemOrder` stage was added, and the fixed system order is unchanged. This is a
+read the same shape as `forEachSprite`: a query over current state, not a new pipeline concern.
+Whether phase 07 folds a real boss-defeat condition into `LevelOutcome.COMPLETED` or needs a fourth
+value is that phase's call once a boss exists to decide it against; this phase deliberately does not
+guess it.
+
+`game` can now delete the F5/F6 debug stand-in and drive `VictoryScreen`/`DefeatScreen` from
+`WorldView.outcome()` each frame, treating `COMPLETED` as the victory case until phase 07 says
+otherwise.
+
+Suite: 236 → 242 (6 new: four `PlayerStatus`/`outcome` cases in `WorldTest`, two `SpawnSystemTest`
+cases for timeline exhaustion; `DamageSystemTest` and `PickupSystemTest` gained extra assertions on
+existing cases for the new `source`/`id` fields rather than new cases — no test file removed, none
+of the 236 rewritten to test something different than before).
+
+## Tasks 12 to 14, closed — `game-presentation`, second pass
+
+Pulled `core-domain`'s `PlayerStatus`/`LevelOutcome` from the same branch. Both proposed gaps came
+back built exactly as asked, so this pass is wiring, not renegotiation.
+
+**`HudRenderer` now draws from `WorldView.player()`, called fresh every frame.** `PlayerHudState`
+and `game`'s own `InvulnerabilitySource` are deleted; `HudRenderer` takes `core.port.PlayerStatus`
+and `core.port.InvulnerabilitySource` directly. `maxLives`, `maxBombs` and `maxWeaponLevel` stay as
+constructor-time fields read from `BalanceValues` once — they are run-wide caps, and `PlayerStatus`
+only ever reports the current value, matching `04-hud-layout.md`'s "five life slots... are always
+drawn" regardless of how many are filled. The invulnerability timer bar needed the same treatment:
+`PlayerStatus.invulnerabilityRemaining()` is a raw second count, not a fraction, so `HudRenderer`
+also takes the three duration values (`respawnInvulnerability()`, `damageInvulnerability()`,
+`invulnerabilityPickupDuration()`) to turn it into the `[0,1]` the bar shrinks by.
+
+One gap `core-domain`'s contract left honestly open: no `AttachmentDefinition` field carries a
+human-readable name, only an id such as `attachment-missiles`. `HudRenderer.attachmentLabel`
+derives one — strips an `"attachment-"` prefix, uppercases, truncates to the column's 13 characters
+— rather than blocking on a name field nothing in content actually needs yet. Revisit if content
+ever wants a display name distinct from its id.
+
+**`PlayScreen` checks `WorldView.outcome()` right after advancing each tick**, before drawing.
+`DEFEATED` opens `DefeatScreen`; anything else that is not `IN_PROGRESS` (today, only `COMPLETED`)
+opens `VictoryScreen` with the completion bonus computed from the same `PlayerStatus` snapshot the
+outcome was read alongside. **The F5/F6 debug stand-in is gone.** `VictoryScreen` and `DefeatScreen`'s
+javadoc no longer says "not reachable" — it says which `LevelOutcome` opens them and, for
+`VictoryScreen`, why `core` calls it `COMPLETED` rather than `VICTORY` on its own side while the
+screen still reads "VICTORY" (the flow's copy, not the signal's honesty, per `screens.html`).
+
+**The font fix asked for.** `GameSkin`'s two `BitmapFont`s no longer call `setScale(target /
+getLineHeight())` — a fractional factor — paired with `setUseIntegerPositions(false)`. Both now use
+`wholeScale()`, which rounds to the nearest whole multiple of the native line height and never below
+1, and both set `setUseIntegerPositions(true)` and `Nearest` filtering on the font's own texture.
+The default font's native size is already above the 10/13 px targets, so the round-trip lands on
+scale 1 for both — the placeholder is now visibly larger than the design's line heights (labels
+overlap their own slot icons in the HUD at this scale, visible in the verification screenshot below)
+rather than blurred. Confirmed on screen: agree with the reviewer's framing that oversized reads as
+"not the final font" while blurred read as a rendering bug. This is a placeholder-only fix; it does
+not touch anything `03-typography.md` fixes about the real sheets, which stay the art lane's.
+
+### Verified vs inferred
+
+**Verified on the real LWJGL3 window, screenshotting and clicking through it** (same technique as
+the first pass — see `.claude/agent-memory/game-presentation/`): menu renders with visibly sharper,
+larger placeholder text than before the font fix; ship selection reachable; gameplay screen shows
+the HUD reading real values at run start (3 of 5 life slots filled, 2 of 3 bomb slots, 1 of 4 power
+segments, score `0000000`) pulled live from `WorldView.player()`, not a fixed placeholder — confirms
+the wiring reads the simulation, not just that it compiles.
+
+One false alarm during this verification, recorded here rather than in agent memory because it was
+environmental, not a code bug: an early screenshot came back completely black with no menu drawn and
+no exception in the log. Stacked Gradle daemons from repeated `:desktop:run` invocations were the
+cause — once cleared (`Get-Process java | Stop-Process -Force` before each fresh launch, not
+`./gradlew --stop`, which killed the daemon the running game's JVM lived inside), the same build
+rendered correctly. Worth knowing before reading a blank screenshot as a rendering regression.
+
+**Not verified**: reaching `VictoryScreen`/`DefeatScreen` from an actual completed or lost run.
+Doing that through scripted clicks means surviving or losing level 1 for real, which this pass did
+not attempt; the code path (`PlayScreen` reading `outcome()` and switching screen) was checked by
+reading, and `core`'s own 242 tests cover `LevelOutcome`'s two terminal cases directly. Trusting
+`core`'s test suite for the domain-side correctness of *when* the outcome flips, and this pass's own
+review for *what game does once it does*, is a narrower claim than having watched both screens
+appear on the real window — flagged rather than folded into "verified" above.
+
+### Acceptance criteria, updated
+
+- The HUD shows everything the spec requires and nothing more — **earned**, live data now backs the
+  full layout from the first pass. The boss bar is still never drawn, correctly: no boss exists yet.
+- Every screen in the flow is reachable and returns correctly — **six of six reachable in principle**
+  (menu, ship select, options, pause, and victory/defeat via the real outcome signal); victory/defeat
+  specifically are verified by code reading and `core`'s tests, not by an on-screen run to completion,
+  per the note above.
+- Everything else in the criteria list is unchanged from the first pass's assessment.
+
+## Two bugs found by playing the build, fixed — `game-presentation`, third pass
+
+Same branch, same PR, no `core` change.
+
+### BACK from Options was broken
+
+Precise symptom, precise cause: `ShipSelectScreen`'s BACK builds a fresh `MenuScreen`; `OptionsScreen`'s
+BACK reused the `Screen` instance passed in as `previous` — `this` from `MenuScreen`. `LittleSpaceshipGame.
+setScreen` disposes the outgoing screen (its own javadoc explains why: `Game.setScreen` alone never does,
+and every screen owns a texture or two), so menu -> Options disposed that `MenuScreen` instance while
+Options still held it. BACK then tried to show a screen whose `Stage` was already gone.
+
+The dispose policy was correct; retaining a `Screen` instance across a `setScreen` call is what cannot
+coexist with it. Fixed by having `OptionsScreen`'s constructor take a `Supplier<Screen>` instead of a
+`Screen` — never evaluated until BACK is actually pressed, so it always builds a live screen regardless of
+whether the caller's own instance already went through `setScreen` and got disposed. Checked every other
+`game.setScreen` call site for the same shape (`grep -rn "Screen previous"`, `grep -rn "game.setScreen"`);
+`OptionsScreen` was the only one holding an instance rather than constructing fresh.
+
+### The menus had no keyboard path at all
+
+Nothing in `menu`/`ship select`/`options`/`pause`/`victory`/`defeat` responded to a key; only the mouse
+worked, wrong for a keyboard-first shoot 'em up. `scene2d.ui` gives none of this for free — no up/down/
+enter convention, no visible focused state beyond what a style already reacts to for the mouse pointer.
+
+Added two small classes, `MenuNavigator` (wires arrow/enter on a `Stage`, cycling with wraparound over an
+ordered list) and `KeyboardFocusable` (`setFocused`/`activate`/`adjust`, one instance per entry). Every
+screen in the flow now builds one. Two focus renderings, chosen per widget because neither `Slider` nor
+`CheckBox` has a font-colour style field the way `TextButton` does:
+
+- Buttons (`MenuEntries`): `TextButtonStyle.checkedFontColor` (new, `W4`) plus a `"> "`/`"  "` prefix
+  swap on the label text, so focus differs in colour **and** shape per `05-legibility-rules.md` R4, and
+  the fixed two-character prefix keeps the button's width stable across the swap.
+- Slider/checkbox rows (`OptionsScreen`): a border, the same `n1-panel` drawable `BaseUiScreen`'s own
+  panels already use, toggled on the row's `Table` background.
+
+The mouse path is untouched — `MenuNavigator` only adds an `InputListener` on the `Stage`'s root actor, it
+does not replace anything scene2d's own click handling already does.
+
+### A third, smaller thing: ship select's stats had no values
+
+`SPEED`, `FIRE`, `BOMBS`, `LIVES` were bare header labels — not a legibility problem, the values were
+never read from anywhere. Now reads them from `BalanceValues` (`playerSpeed()`, `weaponFireCooldown()`,
+`initialBombs()/maxBombs()`, `initialLives()/maxLives()`) and draws each in a new `"stat-value"` style
+(`N7`), the same label/value colour split `HudRenderer` already uses for the HUD, rather than the dim
+`N4` the header text uses.
+
+### Verified vs inferred
+
+**Verified on the real LWJGL3 window**, per this agent's own memory on screenshotting/clicking it: menu
+-> Options -> BACK -> Options -> BACK, twice over, mouse-driven, each hop landing on a working, freshly
+built menu, not a black or frozen screen. Ship select's stat row confirmed showing `140`, `0.15s`, `2/3`,
+`3/5` in a clearly brighter tone than the headers above them.
+
+**The full flow driven by keyboard alone**, also on the real window: DOWN moved focus from PLAY to
+OPTIONS with the `> `/highlight following it; ENTER opened Options with MASTER VOLUME focused by default;
+RIGHT bumped its value from 80 to 85 (confirms `KeyboardFocusable.adjust` reaches the same
+`Consumer<Float>` the mouse-driven `Slider.ChangeListener` already used, not a parallel path); DOWN x4
+reached BACK; ENTER returned to a live menu. Also drove ship select's LAUNCH/BACK by keyboard.
+
+One environment note worth recording since it cost real time here: neither `System.Windows.Forms.SendKeys`
+nor `user32.dll`'s `keybd_event` with a zero scan code reached the GLFW window at all, with no error and
+no visible effect — GLFW's Win32 backend keys off the **scan code** bits of `WM_KEYDOWN`'s `lParam`, not
+the virtual-key code, so a synthetic event needs `MapVirtualKey(vk, MAPVK_VK_TO_VSC)` for the scan code
+and `KEYEVENTF_EXTENDEDKEY` for arrow/navigation keys, or GLFW resolves it as an unknown key and silently
+drops it. Recorded in this agent's own memory, not here, since it is a fact about the verification
+environment, not about the project.
+
+Not verified: `VictoryScreen`/`DefeatScreen`'s own keyboard navigation, since reaching them needs a real
+run to complete or fail, unchanged from the second pass's own "not verified" note above — this pass did
+not attempt a full run, only confirmed by reading that they call `MenuEntries.add`/`MenuNavigator` the
+same way every other screen in this pass does.
+
+### Review round 1, finding 1: the completion bonus rule had two implementations (core side)
+
+`PlayScreen` computed `lives * lifeCompletionBonus` / `bombs * bombCompletionBonus` inline instead of
+calling `ScoreSystem.completionBonus`, which was tested and otherwise dead — its only caller was its own
+test. Its javadoc even explained why it had no caller, written by an earlier pass that edited the
+explanation instead of noticing the caller already existed in the wrong module.
+
+Fixed on the `core` side by exposing the rule through the port instead of leaving `game` to restate it:
+
+- `WorldView.completionBonus()`, a new method returning a new record, `CompletionBonus(livesBonus,
+  bombsBonus)`. Reflects the player's current lives/bombs regardless of `LevelOutcome`, the same way
+  `PlayerStatus.score()` already does — whoever reads it decides when the number means something,
+  typically once `outcome()` reports `COMPLETED`.
+- `ScoreSystem.completionBonus` is now `public` (was package-private) and returns `CompletionBonus`
+  instead of a bare `int`. `World.View.completionBonus()` is its only caller inside `core`; nothing
+  outside `domain.system` should call it directly, `WorldView` is the crossing.
+- `World.View.player()` unchanged in shape apart from one removal below.
+
+This makes a second implementation in `game` pointless rather than merely discouraged: `PlayScreen` can
+build `VictoryScreen`'s two rows straight from `completionBonus.livesBonus()` /
+`completionBonus.bombsBonus()`, with no balance values and no multiplication in `game` at all.
+
+**`PlayerStatus.attachmentDurability` had no consumer anywhere in `game` and no row in the HUD layout
+table** (`12-architecture.md` lists only the `Attachment` component's durability, not a HUD element for
+it; `HudRenderer` reads `attachmentId` but never `attachmentDurability`). Applied the same "no consumer,
+don't guess" test phase 04 applied to `PatternDefinition`: removed the field from `PlayerStatus` rather
+than keep guessing it earns a place. `Attachment.durability` itself is untouched and still covered by
+`PickupSystemTest` directly against the domain component — only the port-crossing copy is gone.
+
+`core` still green at 244 tests (242 + 2 new: a zero-bonus-with-no-player case and a
+lives/bombs-scaled case for `WorldView.completionBonus()`).
+
+**What `game-presentation` should call:** in `PlayScreen`, replace the inline
+`content.balance().lifeCompletionBonus() * status.lives()` /
+`content.balance().bombCompletionBonus() * status.bombs()` with
+`view.completionBonus().livesBonus()` / `view.completionBonus().bombsBonus()` (call once, reuse the
+same `CompletionBonus` for both rows). Drop the `content.balance()` reads for this from `PlayScreen`
+entirely if nothing else in that method needs them. `HudRenderer`/anywhere else reading
+`PlayerStatus.attachmentDurability` needs to stop — the field no longer exists on the record.
+
+## Review round 1, findings closed — `game-presentation` side
+
+Same branch, same PR. Closes both blocking findings from the round-1 review and the six
+`screens.html` omissions it listed as not blocking.
+
+### Blocking 1 — the duplicated completion bonus, gone
+
+`PlayScreen` now calls `view.completionBonus()` once per outcome check and reuses the same
+`CompletionBonus` for both `VictoryScreen` rows. `content.balance()` stays in `PlayScreen` — still
+needed for `HudRenderer`'s construction and `InputAdapter.sample`'s slow-mode read — but nothing
+about the bonus reads it anymore. Grepped `attachmentDurability` across `game`: the only remaining
+hit is `core`'s own `PickupSystemTest`, out of this module's reach.
+
+### Blocking 2 — hit and upgrade-loss feedback, and the ship-side invulnerability treatment
+
+**Feedback.** `HudRenderer` now keeps a `previousStatus` field and diffs it against every `draw()`
+call, per `04-hud-layout.md`'s "Feedback" table: a life lost flashes the lost slot and both playfield
+rules, a bomb used flashes the spent slot, a shield or attachment lost flashes the icon/block before
+it disappears, a weapon level gained flashes the newly lit segment. Tick counts match the table
+exactly (6/2/3/3/4, and the rules' 2-then-4 split). The table's sixth case — "pickup collected at
+maximum" — is deliberately **not** built: `enemy-tank`'s kill score and `maxedPickupBonus` are both
+500 points in `assets/data/*.json`, so a same-value `score` jump cannot be told apart from an
+ordinary kill by diffing `PlayerStatus` alone, and flashing on every `score` increase would fire on
+every kill too. Documented in `HudRenderer`'s class javadoc rather than guessed; needs a signal from
+`core` naming the cause to close for real.
+
+**Ship-side invulnerability.** `WorldRenderer` now takes the frame's `PlayerStatus` in `draw()` and
+matches the player's sprite by content id (`"ship-basic"`, `Simulation.PLAYER_SPRITE`'s value —
+`SpriteVisitor` carries no "this is the player" flag, so this is the same kind of content-id match
+`HudRenderer` already makes for `attachmentId`). Respawn blinks the sprite at alpha 0.35 four ticks
+on, four off; damage absorbed by the shield or the attachment tints it `N7` three ticks on, three
+off; the power-up draws a `C1` outline ring, 21x21, behind the sprite. All three read from a tick
+counter reset whenever `invulnerabilitySource()` changes, not from a clock — the same determinism
+shape `core` itself follows. `HudRenderer`'s plate `STATE` icon now only draws for `POWERUP`, per
+"Invulnerability is shown on the ship, not in the plate": respawn and damage no longer touch the
+plate at all, closing the finding that the two were inverted.
+
+### The six `screens.html` omissions, closed
+
+- `BaseUiScreen` now draws the 1 px `N3` rule under every screen title, sized to the title text.
+- `MenuScreen` adds the subtitle and the `MVP BUILD` footer, both from `05-screens.js`.
+- `PlayScreen`'s pause panel sits on an `n2-panel` plate, sized to the mock's `160,92,160,86`.
+- `DefeatScreen`'s score is zero-padded to 7 digits, the same width `VictoryScreen` already used.
+- `OptionsScreen` gained a `CREDITS AND LICENCES` entry, opening a new `CreditsScreen` — plain-text
+  engine/library attribution (libGDX, LWJGL3, GDX-TeaVM) with one BACK, the same shape every other
+  no-configuration screen in this flow uses.
+- `ShipSelectScreen` draws `SPEED`/`FIRE`/`BOMBS`/`LIVES` as 5-segment bars instead of raw numbers,
+  in the same `C1`/`N2` fill `HudRenderer`'s POWER segments use. `BOMBS`/`LIVES` scale from
+  `BalanceValues`' real caps; `SPEED`/`FIRE` scale against a presentation-only plausible range
+  (documented in `ShipSelectScreen` as not a game rule) since neither has a natural 0-5 domain cap.
+
+### Two status corrections, recorded rather than left silent
+
+- **`docs/plan/03-first-playable/plan.md:45`'s "the render loop allocates nothing per frame" is now
+  literally false**, and was already an overstatement of what the code ever guaranteed. What holds,
+  confirmed by the round-1 review's count and unchanged by this pass, is `12-architecture.md`'s real
+  intent: nothing is allocated **per entity** per frame. This pass adds a bounded, entity-count-
+  independent handful of objects itself (`PlayerStatus` records, `CompletionBonus` on the two frames
+  a run ends) — same shape, same non-issue, under the same "not per entity" reading.
+- **Task 12's "assets are in one atlas and the render loop keeps batching" still cannot be ticked.**
+  This pass adds one more texture outside the atlas: `WorldRenderer`'s own 1x1 pixel, used only to
+  draw the power-up's aura ring, alongside `HudRenderer`'s separate 1x1 pixel and the Skin's two
+  `BitmapFont` textures already flagged. The bind count this criterion cares about goes up by a small,
+  constant amount, not down — real batching arrives with the atlas tasks 6-11 produce, not before.
+
+### Verified vs inferred
+
+**Verified on the real LWJGL3 window**, screenshotting and clicking through it as in every prior
+pass: the menu shows the title rule, the subtitle and the footer; ship select shows all four stats as
+5-segment bars, correctly filled; a full run reads the HUD live — `STATE` showed only the shield icon
+(`C1`/`N6`) once a shield was picked up, with **no** plate invulnerability icon drawn alongside it,
+confirming the plate no longer shows respawn/damage grace at all; `MODULE` showed the attachment
+after its pickup. Pause was not re-verified visually this pass (its code path — background plate,
+sizing — is unchanged in kind from what the second pass already confirmed reachable).
+
+**Not verified**: the ship-side blink/flash/aura and the HUD's flash-on-loss feedback, on screen.
+Level 1's five enemies died quickly enough in this run that no bullet ever reached the player, and no
+life, shield or attachment was lost in the window this pass watched — the respawn blink at spawn is
+real but lasts 2 s against a screenshot round-trip in this environment of roughly 1-2 s, so no capture
+landed inside it either. Checked instead by reading: `WorldRenderer.accept` and `HudRenderer.draw`
+both compute the tinted/flashed branch correctly for the states this session did observe (`NONE`
+throughout most of the run, `POWERUP` never granted), and the tick-cycle arithmetic was hand-traced
+against `04-hud-layout.md`'s tables. A future pass with a hostile enough opening wave, or a debug hook
+that forces a hit, would close this gap for real.

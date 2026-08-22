@@ -52,7 +52,7 @@ class DamageReplayTest {
         world.colliders().set(player, new Collider(4f, CollisionLayer.PLAYER));
         world.players().set(player, new Player(3, 2, 1));
         world.shields().set(player, new Shield());
-        world.attachments().set(player, new Attachment(1));
+        world.attachments().set(player, new Attachment("attachment", 1));
 
         int weakEnemy = world.createEntity();
         world.transforms().set(weakEnemy, new Transform(100f, 50f));

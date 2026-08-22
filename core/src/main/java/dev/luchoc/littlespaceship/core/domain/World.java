@@ -4,6 +4,7 @@ import dev.luchoc.littlespaceship.core.domain.collision.CollisionHit;
 import dev.luchoc.littlespaceship.core.domain.component.Attachment;
 import dev.luchoc.littlespaceship.core.domain.component.BombState;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
+import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
@@ -20,7 +21,12 @@ import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityRegistry;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
+import dev.luchoc.littlespaceship.core.domain.system.ScoreSystem;
+import dev.luchoc.littlespaceship.core.port.CompletionBonus;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
+import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
+import dev.luchoc.littlespaceship.core.port.LevelOutcome;
+import dev.luchoc.littlespaceship.core.port.PlayerStatus;
 import dev.luchoc.littlespaceship.core.port.SpriteVisitor;
 import dev.luchoc.littlespaceship.core.port.WorldView;
 import java.util.ArrayList;
@@ -73,6 +79,15 @@ public final class World {
      * component store without an entity vanishing under it mid-tick.
      */
     private final List<Integer> pendingDestruction = new ArrayList<>();
+
+    /**
+     * Whether {@code SpawnSystem} has walked every event of the level's {@code WaveTimeline}. Read
+     * by {@link View#outcome()} to decide {@link LevelOutcome#COMPLETED}; a run built without a
+     * {@code SpawnSystem} — the level-less constructor {@code Simulation} offers for sandboxes and
+     * tests — simply never sets this, so it never completes, which is the correct behaviour for a
+     * run with no level to finish.
+     */
+    private boolean waveTimelineExhausted;
 
     private final ContentSource content;
     private final Rng rng;
@@ -292,6 +307,14 @@ public final class World {
     }
 
     /**
+     * Records that {@code SpawnSystem} has walked every event of the level's {@code WaveTimeline}.
+     * Idempotent: called every tick once the cursor reaches the end, not just once.
+     */
+    public void markWaveTimelineExhausted() {
+        waveTimelineExhausted = true;
+    }
+
+    /**
      * @return the content the simulation reads its numbers from
      */
     public ContentSource content() {
@@ -343,6 +366,67 @@ public final class World {
                 Sprite sprite = sprites.valueAt(i);
                 visitor.accept(sprite.id, transform.x, transform.y, sprite.frame, sprite.rotation);
             }
+        }
+
+        @Override
+        public PlayerStatus player() {
+            int entity = playerEntity();
+            if (entity == EntityId.NONE) {
+                return PlayerStatus.NONE;
+            }
+            Player state = players.get(entity);
+            if (state == null) {
+                return PlayerStatus.NONE;
+            }
+            Attachment attachment = attachments.get(entity);
+            Invulnerable invulnerable = invulnerabilities.get(entity);
+            return new PlayerStatus(
+                state.lives,
+                state.bombs,
+                state.shotLevel,
+                shields.has(entity),
+                attachment != null ? attachment.id : "",
+                invulnerable != null ? invulnerable.source : InvulnerabilitySource.NONE,
+                invulnerable != null ? invulnerable.remaining : 0f,
+                state.score);
+        }
+
+        @Override
+        public CompletionBonus completionBonus() {
+            int entity = playerEntity();
+            Player state = entity == EntityId.NONE ? null : players.get(entity);
+            if (state == null) {
+                return new CompletionBonus(0, 0);
+            }
+            return ScoreSystem.completionBonus(content.balance(), state);
+        }
+
+        @Override
+        public LevelOutcome outcome() {
+            int entity = playerEntity();
+            Player state = entity == EntityId.NONE ? null : players.get(entity);
+            if (state != null && state.lives <= 0) {
+                return LevelOutcome.DEFEATED;
+            }
+            if (waveTimelineExhausted && noEnemyLeft() && (state == null || state.lives > 0)) {
+                return LevelOutcome.COMPLETED;
+            }
+            return LevelOutcome.IN_PROGRESS;
+        }
+
+        /**
+         * True when no entity carries an {@code ENEMY} collider, checked by walking {@link
+         * #colliders} directly rather than adding a fourth, redundant store just to count them —
+         * the same trade a spatial structure for collision would make with no case in the MVP that
+         * needs it.
+         */
+        private boolean noEnemyLeft() {
+            for (int i = 0; i < colliders.size(); i++) {
+                if (colliders.valueAt(i).layer == CollisionLayer.ENEMY) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }

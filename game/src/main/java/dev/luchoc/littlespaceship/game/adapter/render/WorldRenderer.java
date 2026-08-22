@@ -1,11 +1,17 @@
 package dev.luchoc.littlespaceship.game.adapter.render;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
+import dev.luchoc.littlespaceship.core.port.PlayerStatus;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
 import dev.luchoc.littlespaceship.core.port.SpriteVisitor;
 import dev.luchoc.littlespaceship.core.port.WorldView;
+import dev.luchoc.littlespaceship.game.ui.Palette;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -26,11 +32,37 @@ import java.util.Set;
  * every entity in the left HUD margin instead of the playfield; {@code playfieldLeft} is the
  * correction. {@code y} needs no such shift: the playfield is the full 270 logical units tall, so
  * {@code Transform.y} already lines up with screen space.
+ *
+ * <p><b>Invulnerability is shown on the ship</b>, per {@code 04-hud-layout.md}'s "Invulnerability is
+ * shown on the ship, not in the plate": respawn blinks the sprite out, damage absorbed by the shield
+ * or the attachment flashes it white, and the power-up draws a glow ring behind it. Telling the
+ * player's ship apart from every other sprite this class draws needs a content id, since {@link
+ * SpriteVisitor#accept} carries no "this is the player" flag — {@link #PLAYER_SPRITE_ID} matches
+ * {@code Simulation.PLAYER_SPRITE}'s value, the same way {@code HudRenderer} already treats
+ * {@code attachmentId} as a plain content id crossing the boundary rather than as domain machinery.
  */
 public final class WorldRenderer implements SpriteVisitor {
 
-    private final PlaceholderAtlas atlas;
+    /**
+     * Matches {@code core.application.Simulation.PLAYER_SPRITE}'s value. Not exposed through
+     * {@code core.port} today — see the class javadoc for why matching the content id is still the
+     * right call rather than reaching back into the domain for a "which entity is the player" flag.
+     */
+    private static final String PLAYER_SPRITE_ID = "ship-basic";
+
+    /** Respawn blinks 4 ticks drawn, 4 ticks dimmed, per {@code 04-hud-layout.md}. */
+    private static final int RESPAWN_BLINK_TICKS = 4;
+    private static final float RESPAWN_BLINK_ALPHA = 0.35f;
+
+    /** Damage absorbed by the shield or the attachment flashes 3 ticks tinted, 3 ticks normal. */
+    private static final int DAMAGE_FLASH_TICKS = 3;
+
+    /** The power-up's glow ring, 21x21 per {@code 04-hud-layout.md}. */
+    private static final float AURA_SIZE = 21f;
+
+    private final SpriteAtlas atlas;
     private final float playfieldLeft;
+    private final Texture pixel;
 
     /**
      * Sprite ids already reported missing from {@link #atlas}, so a gap in placeholder art logs
@@ -41,18 +73,32 @@ public final class WorldRenderer implements SpriteVisitor {
     private final Set<String> missingSpritesLogged = new HashSet<>();
 
     private SpriteBatch batch;
+    private PlayerStatus playerStatus = PlayerStatus.NONE;
+
+    /**
+     * Counts ticks spent in the current {@link InvulnerabilitySource}, reset whenever the source
+     * changes — that is what drives the blink/flash phase without a clock, matching {@code
+     * CLAUDE.md}'s determinism rule that presentation should not need one either.
+     */
+    private int sourceTicks;
+    private InvulnerabilitySource previousSource = InvulnerabilitySource.NONE;
 
     /**
      * @param atlas resolves a content sprite id to the region that draws it
      * @param playfieldLeft the playfield's left edge in logical units, added to every entity's
      *     {@code x} before drawing — see the class javadoc for why this is needed at all
      */
-    public WorldRenderer(PlaceholderAtlas atlas, float playfieldLeft) {
+    public WorldRenderer(SpriteAtlas atlas, float playfieldLeft) {
         if (atlas == null) {
             throw new IllegalArgumentException("the renderer needs an atlas to resolve sprites");
         }
         this.atlas = atlas;
         this.playfieldLeft = playfieldLeft;
+        Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pm.setColor(Color.WHITE);
+        pm.fill();
+        this.pixel = new Texture(pm);
+        pm.dispose();
     }
 
     /**
@@ -60,9 +106,19 @@ public final class WorldRenderer implements SpriteVisitor {
      *
      * @param view what to draw, read-only
      * @param batch the batch to draw into; must already be between {@code begin()} and {@code end()}
+     * @param status the player's current status, read once per frame — needed here (not only in the
+     *     HUD) to decide how the ship itself is drawn
      */
-    public void draw(WorldView view, SpriteBatch batch) {
+    public void draw(WorldView view, SpriteBatch batch, PlayerStatus status) {
         this.batch = batch;
+        this.playerStatus = status;
+        InvulnerabilitySource source = status.invulnerabilitySource();
+        if (source != previousSource) {
+            previousSource = source;
+            sourceTicks = 0;
+        } else {
+            sourceTicks++;
+        }
         view.forEachSprite(this);
         this.batch = null;
     }
@@ -90,11 +146,53 @@ public final class WorldRenderer implements SpriteVisitor {
         float logicalX = x + playfieldLeft;
         float width = region.getRegionWidth();
         float height = region.getRegionHeight();
+
+        boolean isPlayer = PLAYER_SPRITE_ID.equals(sprite.value());
+        InvulnerabilitySource source = isPlayer ? playerStatus.invulnerabilitySource()
+            : InvulnerabilitySource.NONE;
+
+        if (source == InvulnerabilitySource.POWERUP) {
+            drawAura(logicalX, y);
+        }
+
+        float alpha = 1f;
+        Color tint = Color.WHITE;
+        if (source == InvulnerabilitySource.RESPAWN) {
+            boolean dimmed = (sourceTicks / RESPAWN_BLINK_TICKS) % 2 == 1;
+            if (dimmed) {
+                alpha = RESPAWN_BLINK_ALPHA;
+            }
+        } else if (source == InvulnerabilitySource.DAMAGE) {
+            boolean flashed = (sourceTicks / DAMAGE_FLASH_TICKS) % 2 == 0;
+            if (flashed) {
+                tint = Palette.N7;
+            }
+        }
+
+        batch.setColor(tint.r, tint.g, tint.b, alpha);
         batch.draw(region,
             logicalX - width / 2f, y - height / 2f,
             width / 2f, height / 2f,
             width, height,
             1f, 1f,
             rotation);
+        batch.setColor(Color.WHITE);
+    }
+
+    /** The power-up's glow ring, drawn as a four-sided outline behind the ship, in {@code C1}. */
+    private void drawAura(float centerX, float centerY) {
+        float half = AURA_SIZE / 2f;
+        float left = centerX - half;
+        float bottom = centerY - half;
+        batch.setColor(Palette.C1);
+        batch.draw(pixel, left, bottom, AURA_SIZE, 1f);
+        batch.draw(pixel, left, bottom + AURA_SIZE - 1f, AURA_SIZE, 1f);
+        batch.draw(pixel, left, bottom, 1f, AURA_SIZE);
+        batch.draw(pixel, left + AURA_SIZE - 1f, bottom, 1f, AURA_SIZE);
+        batch.setColor(Color.WHITE);
+    }
+
+    public void dispose() {
+        pixel.dispose();
     }
 }

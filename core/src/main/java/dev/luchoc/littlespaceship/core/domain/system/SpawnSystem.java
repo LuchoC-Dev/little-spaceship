@@ -81,6 +81,12 @@ public final class SpawnSystem implements GameSystem {
             spawnWave(world, events.get(cursor));
             cursor++;
         }
+        if (cursor >= events.size()) {
+            // Marks every tick from here on, not only the one where the cursor first reached the
+            // end — cheaper than a one-shot guard and just as correct, since World.outcome() only
+            // ever reads this as a level, not an edge.
+            world.markWaveTimelineExhausted();
+        }
     }
 
     private static void spawnWave(World world, SpawnEvent event) {

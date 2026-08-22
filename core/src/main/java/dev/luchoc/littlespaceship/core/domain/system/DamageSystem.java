@@ -12,6 +12,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -127,20 +128,20 @@ public final class DamageSystem implements GameSystem {
 
         if (world.shields().has(player)) {
             world.shields().remove(player);
-            grantInvulnerability(world, player, balance.damageInvulnerability());
+            grantInvulnerability(world, player, balance.damageInvulnerability(), InvulnerabilitySource.DAMAGE);
         } else if (world.attachments().has(player)) {
             Attachment attachment = world.attachments().get(player);
             attachment.durability--;
             if (attachment.durability <= 0) {
                 world.attachments().remove(player);
             }
-            grantInvulnerability(world, player, balance.damageInvulnerability());
+            grantInvulnerability(world, player, balance.damageInvulnerability(), InvulnerabilitySource.DAMAGE);
         } else {
             Player playerState = world.players().get(player);
             if (playerState != null && playerState.lives > 0) {
                 playerState.lives--;
             }
-            grantInvulnerability(world, player, balance.respawnInvulnerability());
+            grantInvulnerability(world, player, balance.respawnInvulnerability(), InvulnerabilitySource.RESPAWN);
         }
 
         if (fromEnemyBody) {
@@ -153,12 +154,14 @@ public final class DamageSystem implements GameSystem {
         }
     }
 
-    private static void grantInvulnerability(World world, int entity, float duration) {
+    private static void grantInvulnerability(
+        World world, int entity, float duration, InvulnerabilitySource source) {
         Invulnerable state = world.invulnerabilities().get(entity);
         if (state == null) {
-            world.invulnerabilities().set(entity, new Invulnerable(duration));
+            world.invulnerabilities().set(entity, new Invulnerable(duration, source));
         } else {
             state.remaining = duration;
+            state.source = source;
         }
     }
 }

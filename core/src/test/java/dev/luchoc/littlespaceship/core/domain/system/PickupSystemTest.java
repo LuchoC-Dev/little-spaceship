@@ -16,6 +16,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Shield;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
 import dev.luchoc.littlespaceship.core.testsupport.TestBalance;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import org.junit.jupiter.api.DisplayName;
@@ -146,13 +147,15 @@ class PickupSystemTest {
 
         assertEquals(balance.invulnerabilityPickupDuration,
             world.invulnerabilities().get(player).remaining, 0.0001f);
+        assertEquals(InvulnerabilitySource.POWERUP, world.invulnerabilities().get(player).source);
     }
 
     @Test
     @DisplayName("the invulnerability pickup while already at or above that duration grants points")
     void invulnerabilityAlreadyAtCapGrantsPoints() {
         int player = spawnPlayer(new Player(3, 2, 1));
-        world.invulnerabilities().set(player, new Invulnerable(balance.invulnerabilityPickupDuration));
+        world.invulnerabilities().set(player,
+            new Invulnerable(balance.invulnerabilityPickupDuration, InvulnerabilitySource.POWERUP));
         int pickup = spawnPickup(PickupSystem.KIND_INVULNERABILITY);
         hit(pickup, player);
 
@@ -173,6 +176,7 @@ class PickupSystemTest {
 
         Attachment attachment = world.attachments().get(player);
         assertEquals(3, attachment.durability);
+        assertEquals("attachment", attachment.id);
     }
 
     @Test
@@ -193,7 +197,7 @@ class PickupSystemTest {
     void attachmentAlreadyEquippedGrantsPoints() {
         content.withAttachment(3);
         int player = spawnPlayer(new Player(3, 2, 1));
-        world.attachments().set(player, new Attachment(1));
+        world.attachments().set(player, new Attachment("attachment", 1));
         int pickup = spawnPickup(PickupSystem.KIND_ATTACHMENT);
         hit(pickup, player);
 

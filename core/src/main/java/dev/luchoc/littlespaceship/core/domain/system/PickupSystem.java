@@ -13,6 +13,7 @@ import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.port.AttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
 import java.util.List;
 import java.util.Set;
 
@@ -179,9 +180,10 @@ public final class PickupSystem implements GameSystem {
             return true;
         }
         if (current == null) {
-            world.invulnerabilities().set(player, new Invulnerable(duration));
+            world.invulnerabilities().set(player, new Invulnerable(duration, InvulnerabilitySource.POWERUP));
         } else {
             current.remaining = duration;
+            current.source = InvulnerabilitySource.POWERUP;
         }
         return false;
     }
@@ -191,7 +193,7 @@ public final class PickupSystem implements GameSystem {
             return true;
         }
         AttachmentDefinition definition = world.content().attachment(kind);
-        world.attachments().set(player, new Attachment(definition.durability()));
+        world.attachments().set(player, new Attachment(definition.id(), definition.durability()));
         return false;
     }
 }

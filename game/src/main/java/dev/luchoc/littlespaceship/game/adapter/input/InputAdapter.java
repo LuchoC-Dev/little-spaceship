@@ -52,23 +52,26 @@ public final class InputAdapter {
      *     displacement into a velocity
      * @param balance where the keyboard's full-deflection magnitude and the slow multiplier come
      *     from — the adapter does not invent numbers the content already owns
+     * @param mouseEnabled the Options screen's mouse-control switch, per
+     *     {@code docs/planning/02-mvp-functional-spec.md}; when false the mouse contributes nothing,
+     *     including to fire and bomb, so a disabled mouse cannot fire either
      * @return an immutable frame ready for {@link dev.luchoc.littlespaceship.core.application.GameLoop#advance}
      */
-    public InputFrame sample(float frameDelta, BalanceValues balance) {
-        managePointerCapture();
+    public InputFrame sample(float frameDelta, BalanceValues balance, boolean mouseEnabled) {
+        managePointerCapture(mouseEnabled);
 
         float safeDelta = Math.max(frameDelta, MIN_FRAME_DELTA);
         boolean slow = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)
             || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT);
         float cap = balance.playerSpeed() * (slow ? balance.playerSlowFactor() : 1f);
 
-        float moveX = keyboardX(cap) + mouseX(safeDelta);
-        float moveY = keyboardY(cap) + mouseY(safeDelta);
+        float moveX = keyboardX(cap) + (mouseEnabled ? mouseX(safeDelta) : 0f);
+        float moveY = keyboardY(cap) + (mouseEnabled ? mouseY(safeDelta) : 0f);
 
         boolean fire = Gdx.input.isKeyPressed(Input.Keys.SPACE)
-            || Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+            || (mouseEnabled && Gdx.input.isButtonPressed(Input.Buttons.LEFT));
         boolean bomb = Gdx.input.isKeyJustPressed(Input.Keys.X)
-            || Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT);
+            || (mouseEnabled && Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT));
 
         return new InputFrame(moveX, moveY, fire, slow, bomb);
     }
@@ -127,8 +130,8 @@ public final class InputAdapter {
      * producing deltas past the window edge and what the browser's Pointer Lock API requires before
      * it will engage. Escape releases it, so the player is never stuck without a visible cursor.
      */
-    private void managePointerCapture() {
-        if (!pointerCaptureRequested
+    private void managePointerCapture(boolean mouseEnabled) {
+        if (mouseEnabled && !pointerCaptureRequested
             && (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)
                 || Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT))) {
             Gdx.input.setCursorCatched(true);

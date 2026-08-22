@@ -6,3 +6,4 @@
 - [Content pipeline design](project_content-pipeline-design.md) — generic ComponentSpec over one type per component, why patterns were deferred but trajectories were not, Drop bypassing the registry.
 - [Game systems design](project_game-systems-design.md) — Health/HealthDamage, fragile-vs-Health split, tick-level input edges need state in core, reflection-based ComponentStore test guards.
 - [Verify against 12-architecture.md](feedback_verify-against-architecture-doc.md) — check its component table and JSON schema before calling a component undecided; a plan's reading list can be incomplete.
+- [HUD contract and level outcome](project_hud-contract-and-level-outcome.md) — PlayerStatus/CompletionBonus as snapshots, a tested-but-callerless method is a sign it drifted into the wrong module, attachmentDurability had no consumer.

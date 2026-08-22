@@ -24,6 +24,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
+import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.lang.reflect.Field;
@@ -103,9 +104,9 @@ class WorldTest {
         world.colliders().set(entity, new Collider(5f, CollisionLayer.ENEMY));
         world.sprites().set(entity, new Sprite(new SpriteId("enemy-basic")));
         world.players().set(entity, new Player(3, 2, 1));
-        world.invulnerabilities().set(entity, new Invulnerable(1f));
+        world.invulnerabilities().set(entity, new Invulnerable(1f, InvulnerabilitySource.RESPAWN));
         world.shields().set(entity, new Shield());
-        world.attachments().set(entity, new Attachment(1));
+        world.attachments().set(entity, new Attachment("attachment", 1));
         world.scoreValues().set(entity, new ScoreValue(100));
         world.drops().set(entity, new Drop("shield"));
         world.weapons().set(entity, new Weapon());
@@ -185,6 +186,68 @@ class WorldTest {
     @DisplayName("the view rejects a null visitor")
     void viewRejectsNullVisitor() {
         assertThrows(IllegalArgumentException.class, () -> world.view().forEachSprite(null));
+    }
+
+    @Test
+    @DisplayName("the view reports PlayerStatus.NONE when no entity holds Player")
+    void playerStatusIsNoneWithNoPlayerEntity() {
+        assertEquals(dev.luchoc.littlespaceship.core.port.PlayerStatus.NONE, world.view().player());
+    }
+
+    @Test
+    @DisplayName("the view snapshots the player's state, including the defensive chain")
+    void playerStatusReflectsTheDefensiveChain() {
+        int player = world.createEntity();
+        world.players().set(player, new Player(2, 1, 3));
+        world.shields().set(player, new Shield());
+        world.attachments().set(player, new Attachment("attachment", 2));
+        world.invulnerabilities().set(player, new Invulnerable(1.5f, InvulnerabilitySource.DAMAGE));
+
+        var status = world.view().player();
+
+        assertEquals(2, status.lives());
+        assertEquals(1, status.bombs());
+        assertEquals(3, status.weaponLevel());
+        assertTrue(status.shieldActive());
+        assertEquals("attachment", status.attachmentId());
+        assertEquals(InvulnerabilitySource.DAMAGE, status.invulnerabilitySource());
+        assertEquals(1.5f, status.invulnerabilityRemaining(), 0.0001f);
+    }
+
+    @Test
+    @DisplayName("the run is defeated once the player's lives reach zero")
+    void outcomeIsDefeatedAtZeroLives() {
+        int player = world.createEntity();
+        world.players().set(player, new Player(0, 1, 1));
+
+        assertEquals(dev.luchoc.littlespaceship.core.port.LevelOutcome.DEFEATED, world.view().outcome());
+    }
+
+    @Test
+    @DisplayName("a fresh world with no player and no exhausted timeline is still in progress")
+    void outcomeStartsInProgress() {
+        assertEquals(dev.luchoc.littlespaceship.core.port.LevelOutcome.IN_PROGRESS, world.view().outcome());
+    }
+
+    @Test
+    @DisplayName("the view reports a zero completion bonus with no player entity")
+    void completionBonusIsZeroWithNoPlayerEntity() {
+        var bonus = world.view().completionBonus();
+
+        assertEquals(0, bonus.livesBonus());
+        assertEquals(0, bonus.bombsBonus());
+    }
+
+    @Test
+    @DisplayName("the view reports the completion bonus for the player's current lives and bombs")
+    void completionBonusReflectsLivesAndBombs() {
+        int player = world.createEntity();
+        world.players().set(player, new Player(3, 2, 1));
+
+        var bonus = world.view().completionBonus();
+
+        assertEquals(3 * 1000, bonus.livesBonus());
+        assertEquals(2 * 300, bonus.bombsBonus());
     }
 
     @Test
