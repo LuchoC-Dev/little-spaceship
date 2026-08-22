@@ -12,6 +12,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Weapon;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.domain.system.BombSystem;
+import dev.luchoc.littlespaceship.core.domain.system.BossSystem;
 import dev.luchoc.littlespaceship.core.domain.system.CleanupSystem;
 import dev.luchoc.littlespaceship.core.domain.system.CollisionSystem;
 import dev.luchoc.littlespaceship.core.domain.system.DamageSystem;
@@ -165,6 +166,7 @@ public final class Simulation implements TickHandler {
         systems.add(new BombSystem());
         if (levelId != null) {
             systems.add(new SpawnSystem(levelId));
+            systems.add(new BossSystem(levelId));
         }
         systems.add(new LifetimeSystem());
         systems.add(new CollisionSystem());

@@ -41,6 +41,19 @@ public enum SystemOrder {
     /** Advances the level timeline and spawns waves. */
     SPAWN,
 
+    /**
+     * Advances the boss encounter: entrance, the pattern state machine and its fire. Added in phase
+     * 07, after {@code SPAWN} and before {@code LIFETIME} — the boss is a second, independent
+     * timeline running alongside the wave one, not a wave itself, so it does not share {@code
+     * SPAWN}'s stage. Placed here rather than folded into {@code SPAWN} because a wave's timeline is
+     * "spawn and forget" while the boss keeps state — entrance progress, which pattern is charging —
+     * across many ticks, closer in shape to {@code WEAPON} than to a one-shot spawn. Running before
+     * {@code LIFETIME} and {@code COLLISION} is what lets a boss projectile fired this tick be
+     * detected by the very same tick's collision pass the moment it exists, exactly like a player
+     * projectile created at {@code WEAPON} already is.
+     */
+    BOSS,
+
     /** Expires projectiles and effects. */
     LIFETIME,
 

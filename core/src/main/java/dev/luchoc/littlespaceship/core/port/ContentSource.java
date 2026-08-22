@@ -53,4 +53,22 @@ public interface ContentSource {
      * @throws IllegalArgumentException if no attachment has that id
      */
     AttachmentDefinition attachment(String id);
+
+    /**
+     * Tells whether a level has a boss to fight, so {@code Simulation} can decide whether to run
+     * {@code BossSystem} at all. A level without a boss is a legitimate case — not every future level
+     * needs one — so absence here is not the kind of content bug {@link #boss(String)} itself fails
+     * loudly on.
+     *
+     * @param levelId the level's content id
+     * @return true when {@link #boss(String)} would succeed for this level
+     */
+    boolean hasBoss(String levelId);
+
+    /**
+     * @param levelId the level's content id
+     * @return the level's boss definition, never null
+     * @throws IllegalArgumentException if the level has no boss
+     */
+    BossDefinition boss(String levelId);
 }

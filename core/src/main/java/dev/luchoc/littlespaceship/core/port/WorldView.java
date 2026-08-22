@@ -41,4 +41,13 @@ public interface WorldView {
      * @return the completion bonus, split into its lives and bombs components
      */
     CompletionBonus completionBonus();
+
+    /**
+     * Reads the boss's aggregate health, for the health bar {@code docs/design/04-hud-layout.md}
+     * shows only during the fight.
+     *
+     * @return the boss's status, or {@link BossStatus#NONE} before it spawns, after it is defeated,
+     *     or on a level with no boss
+     */
+    BossStatus bossStatus();
 }
