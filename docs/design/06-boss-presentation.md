@@ -54,6 +54,16 @@ keeps F1 for its explosion. That is what makes the boss's centre the thing the e
 | Top-lit plate edges | N6 | 1 px, on upward-facing edges only |
 | Interior shadow, gaps | N0 | the gaps are negative space, not shading — see below |
 | Core iris | W3 / W4 / F1 | the one warm accent, and the aim point |
+| Pod and arm emitter, at rest | W3 over an N0 pupil | see below |
+
+**The pods and the arms hold W3 at rest and nothing brighter.** Drawing them on 22/08/2026 made the
+reason obvious: beat 1 of the tell fills the charging part W4 and beat 2 fills it F1, so a pod that
+already sat at W4 would have nowhere to go and the first beat would be invisible. The 1 px N0 pupil
+is what stops a flat W3 disc reading as a sticker, and it is also the pixel the charge closes over,
+which is a second, silent cue that the part is filling.
+
+Only the core carries W4 and F1 at rest, and it is roughly twice the emitter's diameter, so at rest
+the eye goes to the centre and during a tell it goes to the part that changed.
 
 **The one-violet constraint holds on the boss, but only because of the gaps.** At 119x87 the missing
 mid-dark violet would normally show as flat, blotchy black wherever a hull needs occlusion. It does
@@ -117,9 +127,45 @@ The vertical bar in the right margin (`04-hud-layout.md`) reports damage. It mus
 tell: a bar that also pulses turns the margin into a second thing to watch during the only moment
 the player cannot afford to look away from the playfield.
 
+## The five colliders do not cover the drawn boss
+
+Found on 22/08/2026, drawing the parts against the map in
+[`02-sprite-sizes.md`](02-sprite-sizes.md). It is arithmetic, not opinion, and it belongs to phase
+07 rather than to the art:
+
+| Part | Sprite reaches | Its collider reaches | Uncovered |
+|---|---|---|---|
+| Core | y -43 to +43, x ±23 | y -18 to +18, x ±18 | 25 px of keel, 25 px of crown, 5 px each flank |
+| Arm | y -40 to +4 | y -32 to -4 | 8 px of muzzle, 8 px of shoulder |
+| Pod | 25 px across | 24 px across | nothing worth naming |
+
+The keel is the one that will be felt. The boss sits at the top of the playfield and the player
+shoots upward, so the keel is the first thing his shots reach and 25 px of it is pass-through: the
+projectile visibly enters the boss before anything registers. That is the failure rule 3 of
+`02-sprite-sizes.md` exists to prevent, arriving through the collider map instead of through the
+drawing.
+
+The crown is the opposite case and can be left alone — it is the part furthest from the player and
+the last thing he is ever aiming at.
+
+**Proposed, for phase 07 to accept or replace:** one more entity, and one offset moved.
+
+| Change | Value |
+|---|---|
+| Add `core-keel` | radius 13.0 at offset 0, -27 |
+| Move the arms | from 0, -18 to 0, -22, radius unchanged |
+
+That makes six entities instead of five, leaves at most 5 px of any part unhittable, and keeps the
+channels the player flies through open, which is the constraint that must not be traded away.
+
 ## Open, for whoever draws it
 
-The three part sprites are specified here and **not yet drawn**. When they are, the checks that
-matter are `check.js` for the palette split and a look at the boss at 1x with the tell on its last
-beat while the escalation scene's enemy fire is on screen — the tell is only correct if the magenta
-is still the easiest thing to find.
+The three part sprites are **drawn**: `boss-core` 47x87, `boss-pod` 25x25 and `boss-arm` 31x45 in
+`mockups/src/01-sprites.js`, generated from band widths by `mockups/generate-boss.py` rather than
+typed, because a hand-typed 47x87 grid is 4089 characters and half its errors go unnoticed. The
+right-hand pod and arm are the left-hand sprites mirrored at draw time, as this page requires.
+
+What is still open is the tell in motion. The check that matters is a look at the boss at 1x with
+the tell on its last beat while the escalation scene's enemy fire is on screen — the tell is only
+correct if the magenta is still the easiest thing to find, and that cannot be judged from a
+contact sheet.
