@@ -1,6 +1,6 @@
 ---
 name: audit-techniques
-description: Read-only ways to prove a finding in this repo without modifying it or re-running the full build
+description: Read-only ways to prove a finding in this repo without modifying it or re-running the full build, including batching and design-fidelity checks
 metadata:
   type: project
 ---
@@ -100,4 +100,55 @@ Techniques that turned suspicions into confirmed findings during the phase 01 an
   here, which costs nothing, but the reconstruction is what tells you whether an "inferred, not
   verified" note is being conservative or is simply wrong.
 
+## For a phase that turns a design document into screens
+
+- **Count texture binds by reading the draw method top to bottom, not by profiling.** A `SpriteBatch`
+  flushes on every texture change, so the bind sequence is fully determined by the source order of
+  the draw calls. `HudRenderer` alternates a private 1x1 `pixel` `Texture` with its fonts; that plus
+  the next point gives an exact per-frame count with no run.
+- **`new BitmapFont()` twice creates two distinct `Texture` objects**, even for the same bundled
+  default font. Any Skin that builds `font-mini` and `font-title` separately cannot batch text of the
+  two together. Check the constructor, not the font name.
+- **Separate O(1) from O(n) before calling an allocation a defect here.** List the draw path's
+  allocations and ask whether each scales with entity count. This project's real rule is
+  `12-architecture.md:159` ("not one object per entity per frame"), not
+  `03-first-playable/plan.md:45`'s absolute phrasing; a constant handful of short-lived objects
+  against ~10 ms of drawing is not a finding, and the stale criterion wording is.
+- **`BitmapFont.draw` and `GlyphLayout` pool internally**, so text drawing is not the allocation
+  source it looks like — `Integer.toString`/`StringBuilder`/`String.replace` in the same method are.
+- **A design document can be internally ambiguous, and the two readings live in different sections.**
+  `04-hud-layout.md` lists the invulnerability icon and timer unconditionally in its coordinate
+  table, then assigns them to the power-up alone in a later prose section. Read both before calling
+  an implementation wrong or right; quote the section the code actually contradicts.
+- **The mockup sources are the fidelity oracle.** `docs/design/mockups/src/05-screens.js` is a list
+  of explicit draw calls per screen — read it as a checklist against the shipped screen classes.
+  `grep -n "setBackground\|n2-panel"` across `game/screen` settles which panels exist in seconds.
+- **"The owner played the build" verifies reachability, not fidelity, and not the criteria table.**
+  Treat a play-tested branch as having its *flow* confirmed and nothing else; the criteria rows still
+  have to be earned one at a time.
+- **Grep a `core` `static` helper for callers in `src/main` and `src/test` separately when the same
+  formula might have been rewritten in `game`.** Test-only callers on a rule method is the tell that
+  the production copy moved to the other side of the boundary.
+
 Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
+
+## For auditing presentation feedback nobody could capture on screen
+
+- **Read a flash timer's visible length off the *call order* inside `draw()`, not off the constant.**
+  `HudRenderer` runs `updateFeedback` (sets N) -> draw -> `decrementFeedback`, which makes a timer of
+  N visible on exactly N consecutive frames. Set-then-decrement-then-draw would cost one frame,
+  draw-then-set would cost the first. Three lines settle a whole table of tick counts.
+- **For a two-phase flash, enumerate the counter's values rather than reasoning about the
+  threshold.** `ruleFlashTicks` from 6 with `> 4` selecting `N7` gives 6,5 -> `N7` and 4,3,2,1 ->
+  `W3`: the table's "2 then 4" without a probe.
+- **To answer "what if two events land on the same tick", ask the domain which pairs can co-occur
+  first.** `DamageSystem` never destroys the player entity (it decrements `lives` in place), so
+  `WorldView.player()` never returns `PlayerStatus.NONE` mid-run — which is the only thing that
+  would have produced a spurious "weapon level gained" flash off a `0 -> N` recovery step. The
+  co-occurring pairs that remain (death removing shield and attachment with the life) touch disjoint
+  plate regions and share no state.
+- **A new `Skin` lookup is a runtime failure the compiler cannot see.** `getDrawable(name)` and
+  `newDrawable(name, ...)` throw if the name was never registered — and `Skin.add(name, resource)`
+  files it under its runtime class, so a nine-patch added implicitly is invisible to `getDrawable`.
+  Confirm each new name against `GameSkin`, and check whether the screen that uses it is built in a
+  constructor (so a manual run exercised it) or lazily (so nobody has).

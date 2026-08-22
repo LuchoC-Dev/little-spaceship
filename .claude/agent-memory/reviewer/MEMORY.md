@@ -1,3 +1,3 @@
-- [Defect patterns in this repo](project_defect-patterns.md) — the eighteen shapes of defect that stay green here, plus what a correct response to a rejection looks like.
+- [Defect patterns in this repo](project_defect-patterns.md) — the twenty-eight shapes of defect that stay green here, plus what a correct response to a rejection looks like.
 - [Audit techniques](project_audit-techniques.md) — read-only ways to prove a finding without touching the repo or rebuilding.
 - [Review tooling and memory placement](project_review-tooling-and-memory-placement.md) — gh scope errors on this token, and why memory on a phase branch lags main.

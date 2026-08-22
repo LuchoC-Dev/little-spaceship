@@ -1,6 +1,6 @@
 ---
 name: defect-patterns
-description: The recurring shapes of defect found when auditing this repo — where to look first in a phase review, including second-round, data-driven and seam-defect passes
+description: The recurring shapes of defect found when auditing this repo — where to look first in a phase review, including second-round, data-driven, seam and design-fidelity passes
 metadata:
   type: project
 ---
@@ -154,3 +154,97 @@ the shape of an honest fix.
   `status.md` whenever both changed on the branch, in both directions.
 
 See [[audit-techniques]] for how to confirm these cheaply without touching the repo, and [[review-tooling-and-memory-placement]] for the operational traps around posting the verdict.
+
+## Six more from phase 06 (`feat/hud-and-screens`, PR #26), where a design document became screens
+
+This phase's family is the *fidelity* one: the code runs, the owner played it, and what drifted is
+the distance between the document that was drawn and the thing that was built. Nothing here fails a
+test either, and "the owner confirmed it works" does not touch any of it.
+
+19. **A game rule reimplemented in the presentation layer while `core`'s tested copy stays uncalled.**
+    `PlayScreen` computed `lifeCompletionBonus() * lives + bombCompletionBonus() * bombs` inline the
+    same pass that *edited* `ScoreSystem.completionBonus`'s javadoc to explain why it has no caller.
+    Two implementations of one rule in two modules, and the tested one is dead. Whenever `game` reads
+    a `PlayerStatus` field and then does arithmetic on it, ask which document that arithmetic comes
+    from and grep `core` for the same formula — this is pattern 2 (accessor with no call site) seen
+    from the other end, and the giveaway is a `static` method in `core` whose only callers are tests.
+20. **A domain field justified by a design document, consumed by something that document assigns
+    elsewhere.** `Invulnerable.source` was added to `core` because "`04-hud-layout.md` asks the HUD to
+    draw the three sources differently *on the ship*". The ship treatment was never built; the only
+    consumer is a plate widget the same document assigns to the power-up alone. The field is still
+    the least-bad option — read the *consumer* before accepting the justification, and check whether
+    the cited section is the one the code implements.
+21. **A spec bullet list ticked as a whole when one bullet is unbuilt.** `02-mvp-functional-spec.md`'s
+    HUD section has eight bullets; seven were drawn and "clear feedback for hits and for losing
+    upgrades" was not, while the criterion "the HUD shows everything the spec requires" was marked
+    **earned**. Read the source list item by item against the implementation; do not accept a
+    criterion that quotes a document as evidence that the whole document was satisfied. In this case
+    the missing half was not blocked on `core` at all — it is a frame-over-frame diff of
+    `PlayerStatus` — which is worth checking before believing "deferred".
+22. **"Everything else is unchanged from the first pass's assessment", where the first pass assessed
+    two rows of seven.** A criteria table can be dodged by reference as well as by overclaim. When a
+    status pass defers to an earlier one, open the earlier one and count the rows it actually
+    evaluated.
+23. **Batching broken by texture alternation, in the phase whose criterion is batching.** `new
+    BitmapFont()` twice produces two distinct `Texture`s even for the same bundled font, and a HUD
+    that alternates label -> filled rects -> label rebinds once per switch. ~12-14 binds per frame
+    from `HudRenderer` alone. Absolutely trivial at this scale and *not* worth optimising — but it is
+    the literal task-12 criterion, and it is the finding that matters more than any allocation count
+    under this project's own "drawing is the cost" rule. Reconstruct the bind sequence by reading
+    the draw method top to bottom; no profiler needed.
+24. **A pixel-exact mock is a checkable artefact, and nobody checks it.** `docs/design/mockups/src/
+    05-screens.js` draws all six screens as explicit calls. Diffing those calls against the shipped
+    screens found six omissions (title rule, credits entry, pause plate, menu subtitle/footer,
+    unpadded defeat score, stat bars turned into raw numbers) that "the owner played the build and
+    it works" cannot surface, because reachability and fidelity are different claims. The
+    counter-example in the same branch: the omitted second ship slot *is* documented with a reason,
+    which is how a deviation should look.
+
+Calibration from this phase, and it matters: **the per-frame allocation the parent flagged as the
+invariant most at risk turned out not to be a defect.** `WorldView.player()`'s fresh record plus the
+zero-padded score come to ~6-10 short-lived objects per frame, constant in entity count.
+`12-architecture.md:159` states the intent as "not one object per *entity* per frame", which is
+intact; only `03-first-playable/plan.md:45`'s absolute phrasing is now literally false. The honest
+finding was the stale criterion, not the allocation. Do not manufacture the O(1) case into a defect.
+
+## Round 2 on PR #26: presentation timers, and the limit of a snapshot contract
+
+The verdict was accept. What is worth keeping is not the findings — they were all notes — but four
+shapes that will recur the moment presentation grows.
+
+25. **A snapshot contract can report *what changed*, never *what happened*.** Phase 06 derives five
+    of the six feedback events from a frame-over-frame diff of `PlayerStatus`, which works only
+    because they are monotone state transitions. The sixth (pickup collected at maximum) is
+    indistinguishable from an ordinary kill, because `maxedPickupBonus` and `enemy-tank`'s score are
+    both 500. Whenever presentation is asked to react to an *event*, check whether the port hands it
+    a state or an occurrence. The seam for occurrences already exists and is empty:
+    `core.port.GameEventSink`, `core.domain.event.GameEvent` (a marker interface with **zero**
+    implementations) and `GameEventQueue` (buffers, drains in emission order after the tick), with
+    `PlayScreen` passing `event -> { }`. Audio in phase 08 needs the same distinction, so the first
+    concrete `GameEvent` closes both at once.
+26. **Presentation timers counted in `draw()` calls, against a design table written in simulation
+    ticks.** `HudRenderer`'s flash counters and `WorldRenderer.sourceTicks` advance once per render
+    frame, while `04-hud-layout.md` specifies ticks of 1/60. Desktop pins the two together
+    (`DesktopLauncher` sets `useVsync(true)` **and** `setForegroundFPS(60)`); the web target paces
+    off `requestAnimationFrame`, so a high-refresh display runs every blink and flash fast while the
+    durations, which come from `BalanceValues` in seconds, do not move. Constants named `*_TICKS`
+    that a render loop decrements are the tell.
+27. **An identity duplicated as a literal across modules fails silently in both directions.**
+    `WorldRenderer` matches the player by `"ship-basic"`, copied from `Simulation`'s
+    `private static final SpriteId PLAYER_SPRITE`, because `SpriteVisitor.accept` carries no player
+    flag. Rename either side and every ship-side treatment stops drawing with no compile error and
+    no failing test. Distinguish this from a string that genuinely *crosses* the boundary
+    (`PlayerStatus.attachmentId`), which cannot drift.
+28. **A domain method that goes `public` to serve `World.View` escapes `PublicContractTest`
+    entirely.** Its `BOUNDARY_PACKAGES` are `core.port` and `core.application` only, so
+    `ScoreSystem.completionBonus(BalanceValues, Player)` — public, taking a mutable domain component
+    — passes untouched. Not a breach in practice (`game` cannot obtain a `Player`), but the guard
+    becomes the javadoc. Pattern 1 in its newest form: check the test's package filter every time a
+    fix widens visibility inside `domain`.
+
+Calibration, and it is the point of the round: the two claims the parent asked me to distrust —
+hand-traced tick counts and a deliberate omission — both held. The counters set-draw-decrement in
+one method, so a timer of N is visible for exactly N frames, no off-by-one anywhere; the omission
+was the correct call and was documented rather than guessed. What the write-up does instead, twice,
+is state an omission once in prose while the summary sentence beside it reads as complete. That is
+the residual shape in this author's status documents, and it is a note, never a rejection.
