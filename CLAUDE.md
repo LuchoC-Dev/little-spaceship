@@ -75,6 +75,7 @@ Defined in `.claude/agents/`, each with persistent memory under `.claude/agent-m
 | `core-domain` | `core/` — ECS, systems, game rules |
 | `game-presentation` | `game/`, `desktop/`, `web/` — rendering, HUD, audio, input |
 | `visual-designer` | visual direction; produces documents, not code |
+| `level-designer` | `assets/data/level-*.json` — the wave timeline, pacing and the intensity curve |
 | `test-engineer` | unit tests and deterministic replays |
 | `reviewer` | reads and reports only |
 
