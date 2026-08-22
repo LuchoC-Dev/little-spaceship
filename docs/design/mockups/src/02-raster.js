@@ -47,9 +47,11 @@ class Fb {
   }
   text5(str, x, y, c) {
     let cx = x;
-    for (const ch of str.toUpperCase()) {
+    for (const ch of str) {
       const g = FONT5[ch] || FONT5[' '];
-      for (let j = 0; j < 7; j++) {
+      // g is 7 rows, or 9 when the glyph descends. Reading its length is what keeps the two cases
+      // from needing two code paths, here and in the real loader.
+      for (let j = 0; j < g.length; j++) {
         for (let i = 0; i < 5; i++) if (g[j] & (1 << (4 - i))) this.px(cx + i, y + j, c);
       }
       cx += 6;
@@ -57,7 +59,7 @@ class Fb {
   }
   text7(str, x, y, c) {
     let cx = x;
-    for (const ch of str) {
+    for (const ch of str.toUpperCase()) {
       const g = FONT7[ch];
       if (g) {
         for (let j = 0; j < 11; j++) {

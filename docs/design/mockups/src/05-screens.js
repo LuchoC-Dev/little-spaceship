@@ -209,16 +209,25 @@ function proceduralSilhouette(kind) {
   return fb;
 }
 
+// The sheet layout both fonts ship in: 16 columns of ASCII 32-126, cell index = code - 32. Cells
+// font-title does not cover stay empty, which is what lets one loader index either sheet.
+const SHEET_COLUMNS = 16;
+const SHEET_CELL = {
+  mini: { cw: 6, ch: 10 },
+  title: { cw: 8, ch: 13 }
+};
+
 function fontSheetFb(which) {
   const font = which === 'title' ? FONT7 : FONT5;
-  const gw = which === 'title' ? 7 : 5, gh = which === 'title' ? 11 : 7;
-  const keys = Object.keys(font).filter(k => k !== ' ');
-  const cols = which === 'title' ? 10 : 16;
-  const rows = Math.ceil(keys.length / cols);
-  const fb = new Fb(cols * (gw + 1), rows * (gh + 2));
-  keys.forEach((ch, i) => {
-    const x = (i % cols) * (gw + 1), y = Math.floor(i / cols) * (gh + 2);
+  const cell = which === 'title' ? SHEET_CELL.title : SHEET_CELL.mini;
+  const rows = Math.ceil(95 / SHEET_COLUMNS);
+  const fb = new Fb(SHEET_COLUMNS * cell.cw, rows * cell.ch);
+  for (let code = 32; code <= 126; code++) {
+    const ch = String.fromCharCode(code);
+    if (!(ch in font)) continue;
+    const i = code - 32;
+    const x = (i % SHEET_COLUMNS) * cell.cw, y = Math.floor(i / SHEET_COLUMNS) * cell.ch;
     if (which === 'title') fb.text7(ch, x, y, 20); else fb.text5(ch, x, y, 20);
-  });
+  }
   return fb;
 }
