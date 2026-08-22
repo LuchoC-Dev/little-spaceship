@@ -59,9 +59,20 @@ public final class PlaceholderAtlas implements SpriteAtlas {
         new Sprite("enemy-rush", 9, 15, Kind.ENEMY),
         new Sprite("enemy-tank", 23, 23, Kind.ENEMY),
         new Sprite("enemy-carrier", 39, 31, Kind.ENEMY),
+        // The boss's three parts, sizes fixed by docs/design/06-boss-presentation.md — drawn on
+        // feat/sprite-production, not merged here yet. This placeholder exists so the boss is
+        // visible at all while that branch is still separate; see this class's javadoc on why a
+        // placeholder never encodes shape, only size, so nothing here needs replacing once real art
+        // lands beyond this entry being deleted.
+        new Sprite("boss-core", 47, 87, Kind.ENEMY),
+        new Sprite("boss-pod", 25, 25, Kind.ENEMY),
+        new Sprite("boss-arm", 31, 45, Kind.ENEMY),
         // Player projectiles, "Player shot, level 1/3" rows of the sprite sizes table.
         new Sprite("shot-p1", 3, 9, Kind.PROJECTILE),
         new Sprite("shot-p2", 5, 11, Kind.PROJECTILE),
+        // The boss's own shot, invented in phase 07 — no enemy fired before it. Same rough scale as
+        // the player's own shots per BossSystem.PROJECTILE_RADIUS (2.0f).
+        new Sprite("boss-shot", 4, 4, Kind.PROJECTILE),
         // The five fixed power-up kinds share one capsule silhouette per PickupSystem.KIND_*,
         // "Power-up capsule" row.
         new Sprite("pickup-weapon-upgrade", 11, 11, Kind.PICKUP),

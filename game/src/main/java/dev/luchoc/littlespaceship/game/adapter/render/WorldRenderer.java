@@ -40,6 +40,15 @@ import java.util.Set;
  * SpriteVisitor#accept} carries no "this is the player" flag — {@link #PLAYER_SPRITE_ID} matches
  * {@code Simulation.PLAYER_SPRITE}'s value, the same way {@code HudRenderer} already treats
  * {@code attachmentId} as a plain content id crossing the boundary rather than as domain machinery.
+ *
+ * <p><b>The boss's tell</b> reads the same way: {@code BossSystem} steps a charging pod's or arm's
+ * {@code Sprite.frame} 1 through 3 across the 0.75 s tell and drops it to 0 the instant the shot
+ * leaves, per {@code docs/design/06-boss-presentation.md}. This class turns that frame into the
+ * three-beat charge the document specifies — beat 1 tints the part {@code W4}, beat 2 tints it
+ * {@code F1}, beat 3 traces a 1 px {@code N7} outline around it — entirely as a colour/outline
+ * overlay on whatever region {@code sprite} resolves to, since the real art (an animated iris/rim)
+ * lives on {@code feat/sprite-production}, not merged here. {@code boss-core} never receives a
+ * nonzero frame — the core never charges — so it is never mistaken for a tell target.
  */
 public final class WorldRenderer implements SpriteVisitor {
 
@@ -59,6 +68,11 @@ public final class WorldRenderer implements SpriteVisitor {
 
     /** The power-up's glow ring, 21x21 per {@code 04-hud-layout.md}. */
     private static final float AURA_SIZE = 21f;
+
+    /** The boss tell's three beats, per {@code docs/design/06-boss-presentation.md}. */
+    private static final int TELL_BEAT_1 = 1;
+    private static final int TELL_BEAT_2 = 2;
+    private static final int TELL_BEAT_3 = 3;
 
     private final SpriteAtlas atlas;
     private final float playfieldLeft;
@@ -167,6 +181,10 @@ public final class WorldRenderer implements SpriteVisitor {
             if (flashed) {
                 tint = Palette.N7;
             }
+        } else if (frame == TELL_BEAT_1) {
+            tint = Palette.W4;
+        } else if (frame == TELL_BEAT_2) {
+            tint = Palette.F1;
         }
 
         batch.setColor(tint.r, tint.g, tint.b, alpha);
@@ -176,6 +194,26 @@ public final class WorldRenderer implements SpriteVisitor {
             width, height,
             1f, 1f,
             rotation);
+        batch.setColor(Color.WHITE);
+
+        if (frame == TELL_BEAT_3) {
+            drawTellOutline(logicalX, y, width, height);
+        }
+    }
+
+    /**
+     * The tell's third beat: a 1 px {@code N7} outline traced around the whole charging part, held
+     * steady until the shot leaves, per {@code docs/design/06-boss-presentation.md}. Reuses
+     * {@link #pixel} the same way {@link #drawAura} already does, rather than a second texture.
+     */
+    private void drawTellOutline(float centerX, float centerY, float width, float height) {
+        float left = centerX - width / 2f;
+        float bottom = centerY - height / 2f;
+        batch.setColor(Palette.N7);
+        batch.draw(pixel, left, bottom, width, 1f);
+        batch.draw(pixel, left, bottom + height - 1f, width, 1f);
+        batch.draw(pixel, left, bottom, 1f, height);
+        batch.draw(pixel, left + width - 1f, bottom, 1f, height);
         batch.setColor(Color.WHITE);
     }
 
