@@ -29,6 +29,10 @@ What exists in the repository:
 - `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring. 236 tests, no libGDX on its classpath.
 - `game/` and `desktop/` — the LWJGL3 launcher, the input adapter that sums keyboard and relative mouse, an allocation-free renderer reading through `WorldView`, integer-scaled viewport, placeholder art at the sizes the visual direction fixed, and the JSON content loader. No tests yet. `web/` is still an empty skeleton; phase 09 owns it.
 - `assets/data/` — the content as JSON: six archetypes, four trajectories, three formations and one timeline.
+- `.github/workflows/ci.yml` — CI on every push and pull request: compiles, runs the tests, builds the
+  desktop and TeaVM web targets. It cannot prove the web build *runs*; a human does that.
+- `README.md` and `LICENSE` (MIT) — written for the repository going public. The licence covers the
+  whole repository, art and audio included.
 
 ## The three merges, and what they did not do
 
@@ -101,8 +105,11 @@ the diff:
    130 u/s projectile is dodgeable — it is the fastest enemy shot in the game.
 2. **Phase 09 is the only thing left before the MVP** — web, CI and deploy. **In progress since
    25/08.** The web launcher is merged (#33) and **the game has been played in a real browser**: it
-   runs, and that is the first time anything in this project ran outside a JVM. What is still open is
-   the browser matrix, the load-time measurement, CI, the deploy and the README.
+   runs, and that is the first time anything in this project ran outside a JVM. CI (#35) and the
+   README (#37) followed, along with the MIT licence and the repository's description and topics.
+   **Chrome and Firefox were verified by hand; Edge was dropped by the player's decision, so the
+   browser matrix is closed as far as it will be.** What is still open is the load-time measurement
+   and the deploy — after which the link is real and the MVP is shipped.
 
 ### Post-MVP backlog, from real play on 25/08
 
@@ -236,7 +243,7 @@ Everything the three merged branches left unwired is closed.
 | 06 | Presentation | **done** — direction #8, integration #26, sprites packed into `assets/atlas/` and the real bitmap fonts into `assets/fonts/` on 25/08 |
 | 07 | Boss | **merged** — #29, with level 1 and enemy fire. Four archetypes shoot; the boss fans 6 projectiles a volley |
 | 08 | Audio and polish | **merged** — #31, with both dead cues wired on 25/08. Nobody has heard it yet; phase 09's browser pass is the first listen |
-| 09 | Web, CI and release | **in progress** — web launcher merged in #33 and played in a browser; CI, deploy and README open |
+| 09 | Web, CI and release | **in progress** — launcher (#33), CI (#35) and README (#37) merged; deploy is the last step |
 
 ## Open items that do not block
 
