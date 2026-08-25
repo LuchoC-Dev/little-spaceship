@@ -73,8 +73,11 @@ Same spirit, aimed at the code, the MVP and level 1 rather than at process. The 
 Measured, not estimated: `assets/data/level-01.json` has **92 spawn events** and the boss enters at
 **302 s — 5.03 minutes**.
 
-The player's call: **cut it to roughly 2.5–3 minutes**, with the boss arriving there. That is close to
-halving the timeline, not trimming it.
+The player's judgement is that five minutes is too long, and the figure discussed was somewhere around
+2.5–3 minutes. **That number is deliberately not fixed here** — it is decided in the phase that does
+the work, once the wave structure below exists and the pacing can be felt rather than arithmetic'd.
+What is settled is the direction: shorter, with the boss arriving earlier. Whatever the number turns
+out to be, this is close to halving the timeline rather than trimming it.
 
 ### The boss changes
 
@@ -96,6 +99,43 @@ The open tension `docs/STATUS.md` already records belongs here: the spec asks th
 lives long enough for its rate of fire to read.
 
 **Decided, and it stays decided: balance is tuned by playing, not by arithmetic.**
+
+### Levels should be built out of waves, not a flat list of timestamps
+
+Today `level-01.json` is **92 spawn events**, each an absolute time, an archetype, a formation and an
+x position. It is a transcript, not a design: there is nothing in it that says "this is the opening",
+and no way to reuse a piece of it.
+
+The player's proposal is to group spawns into **waves** as the unit of level design. Roughly, as
+described:
+
+> wave 1 is one, two, then three basic ships; wave 2 is when they start coming three at a time and
+> the faster ones begin to appear; wave 3 is the next step up, and so on.
+
+Two reasons, both real: **a level becomes readable as a design** rather than as 92 rows, and **waves
+can be reused** — across a level, and potentially across levels.
+
+This is the piece the per-level document and the movement work below both hang off, which is why it
+is written first.
+
+**Open, and each of these changes what a wave is:**
+
+- **What ends a wave.** A fixed duration, or "the wave is cleared"? Clearing is the more interesting
+  design — pacing follows the player rather than the clock — but it makes level length depend on how
+  the player performs, which is exactly what "the boss arrives at 2.5 minutes" stops meaning. Note it
+  does *not* break determinism: the core reads world state, not the clock, so a cleared-based trigger
+  stays reproducible. The invariant survives; the schedule does not.
+- **How a wave is placed.** Absolute time, or relative to the previous wave ending? Reuse pushes hard
+  towards relative — an absolute time is not reusable anywhere.
+- **Whether a wave takes parameters.** The same wave at a higher difficulty, mirrored, or entering
+  from a different side, is the difference between reuse and copy-paste. It is also the difference
+  between a simple format and a small language, and this project's sixth invariant is no abstraction
+  without a real case in the MVP.
+- **Where waves live.** `assets/data/` alongside formations, or a level-level construct. Formations
+  already exist as a grouping below this one; waves sit above them, and the two should not blur.
+
+None of this is decided. It is written down so the phase that picks it up starts from the questions
+rather than rediscovering them.
 
 ### Movement needs to be a system, not a value
 
