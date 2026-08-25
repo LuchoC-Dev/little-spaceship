@@ -1,9 +1,12 @@
 name: Deploy Pages
 
-# Deploys the release web build only from main, never from a feature branch or a pull request.
+# Deploys the release web build only from main, never automatically from a feature branch or a
+# pull request. workflow_dispatch is kept only so this workflow can be exercised manually from a
+# branch before it is merged — it does not change the automatic trigger.
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 # Scoped to this workflow file only: ci.yml keeps its own `contents: read` and does not need
 # widening. Pages deployment needs both to mint the OIDC token and publish the artifact.
