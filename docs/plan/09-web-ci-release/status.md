@@ -101,15 +101,30 @@ Nothing.
 - Tasks 4-6, 8-9 remain: pointer capture verification, the browser matrix
   (Chrome/Firefox/Edge/Safari), real-asset load-time and framerate measurement, static-site deploy,
   and the repository README. Task 7 (CI) is done as of issue #34 — see above.
-- `.github/workflows/ci.yml` only proves the build compiles and `core`'s tests pass. It has never
-  been run on an actual GitHub Actions runner — that only happens once the PR is opened. Verified
-  locally: the exact same command sequence (`./gradlew build`, then
-  `./gradlew gdx_teavm_web_js_build`) under JDK 21 on this machine (JDK 17 itself was not installed
-  locally to test against, only reasoned about from the pinned `sourceCompatibility`).
+- `.github/workflows/ci.yml` proves the build compiles and the tests pass. It cannot prove the web
+  build *runs*; a human does that, in a real browser, every time.
+- **It has run on real GitHub Actions runners, and all three acceptance criteria were checked
+  against real runs rather than reasoned about.** The workflow triggers on `push`, so it ran itself
+  the moment the branch was pushed:
+  - The first two runs **failed in ~15 s** with `./gradlew: Permission denied` (exit 126).
+    `gradlew` had been committed from Windows, where the executable bit does not exist, so git
+    recorded mode `100644` and the Linux runner could not execute it. Fixed with
+    `git update-index --chmod=+x gradlew` (commit `8542034`). **This is the first time this
+    repository ever touched a Linux runner, which is why it had never surfaced.**
+  - After the fix, runs `32897588973` (push) and `32897594158` (pull_request) both **succeeded in
+    ~1 m 25 s**, with `:core:test`, `:desktop:compileJava/:jar/:assemble/:build` and
+    `:web:generateJavaScript` all genuinely executing.
+  - **CI goes red on a failing test — demonstrated, not assumed.** A deliberate failing test was
+    pushed on a throwaway branch: `290 tests completed, 1 failed`, `Task :core:test FAILED`,
+    `BUILD FAILED`, run red. The branch was then deleted. Worth knowing that the criterion was
+    proved by experiment, because a CI that passes unconditionally looks identical to a working one.
+- Local verification, for the record: the same command sequence passes on the development machine
+  under JDK 21, not the JDK 17 the workflow pins — that machine has no JDK 17. The runner has now
+  covered JDK 17 for real.
 - A human needs to open `web/build/dist/js/webapp/index.html` through a real local server (not
   `file://`, module loading needs HTTP) in a real browser to confirm the game actually runs, the
   pointer-lock relative mouse works, and audio unlocks on the first click. `./gradlew
-  gdx_teavm_web_js_run` serves it on `http://localhost:8181`.
+  gdx_teavm_web_js_run` serves it on `http://localhost:8080`.
 - The measured 2.5 MB / ~298 KB gzip `app.js` numbers are from this machine's build only; re-measure
   once task 6 is actually picked up, ideally with a real browser's network panel rather than
   `gzip -c | wc -c`, since HTTP compression and caching headers change what a visitor actually
