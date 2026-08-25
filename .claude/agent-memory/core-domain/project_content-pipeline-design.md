@@ -63,3 +63,19 @@ registration calls" gets flagged as a determinism risk it is not.
 See [[core-deferred-surface]] for the running list of what is deferred and why, and
 [[defensive-chain-and-collision-design]] for the `SystemOrder` ordinal-checking discipline this
 phase's `SpawnSystem` (ordinal 3, before `COLLISION` at 5) had to respect too.
+
+**Update (enemy first-shot-delay task, branch `feat/enemy-first-shot-delay`): the "no optional
+accessor" rule above got its first real counter-case, and it was added back deliberately, not
+relaxed.** `EnemyWeapon.cooldownRemaining` starting at the full `cooldown` meant an enemy's first shot
+waited as long as every shot after it — fine for the one archetype that shipped with a short cooldown,
+wrong the moment content wants a long `cooldown` (a "slow shot" archetype) with a short, readable delay
+before the *first* shot. Fixed by adding `ComponentSpec.numberOr(key, default)` back, but narrowly: it
+still fails loudly on a wrongly-typed value (only a *missing* key takes the default), and the default
+chosen (`cooldown` itself) is the value every existing archetype already effectively had, not a
+guessed common case — the same trap `flag("fragile", false)` fell into is what this avoids. The new
+field is `firstShotDelay` in JSON, read in `ComponentFactoryRegistry.attachEnemyWeapon`; zero is
+rejected by `EnemyWeapon`'s constructor (same "strictly positive" treatment as `cooldown` and
+`projectileSpeed`) because zero means "fire the instant it spawns", the exact unreadable case the
+delay exists to prevent. Lesson generalised: this rule's exception condition is "a real consumer needs
+a default that is not the field's own most permissive/dangerous value, and wrong-type still fails" —
+check both before adding a second one.
