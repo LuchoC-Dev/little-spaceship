@@ -197,6 +197,89 @@ class BossSystemTest {
         assertTrue(world.colliders().size() > collidersBeforeFire);
     }
 
+    @Test
+    @DisplayName("a spread volley fans three rays per pod, a sweep volley fans three per arm, alternating")
+    void volleyFansThreeRaysPerSideAndAlternatesPattern() {
+        TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
+        World world = new World(content, new Rng(1), new GameEventQueue());
+        BossSystem system = new BossSystem(LEVEL);
+
+        // Reach the fight the same way tellStepsThroughThreeBeatsThenFires does.
+        system.update(world, STEP, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
+
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> firstVolley =
+            runToNextVolley(world, system, seen);
+        assertVxMagnitudes(firstVolley, new float[] {0.25f, 0.45f, 0.70f}, -0.90f, 180f);
+
+        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> secondVolley =
+            runToNextVolley(world, system, seen);
+        assertVxMagnitudes(secondVolley, new float[] {0.55f, 0.75f, 0.95f}, -0.65f, 160f);
+    }
+
+    /**
+     * Drives {@code system} until new {@code ENEMY_PROJECTILE} colliders appear beyond those already in
+     * {@code seen}, then returns exactly the newly spawned ones — a whole volley, since {@code
+     * BossSystem} fires a pattern's full fan within a single {@code update} call, and adds them to
+     * {@code seen} so a later call for the next volley does not re-count them. No {@code MotionSystem}
+     * or {@code CleanupSystem} runs in this isolated test, so a fired projectile stays a live collider
+     * forever — {@code seen} is what stands in for their absence.
+     */
+    private static java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> runToNextVolley(
+        World world, BossSystem system, java.util.Set<Integer> seen) {
+        for (int i = 0; i < 200; i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+            java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> fresh =
+                new java.util.ArrayList<>();
+            for (int j = 0; j < world.colliders().size(); j++) {
+                if (world.colliders().valueAt(j).layer != CollisionLayer.ENEMY_PROJECTILE) {
+                    continue;
+                }
+                int entity = world.colliders().entityAt(j);
+                if (seen.add(entity)) {
+                    fresh.add(world.motions().get(entity));
+                }
+            }
+            if (!fresh.isEmpty()) {
+                return fresh;
+            }
+        }
+        throw new IllegalStateException("no volley fired within the tick budget");
+    }
+
+    /**
+     * A volley must be exactly six projectiles — {@code FAN_COUNT} per side — three negative-vx and
+     * three positive-vx magnitudes matching {@code vxRatios * speed}, in either order across the two
+     * sides, all sharing the one {@code vyRatio * speed}.
+     */
+    private static void assertVxMagnitudes(
+        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> volley,
+        float[] vxRatios, float vyRatio, float speed) {
+        assertEquals(6, volley.size(), "a volley must fan three rays from each of two firing parts");
+        float expectedVy = vyRatio * speed;
+        java.util.List<Float> expectedMagnitudes = new java.util.ArrayList<>();
+        for (float ratio : vxRatios) {
+            expectedMagnitudes.add(ratio * speed);
+        }
+        java.util.List<Float> remaining = new java.util.ArrayList<>(expectedMagnitudes);
+        remaining.addAll(expectedMagnitudes);
+        for (dev.luchoc.littlespaceship.core.domain.component.Motion motion : volley) {
+            assertEquals(expectedVy, motion.vy, 0.01f, "every ray of a volley shares one vy ratio");
+            float magnitude = Math.abs(motion.vx);
+            Float match = null;
+            for (Float candidate : remaining) {
+                if (Math.abs(candidate - magnitude) < 0.01f) {
+                    match = candidate;
+                    break;
+                }
+            }
+            assertTrue(match != null, "unexpected vx magnitude " + magnitude);
+            remaining.remove(match);
+        }
+        assertTrue(remaining.isEmpty(), "not every fixed ratio was fired");
+    }
+
     private static int coreEntity(World world) {
         for (int i = 0; i < world.colliders().size(); i++) {
             if (world.colliders().valueAt(i).radius > 17f) {
