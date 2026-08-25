@@ -375,3 +375,41 @@ by reading the file. The one place content underclaimed rather than overclaimed:
 `:game:compileJava` as failing before the boss-loading fix landed, and it genuinely did (confirmed by
 reading `JsonContentSource` before and after `2ddab6e`) — an honest, checkable "not yet" rather than a
 premature "done".
+
+## PR #35 (`ci/github-actions`), phase 09 task 7 — a status document falsified by its own branch's later commit
+
+The workflow itself was clean: no `core`/`game`/`desktop`/`web` source touched, no dependency
+added, commit hygiene perfect, and the desktop-build and core-test criteria were confirmed by
+reading real GitHub Actions run logs (`:desktop:compileJava/:jar/:assemble/:build`,
+`:core:test`, both `BUILD SUCCESSFUL`), not assumed from the YAML. The one defect was in prose,
+and it is a new variant of pattern 4/33 worth naming on its own.
+
+36. **A status document's claim is falsified by a *later commit on the same branch*, and the
+    correction is skipped even though it was possible.** `docs/plan/09-web-ci-release/status.md`
+    said "[the workflow] has never been run on an actual GitHub Actions runner — that only happens
+    once the PR is opened", written in commit `4e11d87`. By the time that commit's own push
+    triggered a run, the run had already failed (`gradlew: Permission denied`, exit 126) on a real
+    runner. The branch's next and *final* commit, `8542034`, fixed exactly that failure — proving
+    the claim wrong from inside the same branch — and two more real runs then succeeded. Nothing
+    after `8542034` corrected `status.md`. This is pattern 33 in its worse form: that pattern is
+    about a gap closing silently after a status doc is written (unavoidable, order is just what it
+    is); here the branch's own subsequent commit *disproved* the doc's claim and the author had
+    every opportunity to fix the sentence and didn't. The tell is generic and cheap: whenever a
+    status doc makes a claim about "has/hasn't happened yet", check it against every commit that
+    lands *after* that doc on the same branch, not just against commits that precede it — `git log
+    --format="%H %ai %s" <the doc's commit>..HEAD` on the branch is enough, no run logs needed.
+    The same sentence, near-verbatim, was also carried into
+    `.claude/agent-memory/game-presentation/project_github-actions-ci-shape.md` ("the workflow
+    itself is untested until GitHub Actions actually runs it on the opened PR") — confirming that
+    pattern 4 (memory contradicting `status.md`) and this new variant are often the *same* wrong
+    sentence, copy-pasted into both stores, not two independent errors. Check both files for the
+    identical claim, not just one.
+
+Calibration: the coordinator had independently pushed a deliberate failing-test run on a
+throwaway branch specifically to demonstrate "CI fails when tests fail" — a criterion this review
+had flagged as inferred rather than observed. `290 tests completed, 1 failed`,
+`Task :core:test FAILED`, `BUILD FAILED`, confirmed on a real runner before the throwaway branch
+was deleted. Recorded here because it is the calibration case in the other direction from pattern
+36: a criterion that looked like a reasonable inference from Gradle's own behaviour is still
+worth demonstrating directly when the cost of doing so is one throwaway push, and "the tool
+guarantees this" is a weaker form of evidence than this project otherwise insists on.
