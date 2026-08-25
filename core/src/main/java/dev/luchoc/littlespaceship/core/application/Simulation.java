@@ -16,6 +16,7 @@ import dev.luchoc.littlespaceship.core.domain.system.BossSystem;
 import dev.luchoc.littlespaceship.core.domain.system.CleanupSystem;
 import dev.luchoc.littlespaceship.core.domain.system.CollisionSystem;
 import dev.luchoc.littlespaceship.core.domain.system.DamageSystem;
+import dev.luchoc.littlespaceship.core.domain.system.EnemyWeaponSystem;
 import dev.luchoc.littlespaceship.core.domain.system.GameSystem;
 import dev.luchoc.littlespaceship.core.domain.system.LifetimeSystem;
 import dev.luchoc.littlespaceship.core.domain.system.MotionSystem;
@@ -172,6 +173,9 @@ public final class Simulation implements TickHandler {
         // Spawner component that already exists on some entity, wherever that entity came from, so it
         // is registered unconditionally the same way CollisionSystem or DamageSystem are.
         systems.add(new SpawnerSystem());
+        // Stateless and level-independent, the same reasoning as SpawnerSystem right above it: it
+        // only ever reacts to an EnemyWeapon component that already exists on some entity.
+        systems.add(new EnemyWeaponSystem());
         if (levelId != null) {
             systems.add(new BossSystem(levelId));
         }

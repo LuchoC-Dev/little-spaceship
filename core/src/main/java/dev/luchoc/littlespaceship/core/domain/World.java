@@ -7,6 +7,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
+import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
@@ -68,6 +69,7 @@ public final class World {
     private final ComponentStore<Health> healths = new ComponentStore<>();
     private final ComponentStore<BombState> bombStates = new ComponentStore<>();
     private final ComponentStore<Spawner> spawners = new ComponentStore<>();
+    private final ComponentStore<EnemyWeapon> enemyWeapons = new ComponentStore<>();
 
     /**
      * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
@@ -171,6 +173,7 @@ public final class World {
         healths.remove(entity);
         bombStates.remove(entity);
         spawners.remove(entity);
+        enemyWeapons.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -294,6 +297,13 @@ public final class World {
      */
     public ComponentStore<Spawner> spawners() {
         return spawners;
+    }
+
+    /**
+     * @return per-archetype firing state for the entities that carry one, such as {@code enemy-shooter}
+     */
+    public ComponentStore<EnemyWeapon> enemyWeapons() {
+        return enemyWeapons;
     }
 
     /**

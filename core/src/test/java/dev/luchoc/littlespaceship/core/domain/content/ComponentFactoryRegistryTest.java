@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
@@ -137,6 +138,23 @@ class ComponentFactoryRegistryTest {
     }
 
     @Test
+    @DisplayName("the default registry attaches an enemy weapon, rate read as the cooldown in seconds")
+    void weaponFactoryAttachesFields() {
+        World world = worldOf(new TestContent());
+        int entity = world.createEntity();
+
+        ComponentFactoryRegistry.withDefaults().attach(world, entity,
+            new MapComponentSpec("weapon",
+                Map.of("rate", 2.2f, "pattern", "straight-single", "speed", 90f)));
+
+        EnemyWeapon weapon = world.enemyWeapons().get(entity);
+        assertEquals("straight-single", weapon.pattern);
+        assertEquals(2.2f, weapon.cooldown);
+        assertEquals(90f, weapon.projectileSpeed);
+        assertEquals(2.2f, weapon.cooldownRemaining);
+    }
+
+    @Test
     @DisplayName("an unregistered component name fails, naming it, instead of doing nothing silently")
     void unknownComponentFails() {
         World world = worldOf(new TestContent());
@@ -144,9 +162,9 @@ class ComponentFactoryRegistryTest {
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
             () -> ComponentFactoryRegistry.withDefaults().attach(world, entity,
-                new MapComponentSpec("weapon", Map.of())));
+                new MapComponentSpec("unknown-component", Map.of())));
 
-        assertTrue(e.getMessage().contains("weapon"));
+        assertTrue(e.getMessage().contains("unknown-component"));
     }
 
     @Test

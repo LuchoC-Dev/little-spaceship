@@ -63,6 +63,21 @@ public enum SystemOrder {
     SPAWNER,
 
     /**
+     * Resolves every enemy's {@code EnemyWeapon} cooldown and creates its projectile once it reaches
+     * zero. Added to close the gap {@code 08-decisions-and-open-items.md} records: no enemy fired at
+     * all before this — {@code enemy-shooter} read as a bigger, slower basic. Placed after {@code
+     * SPAWNER} and before {@code BOSS}, both for the same reason those two are already here: an enemy
+     * spawned this very tick, whether by {@code SPAWN} or by a carrier's {@code SPAWNER}, already
+     * exists by the time this stage runs, and this stage in turn runs before {@code COLLISION} and
+     * {@code LIFETIME} so a shot fired this tick is detected by the very same tick's collision pass,
+     * exactly like a player projectile created at {@code WEAPON} already is. Distinct from {@code
+     * BOSS}, which fires the boss's own projectiles directly and does not go through the generic,
+     * data-driven {@code EnemyWeapon} component at all — the boss's pattern is a fixed state machine
+     * with no equivalent in {@code enemies.json}, not an archetype component.
+     */
+    ENEMY_WEAPON,
+
+    /**
      * Advances the boss encounter: entrance, the pattern state machine and its fire. Added in phase
      * 07, after {@code SPAWN} and before {@code LIFETIME} — the boss is a second, independent
      * timeline running alongside the wave one, not a wave itself, so it does not share {@code
