@@ -2,3 +2,5 @@
 - [How to check core boundary compliance mechanically](project_core-boundary-check.md) — the one grep that catches an accidental `core.domain` import, including a `{@link}`-only false negative.
 - [Transform coordinate space is playfield-local, not logical](project_transform-coordinate-space.md) — core's x is 0..208 from the playfield's own edge; game must add the left offset before drawing.
 - [Headless verification of libGDX-dependent code](project_headless-libgdx-verification.md) — FileHandle(File) needs no Gdx.app; Gdx.input/Gdx.graphics can be JDK dynamic proxies.
+- [JsonValue key iteration + throwaway classpath](project_libgdx-jsonvalue-key-iteration.md) — walk JsonValue.child/next/name to reject unknown keys; get a runnable classpath for a module with no test source set.
+- [Temporary content edit to verify a late-game boss live](project_temp-content-edit-for-boss-verification.md) — edit-and-revert level-01.json to reach a 5-minute-deep boss in seconds; screenshot cadence vs. tell beat timing gotcha.
