@@ -24,7 +24,8 @@
         "motion": { "trajectory": "slow-descent" },
         "sprite": { "id": "enemy-shooter" },
         "collider": { "radius": 6.5, "fragile": true },
-        "scoreValue": { "points": 200 }
+        "scoreValue": { "points": 200 },
+        "weapon": { "pattern": "straight-single", "rate": 1.8, "speed": 90 }
       }
     },
     {
