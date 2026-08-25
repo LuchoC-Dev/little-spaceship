@@ -12,8 +12,9 @@ over is the fantasy — piloting a ship against threats that come from above.
 
 **<https://luchoc-dev.github.io/little-spaceship/>**
 
-Nothing to install. Runs in a modern desktop browser (Chrome, Firefox, Edge). Click once to start
-audio and capture the mouse — browsers require a user gesture before either will work.
+Nothing to install. Verified by hand in Chrome and Firefox on Windows; other modern desktop
+browsers are expected to work but have not been checked. Click once to start audio and capture the
+mouse — browsers require a user gesture before either will work.
 
 ## Controls
 
@@ -122,4 +123,4 @@ the download heavier than it needs to be. None of it blocks playing the level.
 
 ## License
 
-No license file yet — treat the code as all-rights-reserved until one is added.
+[MIT](LICENSE). The licence covers the whole repository, art and audio included.
