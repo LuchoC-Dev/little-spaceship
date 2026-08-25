@@ -41,6 +41,10 @@ final class MenuEntries {
             Runnable action, List<KeyboardFocusable> focusables) {
         TextButton button = new TextButton("  " + label, skin);
         button.getLabel().setAlignment(com.badlogic.gdx.utils.Align.left);
+        // The 2-character lead ("  " / "> ") is the marker's own 12 px gutter from
+        // 04-hud-layout.md, not padding — without a matching pad on every other edge the text sat
+        // flush against the right and bottom of the plate while the left looked padded by accident.
+        button.pad(3f, 0f, 3f, 12f);
         button.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {

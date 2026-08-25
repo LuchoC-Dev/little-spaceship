@@ -1,5 +1,7 @@
 package dev.luchoc.littlespaceship.game.ui;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -17,28 +19,21 @@ import com.badlogic.gdx.graphics.g2d.NinePatch;
 /**
  * The one {@link Skin} every screen shares, built in code instead of loaded from a {@code .json} +
  * atlas pair — {@code CLAUDE.md} asks for a Skin over a hand-rolled UI framework, not for a
- * particular loading mechanism, and there is nothing to load yet: {@code docs/design/03-typography.md}
- * fixes {@code font-mini}/{@code font-title} as hand-drawn PNG sheets, but drawing them is art
- * production, {@code docs/plan/06-presentation/plan.md} tasks 3 and 11, neither of which has run.
+ * particular loading mechanism, and there is nothing else to load: the panels and controls below are
+ * flat colour and nine-patches, not art.
  *
- * <p><b>The text in every screen this Skin styles is a placeholder.</b> It uses libGDX's bundled
- * default font — a real bitmap font, not {@code FreeTypeFontGenerator}, so it costs nothing extra
- * under TeaVM. It reads at a glance but its glyph shapes, advance and letter-spacing do not match
- * {@code docs/design/03-typography.md}'s {@code font-mini}/{@code font-title}, and nothing here
- * enforces the fixed 6/8 px advance that document is built around. Swapping it for the real sheets
- * is a change confined to this one class: every screen asks the Skin for {@code "font-mini"}/{@code
- * "font-title"} by name and never touches a {@link BitmapFont} directly.
+ * <p><b>The real fonts.</b> {@code font-mini}/{@code font-title} are loaded from
+ * {@code assets/fonts/*.fnt}, plain AngelCode text format, via the ordinary
+ * {@code new BitmapFont(FileHandle)} constructor — no {@code FreeTypeFontGenerator}, no reflection,
+ * per {@code docs/design/03-typography.md}. The {@code .fnt}/{@code .png} pair is generated, not
+ * hand-authored, by {@code docs/design/fonts/build-fnt.js} from the hand-drawn sheets that document
+ * describes; see that script's javadoc for why the {@code .fnt}'s metrics line is not optional.
  *
- * <p><b>The scale is snapped to a whole number, never a fraction.</b> The default font's native
- * line height is well above the 10/13 px {@code 03-typography.md} specifies for {@code
- * font-mini}/{@code font-title}, so a first pass scaled it down with {@code getData().setScale(10f
- * / getLineHeight())} — a fractional factor, exactly the "no fractional scaling anywhere" {@code
- * CLAUDE.md} rules out for sprites, applied to glyphs by mistake. Combined with {@code
- * setUseIntegerPositions(false)} it put glyphs on half pixels, which reads as a rendering bug rather
- * than as an unfinished placeholder. {@link #wholeScale} rounds down to the nearest whole multiple —
- * 1 here, since the native font is already larger than the target — so the placeholder ends up
- * oversized rather than blurred. Wrong size reads as "not the final font yet"; blurred type reads as
- * broken, on a project whose own invariant is integer scaling with no exception.
+ * <p><b>The scale is 1, always.</b> Both sheets are already authored at the target size — 6x10 and
+ * 8x13 cells, exactly {@code 03-typography.md}'s advance and line height — so any scale other than 1
+ * would mean the sheets and the layout built around them have drifted apart. There is no whole-number
+ * rounding step here the way there was for the placeholder default font: a mismatch should fail loud,
+ * not get silently absorbed into a "close enough" integer multiple.
  */
 public final class GameSkin {
 
@@ -51,17 +46,8 @@ public final class GameSkin {
         Texture pixel = solidTexture(0xFFFFFFFF);
         skin.add("white", new TextureRegion(pixel));
 
-        BitmapFont fontMini = new BitmapFont();
-        fontMini.getRegion().getTexture().setFilter(
-            Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        fontMini.getData().setScale(wholeScale(10f, fontMini.getLineHeight()));
-        fontMini.setUseIntegerPositions(true);
-
-        BitmapFont fontTitle = new BitmapFont();
-        fontTitle.getRegion().getTexture().setFilter(
-            Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        fontTitle.getData().setScale(wholeScale(13f, fontTitle.getLineHeight()));
-        fontTitle.setUseIntegerPositions(true);
+        BitmapFont fontMini = loadFont("font-mini");
+        BitmapFont fontTitle = loadFont("font-title");
 
         skin.add("font-mini", fontMini, BitmapFont.class);
         skin.add("font-title", fontTitle, BitmapFont.class);
@@ -70,7 +56,13 @@ public final class GameSkin {
         // its own runtime class (NinePatchDrawable.class here), but Skin.getDrawable(name) looks it
         // up under the Drawable interface, so an implicit add is invisible to every getDrawable()
         // call and to every style field a .json skin would populate through it.
-        skin.add("n2-panel", ninePatch(Palette.N2, Palette.N3), Drawable.class);
+        // 60x12 minimum per 04-hud-layout.md's "Button plate" row — the nine-patch texture itself is
+        // only 3x3, so without this every short label (BACK, QUIT) sized the button down to its own
+        // text width instead of the document's floor.
+        NinePatchDrawable n2Panel = ninePatch(Palette.N2, Palette.N3);
+        n2Panel.setMinWidth(60f);
+        n2Panel.setMinHeight(12f);
+        skin.add("n2-panel", n2Panel, Drawable.class);
         skin.add("n1-panel", ninePatch(Palette.N1, Palette.N0), Drawable.class);
 
         Label.LabelStyle title = new Label.LabelStyle(fontTitle, Palette.N7);
@@ -130,12 +122,13 @@ public final class GameSkin {
         return skin;
     }
 
-    /**
-     * The nearest whole multiple of the native line height to the target, never below 1 — a
-     * fractional scale is what blurs a nearest-neighbour glyph, per the class javadoc.
-     */
-    private static float wholeScale(float targetHeight, float nativeLineHeight) {
-        return Math.max(1f, Math.round(targetHeight / nativeLineHeight));
+    private static BitmapFont loadFont(String name) {
+        FileHandle fontFile = Gdx.files.internal("fonts/" + name + ".fnt");
+        BitmapFont font = new BitmapFont(fontFile);
+        font.getRegion().getTexture().setFilter(
+            Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        font.setUseIntegerPositions(true);
+        return font;
     }
 
     private static NinePatchDrawable ninePatch(Color fill, Color border) {
