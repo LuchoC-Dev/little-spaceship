@@ -89,4 +89,19 @@ purpose for one whose whole point is rate of fire (`enemy-shooter`).
 Spawning a test enemy at the player's own starting `x` (`atX 0.5`, player start `x=104` of 208) on a
 non-drifting trajectory (`slow-descent`, `vx 0`) rams the player almost immediately — game over at
 score 0 before any projectile is visible, indistinguishable on screen from "the weapon never fired."
-Spawn verification enemies off-center (e.g. `atX 0.2`/`0.8`) so the ram doesn't pre-empt the shot.
+Spawn verification enemies off-center (e.g. `atX 0.2`/`0.8`) so the ram doesn't pre-empt the shot. A
+tank on `crawl` (vx 0 as well) has the same problem if spawned centred on the player's spawn — it
+rammed and ended the run within a few seconds during the tank-weapon verification, 25/08/2026.
+
+## `Health` below `weaponProjectileDamage` is a content no-op (25/08/2026)
+
+`DamageSystem.resolveEnemyHit` subtracts a flat `BalanceValues.weaponProjectileDamage()` — `10` today
+— from an enemy's `Health` per hit, and this number does not scale with the player's weapon level
+(only shot *count* does). An enemy with no `Health` is already treated as having exactly one point.
+So giving a fragile archetype a small `Health` (2-3, floated once as a way to make `enemy-basic`'s
+slower rate of fire visible next to `enemy-shooter`'s faster one) changes nothing observable: any
+`Health` at or under `10` still dies to the very first player projectile, identically to having no
+`Health` component at all. Before recommending a small `Health` value to make an archetype "survive a
+hit," check it against `balance.json`'s `weaponProjectileDamage` first — the value needs to clear that
+number, not just be nonzero, or the change is invisible in play. Full reasoning recorded in
+`docs/plan/07-boss/status.md`'s 25/08/2026 tank-weapon entry.
