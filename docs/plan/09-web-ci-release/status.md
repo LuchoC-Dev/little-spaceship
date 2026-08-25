@@ -75,9 +75,42 @@ Task 7 of the plan (issue #34), CI on GitHub Actions:
   compiles, not that it runs. A comment in the workflow states this explicitly next to the web
   build step so it does not get "fixed" by someone unaware of the SwiftShader failure.
 
+Task 9 of the plan (issue #36), repository README:
+
+- `README.md` at the repository root: what the project is, the play link
+  (`https://luchoc-dev.github.io/little-spaceship/`, written ahead of the deploy per the issue —
+  task 8 lands right after this one and must confirm the link resolves), controls, how to run
+  desktop and web, how to build and test, a short architecture section pointing at `CLAUDE.md` and
+  `docs/planning/` rather than restating them, and a status section that names known rough edges
+  instead of hiding them.
+- Every command in the README was actually run on this machine, not copied from memory:
+  - `./gradlew build` — succeeds (cached; most tasks `FROM-CACHE`/`UP-TO-DATE`).
+  - `./gradlew core:test --rerun` — forces real execution rather than a cached pass. Counted the
+    JUnit XML reports directly (`tests="..."` summed across `core/build/test-results/**/*.xml`):
+    **289**, matching `docs/STATUS.md`.
+  - `./gradlew web:gdx_teavm_web_js_run` — builds and serves; log line
+    `Jetty Dev Server started at http://localhost:8080/`, and `curl -I http://localhost:8080/`
+    returned `HTTP/1.1 200 OK`. A parallel check against port 8181 (the number
+    `spikes/web-viability/README.md` gives) got no response — confirms the trap `docs/STATUS.md`
+    and `CLAUDE.md` already record, rather than repeating it on faith.
+  - Controls were read from the actual input code, not from the functional spec alone:
+    `game/src/main/java/dev/luchoc/littlespaceship/game/adapter/input/InputAdapter.java` — arrows to
+    move, Space or left click to fire, X or right click for the bomb, Shift for slow movement, mouse
+    deltas summed additively with the keyboard exactly as `02-mvp-functional-spec.md` describes.
+  - Did not run `desktop:run` interactively (it opens an LWJGL3 window; not something this session's
+    shell can usefully drive) — its command and behaviour are documented from
+    `desktop/build.gradle.kts`, which is a plain `JavaExec` with no platform-specific surprises.
+- **The MIT licence landed while this issue was being worked** (commit `5c5d610`, chosen by the
+  player). The README points at it and states plainly that the licence covers the whole repository,
+  art and audio included — which is a consequence of MIT worth knowing before the repository goes
+  public.
+- Tasks 4-6 and 8 are still open; they are a precondition for the play link the README already
+  states to actually resolve. See "Notes for whoever comes next" below, now with task 9 removed
+  from that list.
+
 ## In progress
 
-Nothing — tasks 1-3 and 7 are done; tasks 4-6, 8-9 remain (see notes below, unchanged from before).
+Nothing — tasks 1-3, 7 and 9 are done; tasks 4-6, 8 remain (see notes below).
 
 ## Blocked
 
@@ -98,9 +131,12 @@ Nothing.
 
 ## Notes for whoever comes next
 
-- Tasks 4-6, 8-9 remain: pointer capture verification, the browser matrix
-  (Chrome/Firefox/Edge/Safari), real-asset load-time and framerate measurement, static-site deploy,
-  and the repository README. Task 7 (CI) is done as of issue #34 — see above.
+- Tasks 4-6, 8 remain: pointer capture verification, the browser matrix
+  (Chrome/Firefox/Edge/Safari), real-asset load-time and framerate measurement, and the static-site
+  deploy. Task 7 (CI) is done as of issue #34, task 9 (README) as of issue #36 — see above.
+- **The README's play link is written but not yet live.** Task 8 (deploy) is expected right after
+  issue #36 lands; whoever picks it up should open the link in a real browser before telling anyone
+  it works, not just trust that the Pages build succeeded.
 - `.github/workflows/ci.yml` proves the build compiles and the tests pass. It cannot prove the web
   build *runs*; a human does that, in a real browser, every time.
 - **It has run on real GitHub Actions runners, and all three acceptance criteria were checked
