@@ -241,6 +241,20 @@ The short version lives in `CLAUDE.md`: invariants, web-target pitfalls, convent
 
 ## What comes next
 
+**The MVP is shipped, so what comes next is the post-MVP work.** Four phases, in order, with the
+reordering first so everything after it is built on a base that holds:
+[`docs/plan/post-mvp-roadmap.md`](plan/post-mvp-roadmap.md). Nothing in it is scheduled or planned in
+detail yet — each phase gets its own folder when it is picked up.
+
+Four issues came out of playing the deployed build on 25/08:
+[#40](https://github.com/LuchoC-Dev/little-spaceship/issues/40) QUIT is dead on web,
+[#41](https://github.com/LuchoC-Dev/little-spaceship/issues/41) losing pointer lock breaks the mouse,
+[#42](https://github.com/LuchoC-Dev/little-spaceship/issues/42) no in-game options,
+[#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) the shield and attachment are
+invisible. None block playing.
+
+### The original plan, for reference
+
 The master plan is in `docs/plan/`, starting from [the overview](plan/00-overview.md). Each phase has
 its own folder with a `plan.md` and a `status.md`.
 
