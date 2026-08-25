@@ -1,17 +1,18 @@
 # Project status
 
-Last updated: 20/08/2026.
+Last updated: 25/08/2026.
 
 Read this first if you are picking the project up. It says where things stand and what comes next; `CLAUDE.md` says how to work here.
 
 ## Where we are
 
-**The game can be finished, but not from `main`.** Phases 01 to 06 are merged: a ship, enemies, the
-defensive chain, power-ups, a bomb, a score, the HUD and six screens. The boss, the real level, the
-sprites and the audio are all built and all sitting in three unmerged branches — a full run from menu
-to victory has been played on `feat/boss`, scoring 8700.
+**`main` is now the whole picture.** The three branches that held the MVP were reviewed and merged on
+25/08/2026, in the order that had been decided: sprites (#30), audio (#31), boss (#29). All three
+were accepted with no blocking findings. `./gradlew build` is green and `core` carries 277 tests.
 
-**Read "Work in flight" below before doing anything else.** `main` alone is not the picture.
+What that leaves is not "polish". Two capabilities landed **built but connected to nothing**, and one
+deliverable turns out not to be what its phase status implied. Read "What is left" before planning
+anything — the remaining work is larger than the phase table suggests.
 
 What exists in the repository:
 
@@ -24,37 +25,61 @@ What exists in the repository:
 - `game/` and `desktop/` — the LWJGL3 launcher, the input adapter that sums keyboard and relative mouse, an allocation-free renderer reading through `WorldView`, integer-scaled viewport, placeholder art at the sizes the visual direction fixed, and the JSON content loader. No tests yet. `web/` is still an empty skeleton; phase 09 owns it.
 - `assets/data/` — the content as JSON: six archetypes, four trajectories, three formations and one timeline.
 
-## Work in flight
+## The three merges, and what they did not do
 
-Three branches, none merged, each with a draft pull request. They are the MVP.
+Merged 25/08/2026 after one `reviewer` pass each, on Sonnet, one per pull request.
 
-| Branch | Worktree | PR | Holds |
-|---|---|---|---|
-| `feat/boss` | `../little-spaceship-boss` | [#29](https://github.com/LuchoC-Dev/little-spaceship/pull/29) | phase 07's boss, the carrier's spawner, level 1 in full, `game`'s wiring for all of it, and enemy fire |
-| `feat/sprite-production` | `../little-spaceship-visual` | [#30](https://github.com/LuchoC-Dev/little-spaceship/pull/30) | every sprite, both bitmap fonts, the explosions and the Skin |
-| `feat/audio` | `../little-spaceship-audio` | [#31](https://github.com/LuchoC-Dev/little-spaceship/pull/31) | the procedural WAV generator, the audio runtime and the volume sliders |
+| PR | Branch | Verdict |
+|---|---|---|
+| [#30](https://github.com/LuchoC-Dev/little-spaceship/pull/30) | `feat/sprite-production` | accept — every measurable claim reproduced against the committed PNGs |
+| [#31](https://github.com/LuchoC-Dev/little-spaceship/pull/31) | `feat/audio` | accept — `core` untouched, no threads, determinism intact |
+| [#29](https://github.com/LuchoC-Dev/little-spaceship/pull/29) | `feat/boss` | accept — including the coordinator-committed last commit, whose "277 tests" is exact |
 
-**None has been reviewed.** The decision was to review and merge all three together, in that order —
-sprites first since nothing depends on it, then audio, then boss, which touches the most.
+The merges resolved the cross-branch dependencies that were the reason for merging together. They did
+**not** finish the features, and the gap is easy to miss because every phase reads as done:
 
-Two things to know before merging:
+- **Nothing consumes `EnemyDestroyed`.** `CleanupSystem` emits it; no listener exists in `game`. The
+  explosion sound is generated, loaded and silent.
+- **Nothing reads `bossStatus()` for audio.** `MusicTrack.BOSS` exists and never plays.
+- **No archetype declares a `"weapon"` component.** `EnemyWeaponSystem` and the `"weapon"` factory
+  both exist, but `assets/data/enemies.json` gives the weapon to nobody, so **enemies still do not
+  shoot in the shipped level**.
+- **The sprites are not in the game.** This is the big one. `#30`'s diff touches only `docs/design/`.
+  The 34 character sprites — archetypes, ship, boss parts, shots, pickups, HUD icons — live as pixel
+  art in `docs/design/mockups/src/01-sprites.js`, and the PNGs that script renders are gitignored
+  previews. `assets/` holds JSON and `startup-logo.png`, nothing else. `game` still draws through
+  `PlaceholderAtlas`, which builds coloured rectangles into a `Pixmap` at runtime. Phase 06 delivered
+  the art direction; it never delivered game-loadable art.
 
-- **The last commit on `feat/boss` was not reviewed and was committed by the coordinator, not its
-  author.** `feat(core): let enemies fire and record an enemy's death` was finished but uncommitted
-  when a spend limit killed the agent mid-run. 277 tests were green at that point. It brings
-  `EnemyWeaponSystem` and the first real `GameEvent`, `EnemyDestroyed`, which the audio lane needs for
-  the explosion sound it has already built and wired to nothing.
-- **`feat/audio` and `feat/sprite-production` predate the boss.** The audio lane's music-change hook
-  and the atlas both expect things that only exist on `feat/boss`.
+## What is left
 
-## What is left after that
+Ordered by what blocks what.
 
-- **Balance.** Level 1's pacing was written before enemies could shoot, and enemy health is still
-  placeholder — a heavy carrier dies in about 1.2 s against the 32 s its stretch reserves. Decided:
-  tuned by playing, not by arithmetic.
-- **Phase 09** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
-  can open. `assets/startup-logo.png` is already in place; `web/` is an empty skeleton by decision,
-  and the TeaVM build was verified working once, in phase 03, before being reverted as out of scope.
+1. **Give `enemy-shooter` a `"weapon"` in `assets/data/enemies.json`.** Small, `level-designer`'s
+   lane, and it gates the balance pass: there is nothing to tune while nothing shoots.
+2. **Export the sprites to a real atlas under `assets/` and make the renderer consume it** instead of
+   `PlaceholderAtlas`. Unplanned, `game-presentation`'s lane, and the largest single item left. It is
+   the difference between the MVP being playable with its own art and playable with rectangles.
+3. **Wire the two dead audio cues** — an `EnemyDestroyed` listener and a `bossStatus().present()`
+   edge. Both hooks are written and documented in `AudioSystem`'s javadoc.
+4. **Balance.** Level 1's pacing was written before enemies could shoot, and enemy health is still
+   placeholder — a heavy carrier dies in about 1.2 s against the 32 s its stretch reserves. Decided:
+   tuned by playing, not by arithmetic. Blocked on item 1.
+5. **Phase 09** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
+   can open. `assets/startup-logo.png` is already in place; `web/` is an empty skeleton by decision,
+   and the TeaVM build was verified working once, in phase 03, before being reverted as out of scope.
+
+Two things phase 09 must check, both surfaced by these reviews and neither a problem today:
+
+- `game/src/main/java/.../tools/audio/{Wav,Synth,GenerateAudio}.java` use `java.nio.file` and sit
+  inside the module TeaVM compiles. Harmless only while `web/build.gradle.kts`'s `gdxTeaVM {}` block
+  stays commented out. When it comes back, exclude `tools.audio` from the TeaVM source set or move it
+  to its own source set.
+- `docs/design/07-skin.md` commits the Skin integration to `Skin(FileHandle, TextureAtlas)` /
+  `skin.load(...)`, which is libGDX's reflective `Json` class underneath — the exact mechanism
+  `CLAUDE.md`'s web-pitfalls section warns about. scene2d has no non-reflective Skin loader, so this
+  is likely the project's one legitimate exception, but the TeaVM reflection declarations for every
+  style class named in `skin.json` must exist before that call ships.
 
 ## What is settled
 
@@ -74,8 +99,8 @@ its own folder with a `plan.md` and a `status.md`.
 | MVP — level 1 playable in the browser with its own art | 26/08/2026 |
 | Finish — polish, game feel, final audio | 09/09/2026 |
 
-The order from here: review and merge the three branches above, tune the balance by playing, then
-phase 09. Nothing else blocks the MVP.
+The order from here is the five numbered items in "What is left". The three branches are merged; what
+replaced them is smaller per item but there are more items than the phase table implies.
 
 ### Phase state
 
@@ -86,9 +111,9 @@ phase 09. Nothing else blocks the MVP.
 | 03 | First playable | **done** — merged in #14 |
 | 04 | Content pipeline | **done** — core in #16, loader in #14 |
 | 05 | Game systems | **done** — merged in #22 |
-| 06 | Presentation | **done** — direction #8, integration #26, sprites in #30 (unmerged) |
-| 07 | Boss | **built, unmerged** — #29, with level 1 and enemy fire |
-| 08 | Audio and polish | **built, unmerged** — #31 |
+| 06 | Presentation | **art direction done** — #8, #26, sprites drawn in #30. The sprites are not yet game-loadable art; see "What is left", item 2 |
+| 07 | Boss | **merged** — #29, with level 1 and the machinery for enemy fire. No content uses the weapon yet |
+| 08 | Audio and polish | **merged** — #31. Two cues built and unwired; see "What is left", item 3 |
 | 09 | Web, CI and release | not started |
 
 ## Open items that do not block
