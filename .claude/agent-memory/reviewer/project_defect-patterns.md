@@ -413,3 +413,40 @@ was deleted. Recorded here because it is the calibration case in the other direc
 36: a criterion that looked like a reasonable inference from Gradle's own behaviour is still
 worth demonstrating directly when the cost of doing so is one throwaway push, and "the tool
 guarantees this" is a weaker form of evidence than this project otherwise insists on.
+
+## PR #37 (`docs/readme`), phase 09 task 9 — the README itself was clean; a coordinator's own fix commit left a sibling document stale
+
+Docs-only branch (`README.md` + `docs/plan/09-web-ci-release/status.md`, confirmed by
+`git diff main...HEAD --stat`), and every checkable claim in the README reproduced exactly:
+289 tests (summed `tests="..."` across `core/build/test-results/test/*.xml` after
+`./gradlew core:test --rerun`), port 8080 (not `spikes/web-viability/README.md`'s stale 8181 —
+its own `build.gradle.kts` hardcodes `serverPort.set(8181)`, confirming *that* file is wrong, not
+the README), every Gradle task name (`desktop:run`, `web:gdx_teavm_web_js_run`,
+`web:gdx_teavm_web_js_build -Prelease`) existing verbatim, the controls table matching
+`InputAdapter.java` line for line including "Escape releases pointer lock" and the additive
+keyboard+mouse rule, and all six architectural invariant claims (no `com.badlogic.gdx` / no
+`Math.random` / no `Thread`-family / no `Json` reflection class in `core` or `game`, `game` never
+importing `core.domain`, `core/build.gradle.kts` declaring zero dependencies).
+
+37. **A coordinator's correction commit fixed the claim in the document a stranger reads and left
+    the identical stale claim in the document only the team reads.** Commit `9406151` (the final
+    commit on the branch) rewrote README.md's License section from "no license file yet" to
+    "[MIT](LICENSE)" — correct, `LICENSE` (MIT, added by `5c5d610`) really does exist. But
+    `docs/plan/09-web-ci-release/status.md`, edited by an *earlier* commit on the same branch
+    (`f70c6e3`, timestamped 3 minutes before `9406151`), still asserts in present tense "**Not
+    done in this issue: no LICENSE file exists**" after the merge — and `9406151` touched only
+    `README.md`, never revisiting the sibling doc that made the same now-false claim. This is
+    pattern 33/36 with the fix and the miss in the *same commit*: the author demonstrably knew
+    the claim was wrong (that is what `9406151` is) and fixed it in exactly one of the two places
+    it appeared. The generic tell from pattern 36 still applies and would have caught this in
+    seconds: `git log --format="%H %ai %s" <doc's commit>..HEAD` on the branch, then grep the doc
+    for anything that commit range's diff touches.
+
+Calibration, in the direction that matters for judgement: the *other* correction in the same
+commit (downgrading "Chrome, Firefox, Edge" to "Chrome and Firefox... verified by hand") is
+accurate and complete in the one place it needed to be — the README, the public-facing document —
+and status.md never made the Edge claim to begin with, so there was nothing to leave stale there.
+One correction was fully propagated, the sibling one was not; the difference was not effort, the
+Edge fix and the License fix are the same size, so treat "the coordinator already fixed X" as a
+claim to verify per-document, not a fact that generalises across the branch's two docs once
+confirmed in one.
