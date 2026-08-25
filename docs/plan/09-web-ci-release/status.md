@@ -108,9 +108,59 @@ Task 9 of the plan (issue #36), repository README:
   states to actually resolve. See "Notes for whoever comes next" below, now with task 9 removed
   from that list.
 
+Task 8 of the plan (issue #38), deploy to GitHub Pages:
+
+- `.github/workflows/deploy-pages.yml`, a new workflow separate from `ci.yml` (which keeps its own
+  `contents: read` and was not touched). Triggers on `push` to `main` only, plus `workflow_dispatch`
+  for manual runs, with its own `permissions: { pages: write, id-token: write }`. Steps: checkout,
+  JDK 17 Temurin (matching `ci.yml`), `gradle/actions/setup-gradle@v4`, then
+  `./gradlew clean gdx_teavm_web_js_build -Prelease` — `clean` first is deliberate, per the release
+  build caching trap already recorded in this file and in agent memory — then
+  `actions/configure-pages@v5`, `actions/upload-pages-artifact@v3` on
+  `web/build/dist/js/webapp`, and a second `deploy` job using `actions/deploy-pages@v4`. No
+  `gh-pages` branch is used; Pages is configured with `build_type: workflow` (enabled ahead of this
+  issue, confirmed via `gh api repos/.../pages` returning `"build_type":"workflow"`).
+- **GitHub Pages was already enabled before this issue started** (`status: null`, `build_type:
+  workflow`, `html_url` matching the README's link) — the first-time-enablement step the plan warned
+  about did not need doing here.
+- **Verified with a real run, not by trusting the workflow file.** `workflow_dispatch` cannot fire
+  until a workflow file exists on the default branch, so a genuinely-new workflow can't be manually
+  dispatched from a feature branch. Worked around this by temporarily widening the `push` trigger to
+  include `ci/pages-deploy` (commit `04c3343`), pushing, and reverting immediately after
+  (`f698b84`) — the workflow ran for real on that push:
+  - Run `32901883149`: the `build` job **succeeded in 43s** (Gradle step: `BUILD SUCCESSFUL in
+    25s`), confirming `clean gdx_teavm_web_js_build -Prelease` genuinely runs on a fresh Linux
+    runner and the Pages artifact uploads (`Finished uploading artifact content to blob storage!`).
+  - The `deploy` job **failed**, but for an expected reason, not a bug: `Branch "ci/pages-deploy" is
+    not allowed to deploy to github-pages due to environment protection rules.` Checked via
+    `gh api repos/.../environments/github-pages/deployment-branch-policies`: the `github-pages`
+    environment (auto-created when Pages was enabled) has exactly one allowed branch, `main`. This
+    is GitHub's own protection enforcing the same rule the workflow's trigger already states, so no
+    further attempt was made to bypass it from a feature branch — the deploy job will run for real
+    once this PR is merged to `main`, which this session was told not to do.
+  - Downloaded the uploaded Pages artifact directly (`gh api .../actions/artifacts/9583395748/zip`)
+    and inspected its real contents rather than trusting the log: `assets/startup-logo.png` is
+    present at 12,214 bytes, matching the size task 3 recorded. Summed every file's actual byte size
+    (not `du`, which overstates a TeaVM dist by block rounding and sourcemap noise): **2,470,942
+    bytes (2.36 MB) across 34 files** for the whole `webapp/` dist. `app.js` alone is 1,027,585 bytes
+    uncompressed, 298,689 bytes gzip-compressed (`gzip -c app.js | wc -c`) — both numbers match the
+    ones already recorded from a local build in this file, so the CI-produced release build is not
+    meaningfully different from what was measured locally.
+  - `curl -I https://luchoc-dev.github.io/little-spaceship/` returns `404`, as expected — the real
+    `deploy` job (main-branch-only) has not run yet, so the site has nothing published. This is not a
+    failure; it is the state before merge.
+
 ## In progress
 
-Nothing — tasks 1-3, 7 and 9 are done; tasks 4-6, 8 remain (see notes below).
+Task 8: the workflow exists, is verified to build and upload the artifact for real on a runner, and
+is confirmed to be correctly gated to `main` only by both its own trigger and GitHub's environment
+protection. What is **not yet done** is the actual deploy: that only runs on a push to `main`, which
+this session did not do (explicitly out of scope — reviewer/coordinator merges the PR). Whoever
+merges PR #38 (or reviews it) should confirm `https://luchoc-dev.github.io/little-spaceship/`
+serves a `200` afterwards, not just that the `deploy` job went green.
+
+Tasks 1-3, 7 and 9 are done; tasks 4-6 remain (see notes below), and task 8 needs the merge-time
+check above before it can be called done.
 
 ## Blocked
 
@@ -131,12 +181,16 @@ Nothing.
 
 ## Notes for whoever comes next
 
-- Tasks 4-6, 8 remain: pointer capture verification, the browser matrix
-  (Chrome/Firefox/Edge/Safari), real-asset load-time and framerate measurement, and the static-site
-  deploy. Task 7 (CI) is done as of issue #34, task 9 (README) as of issue #36 — see above.
-- **The README's play link is written but not yet live.** Task 8 (deploy) is expected right after
-  issue #36 lands; whoever picks it up should open the link in a real browser before telling anyone
-  it works, not just trust that the Pages build succeeded.
+- Tasks 4-6 remain: pointer capture verification, the browser matrix
+  (Chrome/Firefox/Edge/Safari), and real-asset load-time and framerate measurement. Task 7 (CI) is
+  done as of issue #34, task 9 (README) as of issue #36, task 8 (deploy) as of issue #38 modulo the
+  merge-time check noted above.
+- **The README's play link is written and the workflow that will make it live exists
+  (`.github/workflows/deploy-pages.yml`, PR #38), but the link itself is still a 404 as of this
+  writing** — the `deploy` job is correctly gated to `main` only (both by its own trigger and by
+  GitHub's `github-pages` environment protection, which only allows `main`), and this session did
+  not merge. Whoever merges PR #38 should watch the workflow run on `main` and open the link in a
+  real browser before telling anyone it works, not just trust that the job went green.
 - `.github/workflows/ci.yml` proves the build compiles and the tests pass. It cannot prove the web
   build *runs*; a human does that, in a real browser, every time.
 - **It has run on real GitHub Actions runners, and all three acceptance criteria were checked
