@@ -99,9 +99,10 @@ the diff:
    dies too fast to tell; whether the boss at 0.7 now feels like a boss; whether `enemy-rush`'s single
    likely shot reads as "shoots little" rather than "does not shoot"; and whether `enemy-light`'s
    130 u/s projectile is dodgeable — it is the fastest enemy shot in the game.
-2. **Phase 09 is the only thing left before the MVP.** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
-   can open. `assets/startup-logo.png` is already in place; `web/` is an empty skeleton by decision,
-   and the TeaVM build was verified working once, in phase 03, before being reverted as out of scope.
+2. **Phase 09 is the only thing left before the MVP** — web, CI and deploy. **In progress since
+   25/08.** The web launcher is merged (#33) and **the game has been played in a real browser**: it
+   runs, and that is the first time anything in this project ran outside a JVM. What is still open is
+   the browser matrix, the load-time measurement, CI, the deploy and the README.
 
 ### Post-MVP backlog, from real play on 25/08
 
@@ -123,6 +124,11 @@ trusts for balance, and because two of them are defects rather than tuning.
   at the player rather than at fixed outward angles. That changes the nature of the attack instead of
   its quantity — and it must be weighed against the tell staying honest, which is what makes this boss
   fair.
+- **The download is 2.5 MB, and 1.3 MB of it is two music WAVs** (`level.wav` 592 KB, `boss.wav`
+  395 KB). The release `app.js` is only ~298 KB gzipped, so the code is not the problem — uncompressed
+  audio is. For a portfolio piece where the visitor waits or leaves, encoding the music to OGG is the
+  single biggest win available, and libGDX plays OGG on both targets. Measured on 25/08 by the web
+  launcher work; not done because the MVP was frozen.
 - **Every enemy projectile uses `shot-e-small`.** `EnemyWeaponSystem` hardcodes it. The tank's shot
   should be visibly heavier — `shot-e-heavy` already exists in the atlas, unused — which needs
   `EnemyWeapon` to carry a sprite id per weapon.
@@ -184,17 +190,18 @@ None of these block the MVP. Each is a real thing someone chose not to fix under
   `structure-tower` and the five `icon-*` glyphs** are in the atlas and referenced by nothing. Art
   waiting for a system.
 
-Two things phase 09 must check, both surfaced by these reviews and neither a problem today:
+~~Two things phase 09 must check~~ **Both closed on 25/08 by #33, and one of them was never real:**
 
-- `game/src/main/java/.../tools/audio/{Wav,Synth,GenerateAudio}.java` use `java.nio.file` and sit
-  inside the module TeaVM compiles. Harmless only while `web/build.gradle.kts`'s `gdxTeaVM {}` block
-  stays commented out. When it comes back, exclude `tools.audio` from the TeaVM source set or move it
-  to its own source set.
-- `docs/design/07-skin.md` commits the Skin integration to `Skin(FileHandle, TextureAtlas)` /
-  `skin.load(...)`, which is libGDX's reflective `Json` class underneath — the exact mechanism
-  `CLAUDE.md`'s web-pitfalls section warns about. scene2d has no non-reflective Skin loader, so this
-  is likely the project's one legitimate exception, but the TeaVM reflection declarations for every
-  style class named in `skin.json` must exist before that call ships.
+- ~~`tools/audio` uses `java.nio.file` inside the module TeaVM compiles.~~ **Fixed.** `GenerateAudio`,
+  `Synth` and `Wav` moved to their own Gradle source set at `game/src/tools/java`. `web` depends on
+  `:game`, which exposes only `main`, so TeaVM never sees them. Verified against the jar, not
+  assumed: `game.jar` carries no `tools` classes.
+- ~~The Skin integration is reflective and needs TeaVM declarations.~~ **It was not.** `GameSkin`
+  builds the entire skin in code from `Pixmap`/`NinePatch`/style objects; the only file it reads is a
+  plain-text AngelCode `.fnt`, which is not reflective. There is no `Skin(FileHandle, TextureAtlas)`
+  and no `skin.load(...)` anywhere. **`docs/design/07-skin.md` still describes the reflective path and
+  is now wrong about the code** — that stale doc is what put this warning here in the first place.
+  Fix the doc, or a future phase will re-raise this same non-problem.
 
 ## What is settled
 
@@ -229,7 +236,7 @@ Everything the three merged branches left unwired is closed.
 | 06 | Presentation | **done** — direction #8, integration #26, sprites packed into `assets/atlas/` and the real bitmap fonts into `assets/fonts/` on 25/08 |
 | 07 | Boss | **merged** — #29, with level 1 and enemy fire. Four archetypes shoot; the boss fans 6 projectiles a volley |
 | 08 | Audio and polish | **merged** — #31, with both dead cues wired on 25/08. Nobody has heard it yet; phase 09's browser pass is the first listen |
-| 09 | Web, CI and release | not started |
+| 09 | Web, CI and release | **in progress** — web launcher merged in #33 and played in a browser; CI, deploy and README open |
 
 ## Open items that do not block
 
@@ -246,6 +253,13 @@ All of these are in `CLAUDE.md`, but they are worth repeating because they are s
 - Headless Chrome cannot validate the web runtime. It fails under SwiftShader even when a real browser works.
 - `ExecutorService`, `CompletableFuture` and `ReentrantLock` do not exist in TeaVM: they break the build. The core is single-threaded by decision, and it was measured that concurrency would buy nothing.
 - Breaking determinism does not fail loudly. It silently invalidates every replay.
+- `spikes/web-viability/README.md` says `gdx_teavm_web_js_run` serves on **8181**. It does not — the
+  pinned 1.6.1 plugin serves on **8080**, and the plan sends you to that README for the commands.
+- `gdx_teavm_web_js_build -Prelease` **reuses the previous non-release output**: `generateJavaScript`
+  reports `UP-TO-DATE` even though release mode changes obfuscation, optimisation and source maps,
+  and leaves a stale `app.js.map` behind. Run `clean` before measuring a release build.
+- `du -sh` overstates a TeaVM debug dist by roughly 4x — it copies ~580 tiny sourcemap files, each
+  rounded up to a filesystem block. Sum actual file bytes when measuring download size.
 
 ## How work is organised
 
