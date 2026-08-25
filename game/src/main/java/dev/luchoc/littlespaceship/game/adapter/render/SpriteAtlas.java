@@ -9,11 +9,13 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * entity, and that only holds if every id in play comes from the same {@link
  * com.badlogic.gdx.graphics.Texture}.
  *
- * <p>Two implementations exist because the art lane and this lane run in parallel and finish on
- * different days. {@link PackedSpriteAtlas} loads a real {@code TexturePacker} atlas from disk —
- * what the game ships with, once art lands. {@link PlaceholderAtlas} draws silhouettes in code and
- * is what runs until then. {@link #load} picks between them by asking whether the packed atlas file
- * exists, so nothing else in the composition root has to know which one is running.
+ * <p>Two implementations exist. {@link PackedSpriteAtlas} loads the real atlas from disk — built by
+ * {@code docs/design/atlas/build-atlas.js} from {@code docs/design/mockups/src/01-sprites.js} into
+ * {@code assets/atlas/sprites.png}/{@code .atlas}, and what the game ships with today. {@link
+ * PlaceholderAtlas} draws silhouettes in code and only runs as a fallback, for a checkout that has
+ * not generated the atlas or a sprite id neither one covers. {@link PackedSpriteAtlas#load} picks
+ * between them by asking whether the packed atlas file exists, so nothing else in the composition
+ * root has to know which one is running.
  */
 public interface SpriteAtlas {
 
