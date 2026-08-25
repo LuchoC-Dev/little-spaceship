@@ -611,3 +611,93 @@ that matters here — screenshots taken, not just "it didn't crash":
   reach the boss in seconds rather than five minutes. The real level's own pacing, its escalation, and
   whether the strong encounter's carriers survive their 32 s window (the balance gap `level-designer`
   already flagged as open) were not exercised live.
+
+---
+
+## The tank gets a weapon; the basic/light `Health` question is closed (`level-designer`, 25/08/2026)
+
+Reported from play: "these enemies do nothing" — `enemy-tank`. It carries `motion`, a non-fragile
+`Collider` and 40 `Health`, and nothing that lets it act; it only absorbs bullets. `02-mvp-functional-
+spec.md`'s roster says only "slow and resistant" for the tank and assigns it no shot, but does not
+forbid one either. **Deciding as the coordinating lead's explicit call, not a roster requirement:**
+the tank gets a weapon. "Resistant" is a property, not a behaviour; an enemy the player can only ever
+shoot at, never be threatened by, is not a design choice recorded anywhere — it is an absence nobody
+made on purpose. Recorded here so a later reader can tell this was a deliberate deviation, not an
+oversight the roster prose settled.
+
+```json
+"weapon": { "pattern": "straight-single", "rate": 4.8, "speed": 60, "firstShotDelay": 1.6 }
+```
+
+Checked against the roster's other three shooting archetypes already tuned this same day
+(`enemy-basic` 3.2/70/1.0, `enemy-light` 2.4/130/0.9, `enemy-shooter` 1.8/90/0.7, `enemy-rush`
+4.0/120/1.4):
+
+- **`rate 4.8`** is the slowest cooldown in the roster, on purpose — the tank is the one archetype
+  whose 40 `Health` guarantees it survives long enough for even a very slow cadence to actually be
+  seen twice, so it is the right place to spend the heaviest, slowest shot rather than trying to make
+  a one-hit-kill archetype (`enemy-basic`/`enemy-light`) carry it.
+- **`speed 60`** is the slowest projectile in the roster too (next slowest is `enemy-shooter` at 90).
+  A tank that is itself slow and stationary-feeling firing a fast bullet would read as a different
+  archetype wearing the tank's sprite; a heavy, lumbering shot matches the body it comes from.
+- **`firstShotDelay 1.6`** is the longest in the roster, matched to `rate` the same proportionate way
+  the other four archetypes were tuned (`firstShotDelay` ≈ 30-50% of `rate`) — the tank does not need
+  a short delay to guarantee one shot before dying, since nothing here kills it quickly.
+
+**The one thing this shot cannot do yet: look heavy.** `EnemyWeaponSystem` hardcodes `"shot-e-small"`
+as the sprite for *every* enemy projectile — there is no per-weapon sprite selection, only a single
+constant. The atlas already contains an unused `shot-e-heavy` region sized for exactly this case
+(`02-sprite-sizes.md`), but wiring it in needs `EnemyWeapon` to carry its own sprite id (or
+`EnemyWeaponSystem` to look one up per pattern/archetype) — a `core` change, out of this lane's
+boundary and out of scope today. Until that lands, the tank's shot can only read as heavy through
+cadence and speed, not silhouette; **worth an issue**: give `EnemyWeapon` a `spriteId` field (or
+equivalent) so content can select `shot-e-heavy` for the tank instead of every enemy sharing one
+projectile sprite.
+
+### The `enemy-basic`/`enemy-light` `Health` question — decided, not deferred again
+
+Earlier in this file (25/08/2026, "the low-health/slow-shot tension") this lane flagged but did not
+make a recommendation: giving `enemy-basic`/`enemy-light` a small `Health` (2-3 points) so their
+rate-of-fire contrast against `enemy-shooter` becomes visible in play. Re-examined now, against
+`DamageSystem`'s actual rule rather than only against the spec prose — and the answer has changed
+from "open, worth trying" to **no, do not make this change, because it does nothing**.
+
+`DamageSystem.resolveEnemyHit` subtracts a flat `BalanceValues.weaponProjectileDamage()` — `10` in
+`balance.json` — from an enemy's `Health` on every player-projectile hit, and this number does not
+vary with the player's weapon level; only the *number* of simultaneous shots scales with level, not
+the damage each one carries. An enemy with no `Health` component is already treated as having exactly
+one point (`DamageSystem`'s own class javadoc states this explicitly). Giving `enemy-basic`/
+`enemy-light` `Health: 2` or `Health: 3` therefore changes nothing observable: `10 > 3` in every case,
+so either enemy still dies to the very first player projectile that reaches it, exactly as today.
+Making the rate-of-fire contrast actually visible would need `Health` above `10` — a materially larger
+change than the "small chip damage" the earlier entry described, and one that would cost real clear
+time and real player-facing chip damage risk against every other archetype's own untouched `Health`,
+for a benefit (seeing a `enemy-basic` survive to fire a second, slower shot next to a `enemy-shooter`
+firing its second, faster shot) that a 2-3 point `Health` cannot deliver anyway. **Decision: leave
+`enemy-basic` and `enemy-light` with no `Health` component.** The open item is closed, not deferred —
+if the rate-of-fire contrast still needs to read more clearly after more play, the real lever is
+`firstShotDelay`/`rate` tuning on the two archetypes themselves, or a `Health` value well above `10`,
+not the 2-3 point range this lane originally floated.
+
+### Verified visually, and what was not
+
+Using the established throwaway-content technique
+(`.claude/agent-memory/game-presentation/project_windows-desktop-screenshot-verification.md`):
+`level-01.json` was temporarily edited to spawn one `enemy-tank` at `t=1.0`, `atX 0.5`, launched
+through `:desktop:run` via the real menu → ship select → play flow (no debug shortcut), and
+screenshotted around `t≈3.5s`. The tank (purple sprite) and a `shot-e-small` projectile it had already
+fired, descending toward the player, are both visible in the same frame — direct confirmation the
+tank's `EnemyWeapon` fires through the real content pipeline, not only reasoned from the code. The
+player was not moved (no input simulated) and was hit; the run ended in `GAME OVER` a couple of
+seconds later, consistent with an armed tank actually threatening a stationary target rather than
+proof of a bug — this was not a dodging test. The edit was reverted before committing;
+`git status`/`git diff --stat` on `level-01.json` shows no change, and only `enemies.json`'s two added
+lines are in the commit. `./gradlew build` is green (`BUILD SUCCESSFUL`, core's test suite included,
+unaffected by a content-only change).
+
+Not verified: the tank's cadence (`rate 4.8`) over a longer window — one shot was seen, not two, since
+the throwaway run ended on the first hit. Whether 4.8 s between shots reads as "heavy and deliberate"
+versus "so slow it might as well not fire" across a real several-tank stretch of the level (the
+1:26-1:47 "tank, priority shift" stretch, or the later solo/paired tank waves) is exactly what the
+next balance pass should watch for, the same way earlier entries in this file leave `enemy-rush`'s
+single likely shot as an open question.
