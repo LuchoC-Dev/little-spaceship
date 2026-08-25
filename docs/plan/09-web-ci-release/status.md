@@ -54,9 +54,30 @@ Verified, measured:
 - Did **not** attempt headless-Chrome verification — the plan and `CLAUDE.md` both say it fails
   under SwiftShader even when the real thing works, so it would have produced nothing useful.
 
+Task 7 of the plan (issue #34), CI on GitHub Actions:
+
+- `.github/workflows/ci.yml`, a single job on `ubuntu-latest`, triggered on every push and on pull
+  requests targeting `main`.
+- **Runner JDK is 17 (Temurin)**, chosen deliberately rather than matching the local dev machine's
+  JDK 25: `sourceCompatibility`/`targetCompatibility` in the root `build.gradle.kts` are pinned to
+  17 because TeaVM cannot digest newer bytecode, so running the whole CI build on 17 produces
+  17-shaped bytecode directly instead of relying on javac's downcompile path, which was never the
+  thing measured in the spike.
+- Gradle wrapper (already committed) via `gradle/actions/setup-gradle@v4`, which caches both the
+  wrapper distribution and the dependency/build cache — no manual `actions/cache` wiring needed.
+- Two run steps: `./gradlew build` (compiles `core`, `game`, `desktop`, `web`'s JVM sources,
+  assembles jars, runs `core`'s — and every other module's — test suite) and
+  `./gradlew gdx_teavm_web_js_build` (the web/TeaVM target, run separately because the plugin
+  registers it outside the standard `build` lifecycle task).
+- `permissions: contents: read` at the workflow level — the repo is about to go public and this
+  workflow never needs to write anything.
+- **No headless-browser step**, per the plan's decided limitation: CI proves the web build
+  compiles, not that it runs. A comment in the workflow states this explicitly next to the web
+  build step so it does not get "fixed" by someone unaware of the SwiftShader failure.
+
 ## In progress
 
-Nothing — tasks 1-3 are the whole scope of issue #32.
+Nothing — tasks 1-3 and 7 are done; tasks 4-6, 8-9 remain (see notes below, unchanged from before).
 
 ## Blocked
 
@@ -77,9 +98,14 @@ Nothing.
 
 ## Notes for whoever comes next
 
-- Tasks 4-9 remain: pointer capture verification, the browser matrix (Chrome/Firefox/Edge/Safari),
-  real-asset load-time and framerate measurement, CI on GitHub Actions, static-site deploy, and the
-  repository README.
+- Tasks 4-6, 8-9 remain: pointer capture verification, the browser matrix
+  (Chrome/Firefox/Edge/Safari), real-asset load-time and framerate measurement, static-site deploy,
+  and the repository README. Task 7 (CI) is done as of issue #34 — see above.
+- `.github/workflows/ci.yml` only proves the build compiles and `core`'s tests pass. It has never
+  been run on an actual GitHub Actions runner — that only happens once the PR is opened. Verified
+  locally: the exact same command sequence (`./gradlew build`, then
+  `./gradlew gdx_teavm_web_js_build`) under JDK 21 on this machine (JDK 17 itself was not installed
+  locally to test against, only reasoned about from the pinned `sourceCompatibility`).
 - A human needs to open `web/build/dist/js/webapp/index.html` through a real local server (not
   `file://`, module loading needs HTTP) in a real browser to confirm the game actually runs, the
   pointer-lock relative mouse works, and audio unlocks on the first click. `./gradlew
