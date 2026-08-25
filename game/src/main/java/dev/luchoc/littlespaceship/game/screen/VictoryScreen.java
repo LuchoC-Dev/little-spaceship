@@ -36,7 +36,7 @@ public final class VictoryScreen extends BaseUiScreen {
         content.add(total).left().padTop(12f).padBottom(20f).row();
 
         List<KeyboardFocusable> focusables = new ArrayList<>();
-        MenuEntries.add(content, skin, "CONTINUE", () -> game.setScreen(new MenuScreen(game)), focusables);
+        MenuEntries.add(content, game, skin, "CONTINUE", () -> game.setScreen(new MenuScreen(game)), focusables);
         new MenuNavigator(stage, focusables);
     }
 

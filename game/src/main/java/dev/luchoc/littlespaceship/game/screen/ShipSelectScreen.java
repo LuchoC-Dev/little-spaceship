@@ -45,8 +45,8 @@ public final class ShipSelectScreen extends BaseUiScreen {
         content.add(stats).left().padBottom(24f).row();
 
         List<KeyboardFocusable> focusables = new ArrayList<>();
-        MenuEntries.add(content, skin, "LAUNCH", () -> game.setScreen(new PlayScreen(game)), focusables);
-        MenuEntries.add(content, skin, "BACK", () -> game.setScreen(new MenuScreen(game)), focusables);
+        MenuEntries.add(content, game, skin, "LAUNCH", () -> game.setScreen(new PlayScreen(game)), focusables);
+        MenuEntries.add(content, game, skin, "BACK", () -> game.setScreen(new MenuScreen(game)), focusables);
         new MenuNavigator(stage, focusables);
     }
 

@@ -24,10 +24,10 @@ public final class MenuScreen extends BaseUiScreen {
         content.add(subtitle).left().padBottom(20f).row();
 
         List<KeyboardFocusable> focusables = new ArrayList<>();
-        MenuEntries.add(content, skin, "PLAY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
-        MenuEntries.add(content, skin, "OPTIONS",
+        MenuEntries.add(content, game, skin, "PLAY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
+        MenuEntries.add(content, game, skin, "OPTIONS",
             () -> game.setScreen(new OptionsScreen(game, () -> new MenuScreen(game))), focusables);
-        MenuEntries.add(content, skin, "QUIT", Gdx.app::exit, focusables);
+        MenuEntries.add(content, game, skin, "QUIT", Gdx.app::exit, focusables);
         new MenuNavigator(stage, focusables);
 
         Table footerRow = new Table();

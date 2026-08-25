@@ -27,8 +27,8 @@ public final class DefeatScreen extends BaseUiScreen {
         content.add(scoreLabel).left().padBottom(24f).row();
 
         List<KeyboardFocusable> focusables = new ArrayList<>();
-        MenuEntries.add(content, skin, "RETRY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
-        MenuEntries.add(content, skin, "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)), focusables);
+        MenuEntries.add(content, game, skin, "RETRY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
+        MenuEntries.add(content, game, skin, "QUIT TO MENU", () -> game.setScreen(new MenuScreen(game)), focusables);
         new MenuNavigator(stage, focusables);
     }
 
