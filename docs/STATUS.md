@@ -58,7 +58,21 @@ the diff:
 
 1. **Balance.** Level 1's pacing was written before enemies could shoot, and enemy health is still
    placeholder — a heavy carrier dies in about 1.2 s against the 32 s its stretch reserves. Decided:
-   tuned by playing, not by arithmetic. No longer blocked; enemies now shoot.
+   tuned by playing, not by arithmetic.
+
+   The first real play session, 25/08, named two things:
+
+   - **Enemy fire is invisible in practice.** It works — verified on a throwaway level where four
+     shooters spawned at 1 s and a projectile was on screen within seconds. But `EnemyWeapon`
+     initialises `cooldownRemaining` to the full cooldown, so a shooter must survive **1.8 s** before
+     its first shot — while `enemy-shooter` carries **no `health` component at all**, so one player
+     projectile destroys it. A shooter only ever fires if the player ignores it for 1.8 s. Lowering
+     `rate` alone will not fix that, because `rate` does not touch the first shot. What would: give
+     the first shot a shorter delay than the rest, or give the shooter enough health to live long
+     enough to use the weapon it has. This is a design choice, not a tuning knob, and it is the
+     single biggest thing standing between the level as written and the level as designed.
+   - **The boss fires far too little for a boss.** Its `patternCooldown` in `assets/data/level-01.json`
+     is the number to move.
 2. **Phase 09** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
    can open. `assets/startup-logo.png` is already in place; `web/` is an empty skeleton by decision,
    and the TeaVM build was verified working once, in phase 03, before being reverted as out of scope.
@@ -75,9 +89,12 @@ None of these block the MVP. Each is a real thing someone chose not to fix under
 - **The HUD's icon squares overlap their text labels** — LIVES, BOMBS and POWER are drawn over by
   their own icons. Predates the atlas. The five `icon-*` sprites exist in the atlas and `HudRenderer`
   does not use them; it is still text-only.
-- **Ramming the boss does not repeatedly damage the player** — one `IMPACT` on first contact, then
-  nothing across continued overlap. Found while trying to force a fast defeat for verification. It is
-  not known whether this is intended; nobody has looked at it as a rule.
+- ~~Ramming the boss does not repeatedly damage the player.~~ **Withdrawn on 25/08 after a play
+  session.** Ramming damages the player normally. The "one hit then nothing" an agent saw under
+  sustained overlap is `03-game-systems.md`'s decided rule — all damage taken grants temporary
+  invulnerability — working exactly as specified. Kept here as a record that a guess reached this
+  document as an open unknown; check `docs/planning/` before writing down that the game fails to do
+  something.
 - **`game` now imports `core.domain.event`** (`EnemyDestroyed`, `GameEvent`), the first such import in
   the project, and the mechanical boundary grep in `.claude/agent-memory/game-presentation/` will flag
   it. It is not a violation: `core.port.GameEventSink` already imports `GameEvent`, and `GameEvent`'s
