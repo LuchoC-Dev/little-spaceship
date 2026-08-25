@@ -386,17 +386,17 @@ public final class HudRenderer {
 
     private void label(SpriteBatch batch, String text, int x, int yDown) {
         fontMini.setColor(Palette.N4);
-        fontMini.draw(batch, text, x, yGdx(yDown, fontMini.getCapHeight()));
+        fontMini.draw(batch, text, x, yGdxTop(yDown));
     }
 
     private void value(SpriteBatch batch, String text, int x, int yDown, Color color) {
         fontMini.setColor(color);
-        fontMini.draw(batch, text, x, yGdx(yDown, fontMini.getCapHeight()));
+        fontMini.draw(batch, text, x, yGdxTop(yDown));
     }
 
     private void title(SpriteBatch batch, String text, float x, int yDown, Color color) {
         fontTitle.setColor(color);
-        fontTitle.draw(batch, text, x, yGdx(yDown, fontTitle.getCapHeight()));
+        fontTitle.draw(batch, text, x, yGdxTop(yDown));
     }
 
     private void rect(SpriteBatch batch, float xDown, float yDown, float w, float h, Color color) {
@@ -419,10 +419,22 @@ public final class HudRenderer {
     /**
      * Converts the design document's y-down coordinate, measured from an element's top edge, to
      * libGDX's y-up space — {@code y_gdx = 270 - y_down - height}, exactly as
-     * {@code docs/design/04-hud-layout.md} specifies.
+     * {@code docs/design/04-hud-layout.md} specifies. This is for {@code batch.draw}, whose {@code y}
+     * is the bottom-left corner: subtracting {@code height} turns a top-edge coordinate into that
+     * bottom edge.
      */
     private static float yGdx(float yDown, float height) {
         return LittleSpaceshipGame.LOGICAL_HEIGHT - yDown - height;
+    }
+
+    /**
+     * The same conversion for {@link BitmapFont#draw}, whose {@code y} is documented as "the top of
+     * most capital letters" — already a top-edge coordinate, not a bottom-left corner. Reusing
+     * {@link #yGdx} with the font's cap height here would subtract that height a second time,
+     * pushing every label down by roughly one line onto the row below it.
+     */
+    private static float yGdxTop(float yDown) {
+        return LittleSpaceshipGame.LOGICAL_HEIGHT - yDown;
     }
 
     private static String zeroPadded(int value, int digits) {
