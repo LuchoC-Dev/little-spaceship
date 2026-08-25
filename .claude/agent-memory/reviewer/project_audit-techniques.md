@@ -1,6 +1,6 @@
 ---
 name: audit-techniques
-description: Read-only ways to prove a finding in this repo without modifying it or re-running the full build, including batching and design-fidelity checks
+description: Read-only ways to prove a finding in this repo without modifying it or re-running the full build, including batching, design-fidelity and TeaVM dist-size checks
 metadata:
   type: project
 ---
@@ -152,3 +152,17 @@ Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
   files it under its runtime class, so a nine-patch added implicitly is invisible to `getDrawable`.
   Confirm each new name against `GameSkin`, and check whether the screen that uses it is built in a
   constructor (so a manual run exercised it) or lazily (so nobody has).
+
+## For auditing a TeaVM web dist directory
+
+- **`du -sh` overstates a TeaVM debug/sourcemap dist by roughly 4x on this filesystem.** A non-release
+  (or leftover-debug) build copies the sourcemap's original `.java` sources alongside `app.js`
+  (`sourceFilePolicy.set(SourceFilePolicy.COPY)`), which for this project is ~580 small files under
+  `webapp/src/`. Each gets rounded up to a filesystem allocation unit, so `du -sh web/build/dist/js/webapp`
+  reported 8.5 MB against a true sum of ~2.2 MB (`find <dir> -type f -printf "%s %p\n"` added by hand,
+  or `find <dir> -type f -exec du -ch {} + | tail -1` which sums apparent size instead of block size).
+  Whenever a size claim for a TeaVM dist needs reproducing, sum file bytes directly — don't trust `du`
+  on a tree with many small files, and check `app.js.map`/`app.js.teavmdbg`/`src/` are excluded from
+  what you compare against a "what a visitor downloads" figure, since a release build (`-Prelease`)
+  should not ship them but a stale incremental build directory can still contain them from an earlier
+  non-release run.
