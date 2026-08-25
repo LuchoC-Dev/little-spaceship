@@ -60,19 +60,32 @@ the diff:
    placeholder — a heavy carrier dies in about 1.2 s against the 32 s its stretch reserves. Decided:
    tuned by playing, not by arithmetic.
 
-   The first real play session, 25/08, named two things:
+   Two play sessions on 25/08 drove a round of fixes, all merged the same day.
 
-   - **Enemy fire is invisible in practice.** It works — verified on a throwaway level where four
-     shooters spawned at 1 s and a projectile was on screen within seconds. But `EnemyWeapon`
-     initialises `cooldownRemaining` to the full cooldown, so a shooter must survive **1.8 s** before
-     its first shot — while `enemy-shooter` carries **no `health` component at all**, so one player
-     projectile destroys it. A shooter only ever fires if the player ignores it for 1.8 s. Lowering
-     `rate` alone will not fix that, because `rate` does not touch the first shot. What would: give
-     the first shot a shorter delay than the rest, or give the shooter enough health to live long
-     enough to use the weapon it has. This is a design choice, not a tuning knob, and it is the
-     single biggest thing standing between the level as written and the level as designed.
-   - **The boss fires far too little for a boss.** Its `patternCooldown` in `assets/data/level-01.json`
-     is the number to move.
+   **What was wrong and is now fixed.** Only `enemy-shooter` was ever armed, and it does not appear
+   in `level-01.json` until 166 s — so the player met no enemy fire at all. Worse, `EnemyWeapon`
+   initialised `cooldownRemaining` to the full cooldown, so an enemy had to survive an entire cooldown
+   before its first shot, while these archetypes carry no `health` component and die to one player
+   projectile. Nothing ever fired.
+
+   `EnemyWeapon` now takes an optional `"firstShotDelay"`, independent of `"rate"` and defaulting to it
+   (zero rejected: an enemy firing the frame it spawns is unreadable). The roster in
+   `02-mvp-functional-spec.md` was then honoured properly — Basic, Fast light, shooter and Super-fast
+   all shoot; Tank and carrier do not, as specified. The boss's `patternCooldown` went 1.3 → 0.7,
+   making its attack cycle 2.05 s → 1.45 s against the fixed 0.75 s tell. Verified on screen: six
+   enemy projectiles in flight from three archetypes at once, and the player losing a life to them.
+
+   **The open tension, deliberately not resolved.** The spec asks the basic for "low health and a slow
+   shot", and those fight each other: dying to one hit, a basic rarely lives to fire twice, so its
+   rate-of-fire contrast against the shooter is mostly invisible. The honest fix is a small `Health`
+   (2–3 points) on `enemy-basic` and `enemy-light`, which is a real balance change — it lengthens clear
+   time and introduces chip damage against `weaponProjectileDamage: 10`. Left for a play session to
+   decide, not for arithmetic.
+
+   **Watch first, next session:** whether the basic reads as firing less often than the shooter or just
+   dies too fast to tell; whether the boss at 0.7 now feels like a boss; whether `enemy-rush`'s single
+   likely shot reads as "shoots little" rather than "does not shoot"; and whether `enemy-light`'s
+   130 u/s projectile is dodgeable — it is the fastest enemy shot in the game.
 2. **Phase 09** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
    can open. `assets/startup-logo.png` is already in place; `web/` is an empty skeleton by decision,
    and the TeaVM build was verified working once, in phase 03, before being reverted as out of scope.
