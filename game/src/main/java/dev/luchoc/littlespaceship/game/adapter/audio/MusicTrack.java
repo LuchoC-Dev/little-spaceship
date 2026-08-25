@@ -11,8 +11,8 @@ public enum MusicTrack {
     /** The level's own loop, playing for the whole run until the boss appears. */
     LEVEL("level.wav"),
 
-    /** Swapped in the instant {@code WorldView.bossStatus().present()} turns true — see {@link
-     * AudioSystem}'s javadoc for why this is not wired yet. */
+    /** Swapped in the instant {@code WorldView.bossStatus().present()} turns true, from {@link
+     * AudioDirector#update}. */
     BOSS("boss.wav");
 
     private final String fileName;

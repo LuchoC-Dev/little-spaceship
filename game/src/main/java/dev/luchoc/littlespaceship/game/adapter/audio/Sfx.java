@@ -6,10 +6,8 @@ package dev.luchoc.littlespaceship.game.adapter.audio;
  * bomb and UI — one category each, not one sound per pickup kind or per enemy archetype. A player
  * hearing six distinct power-up chimes gains nothing a single one does not already give.
  *
- * <p>{@link #EXPLOSION} has no caller yet. {@code core} destroys an enemy without reporting when
- * or where — see {@code docs/plan/08-audio-and-polish/status.md}'s account of the missing seam —
- * so nothing in {@code game} can currently tell "an enemy died" from "nothing happened". The asset
- * and the playback path both exist and wait for a real trigger once {@code core} provides one.
+ * <p>{@link #EXPLOSION} plays from {@link AudioDirector#emit}, triggered by {@code core}'s {@link
+ * dev.luchoc.littlespaceship.core.domain.event.EnemyDestroyed}.
  */
 public enum Sfx {
 
