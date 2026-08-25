@@ -12,15 +12,18 @@ import dev.luchoc.littlespaceship.core.domain.component.Weapon;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.domain.system.BombSystem;
+import dev.luchoc.littlespaceship.core.domain.system.BossSystem;
 import dev.luchoc.littlespaceship.core.domain.system.CleanupSystem;
 import dev.luchoc.littlespaceship.core.domain.system.CollisionSystem;
 import dev.luchoc.littlespaceship.core.domain.system.DamageSystem;
+import dev.luchoc.littlespaceship.core.domain.system.EnemyWeaponSystem;
 import dev.luchoc.littlespaceship.core.domain.system.GameSystem;
 import dev.luchoc.littlespaceship.core.domain.system.LifetimeSystem;
 import dev.luchoc.littlespaceship.core.domain.system.MotionSystem;
 import dev.luchoc.littlespaceship.core.domain.system.PickupSystem;
 import dev.luchoc.littlespaceship.core.domain.system.ScoreSystem;
 import dev.luchoc.littlespaceship.core.domain.system.SpawnSystem;
+import dev.luchoc.littlespaceship.core.domain.system.SpawnerSystem;
 import dev.luchoc.littlespaceship.core.domain.system.SystemPipeline;
 import dev.luchoc.littlespaceship.core.domain.system.WeaponSystem;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
@@ -165,6 +168,16 @@ public final class Simulation implements TickHandler {
         systems.add(new BombSystem());
         if (levelId != null) {
             systems.add(new SpawnSystem(levelId));
+        }
+        // Stateless and level-independent, unlike SpawnSystem/BossSystem: it only ever reacts to a
+        // Spawner component that already exists on some entity, wherever that entity came from, so it
+        // is registered unconditionally the same way CollisionSystem or DamageSystem are.
+        systems.add(new SpawnerSystem());
+        // Stateless and level-independent, the same reasoning as SpawnerSystem right above it: it
+        // only ever reacts to an EnemyWeapon component that already exists on some entity.
+        systems.add(new EnemyWeaponSystem());
+        if (levelId != null) {
+            systems.add(new BossSystem(levelId));
         }
         systems.add(new LifetimeSystem());
         systems.add(new CollisionSystem());

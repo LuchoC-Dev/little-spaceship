@@ -94,17 +94,36 @@ public final class SpawnSystem implements GameSystem {
         FormationDefinition formation = world.content().formation(event.formationId());
         if (event.hasDrop()) {
             requireRecognisedDrop(enemy, event);
+            requireSlotInRange(formation, event);
         }
         float anchorX = event.atX() * MotionSystem.PLAYFIELD_WIDTH;
         float lowestOffsetY = lowestOffsetY(formation.slots());
 
-        for (FormationSlot slot : formation.slots()) {
+        List<FormationSlot> slots = formation.slots();
+        for (int i = 0; i < slots.size(); i++) {
+            FormationSlot slot = slots.get(i);
             int entity = world.createEntity();
             attachComponents(world, enemy, entity);
             positionSpawned(world, entity, anchorX, lowestOffsetY, slot);
-            if (event.hasDrop()) {
+            if (event.hasDrop() && i == event.dropSlot()) {
                 world.drops().set(entity, new Drop(event.dropId()));
             }
+        }
+    }
+
+    /**
+     * Fails the moment a wave's drop names a slot its own formation does not have, instead of the
+     * drop silently landing on no entity at all — the same reasoning as {@link
+     * #requireRecognisedDrop}, applied to issue #23's fix: a designed drop is tied to one specific
+     * slot, and a typo in which one should not go unnoticed until someone wonders why an encounter
+     * gave up nothing.
+     */
+    private static void requireSlotInRange(FormationDefinition formation, SpawnEvent event) {
+        if (event.dropSlot() >= formation.slots().size()) {
+            throw new IllegalArgumentException(
+                "spawn event at " + event.at() + "s drops into slot " + event.dropSlot()
+                    + " of formation '" + formation.id() + "', which only has "
+                    + formation.slots().size() + " slot(s)");
         }
     }
 

@@ -7,6 +7,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
+import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
@@ -14,6 +15,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
+import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
@@ -22,6 +24,7 @@ import dev.luchoc.littlespaceship.core.domain.entity.EntityRegistry;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.domain.system.ScoreSystem;
+import dev.luchoc.littlespaceship.core.port.BossStatus;
 import dev.luchoc.littlespaceship.core.port.CompletionBonus;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
@@ -65,6 +68,8 @@ public final class World {
     private final ComponentStore<Pickup> pickups = new ComponentStore<>();
     private final ComponentStore<Health> healths = new ComponentStore<>();
     private final ComponentStore<BombState> bombStates = new ComponentStore<>();
+    private final ComponentStore<Spawner> spawners = new ComponentStore<>();
+    private final ComponentStore<EnemyWeapon> enemyWeapons = new ComponentStore<>();
 
     /**
      * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
@@ -88,6 +93,26 @@ public final class World {
      * run with no level to finish.
      */
     private boolean waveTimelineExhausted;
+
+    /**
+     * Whether this run's level has a boss at all, set by {@code BossSystem} the moment it first
+     * updates. {@link View#outcome()} branches on this: a boss level can only ever complete by
+     * {@link #bossDefeated}, never by the older "wave timeline dry, no enemy left" rule — a boss's
+     * own parts are {@code ENEMY}-layer colliders, so that older rule would otherwise report {@link
+     * LevelOutcome#COMPLETED} the instant the boss's own entrance quiet gap left no enemy on screen,
+     * long before the fight even started. A level with no {@code BossSystem} registered never sets
+     * this, so it keeps the older rule exactly as before phase 07.
+     */
+    private boolean bossLevel;
+
+    /** Whether the boss's core has been destroyed. Set once by {@code BossSystem}, never cleared. */
+    private boolean bossDefeated;
+
+    /** Whether the boss is currently on screen — spawned and not yet defeated. */
+    private boolean bossPresent;
+
+    private int bossHp;
+    private int bossHpMax;
 
     private final ContentSource content;
     private final Rng rng;
@@ -147,6 +172,8 @@ public final class World {
         pickups.remove(entity);
         healths.remove(entity);
         bombStates.remove(entity);
+        spawners.remove(entity);
+        enemyWeapons.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -266,6 +293,20 @@ public final class World {
     }
 
     /**
+     * @return periodic-spawn state for the entities that carry one, such as the heavy carrier
+     */
+    public ComponentStore<Spawner> spawners() {
+        return spawners;
+    }
+
+    /**
+     * @return per-archetype firing state for the entities that carry one, such as {@code enemy-shooter}
+     */
+    public ComponentStore<EnemyWeapon> enemyWeapons() {
+        return enemyWeapons;
+    }
+
+    /**
      * Finds the player's entity.
      *
      * <p>Exactly one entity holds {@link Player} at a time in the MVP; this is a lookup convenience
@@ -312,6 +353,38 @@ public final class World {
      */
     public void markWaveTimelineExhausted() {
         waveTimelineExhausted = true;
+    }
+
+    /**
+     * Records that this run's level has a boss, so {@link View#outcome()} knows to require {@link
+     * #markBossDefeated()} instead of the older wave-timeline rule. Idempotent: {@code BossSystem}
+     * calls it every tick, not just once.
+     */
+    public void markBossLevel() {
+        bossLevel = true;
+    }
+
+    /**
+     * Records that the boss's core has been destroyed and clears {@link #bossPresent}, so the health
+     * bar and the victory condition agree on the same instant.
+     */
+    public void markBossDefeated() {
+        bossDefeated = true;
+        bossPresent = false;
+    }
+
+    /**
+     * Reports the boss's current aggregate health, called by {@code BossSystem} every tick the boss
+     * is on screen — from the start of its entrance through the fight, stopping once {@link
+     * #markBossDefeated()} is called instead.
+     *
+     * @param hp current combined hit points across every surviving part
+     * @param hpMax the combined hit points the boss started the fight with
+     */
+    public void setBossStatus(int hp, int hpMax) {
+        bossPresent = true;
+        bossHp = hp;
+        bossHpMax = hpMax;
     }
 
     /**
@@ -408,10 +481,24 @@ public final class World {
             if (state != null && state.lives <= 0) {
                 return LevelOutcome.DEFEATED;
             }
-            if (waveTimelineExhausted && noEnemyLeft() && (state == null || state.lives > 0)) {
+            boolean alive = state == null || state.lives > 0;
+            if (bossLevel) {
+                // A boss level completes only by defeating the boss — see bossLevel's javadoc for
+                // why the older wave-timeline rule below would lie once a boss exists.
+                return bossDefeated && alive ? LevelOutcome.COMPLETED : LevelOutcome.IN_PROGRESS;
+            }
+            if (waveTimelineExhausted && noEnemyLeft() && alive) {
                 return LevelOutcome.COMPLETED;
             }
             return LevelOutcome.IN_PROGRESS;
+        }
+
+        @Override
+        public BossStatus bossStatus() {
+            if (!bossPresent) {
+                return BossStatus.NONE;
+            }
+            return new BossStatus(true, bossHp, bossHpMax);
         }
 
         /**

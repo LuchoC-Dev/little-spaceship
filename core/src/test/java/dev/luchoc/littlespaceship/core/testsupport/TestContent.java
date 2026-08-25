@@ -2,6 +2,7 @@ package dev.luchoc.littlespaceship.core.testsupport;
 
 import dev.luchoc.littlespaceship.core.port.AttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
+import dev.luchoc.littlespaceship.core.port.BossDefinition;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationDefinition;
@@ -28,6 +29,7 @@ public final class TestContent implements ContentSource {
     private final Map<String, FormationDefinition> formations = new HashMap<>();
     private final Map<String, WaveTimeline> timelines = new HashMap<>();
     private final Map<String, AttachmentDefinition> attachments = new HashMap<>();
+    private final Map<String, BossDefinition> bosses = new HashMap<>();
 
     public TestContent() {
         this(new TestBalance());
@@ -95,6 +97,21 @@ public final class TestContent implements ContentSource {
     @Override
     public AttachmentDefinition attachment(String id) {
         return require(attachments, id, "attachment");
+    }
+
+    public TestContent withBoss(String levelId, BossDefinition definition) {
+        bosses.put(levelId, definition);
+        return this;
+    }
+
+    @Override
+    public boolean hasBoss(String levelId) {
+        return bosses.containsKey(levelId);
+    }
+
+    @Override
+    public BossDefinition boss(String levelId) {
+        return require(bosses, levelId, "boss");
     }
 
     private static <T> T require(Map<String, T> registry, String id, String kind) {

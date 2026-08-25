@@ -3,9 +3,11 @@ package dev.luchoc.littlespaceship.core.domain.content;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
+import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
@@ -61,12 +63,16 @@ public final class ComponentFactoryRegistry {
 
     /**
      * Builds the registry with the factories the MVP's content needs: motion, collider, sprite,
-     * scoreValue, health. {@code "health"} was added in phase 05, alongside the systems
-     * ({@code WeaponSystem}, {@code BombSystem}) that consume it — {@code 12-architecture.md} named
-     * the component and its {@code {"points": N}} shape from the start, but no phase had it as a
-     * task until the gap was caught in review. {@code "weapon"} — a per-archetype firing pattern for
-     * enemies — stays unregistered: nothing enemy-side fires yet, so registering a factory for it
-     * would still be the guessed shape this project avoids building ahead of a real consumer.
+     * scoreValue, health, spawner, weapon. {@code "health"} was added in phase 05, alongside the
+     * systems ({@code WeaponSystem}, {@code BombSystem}) that consume it — {@code 12-architecture.md}
+     * named the component and its {@code {"points": N}} shape from the start, but no phase had it as
+     * a task until the gap was caught in review. {@code "spawner"} was added in phase 07, for the
+     * same reason: named in {@code 12-architecture.md}'s component table from the start, built only
+     * once the strong encounter (two heavy carriers) needed the periodic spawn it names. {@code
+     * "weapon"} — a per-archetype firing pattern for enemies — was the same kind of gap, closed once
+     * {@code enemy-shooter} needed to actually shoot: no enemy fired at all before this, per {@code
+     * 08-decisions-and-open-items.md}. The boss does not go through this registry — see {@code
+     * BossSystem} — since its fire is a fixed state machine, not an archetype component.
      *
      * @return a registry ready to attach the MVP's archetypes
      */
@@ -76,7 +82,9 @@ public final class ComponentFactoryRegistry {
             .register("collider", ComponentFactoryRegistry::attachCollider)
             .register("sprite", ComponentFactoryRegistry::attachSprite)
             .register("scoreValue", ComponentFactoryRegistry::attachScoreValue)
-            .register("health", ComponentFactoryRegistry::attachHealth);
+            .register("health", ComponentFactoryRegistry::attachHealth)
+            .register("spawner", ComponentFactoryRegistry::attachSpawner)
+            .register("weapon", ComponentFactoryRegistry::attachEnemyWeapon);
     }
 
     /**
@@ -124,5 +132,35 @@ public final class ComponentFactoryRegistry {
     private static void attachHealth(World world, int entity, ComponentSpec spec) {
         float points = spec.number("points");
         world.healths().set(entity, new Health(Math.round(points)));
+    }
+
+    /**
+     * Reads which archetype to spawn, how often, and at what offset from the holder — the exact
+     * fields {@link Spawner}'s constructor needs, so {@code level-designer} can tune the carrier's
+     * encounter (interval, offset, even a different spawned archetype) purely in content.
+     */
+    private static void attachSpawner(World world, int entity, ComponentSpec spec) {
+        String enemyId = spec.text("enemyId");
+        float interval = spec.number("interval");
+        float offsetX = spec.number("offsetX");
+        float offsetY = spec.number("offsetY");
+        world.spawners().set(entity, new Spawner(enemyId, interval, offsetX, offsetY));
+    }
+
+    /**
+     * Reads the shot shape, the cooldown between shots and the projectile's speed — the exact three
+     * fields {@link EnemyWeapon}'s constructor needs. {@code "rate"} is the field name {@code
+     * 12-architecture.md}'s own example uses for the cooldown, kept here for consistency with that
+     * document even though it reads as seconds between shots, not shots per second — the same
+     * quantity {@code Weapon#cooldownRemaining} counts down from. {@code "speed"} has no equivalent
+     * in that example: unlike {@code "motion"}, whose velocity is fully described by a named {@code
+     * TrajectoryDefinition}, nothing else in the content pipeline yet carries a projectile's speed
+     * for an enemy, so it is a plain required number here.
+     */
+    private static void attachEnemyWeapon(World world, int entity, ComponentSpec spec) {
+        String pattern = spec.text("pattern");
+        float cooldown = spec.number("rate");
+        float speed = spec.number("speed");
+        world.enemyWeapons().set(entity, new EnemyWeapon(pattern, cooldown, speed));
     }
 }

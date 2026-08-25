@@ -6,14 +6,19 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.luchoc.littlespaceship.core.domain.World;
+import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.event.EnemyDestroyed;
+import dev.luchoc.littlespaceship.core.domain.event.GameEvent;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -103,6 +108,54 @@ class CleanupSystemTest {
 
         assertEquals(0, world.pickups().size());
         assertNull(world.transforms().get(enemy));
+    }
+
+    @Test
+    @DisplayName("destroying an ENEMY-layer entity emits EnemyDestroyed at its last position")
+    void emitsEnemyDestroyedForAnEnemy() {
+        int enemy = world.createEntity();
+        world.transforms().set(enemy, new Transform(42f, 99f));
+        world.colliders().set(enemy, new Collider(5f, CollisionLayer.ENEMY));
+        world.markForDestruction(enemy);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        List<GameEvent> events = drain();
+        assertEquals(1, events.size());
+        EnemyDestroyed event = (EnemyDestroyed) events.get(0);
+        assertEquals(42f, event.x());
+        assertEquals(99f, event.y());
+    }
+
+    @Test
+    @DisplayName("destroying a non-ENEMY-layer entity emits nothing")
+    void emitsNothingForOtherLayers() {
+        int projectile = world.createEntity();
+        world.transforms().set(projectile, new Transform(0f, 0f));
+        world.colliders().set(projectile, new Collider(1.5f, CollisionLayer.PLAYER_PROJECTILE));
+        world.markForDestruction(projectile);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(drain().isEmpty());
+    }
+
+    @Test
+    @DisplayName("destroying an ENEMY-layer entity with no collider left to read emits nothing")
+    void emitsNothingWithNoCollider() {
+        int enemy = world.createEntity();
+        world.transforms().set(enemy, new Transform(0f, 0f));
+        world.markForDestruction(enemy);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(drain().isEmpty());
+    }
+
+    private List<GameEvent> drain() {
+        List<GameEvent> collected = new ArrayList<>();
+        world.events().drainTo(collected::add);
+        return collected;
     }
 
     private int findPickup() {

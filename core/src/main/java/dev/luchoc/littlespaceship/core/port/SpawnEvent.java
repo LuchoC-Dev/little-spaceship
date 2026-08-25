@@ -11,12 +11,18 @@ package dev.luchoc.littlespaceship.core.port;
  * @param dropId the pickup this specific wave instance delivers, or {@code null}/empty for none —
  *     a designed drop is a property of the event, never of the archetype, per
  *     {@code 03-game-systems.md}
+ * @param dropSlot which slot of the formation carries {@code dropId}, meaningless when {@link
+ *     #hasDrop()} is false. Confirmed in {@code 08-decisions-and-open-items.md}, issue #23: a
+ *     designed drop belongs to one specific enemy of a wave, never to every slot of its formation —
+ *     a three-carrier wave with a drop hands out exactly one attachment, not three.
  */
-public record SpawnEvent(float at, String enemyId, String formationId, float atX, String dropId) {
+public record SpawnEvent(float at, String enemyId, String formationId, float atX, String dropId, int dropSlot) {
 
     /**
-     * Rejects a malformed event: a negative timestamp, a missing archetype or formation, or an
-     * anchor outside the playfield.
+     * Rejects a malformed event: a negative timestamp, a missing archetype or formation, an anchor
+     * outside the playfield, or a negative slot index. Whether {@code dropSlot} actually names a
+     * slot that exists is checked by {@code SpawnSystem}, against the formation it resolves — this
+     * constructor has no access to that formation's slot count.
      */
     public SpawnEvent {
         if (at < 0f || Float.isNaN(at) || Float.isInfinite(at)) {
@@ -32,6 +38,24 @@ public record SpawnEvent(float at, String enemyId, String formationId, float atX
             throw new IllegalArgumentException(
                 "spawn event at " + at + "s has atX " + atX + ", outside [0, 1]");
         }
+        if (dropSlot < 0) {
+            throw new IllegalArgumentException(
+                "spawn event at " + at + "s has a negative dropSlot " + dropSlot);
+        }
+    }
+
+    /**
+     * Convenience for the common case — a formation with only one slot, or a drop meant for its
+     * first one — equivalent to {@code dropSlot} 0.
+     *
+     * @param at seconds since the level started, when this wave spawns
+     * @param enemyId the {@link EnemyDefinition} to spawn
+     * @param formationId the {@link FormationDefinition} that lays it out
+     * @param atX the anchor's horizontal position
+     * @param dropId the pickup this specific wave instance delivers, or {@code null}/empty for none
+     */
+    public SpawnEvent(float at, String enemyId, String formationId, float atX, String dropId) {
+        this(at, enemyId, formationId, atX, dropId, 0);
     }
 
     /**

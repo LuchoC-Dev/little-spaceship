@@ -7,6 +7,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.event.EnemyDestroyed;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
@@ -27,6 +28,13 @@ import java.util.List;
  * per-source duplication. The spawned pickup only becomes collectable from the next tick's {@code
  * CollisionSystem} pass, which is the correct, unremarkable behaviour of an item appearing where an
  * enemy died.
+ *
+ * <p>It is also the one place {@link EnemyDestroyed} is emitted, for exactly the same reason: this
+ * is the single convergence point for every death source, so an {@code ENEMY}-layer entity is
+ * reported destroyed once, uniformly, regardless of whether it was rammed, shot, bombed, or was one
+ * of the boss's own parts destroyed alongside its core. An entity on any other layer — a player
+ * projectile expiring, a pickup collected, an enemy projectile reaching the player — is not reported:
+ * nothing downstream needs those to sound like a kill.
  */
 public final class CleanupSystem implements GameSystem {
 
@@ -41,6 +49,7 @@ public final class CleanupSystem implements GameSystem {
         for (int i = 0; i < pending.size(); i++) {
             int entity = pending.get(i);
             spawnDropIfAny(world, entity);
+            emitEnemyDestroyedIfAny(world, entity);
             world.destroyEntity(entity);
         }
         pending.clear();
@@ -68,5 +77,23 @@ public final class CleanupSystem implements GameSystem {
         world.colliders().set(pickup, new Collider(balance.pickupRadius(), CollisionLayer.PICKUP));
         world.sprites().set(pickup, new Sprite(new SpriteId("pickup-" + drop.pickupId)));
         world.pickups().set(pickup, new Pickup(drop.pickupId));
+    }
+
+    /**
+     * Reads {@code entity}'s {@link Collider} and {@link Transform} before either is wiped out by
+     * {@link World#destroyEntity(int)}, and emits {@link EnemyDestroyed} when the layer is {@link
+     * CollisionLayer#ENEMY}. Silently does nothing otherwise — a destroyed player projectile, pickup
+     * or enemy projectile, or an entity with no collider or no position at all.
+     */
+    private static void emitEnemyDestroyedIfAny(World world, int entity) {
+        Collider collider = world.colliders().get(entity);
+        if (collider == null || collider.layer != CollisionLayer.ENEMY) {
+            return;
+        }
+        Transform transform = world.transforms().get(entity);
+        if (transform == null) {
+            return;
+        }
+        world.events().emit(new EnemyDestroyed(transform.x, transform.y));
     }
 }
