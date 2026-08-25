@@ -108,6 +108,53 @@ class MotionSystemTest {
     }
 
     @Test
+    @DisplayName("the player cannot fly off the top edge, even after many ticks of sustained input")
+    void playerIsClampedOnTheTopEdge() {
+        int player = spawnPlayer(100f, MotionSystem.PLAYFIELD_WIDTH / 2f);
+        Collider collider = world.colliders().get(player);
+        InputFrame upward = new InputFrame(0f, balance.playerSpeed, false, false, false);
+
+        // A single tick would land well short of the edge; only sustained input over many ticks
+        // reproduces the reported bug of the ship flying off-screen indefinitely.
+        for (int i = 0; i < 600; i++) {
+            system.update(world, STEP, upward);
+        }
+
+        Transform transform = world.transforms().get(player);
+        assertEquals(SpawnSystem.PLAYFIELD_HEIGHT - collider.radius, transform.y, 0.001f);
+    }
+
+    @Test
+    @DisplayName("the player cannot fly off the bottom edge, even after many ticks of sustained input")
+    void playerIsClampedOnTheBottomEdge() {
+        int player = spawnPlayer(100f, MotionSystem.PLAYFIELD_WIDTH / 2f);
+        Collider collider = world.colliders().get(player);
+        InputFrame downward = new InputFrame(0f, -balance.playerSpeed, false, false, false);
+
+        for (int i = 0; i < 600; i++) {
+            system.update(world, STEP, downward);
+        }
+
+        Transform transform = world.transforms().get(player);
+        assertEquals(collider.radius, transform.y, 0.001f);
+    }
+
+    @Test
+    @DisplayName("sustained input against the right edge still stops at the collider's radius")
+    void playerIsClampedOnTheRightEdgeUnderSustainedInput() {
+        int player = spawnPlayer(100f, 100f);
+        Collider collider = world.colliders().get(player);
+        InputFrame rightward = new InputFrame(balance.playerSpeed, 0f, false, false, false);
+
+        for (int i = 0; i < 600; i++) {
+            system.update(world, STEP, rightward);
+        }
+
+        Transform transform = world.transforms().get(player);
+        assertEquals(MotionSystem.PLAYFIELD_WIDTH - collider.radius, transform.x, 0.001f);
+    }
+
+    @Test
     @DisplayName("enemies leave the playfield freely")
     void enemiesAreNotClamped() {
         int enemy = world.createEntity();
