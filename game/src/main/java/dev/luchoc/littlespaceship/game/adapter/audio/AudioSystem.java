@@ -23,13 +23,11 @@ import java.util.Map;
  * MenuScreen}'s very first show — reached from {@code LittleSpaceshipGame.create()}, with no
  * gesture behind it yet — ask for nothing and get exactly that.
  *
- * <p><b>Missing today: a trigger for {@link Sfx#EXPLOSION}</b> and for the boss music swap. Both
- * need {@code core} to report something {@link dev.luchoc.littlespaceship.core.port.WorldView}
- * cannot: which enemy died, or that {@code bossStatus().present()} exists at all on {@code main}
- * yet. See {@code docs/plan/08-audio-and-polish/status.md} for the exact request filed against
- * {@code core-domain}. Everything else in the MVP's audio list — shots, the player's own hits, all
- * six pickup kinds, the bomb, and UI — is driven off frame-over-frame differences in {@link
- * dev.luchoc.littlespaceship.core.port.PlayerStatus} and {@link
+ * <p>{@link Sfx#EXPLOSION} and the boss music swap are both driven by {@link AudioDirector}: the
+ * former from {@code core}'s {@code EnemyDestroyed} event, the latter from a {@code
+ * WorldView.bossStatus().present()} diff. Everything else in the MVP's audio list — shots, the
+ * player's own hits, all six pickup kinds, the bomb, and UI — is driven off frame-over-frame
+ * differences in {@link dev.luchoc.littlespaceship.core.port.PlayerStatus} and {@link
  * dev.luchoc.littlespaceship.core.port.InputFrame}, which already say enough.
  *
  * <p>Not per-frame allocation: every {@link Sound}/{@link Music} is loaded once in the constructor
