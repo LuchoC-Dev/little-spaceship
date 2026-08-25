@@ -16,6 +16,9 @@ Nothing to install. Verified by hand in Chrome and Firefox on Windows; other mod
 browsers are expected to work but have not been checked. Click once to start audio and capture the
 mouse — browsers require a user gesture before either will work.
 
+> The deploy is the last step of the current milestone. If the link does not resolve yet, the game
+> still builds and runs locally with the commands below.
+
 ## Controls
 
 | Action | Keyboard | Mouse (optional) |

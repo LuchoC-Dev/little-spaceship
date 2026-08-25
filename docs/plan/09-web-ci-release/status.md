@@ -100,8 +100,10 @@ Task 9 of the plan (issue #36), repository README:
   - Did not run `desktop:run` interactively (it opens an LWJGL3 window; not something this session's
     shell can usefully drive) — its command and behaviour are documented from
     `desktop/build.gradle.kts`, which is a plain `JavaExec` with no platform-specific surprises.
-- **Not done in this issue: no LICENSE file exists**, so the README says so explicitly rather than
-  inventing one. Worth a decision before or shortly after the repository goes public.
+- **The MIT licence landed while this issue was being worked** (commit `5c5d610`, chosen by the
+  player). The README points at it and states plainly that the licence covers the whole repository,
+  art and audio included — which is a consequence of MIT worth knowing before the repository goes
+  public.
 - Tasks 4-6 and 8 are still open; they are a precondition for the play link the README already
   states to actually resolve. See "Notes for whoever comes next" below, now with task 9 removed
   from that list.
