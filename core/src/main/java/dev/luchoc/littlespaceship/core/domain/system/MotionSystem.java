@@ -94,8 +94,12 @@ public final class MotionSystem implements GameSystem {
     }
 
     /**
-     * Keeps the player inside the playfield's width. Enemies leave freely, which is why this only
-     * ever touches the player's entity.
+     * Keeps the player inside the playfield on both axes, collider edge against the boundary rather
+     * than the ship's centre. Enemies leave freely, which is why this only ever touches the player's
+     * entity. {@code 01-vision-and-scope.md} describes "free ship movement inside the playable area"
+     * with no separate zone for the top edge, so the vertical bound uses the full {@link
+     * SpawnSystem#PLAYFIELD_HEIGHT}, symmetric with the x clamp below rather than some narrower band
+     * near the bottom where the ship merely starts.
      */
     private static void clampPlayerToPlayfield(World world) {
         int player = world.playerEntity();
@@ -108,12 +112,17 @@ public final class MotionSystem implements GameSystem {
         }
         Collider collider = world.colliders().get(player);
         float margin = collider == null ? 0f : collider.radius;
-        float min = margin;
-        float max = PLAYFIELD_WIDTH - margin;
-        if (transform.x < min) {
-            transform.x = min;
-        } else if (transform.x > max) {
-            transform.x = max;
+        transform.x = clamp(transform.x, margin, PLAYFIELD_WIDTH - margin);
+        transform.y = clamp(transform.y, margin, SpawnSystem.PLAYFIELD_HEIGHT - margin);
+    }
+
+    private static float clamp(float value, float min, float max) {
+        if (value < min) {
+            return min;
         }
+        if (value > max) {
+            return max;
+        }
+        return value;
     }
 }
