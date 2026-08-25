@@ -5,7 +5,7 @@ name: Deploy Pages
 # branch before it is merged — it does not change the automatic trigger.
 on:
   push:
-    branches: [main, ci/pages-deploy] # TEMP: verifying the workflow before merge, see PR #38.
+    branches: [main]
   workflow_dispatch:
 
 # Scoped to this workflow file only: ci.yml keeps its own `contents: read` and does not need
