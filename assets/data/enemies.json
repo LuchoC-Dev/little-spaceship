@@ -47,7 +47,8 @@
         "sprite": { "id": "enemy-tank" },
         "collider": { "radius": 10.5, "fragile": false },
         "scoreValue": { "points": 500 },
-        "health": { "points": 40 }
+        "health": { "points": 40 },
+        "weapon": { "pattern": "straight-single", "rate": 4.8, "speed": 60, "firstShotDelay": 1.6 }
       }
     },
     {
