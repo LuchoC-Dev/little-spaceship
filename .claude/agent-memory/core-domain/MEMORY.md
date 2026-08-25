@@ -9,3 +9,4 @@
 - [HUD contract and level outcome](project_hud-contract-and-level-outcome.md) — PlayerStatus/CompletionBonus as snapshots, a tested-but-callerless method is a sign it drifted into the wrong module, attachmentDurability had no consumer.
 - [Boss fight design](project_boss-fight-design.md) — no component/store for a unique entity group, the record-constructor back-compat trick, verify cross-module breaks, independent-vs-shared Health, and re-check "no consumer" against design decisions.
 - [Boss volley density](project_boss-volley-density.md) — fanning a volley with fixed ratio arrays instead of a new content key, and a seen-set trick for testing what one tick spawned.
+- [Player vertical clamp](project_player-vertical-clamp.md) — PLAYFIELD_HEIGHT was already shared before this fix; no written vertical-range decision; single-tick tests miss an absent clamp.
