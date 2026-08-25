@@ -56,7 +56,15 @@ the diff:
 
 ## What is left
 
-1. **Balance.** Level 1's pacing was written before enemies could shoot, and enemy health is still
+1. ~~**Balance.**~~ **Closed on 25/08 by the player's own judgement: good enough to ship.** What is
+   left is in "Post-MVP backlog" below, not here. The history below is kept because it records how the
+   numbers got where they are.
+
+   Also fixed the same day, both defects rather than balance: the player could fly off the top and
+   bottom of the screen for ever (`MotionSystem.clampPlayerToPlayfield` clamped x only — there was no
+   y clamp at all), and the HUD's labels sat on top of their own icon rows.
+
+   Level 1's pacing was written before enemies could shoot, and enemy health is still
    placeholder — a heavy carrier dies in about 1.2 s against the 32 s its stretch reserves. Decided:
    tuned by playing, not by arithmetic.
 
@@ -90,6 +98,30 @@ the diff:
    can open. `assets/startup-logo.png` is already in place; `web/` is an empty skeleton by decision,
    and the TeaVM build was verified working once, in phase 03, before being reverted as out of scope.
 
+### Post-MVP backlog, from real play on 25/08
+
+The player judged the gameplay good enough to ship and asked that none of these be changed before the
+MVP. They are written down here because they came from playing, which is the only source this project
+trusts for balance, and because two of them are defects rather than tuning.
+
+- **The shooting sound glitches under sustained fire.** Appears after firing continuously for a while.
+  Most likely `Sound` instance exhaustion in libGDX — every shot starts a new one and nothing bounds
+  them. Not diagnosed.
+- **Frame rate drops about 20 FPS for 5–10 seconds at certain points.** Cause unknown. The obvious
+  hypothesis — projectiles accumulating off screen — was **checked and refuted**: `LifetimeSystem`
+  expires both projectile layers past the playfield edge with a 16 unit margin, so they do not pile
+  up. Do not start from that theory again.
+- **The boss is still too easy, and the reason is its aim, not its volume.** Tripling the fan to three
+  rays per part barely moved it. The player's diagnosis is better than the fix: the spread always
+  points *outward* and the sweep *inward*, so a player who parks in the centre is never threatened.
+  The fight is a positioning problem solved once, not a dodge. What to try: five rays, and aim the fan
+  at the player rather than at fixed outward angles. That changes the nature of the attack instead of
+  its quantity — and it must be weighed against the tell staying honest, which is what makes this boss
+  fair.
+- **Every enemy projectile uses `shot-e-small`.** `EnemyWeaponSystem` hardcodes it. The tank's shot
+  should be visibly heavier — `shot-e-heavy` already exists in the atlas, unused — which needs
+  `EnemyWeapon` to carry a sprite id per weapon.
+
 ### Known and deliberately left open
 
 None of these block the MVP. Each is a real thing someone chose not to fix under a deadline.
@@ -99,9 +131,13 @@ None of these block the MVP. Each is a real thing someone chose not to fix under
   either side crosses an agent boundary. Settle it by picking a side, not by adding a third alias.
 - **`boss-shot` has no authored art.** It was invented in phase 07, after the sprite pass, and is
   aliased to `shot-e-small`. It reads correctly; it is not its own sprite.
-- **The HUD's icon squares overlap their text labels** — LIVES, BOMBS and POWER are drawn over by
-  their own icons. Predates the atlas. The five `icon-*` sprites exist in the atlas and `HudRenderer`
-  does not use them; it is still text-only.
+- ~~The HUD's icon squares overlap their text labels.~~ **Fixed on 25/08.** `HudRenderer` fed
+  `BitmapFont.draw` through the rect helper `yGdx(yDown, height)`, but a font's `y` is already a top
+  edge ("the top of most capital letters"), not a bottom-left corner, so the cap height was subtracted
+  twice and every label landed one line down, on its own icon row. A separate `yGdxTop` helper now
+  serves text. The score value was silently mispositioned by the same bug. Still open from this entry:
+  the five `icon-*` sprites exist in the atlas and `HudRenderer` does not use them; it is still
+  text-only.
 - ~~Ramming the boss does not repeatedly damage the player.~~ **Withdrawn on 25/08 after a play
   session.** Ramming damages the player normally. The "one hit then nothing" an agent saw under
   sustained overlap is `03-game-systems.md`'s decided rule — all damage taken grants temporary
