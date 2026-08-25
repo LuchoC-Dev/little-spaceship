@@ -101,11 +101,11 @@ Acceptance criteria against `plan.md` and issue #27:
 
 | Criterion | Status | Where |
 |---|---|---|
-| The boss can be defeated and can kill the player, both to the right screen | **met on the `core` side** | `BossReplayTest.victoryIsDeterministic`/`defeatIsDeterministic` prove `LevelOutcome` reaches `COMPLETED`/`DEFEATED`; which screen `game` shows for each is that module's job, not built here |
+| The boss can be defeated and can kill the player, both to the right screen | **met on the `core` side** | `BossReplayTest.victoryIsDeterministic` proves `LevelOutcome` reaches `COMPLETED` through a real boss fight. For the defeat half, read the citation exactly: `.defeatIsDeterministic`'s `defeatContent()` never calls `.withBoss(...)`, so it proves `DEFEATED` through the ordinary rammer path, not a boss kill. The boss-specific rule — `DEFEATED` winning a same-tick tie against the boss's own defeat — is covered by `BossSystemTest.defeatWinsATieWithBossDefeat`, at the unit level. Which screen `game` shows for each is that module's job, not built here |
 | Its health bar appears only during the fight | **met** | `BossStatus.present`, `BossSystemTest.presentOnlyDuringTheFight`; drawing the bar itself is `game-presentation`'s |
 | Music changes on entry and returns correctly if the player dies | **hook provided, not implemented** | `BossStatus.present` flipping false→true is the entry edge; `game-presentation` detects it and plays/stops audio — see "Notes for whoever comes next" |
 | The fight is deterministic: same seed and inputs, same outcome | **met** | `BossReplayTest`, both scenarios run twice with identical fingerprints; no `Rng` use anywhere in `BossSystem` — the pattern alternates by a fixed rule, never a roll |
-| A replay covers a full victory and a full defeat | **met** | `BossReplayTest.victoryIsDeterministic`, `.defeatIsDeterministic` |
+| A replay covers a full victory and a full defeat | **met, with one caveat** | `BossReplayTest.victoryIsDeterministic`, `.defeatIsDeterministic`. Only the victory replay runs against a configured boss; the defeat replay is a boss-free scenario, as noted three rows above |
 | Victory requires surviving with at least one life | **met** | `World.View.outcome()`'s `bossLevel` branch, `BossSystemTest.defeatWinsATieWithBossDefeat` |
 | The strong encounter hands over the attachment, tied to one slot | **met on the `core` side** | the drop-slot fix; the actual two-carrier wave is `level-designer`'s content, not built here |
 | The strong encounter is two carriers producing sustained pressure | **met** | `Spawner`/`SpawnerSystem`, `SpawnerReplayTest` |
@@ -235,10 +235,13 @@ music itself and the actual `level-01.json`/`assets/data` boss and carrier conte
 
 ### A gap this phase did not close
 
-`enemy-shooter`'s "higher rate of fire" from `02-mvp-functional-spec.md`'s minimum roster is still
-unbuilt on the `core` side — no enemy `"weapon"` component factory exists yet, and nothing in this
-phase needed one, since the boss's own fire goes through `BossSystem` directly rather than the generic
-archetype pipeline. The carrier's periodic spawn, previously listed here as the same kind of gap, is
+`enemy-shooter`'s "higher rate of fire" from `02-mvp-functional-spec.md`'s minimum roster is built on
+the `core` side but unused by content. This entry said "no enemy `"weapon"` component factory exists
+yet"; that was true when it was written and was closed by this branch's own final commit, `b33f302`,
+which added `EnemyWeapon`, `EnemyWeaponSystem` and the `"weapon"` entry in
+`ComponentFactoryRegistry.withDefaults()`. What remains open is the content half: no archetype in
+`assets/data/enemies.json` carries a `"weapon"` component, so nothing in the shipped level fires
+through it. The carrier's periodic spawn, previously listed here as the same kind of gap, is
 now built — see "Done" above. The structure collider gap is recorded as open above, in "Decisions
 taken while implementing", for the reason given there.
 
@@ -365,8 +368,9 @@ ones, so they are recorded there rather than changed here.
 
 ## A gap this lane did not close
 
-**`enemy-shooter` does not shoot.** No enemy `"weapon"` component factory exists — `core-domain`
-records the same gap above. So beat 9 of `04-campaign-and-levels.md`'s sequence currently reads as
+**`enemy-shooter` does not shoot.** The machinery to make it shoot now exists — `core-domain` records
+above how `b33f302` closed that half — but no archetype in `enemies.json` declares a `"weapon"`
+component, so the behaviour is still absent from the game. So beat 9 of `04-campaign-and-levels.md`'s sequence currently reads as
 "a larger, slower basic worth more points" rather than as the pressure it is meant to introduce, and
 the 2:46–2:57 stretch will need rewriting, not just retuning, once enemies can fire. It is written to
 be replaced: the shooter waves sit in their own contiguous stretch rather than being scattered

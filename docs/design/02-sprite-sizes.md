@@ -127,8 +127,15 @@ problem the moment they enter, before they have done anything.
 
 | What | Sprite | Proposed id |
 |---|---|---|
-| Boss | 119x87 | `boss-l1` |
+| Boss core | 47x87 | `boss-core` |
+| Boss pod, ×2 | 25x25 | `boss-pod` |
+| Boss arm, ×2 | 31x45 | `boss-arm` |
 | Boss explosion, chained | 95x95 plus medium and large | `fx-explosion-boss` |
+
+The three ids above replace the single `boss-l1` this table proposed before the boss was drawn: it is
+five sprites, not one image. The 119x87 footprint below is still the assembled silhouette, and the
+radii and offsets in this section are unchanged — see
+[`06-boss-presentation.md`](06-boss-presentation.md).
 
 At 119 px the boss occupies 57% of the 208 px playfield: dominant, with dodging room left on both
 sides.
