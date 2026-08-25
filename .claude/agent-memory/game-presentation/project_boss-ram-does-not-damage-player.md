@@ -1,27 +1,34 @@
 ---
 name: boss-ram-does-not-damage-player
-description: Ramming the ship into the boss's body does not repeatedly damage the player, which matters when trying to force a quick DEFEATED for verification
+description: Ramming the boss damages the player once and then stops for the invulnerability window, which is the decided rule and not a bug — it just makes ramming a bad way to force a fast DEFEATED
 metadata:
   type: project
 ---
 
-While verifying the boss music exit edge (`docs/plan/08-audio-and-polish/status.md`'s "return
-correctly if the player dies"), I tried to kill the player fast by holding the ship into the boss's
-body via simulated arrow-key input (see `[[windows-desktop-screenshot-verification]]` for the
-input-simulation mechanics). One `IMPACT` fired on first contact, lives dropped by one, and then
-nothing — tens of seconds of continuous overlap produced no further hits, even after releasing and
-re-pressing the movement key to force a fresh collision entry. The ship visually disappears
-underneath the boss sprite while overlapping, which is itself a minor render-order thing worth
-knowing about if a screenshot ever shows an "invisible ship" near the boss.
+While verifying the boss music exit edge, I tried to kill the player fast by holding the ship inside
+the boss's body via simulated arrow-key input (see `[[windows-desktop-screenshot-verification]]` for
+the input-simulation mechanics). One `IMPACT` fired on first contact, lives dropped by one, and then
+nothing across tens of seconds of continuous overlap.
 
-Never root-caused whether this is a genuine invulnerability window, a one-shot-per-contact rule, or
-ram not being a real damage source at all (only the boss's own projectile patterns are) — out of
-`game`'s boundary to dig into `core`'s collision system for a verification task. What did work to
-land at least one `IMPACT`/lives loss: sitting in the boss's projectile line and letting a pattern
-volley hit the ship, not ramming its body.
+**This is the decided rule, not a defect.** `docs/planning/03-game-systems.md` line 62: "All damage
+taken grants temporary invulnerability, including losing the shield or the attachment, with a shorter
+duration than that of respawn." `DamageSystem` is the single place the defensive chain lives —
+invulnerability → shield → attachment → life — and it is also the only place that grants
+invulnerability, doing so after any damage. So sustained overlap lands one hit per invulnerability
+window, not one hit per tick. An earlier version of this note called this "ram does not repeatedly
+damage the player" and guessed it might be a genuine hole; a real play session confirmed ramming does
+damage the player normally, and reading `03-game-systems.md` explains why continuous overlap looked
+like it did nothing.
 
-**Practical upshot for next time:** don't budget on ramming to reach `DEFEATED` quickly for a
-verification session — it costs real minutes for at most one hit. If a future task needs a
-guaranteed fast death, ask `core-domain` whether ram damage exists at all, or accept the exit edge
-as verified once via `VICTORY` (same generic non-`PlayScreen` code path in
-`LittleSpaceshipGame.setScreen`) plus reading the code, per `[[temp-content-edit-for-boss-verification]]`.
+The ship visually disappears underneath the boss sprite while overlapping, which is worth knowing if
+a screenshot ever shows an "invisible ship" near the boss.
+
+**Practical upshot for next time:** ramming still is not a fast route to `DEFEATED` for a verification
+session — one hit per invulnerability window means it costs real time to burn several lives. Prefer
+sitting in the boss's projectile line, or accept the exit edge as verified once via `VICTORY` (same
+generic non-`PlayScreen` code path in `LittleSpaceshipGame.setScreen`) plus reading the code, per
+`[[temp-content-edit-for-boss-verification]]`.
+
+**The wider lesson, which cost more than the fact did:** before recording "the game does not do X",
+check whether X is a decided rule in `docs/planning/`. This note originally shipped a guess as a
+finding, and it reached `docs/STATUS.md` as an open unknown before a play session corrected it.
