@@ -59,6 +59,32 @@ class MapComponentSpecTest {
     }
 
     @Test
+    @DisplayName("an optional numeric field falls back to the default when the key is absent")
+    void numberOrFallsBackWhenAbsent() {
+        ComponentSpec spec = new MapComponentSpec("weapon", Map.of("rate", 1.8f));
+
+        assertEquals(1.8f, spec.numberOr("firstShotDelay", 1.8f));
+    }
+
+    @Test
+    @DisplayName("an optional numeric field reads the given value when present, not the default")
+    void numberOrReadsValueWhenPresent() {
+        ComponentSpec spec = new MapComponentSpec("weapon", Map.of("firstShotDelay", 0.4f));
+
+        assertEquals(0.4f, spec.numberOr("firstShotDelay", 1.8f));
+    }
+
+    @Test
+    @DisplayName("an optional numeric field present with the wrong type still fails, not silently ignored")
+    void numberOrWrongTypeFails() {
+        ComponentSpec spec = new MapComponentSpec("weapon", Map.of("firstShotDelay", "soon"));
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> spec.numberOr("firstShotDelay", 1.8f));
+        assertTrue(e.getMessage().contains("firstShotDelay"));
+    }
+
+    @Test
     @DisplayName("a numeric field present with the wrong type fails naming the value, not silently")
     void wrongTypeNumberFails() {
         ComponentSpec spec = new MapComponentSpec("collider", Map.of("radius", "not a number"));

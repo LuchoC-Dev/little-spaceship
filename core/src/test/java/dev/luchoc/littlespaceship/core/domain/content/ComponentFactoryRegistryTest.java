@@ -155,6 +155,21 @@ class ComponentFactoryRegistryTest {
     }
 
     @Test
+    @DisplayName("an explicit firstShotDelay seeds cooldownRemaining instead of the cooldown")
+    void weaponFactoryReadsExplicitFirstShotDelay() {
+        World world = worldOf(new TestContent());
+        int entity = world.createEntity();
+
+        ComponentFactoryRegistry.withDefaults().attach(world, entity,
+            new MapComponentSpec("weapon",
+                Map.of("rate", 2.2f, "pattern", "straight-single", "speed", 90f, "firstShotDelay", 0.5f)));
+
+        EnemyWeapon weapon = world.enemyWeapons().get(entity);
+        assertEquals(2.2f, weapon.cooldown);
+        assertEquals(0.5f, weapon.cooldownRemaining);
+    }
+
+    @Test
     @DisplayName("an unregistered component name fails, naming it, instead of doing nothing silently")
     void unknownComponentFails() {
         World world = worldOf(new TestContent());
