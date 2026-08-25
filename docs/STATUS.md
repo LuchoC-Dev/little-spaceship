@@ -11,8 +11,9 @@ that held the MVP were reviewed and merged on 25/08/2026 — sprites (#30), audi
 everything they left unwired was closed the same day, along with a balance pass driven by playing, two
 defects and a UI pass. `./gradlew build` is green and `core` carries 289 tests.
 
-**Phase 09 — web, CI and deploy — is the only thing between this and a link a stranger can open.**
-Nothing else blocks the MVP.
+**The MVP is shipped.** The game is live at <https://luchoc-dev.github.io/little-spaceship/>, it runs
+in a browser with no install, and phase 09 closed on 25/08/2026. What follows is polish, and the
+post-MVP backlog below says what is rough.
 
 A pattern worth knowing before you trust any phase marked done: **three times in one day, art that a
 phase had "delivered" turned out to exist only under `docs/design/`, with nothing in `assets/` and no
@@ -103,13 +104,27 @@ the diff:
    dies too fast to tell; whether the boss at 0.7 now feels like a boss; whether `enemy-rush`'s single
    likely shot reads as "shoots little" rather than "does not shoot"; and whether `enemy-light`'s
    130 u/s projectile is dodgeable — it is the fastest enemy shot in the game.
-2. **Phase 09 is the only thing left before the MVP** — web, CI and deploy. **In progress since
-   25/08.** The web launcher is merged (#33) and **the game has been played in a real browser**: it
-   runs, and that is the first time anything in this project ran outside a JVM. CI (#35) and the
-   README (#37) followed, along with the MIT licence and the repository's description and topics.
-   **Chrome and Firefox were verified by hand; Edge was dropped by the player's decision, so the
-   browser matrix is closed as far as it will be.** What is still open is the load-time measurement
-   and the deploy — after which the link is real and the MVP is shipped.
+2. ~~**Phase 09 is the only thing left before the MVP.**~~ **Closed on 25/08. The game is live at
+   <https://luchoc-dev.github.io/little-spaceship/>** — a link a stranger can open, which is what
+   this phase existed for.
+
+   The launcher (#33), CI (#35), the README (#37) and the Pages deploy (#39) all merged the same
+   day, each after a `reviewer` pass on Sonnet. The MIT licence, the repository description and its
+   topics landed alongside them, and the repository was made public by the player.
+
+   **Verified against the live site, not against a green workflow:** `index.html`, `app.js`,
+   `startup-logo.png`, the sprite atlas and every music and SFX file return 200. `app.js` is served
+   gzipped at 302,393 bytes against 1,027,585 on disk. The thirteen main files total **1,437,558
+   bytes (~1.4 MB)** as actually served — the Pages artifact is 2,470,942 bytes across 34 files, but
+   the CDN compresses the JavaScript.
+
+   **The WAVs are served uncompressed** — `level.wav` 592,748 bytes and `boss.wav` 395,180 — so
+   roughly a megabyte of the download is raw music. That is the single largest load-time win
+   available and it is in the post-MVP backlog below.
+
+   Browsers: **Chrome and Firefox verified by hand**; Edge dropped by the player's decision. Load
+   time was not measured beyond the sub-second `curl` figures above; a real browser's network panel
+   would be the honest instrument.
 
 ### Post-MVP backlog, from real play on 25/08
 
@@ -243,7 +258,7 @@ Everything the three merged branches left unwired is closed.
 | 06 | Presentation | **done** — direction #8, integration #26, sprites packed into `assets/atlas/` and the real bitmap fonts into `assets/fonts/` on 25/08 |
 | 07 | Boss | **merged** — #29, with level 1 and enemy fire. Four archetypes shoot; the boss fans 6 projectiles a volley |
 | 08 | Audio and polish | **merged** — #31, with both dead cues wired on 25/08. Nobody has heard it yet; phase 09's browser pass is the first listen |
-| 09 | Web, CI and release | **in progress** — launcher (#33), CI (#35) and README (#37) merged; deploy is the last step |
+| 09 | Web, CI and release | **done** — launcher (#33), CI (#35), README (#37) and Pages deploy (#39). The game is live |
 
 ## Open items that do not block
 
