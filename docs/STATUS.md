@@ -151,6 +151,12 @@ trusts for balance, and because two of them are defects rather than tuning.
   audio is. For a portfolio piece where the visitor waits or leaves, encoding the music to OGG is the
   single biggest win available, and libGDX plays OGG on both targets. Measured on 25/08 by the web
   launcher work; not done because the MVP was frozen.
+- **QUIT does nothing on the web target** ([#40](https://github.com/LuchoC-Dev/little-spaceship/issues/40)).
+  `MenuScreen.java:30` wires it to `Gdx.app::exit`, which closes the window on desktop and cannot do
+  anything in a browser — JavaScript may not close a tab it did not open. Found by playing the
+  deployed build on 25/08. It is a dead control in the first menu a stranger sees, and the fix is a
+  decision rather than code: hide it on web, give it a different meaning there, or accept it. The
+  spec in `02-mvp-functional-spec.md` asks for Play/Options/Quit and was written for a desktop game.
 - **Every enemy projectile uses `shot-e-small`.** `EnemyWeaponSystem` hardcodes it. The tank's shot
   should be visibly heavier — `shot-e-heavy` already exists in the atlas, unused — which needs
   `EnemyWeapon` to carry a sprite id per weapon.
