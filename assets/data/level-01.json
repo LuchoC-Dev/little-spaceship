@@ -10,7 +10,7 @@
     "armPoints": 500,
     "entranceSpeed": 25.0,
     "combatY": 175.0,
-    "patternCooldown": 1.3,
+    "patternCooldown": 0.7,
     "spreadProjectileSpeed": 95.0,
     "sweepProjectileSpeed": 140.0
   },
