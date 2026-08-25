@@ -56,7 +56,13 @@ public final class GameSkin {
         // its own runtime class (NinePatchDrawable.class here), but Skin.getDrawable(name) looks it
         // up under the Drawable interface, so an implicit add is invisible to every getDrawable()
         // call and to every style field a .json skin would populate through it.
-        skin.add("n2-panel", ninePatch(Palette.N2, Palette.N3), Drawable.class);
+        // 60x12 minimum per 04-hud-layout.md's "Button plate" row — the nine-patch texture itself is
+        // only 3x3, so without this every short label (BACK, QUIT) sized the button down to its own
+        // text width instead of the document's floor.
+        NinePatchDrawable n2Panel = ninePatch(Palette.N2, Palette.N3);
+        n2Panel.setMinWidth(60f);
+        n2Panel.setMinHeight(12f);
+        skin.add("n2-panel", n2Panel, Drawable.class);
         skin.add("n1-panel", ninePatch(Palette.N1, Palette.N0), Drawable.class);
 
         Label.LabelStyle title = new Label.LabelStyle(fontTitle, Palette.N7);
