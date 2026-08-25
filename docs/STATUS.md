@@ -35,39 +35,58 @@ Merged 25/08/2026 after one `reviewer` pass each, on Sonnet, one per pull reques
 | [#31](https://github.com/LuchoC-Dev/little-spaceship/pull/31) | `feat/audio` | accept — `core` untouched, no threads, determinism intact |
 | [#29](https://github.com/LuchoC-Dev/little-spaceship/pull/29) | `feat/boss` | accept — including the coordinator-committed last commit, whose "277 tests" is exact |
 
-The merges resolved the cross-branch dependencies that were the reason for merging together. They did
-**not** finish the features, and the gap is easy to miss because every phase reads as done:
+The merges resolved the cross-branch dependencies but did **not** finish the features. Three
+capabilities landed connected to nothing, and one deliverable was not what its phase status implied.
+All four were closed the same day, on their own branches, each merged after the coordinator audited
+the diff:
 
-- **Nothing consumes `EnemyDestroyed`.** `CleanupSystem` emits it; no listener exists in `game`. The
-  explosion sound is generated, loaded and silent.
-- **Nothing reads `bossStatus()` for audio.** `MusicTrack.BOSS` exists and never plays.
-- **No archetype declares a `"weapon"` component.** `EnemyWeaponSystem` and the `"weapon"` factory
-  both exist, but `assets/data/enemies.json` gives the weapon to nobody, so **enemies still do not
-  shoot in the shipped level**.
-- **The sprites are not in the game.** This is the big one. `#30`'s diff touches only `docs/design/`.
-  The 34 character sprites — archetypes, ship, boss parts, shots, pickups, HUD icons — live as pixel
-  art in `docs/design/mockups/src/01-sprites.js`, and the PNGs that script renders are gitignored
-  previews. `assets/` holds JSON and `startup-logo.png`, nothing else. `game` still draws through
-  `PlaceholderAtlas`, which builds coloured rectangles into a `Pixmap` at runtime. Phase 06 delivered
-  the art direction; it never delivered game-loadable art.
+- **`EnemyDestroyed` had no listener** — the explosion sound was generated, loaded and silent.
+  `AudioDirector` is now the simulation's `GameEventSink`.
+- **Nothing read `bossStatus()` for audio** — `MusicTrack.BOSS` never played. The `false→true` edge
+  now swaps the music. The return-on-death path needed no new code: `LittleSpaceshipGame.setScreen`
+  already stops the music for any screen that is not `PlayScreen`.
+- **No archetype declared a `"weapon"`** — enemies did not shoot in the shipped level. `enemy-shooter`
+  now carries `{ "pattern": "straight-single", "rate": 1.8, "speed": 90 }`. Those numbers are
+  `level-designer`'s judgement, not a decided value; see `docs/plan/07-boss/status.md`.
+- **The sprites were not in the game.** `#30`'s diff touched only `docs/design/`: the 34 character
+  sprites lived as pixel art in `docs/design/mockups/src/01-sprites.js`, and the PNGs that script
+  renders are gitignored previews. `PackedSpriteAtlas` and `SpriteAtlas` already existed and were
+  falling back to `PlaceholderAtlas` for want of a file. `docs/design/atlas/build-atlas.js` now
+  generates `assets/atlas/sprites.png`/`.atlas` from that one source, and the game loads it.
 
 ## What is left
 
-Ordered by what blocks what.
-
-1. **Give `enemy-shooter` a `"weapon"` in `assets/data/enemies.json`.** Small, `level-designer`'s
-   lane, and it gates the balance pass: there is nothing to tune while nothing shoots.
-2. **Export the sprites to a real atlas under `assets/` and make the renderer consume it** instead of
-   `PlaceholderAtlas`. Unplanned, `game-presentation`'s lane, and the largest single item left. It is
-   the difference between the MVP being playable with its own art and playable with rectangles.
-3. **Wire the two dead audio cues** — an `EnemyDestroyed` listener and a `bossStatus().present()`
-   edge. Both hooks are written and documented in `AudioSystem`'s javadoc.
-4. **Balance.** Level 1's pacing was written before enemies could shoot, and enemy health is still
+1. **Balance.** Level 1's pacing was written before enemies could shoot, and enemy health is still
    placeholder — a heavy carrier dies in about 1.2 s against the 32 s its stretch reserves. Decided:
-   tuned by playing, not by arithmetic. Blocked on item 1.
-5. **Phase 09** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
+   tuned by playing, not by arithmetic. No longer blocked; enemies now shoot.
+2. **Phase 09** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
    can open. `assets/startup-logo.png` is already in place; `web/` is an empty skeleton by decision,
    and the TeaVM build was verified working once, in phase 03, before being reverted as out of scope.
+
+### Known and deliberately left open
+
+None of these block the MVP. Each is a real thing someone chose not to fix under a deadline.
+
+- **Art and ECS disagree on five pickup ids** (`pickup-weapon` vs `pickup-weapon-upgrade`, and four
+  more), bridged by alias regions in `sprites.atlas` — same pixels, second name — because renaming
+  either side crosses an agent boundary. Settle it by picking a side, not by adding a third alias.
+- **`boss-shot` has no authored art.** It was invented in phase 07, after the sprite pass, and is
+  aliased to `shot-e-small`. It reads correctly; it is not its own sprite.
+- **The HUD's icon squares overlap their text labels** — LIVES, BOMBS and POWER are drawn over by
+  their own icons. Predates the atlas. The five `icon-*` sprites exist in the atlas and `HudRenderer`
+  does not use them; it is still text-only.
+- **Ramming the boss does not repeatedly damage the player** — one `IMPACT` on first contact, then
+  nothing across continued overlap. Found while trying to force a fast defeat for verification. It is
+  not known whether this is intended; nobody has looked at it as a rule.
+- **`game` now imports `core.domain.event`** (`EnemyDestroyed`, `GameEvent`), the first such import in
+  the project, and the mechanical boundary grep in `.claude/agent-memory/game-presentation/` will flag
+  it. It is not a violation: `core.port.GameEventSink` already imports `GameEvent`, and `GameEvent`'s
+  own javadoc says the events "are the whole contract" towards presentation. The event package is a
+  boundary package that happens to be filed under `domain`. If that keeps causing false alarms, move
+  it to `core.port` rather than weakening the check.
+- **`ship-bank`, `ship-tilt`, `ship-hit`, the thrust and muzzle effects, `module-satellite`,
+  `structure-tower` and the five `icon-*` glyphs** are in the atlas and referenced by nothing. Art
+  waiting for a system.
 
 Two things phase 09 must check, both surfaced by these reviews and neither a problem today:
 
@@ -99,8 +118,8 @@ its own folder with a `plan.md` and a `status.md`.
 | MVP — level 1 playable in the browser with its own art | 26/08/2026 |
 | Finish — polish, game feel, final audio | 09/09/2026 |
 
-The order from here is the five numbered items in "What is left". The three branches are merged; what
-replaced them is smaller per item but there are more items than the phase table implies.
+The order from here is the two numbered items in "What is left": balance by playing, then phase 09.
+Everything the three merged branches left unwired is closed.
 
 ### Phase state
 
@@ -111,9 +130,9 @@ replaced them is smaller per item but there are more items than the phase table 
 | 03 | First playable | **done** — merged in #14 |
 | 04 | Content pipeline | **done** — core in #16, loader in #14 |
 | 05 | Game systems | **done** — merged in #22 |
-| 06 | Presentation | **art direction done** — #8, #26, sprites drawn in #30. The sprites are not yet game-loadable art; see "What is left", item 2 |
+| 06 | Presentation | **done** — direction #8, integration #26, sprites drawn in #30 and packed into `assets/atlas/` on 25/08 |
 | 07 | Boss | **merged** — #29, with level 1 and the machinery for enemy fire. No content uses the weapon yet |
-| 08 | Audio and polish | **merged** — #31. Two cues built and unwired; see "What is left", item 3 |
+| 08 | Audio and polish | **merged** — #31, with both dead cues wired on 25/08. Nobody has heard it yet; phase 09's browser pass is the first listen |
 | 09 | Web, CI and release | not started |
 
 ## Open items that do not block
