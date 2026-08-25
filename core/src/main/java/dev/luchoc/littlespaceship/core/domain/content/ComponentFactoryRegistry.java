@@ -148,19 +148,24 @@ public final class ComponentFactoryRegistry {
     }
 
     /**
-     * Reads the shot shape, the cooldown between shots and the projectile's speed — the exact three
-     * fields {@link EnemyWeapon}'s constructor needs. {@code "rate"} is the field name {@code
-     * 12-architecture.md}'s own example uses for the cooldown, kept here for consistency with that
-     * document even though it reads as seconds between shots, not shots per second — the same
-     * quantity {@code Weapon#cooldownRemaining} counts down from. {@code "speed"} has no equivalent
-     * in that example: unlike {@code "motion"}, whose velocity is fully described by a named {@code
-     * TrajectoryDefinition}, nothing else in the content pipeline yet carries a projectile's speed
-     * for an enemy, so it is a plain required number here.
+     * Reads the shot shape, the cooldown between shots, the projectile's speed and, optionally, the
+     * delay before the first shot — the four fields {@link EnemyWeapon}'s constructor needs. {@code
+     * "rate"} is the field name {@code 12-architecture.md}'s own example uses for the cooldown, kept
+     * here for consistency with that document even though it reads as seconds between shots, not shots
+     * per second — the same quantity {@code Weapon#cooldownRemaining} counts down from. {@code "speed"}
+     * has no equivalent in that example: unlike {@code "motion"}, whose velocity is fully described by
+     * a named {@code TrajectoryDefinition}, nothing else in the content pipeline yet carries a
+     * projectile's speed for an enemy, so it is a plain required number here.
+     *
+     * <p>{@code "firstShotDelay"} is optional and defaults to the cooldown, matching {@link
+     * EnemyWeapon}'s own three-argument constructor: content that predates this field keeps behaving
+     * exactly as it did.
      */
     private static void attachEnemyWeapon(World world, int entity, ComponentSpec spec) {
         String pattern = spec.text("pattern");
         float cooldown = spec.number("rate");
         float speed = spec.number("speed");
-        world.enemyWeapons().set(entity, new EnemyWeapon(pattern, cooldown, speed));
+        float firstShotDelay = spec.numberOr("firstShotDelay", cooldown);
+        world.enemyWeapons().set(entity, new EnemyWeapon(pattern, cooldown, speed, firstShotDelay));
     }
 }

@@ -45,6 +45,14 @@ public final class MapComponentSpec implements ComponentSpec {
     }
 
     @Override
+    public float numberOr(String key, float defaultValue) {
+        if (!params.containsKey(key)) {
+            return defaultValue;
+        }
+        return number(key);
+    }
+
+    @Override
     public String text(String key) {
         Object value = require(key);
         if (!(value instanceof String text) || text.isEmpty()) {

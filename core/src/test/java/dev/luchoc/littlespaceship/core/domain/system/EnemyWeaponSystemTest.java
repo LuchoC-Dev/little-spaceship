@@ -92,6 +92,56 @@ class EnemyWeaponSystemTest {
     }
 
     @Test
+    @DisplayName("an explicit first shot delay fires the first shot on time, independent of the cooldown")
+    void firstShotDelayFiresIndependentlyOfCooldown() {
+        int shooter = world.createEntity();
+        world.transforms().set(shooter, new Transform(0f, 0f));
+        // A cooldown much longer than the delay: if the delay were ignored and cooldown used instead
+        // (today's bug), nothing would fire within these 0.5s.
+        world.enemyWeapons().set(shooter, new EnemyWeapon("straight-single", 1.8f, 90f, 0.4f));
+
+        system.update(world, 0.3f, InputFrame.IDLE);
+        assertEquals(1, world.entityCount(), "should not fire before the delay elapses");
+
+        system.update(world, 0.1f, InputFrame.IDLE);
+        assertEquals(2, world.entityCount(), "should fire once the delay elapses");
+    }
+
+    @Test
+    @DisplayName("after the delayed first shot, the second shot still waits a full cooldown, not the delay again")
+    void secondShotWaitsFullCooldownAfterDelayedFirstShot() {
+        int shooter = world.createEntity();
+        world.transforms().set(shooter, new Transform(0f, 0f));
+        world.enemyWeapons().set(shooter, new EnemyWeapon("straight-single", 1.8f, 90f, 0.4f));
+
+        system.update(world, 0.4f, InputFrame.IDLE);
+        assertEquals(2, world.entityCount(), "first shot due at the delay");
+
+        system.update(world, 1.7f, InputFrame.IDLE);
+        assertEquals(2, world.entityCount(), "one tick short of a full cooldown after the first shot");
+
+        system.update(world, 0.1f, InputFrame.IDLE);
+        assertEquals(3, world.entityCount(), "second shot due a full cooldown after the first");
+    }
+
+    @Test
+    @DisplayName("a zero or negative first shot delay is rejected, not read as fire on the first tick")
+    void rejectsNonPositiveFirstShotDelay() {
+        assertThrows(IllegalArgumentException.class,
+            () -> new EnemyWeapon("straight-single", 1.8f, 90f, 0f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new EnemyWeapon("straight-single", 1.8f, 90f, -0.1f));
+    }
+
+    @Test
+    @DisplayName("the three-argument constructor keeps defaulting the first shot delay to the cooldown")
+    void threeArgumentConstructorDefaultsFirstShotDelayToCooldown() {
+        EnemyWeapon weapon = new EnemyWeapon("straight-single", 1.8f, 90f);
+
+        assertEquals(1.8f, weapon.cooldownRemaining);
+    }
+
+    @Test
     @DisplayName("an unknown pattern fails naming it and the entity, rather than firing nothing")
     void unknownPatternFails() {
         int shooter = world.createEntity();
