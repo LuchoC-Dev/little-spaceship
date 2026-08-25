@@ -6,13 +6,18 @@ Read this first if you are picking the project up. It says where things stand an
 
 ## Where we are
 
-**`main` is now the whole picture.** The three branches that held the MVP were reviewed and merged on
-25/08/2026, in the order that had been decided: sprites (#30), audio (#31), boss (#29). All three
-were accepted with no blocking findings. `./gradlew build` is green and `core` carries 277 tests.
+**`main` is now the whole picture, and the game is finished except for shipping it.** The three branches
+that held the MVP were reviewed and merged on 25/08/2026 — sprites (#30), audio (#31), boss (#29) — and
+everything they left unwired was closed the same day, along with a balance pass driven by playing, two
+defects and a UI pass. `./gradlew build` is green and `core` carries 289 tests.
 
-What that leaves is not "polish". Two capabilities landed **built but connected to nothing**, and one
-deliverable turns out not to be what its phase status implied. Read "What is left" before planning
-anything — the remaining work is larger than the phase table suggests.
+**Phase 09 — web, CI and deploy — is the only thing between this and a link a stranger can open.**
+Nothing else blocks the MVP.
+
+A pattern worth knowing before you trust any phase marked done: **three times in one day, art that a
+phase had "delivered" turned out to exist only under `docs/design/`, with nothing in `assets/` and no
+code loading it** — the sprites, then the fonts. A phase status saying the art is drawn does not mean
+the game can draw it. Check `assets/` and check what the loader actually asks for.
 
 What exists in the repository:
 
@@ -94,7 +99,7 @@ the diff:
    dies too fast to tell; whether the boss at 0.7 now feels like a boss; whether `enemy-rush`'s single
    likely shot reads as "shoots little" rather than "does not shoot"; and whether `enemy-light`'s
    130 u/s projectile is dodgeable — it is the fastest enemy shot in the game.
-2. **Phase 09** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
+2. **Phase 09 is the only thing left before the MVP.** — web, CI and deploy. Not started, and it is what turns this into a link a stranger
    can open. `assets/startup-logo.png` is already in place; `web/` is an empty skeleton by decision,
    and the TeaVM build was verified working once, in phase 03, before being reverted as out of scope.
 
@@ -121,6 +126,31 @@ trusts for balance, and because two of them are defects rather than tuning.
 - **Every enemy projectile uses `shot-e-small`.** `EnemyWeaponSystem` hardcodes it. The tank's shot
   should be visibly heavier — `shot-e-heavy` already exists in the atlas, unused — which needs
   `EnemyWeapon` to carry a sprite id per weapon.
+
+### The UI pass, 25/08 — closed
+
+The player called the screens "not well made": buttons with no padding or padding on one side only,
+text overflowing its frames, a BACK button clipped off the bottom of Options. None of it was padding.
+
+**`GameSkin.build()` was calling `new BitmapFont()` — libGDX's bundled Arial — and registering it under
+the names `"font-mini"` and `"font-title"`.** Every screen and `HudRenderer` asked the Skin for the
+project's own fonts by name and got Arial. Smooth, proportional, wrong metrics, inside layouts drawn
+pixel-exactly around a fixed 6/8 px advance. The frames were right; the glyphs were wrong. The hand-drawn
+sheets had existed since #30 and had never been made loadable — **the same gap the sprites had**: art
+produced in `docs/design/`, never packaged into `assets/`. That pattern appeared three times in one day;
+it is worth checking for a fourth before assuming a phase is done.
+
+`docs/design/fonts/build-fnt.js` now emits `assets/fonts/*.fnt` + page from the sheets, and `GameSkin`
+loads them at scale 1. Fixed alongside it: the BACK button (the placeholder's line height overflowed the
+480×270 viewport — `BaseUiScreen.content` has no clip), absent button minimums (`04-hud-layout.md`'s
+60×12 was never enforced), one-sided padding, menu entries now centred so a short label's slack splits
+evenly, and the focus marker no longer flush against the frame.
+
+**One thing deliberately re-added:** the focused entry grows 6 px. That was never an animation — with the
+placeholder font each button sized to its own text, so swapping `"  "` for `"> "` widened it for free.
+A fixed advance makes that swap cost zero pixels, so the movement vanished when the real font landed. It
+is now driven from the cell's width, not the button's padding, because the 60 px plate minimum absorbs
+padding on short labels and nothing moves.
 
 ### Known and deliberately left open
 
@@ -196,8 +226,8 @@ Everything the three merged branches left unwired is closed.
 | 03 | First playable | **done** — merged in #14 |
 | 04 | Content pipeline | **done** — core in #16, loader in #14 |
 | 05 | Game systems | **done** — merged in #22 |
-| 06 | Presentation | **done** — direction #8, integration #26, sprites drawn in #30 and packed into `assets/atlas/` on 25/08 |
-| 07 | Boss | **merged** — #29, with level 1 and the machinery for enemy fire. No content uses the weapon yet |
+| 06 | Presentation | **done** — direction #8, integration #26, sprites packed into `assets/atlas/` and the real bitmap fonts into `assets/fonts/` on 25/08 |
+| 07 | Boss | **merged** — #29, with level 1 and enemy fire. Four archetypes shoot; the boss fans 6 projectiles a volley |
 | 08 | Audio and polish | **merged** — #31, with both dead cues wired on 25/08. Nobody has heard it yet; phase 09's browser pass is the first listen |
 | 09 | Web, CI and release | not started |
 
