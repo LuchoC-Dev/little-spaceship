@@ -10,15 +10,15 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * loaded through {@link TextureAtlas} — a plain-text pack file and no reflection, so it costs
  * nothing extra under TeaVM per {@code CLAUDE.md}'s "prefer boring APIs".
  *
- * <p>This is the seam the art lane's PNGs cross into the running game. Nothing in {@code
- * WorldRenderer} or the composition root changes when a real sprite replaces a placeholder one:
- * packing the finished PNGs into {@code assets/atlas/sprites.atlas} and having {@link
- * PlaceholderAtlas} give way to this class in {@link #load} is the entire integration step. A build
- * step that runs {@code TexturePacker.process} was considered and rejected for now — it would need a
- * Gradle task wired to the art lane's own output directory, which does not exist yet since art
- * production, {@code docs/plan/06-presentation/plan.md} tasks 6-11, has not started. Packing by hand
- * once art lands, and adding the Gradle task once the source directory is stable, costs less than
- * building the automation today against a directory that is still empty.
+ * <p>This is the seam the art lane's pixels cross into the running game. Nothing in {@code
+ * WorldRenderer} or the composition root changes when the atlas is regenerated: {@code
+ * docs/design/atlas/build-atlas.js} rasterises {@code docs/design/mockups/src/01-sprites.js} — the
+ * one place the pixel art is authored — into {@code assets/atlas/sprites.png}/{@code .atlas}, and
+ * {@link #load} finds it there. A Gradle task that ran the generator automatically was considered
+ * and rejected for now: the script is Node, this build is Gradle/Java, and wiring the two costs more
+ * than running {@code node docs/design/atlas/build-atlas.js} by hand the rare times the art changes.
+ * {@link PlaceholderAtlas} remains as the fallback in {@link #load} for a checkout that has not run
+ * the generator, or for any sprite id it does not (yet) cover.
  */
 public final class PackedSpriteAtlas implements SpriteAtlas {
 
