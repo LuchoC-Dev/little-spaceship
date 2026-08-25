@@ -7,3 +7,4 @@
 - [Audio diffing sufficiency and WAV verification without ears](project_audio-diffing-and-wav-verification.md) — why PlayerStatus diffs covered almost every MVP sound, and how to check a generated WAV actually holds audio in this sandbox.
 - [JsonValue key iteration + throwaway classpath](project_libgdx-jsonvalue-key-iteration.md) — walk JsonValue.child/next/name to reject unknown keys; get a runnable classpath for a module with no test source set.
 - [Temporary content edit to verify a late-game boss live](project_temp-content-edit-for-boss-verification.md) — edit-and-revert level-01.json to reach a 5-minute-deep boss in seconds; screenshot cadence vs. tell beat timing gotcha.
+- [Boss ram does not repeatedly damage the player](project_boss-ram-does-not-damage-player.md) — don't rely on ramming to force a fast DEFEATED for verification; it costs minutes for at most one hit.
