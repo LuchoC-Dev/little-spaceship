@@ -46,9 +46,11 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * charging parts' {@link Sprite#frame} steps 1, 2, 3 and drops back to 0 the instant the shot leaves,
  * exactly the class javadoc there describes; that is the whole channel presentation needs to draw the
  * charge, so no separate "which part, how far" contract exists on {@link
- * dev.luchoc.littlespaceship.core.port.BossStatus}. Spread charges both pods and fires outward from
- * them; sweep charges both arms and fires converging toward the centre — pods for spread, arms for
- * sweep, per that same design document, so the part that lights carries the dodge direction.
+ * dev.luchoc.littlespaceship.core.port.BossStatus}. Spread charges both pods and each fires a fan of
+ * {@link #FAN_COUNT} projectiles outward from it; sweep charges both arms and each fires the same-sized
+ * fan converging toward the centre — pods for spread, arms for sweep, per that same design document, so
+ * the part that lights still carries the dodge direction: every ray of a fan travels away from its own
+ * pod, or toward the centre from its own arm, none of them crossing to the other side.
  *
  * <p><b>Defeat.</b> The core is the only part whose death ends the fight: once it is destroyed,
  * whatever keel, pods or arms remain are destroyed with it — a boss does not linger as a headless
@@ -110,16 +112,34 @@ public final class BossSystem implements GameSystem {
     private static final float TELL_DURATION = BEATS * BEAT_DURATION;
 
     /**
-     * How far a spread shot fans out sideways versus how fast it falls, and the same pair for a
-     * sweep shot converging inward. Fixed shapes, like {@code WeaponSystem.SHOT_SPACING} — {@link
-     * BossDefinition} supplies the speed each ratio scales, not the shape itself. Fixed ratios rather
-     * than a runtime {@code Math.sin}/{@code cos} on purpose: a transcendental function is not
-     * guaranteed to produce the identical float on the JVM and under TeaVM, which a replay cannot
-     * afford.
+     * How many projectiles each charging part fires in one volley, fanned across the ratios below.
+     * A design constant rather than a {@link BossDefinition} field: the shape of a volley is footprint,
+     * the same reasoning that keeps the part radii and offsets above out of content. Two per volley (one
+     * pod, one arm side, no fan) proved undodgeable-because-trivial in play at level 1's tuned
+     * {@code patternCooldown} — content's own lever was already spent lowering that cooldown, so the
+     * fix has to change the shape a volley takes instead of how often it comes. Three was chosen over a
+     * wider fan by playing it: it triples volley density (six projectiles instead of two) while the
+     * fanned rays stay far enough apart, at the speeds {@code 10-mvp-initial-values.md} tunes, for a
+     * player who reads the tell correctly to still find a gap — a wider fan starts to close every gap at
+     * once, which is a coin flip rather than a dodge.
      */
-    private static final float SPREAD_VX_RATIO = 0.45f;
+    private static final int FAN_COUNT = 3;
+
+    /**
+     * How far a spread shot fans out sideways versus how fast it falls, and the same pair for a sweep
+     * shot converging inward. Each array holds {@link #FAN_COUNT} ratios, narrowest to widest, fired
+     * from the same origin in the same tick — a fan, not a spray, built from fixed constants like
+     * {@code WeaponSystem.SHOT_SPACING}; {@link BossDefinition} supplies the speed each ratio scales,
+     * not the shape itself. Fixed ratios rather than a runtime {@code Math.sin}/{@code cos} on purpose:
+     * a transcendental function is not guaranteed to produce the identical float on the JVM and under
+     * TeaVM, which a replay cannot afford. The vertical ratio is not fanned — varying the horizontal
+     * ratio alone already produces distinct rays from a shared origin, and keeping the vertical speed
+     * uniform is what keeps every ray of a volley reaching the player's height at a predictable, readable
+     * cadence instead of arriving in a jumble.
+     */
+    private static final float[] SPREAD_VX_RATIOS = {0.25f, 0.45f, 0.70f};
     private static final float SPREAD_VY_RATIO = -0.90f;
-    private static final float SWEEP_VX_RATIO = 0.75f;
+    private static final float[] SWEEP_VX_RATIOS = {0.55f, 0.75f, 0.95f};
     private static final float SWEEP_VY_RATIO = -0.65f;
 
     /**
@@ -345,15 +365,25 @@ public final class BossSystem implements GameSystem {
 
     private void fire(World world, BossDefinition def, BossPattern pattern) {
         if (pattern == BossPattern.SPREAD) {
-            fireFrom(world, podLeft, -SPREAD_VX_RATIO * def.spreadProjectileSpeed(),
-                SPREAD_VY_RATIO * def.spreadProjectileSpeed());
-            fireFrom(world, podRight, SPREAD_VX_RATIO * def.spreadProjectileSpeed(),
-                SPREAD_VY_RATIO * def.spreadProjectileSpeed());
+            fireFan(world, podLeft, SPREAD_VX_RATIOS, -1f, SPREAD_VY_RATIO, def.spreadProjectileSpeed());
+            fireFan(world, podRight, SPREAD_VX_RATIOS, 1f, SPREAD_VY_RATIO, def.spreadProjectileSpeed());
         } else {
-            fireFrom(world, armLeft, SWEEP_VX_RATIO * def.sweepProjectileSpeed(),
-                SWEEP_VY_RATIO * def.sweepProjectileSpeed());
-            fireFrom(world, armRight, -SWEEP_VX_RATIO * def.sweepProjectileSpeed(),
-                SWEEP_VY_RATIO * def.sweepProjectileSpeed());
+            fireFan(world, armLeft, SWEEP_VX_RATIOS, 1f, SWEEP_VY_RATIO, def.sweepProjectileSpeed());
+            fireFan(world, armRight, SWEEP_VX_RATIOS, -1f, SWEEP_VY_RATIO, def.sweepProjectileSpeed());
+        }
+    }
+
+    /**
+     * Fires {@link #FAN_COUNT} projectiles from the same part in the same tick, one per ratio in
+     * {@code vxRatios}, all sharing {@code vyRatio}. {@code side} carries the pattern's fixed left/right
+     * sign — {@code -1} or {@code 1} — so the same ratio table serves both pods or both arms while
+     * keeping a left pod's fan pointed left and a right pod's pointed right, exactly as the un-fanned
+     * volley did.
+     */
+    private static void fireFan(
+        World world, int part, float[] vxRatios, float side, float vyRatio, float speed) {
+        for (float vxRatio : vxRatios) {
+            fireFrom(world, part, side * vxRatio * speed, vyRatio * speed);
         }
     }
 
