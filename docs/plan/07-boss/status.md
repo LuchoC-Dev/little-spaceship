@@ -378,6 +378,60 @@ through the level.
 
 ---
 
+## `enemy-shooter` now shoots (`level-designer`, 25/08/2026)
+
+Closes the gap the section above named. `enemies.json`'s `enemy-shooter` archetype now carries:
+
+```json
+"weapon": { "pattern": "straight-single", "rate": 1.8, "speed": 90 }
+```
+
+`"pattern"` is fixed — `EnemyWeaponSystem` only knows `"straight-single"`, and it is the only shape
+`02-mvp-functional-spec.md`'s minimum roster needs. `"rate"` (1.8 s between shots) and `"speed"` (90
+logical units/s) are **not** decided anywhere in `docs/planning/`; they are this lane's own judgement,
+a starting point for the playing-based balance pass `08-decisions-and-open-items.md` already commits
+this project to, not a computed optimum:
+
+- 90 u/s is well under the player projectile's placeholder 220 u/s (`10-mvp-initial-values.md`) —
+  the genre convention of enemy fire reading slower and more dodgeable than the player's own, and
+  slow enough to be legible against `05-legibility-rules.md`'s reserved bullet colour on a first
+  encounter. At that speed a bullet fired near the top of the playfield takes roughly 2.5 s to reach
+  the bottom, comfortably inside the player's reaction window at the placeholder `playerSpeed` of 140
+  u/s.
+- 1.8 s between shots is a single, readable shot per enemy — not a curtain — since only one pattern
+  exists and stacking several shooters (the `line-3` waves already in `level-01.json`) is what is
+  meant to build the pressure, not the rate of any one enemy.
+
+No other archetype was given a `"weapon"`. `02-mvp-functional-spec.md`'s roster prose also mentions a
+"slow shot" for the basic and "shoots little" for the super-fast, but `08-decisions-and-open-items.md`'s
+22/08/2026 entry frames `enemy-shooter` specifically as "the archetype that shoots" and the whole gap
+this section closes was scoped to it — giving other archetypes a weapon now would be inventing
+behaviour beyond what was asked and decided for this pass. Worth raising as a follow-up open item, not
+folded into this change.
+
+**Not touched:** `level-01.json`'s existing `enemy-shooter` waves (166.0–183.0 and the two later
+appearances) needed no edit — they were already authored as isolated singles before combining into
+`line-3`, which is exactly the "teach it alone before it arrives mixed" shape a first appearance of
+live enemy fire needs. They simply do nothing until now.
+
+**What to watch for in the balance pass:** whether 1.8 s reads as too slow to threaten (a shooter that
+fires once and is dead before its second shot) or too fast once three are stacked in a `line-3` and
+firing independently — three simultaneous 1.8 s timers can still cluster by chance since they are not
+synchronised; whether 90 u/s gives enough reaction time at the player's own placeholder speed once
+that speed itself is tuned; and whether the 2:46–2:57 stretch (still the lightest stretch of the
+second half by design) now reads as a fair introduction or needs more space once bullets are actually
+on screen.
+
+**Verification.** `./gradlew build` is green. `core`'s and `game`'s test suites do not exercise
+`assets/data/enemies.json` at all — no test in `game` loads it — so the only real check is booting the
+game: `:desktop:run` started clean, past content loading, with no exception in the log before the
+window opened (a bad `"weapon"` key would have failed loudly and early, per `JsonContentSource`'s
+`requireOnlyKeys`). I could not get a screenshot of a shooter actually firing in this environment —
+no visual confirmation, only the absence of a load-time failure. That last check is the first thing
+the balance pass should do.
+
+---
+
 # Rendering lane — the boss on screen (`game-presentation`, 22/08/2026)
 
 Appended, not edited into the sections above. Closes the two `JsonContentSource` gaps and wires
