@@ -248,3 +248,130 @@ one method, so a timer of N is visible for exactly N frames, no off-by-one anywh
 was the correct call and was documented rather than guessed. What the write-up does instead, twice,
 is state an omission once in prose while the summary sentence beside it reads as complete. That is
 the residual shape in this author's status documents, and it is a note, never a rejection.
+
+## PR #30 (`feat/sprite-production`), art-only, no code — the clean-branch calibration case
+
+Nine commits, docs/design only (`git diff --stat main...HEAD -- core game desktop web` is empty), so
+invariants 1-6 could not be at risk structurally and the review became fidelity-checking a design
+document against itself and against the PNGs it describes. Worth recording because this branch
+passed almost everything, and knowing what "clean" looks like here matters as much as the defect
+catalogue.
+
+29. **A frozen sizing table not updated when a later document in the *same PR* supersedes its
+    granularity.** `02-sprite-sizes.md`'s boss row still reads one sprite, `boss-l1`, 119x87; the
+    same branch's `06-boss-presentation.md` splits the boss into `boss-core`/`boss-pod`/`boss-arm`
+    (47x87/25x25/31x45) and says explicitly "five sprites, not one image". The radii and offsets
+    agree byte-for-byte between the two documents — only the sprite-id/dimension row was left
+    stale. A note, not a blocker: whenever a phase adds a document that supersedes part of an
+    earlier frozen one, diff the specific row, not just the shared numbers (radius, offset), since
+    those are what people check first and the id/dimension column is what silently drifts.
+30. **A Skin's `skin.json` loaded through `Skin(FileHandle, TextureAtlas)` is exactly the reflective
+    `Json` class the web-pitfalls section warns about**, and the design doc for it
+    (`docs/design/07-skin.md`) commits to that loading contract (`skin.load(Gdx.files.internal(...))`)
+    without mentioning TeaVM reflection config. Not a defect on an art-only branch with no code, and
+    scene2d's own Skin format has no non-reflective loader — but it is a suspicion worth handing to
+    whichever phase writes the `Skin.load` call: confirm the TeaVM reflection declarations exist for
+    every style class named in the JSON before that call ships, since CLAUDE.md's own JSON rule reads
+    as an absolute and this is the one legitimate exception to it.
+31. **Numeric self-consistency across a design PR is checkable in full, cheaply.** Every measurable
+    claim in this branch's `status.md` table checked out against the committed PNGs: frame counts
+    (29 = 5+6+8+10), per-frame sprite sizes (21/31/47/95, read via `struct.unpack` on each PNG's IHDR),
+    font sheet dimensions (96x60, 128x78), and the boss's ±59 px arm reach recomputed by hand from
+    odd-width sprite geometry (half-width to edge is 15, not 15.5, because rule 1 makes every
+    dimension odd with a true centre pixel). Zero mismatches. This is the counter-example to keep
+    calibration honest: "read every number, trust none of them until reconstructed" does not always
+    find something, and this branch is the proof it does not have to.
+is state an omission once in prose while the summary sentence beside it reads as complete. That is
+the residual shape in this author's status documents, and it is a note, never a rejection.
+
+## Phase 08 (`feat/audio`, PR #31): clean, and worth recording *why* nothing fired
+
+Five commits, 29 files, a synthesised-WAV generator, a runtime, and volume sliders. Verdict was
+accept — no invariant violation, no misclaimed criterion. Recording this one because "I found
+nothing" needs the same rigor as a rejection, and because two shapes from earlier phases were
+present here in their *safe* form, which is the useful contrast to keep.
+
+- **Pattern 27 (identity duplicated as a literal across modules) recurred, in the form the project
+  already has precedent for accepting.** `AudioDirector.SHOT_P1`/`SHOT_P2` copy `WeaponSystem`'s
+  private `SpriteId("shot-p1"/"shot-p2")` literals verbatim, exactly the way `WorldRenderer.
+  PLAYER_SPRITE_ID` already does for the ship. Confirmed both sides still match by grep. Still a
+  real fragility (rename either side and the shoot cue goes silent with no compile error and no
+  failing test) — worth a note every time, not a blocker, since the project already made this
+  trade-off once and it holds for the same reason: no `core.port` type currently carries a role tag,
+  and adding one without a second real case would trip invariant 6.
+- **A "blocked, waiting on another branch" claim is a citation, and checks out the same way any
+  other citation does.** `status.md` asks `core-domain` for an `EnemyDestroyed` event and says
+  `WorldView.bossStatus()` "does not exist on `main` yet — it is on `feat/boss`". Both grepped to
+  zero hits in `core/src/main` and `game/src/main` on this branch. The task's own framing (context
+  section) said not to report this as a defect if true; verifying it cheaply is still worth doing
+  rather than taking the framing on faith — it would have been a real finding if the grep had come
+  back non-empty.
+- **A design-time-only tool living inside a module that TeaVM compiles is not a risk *while the web
+  build stays commented out*.** `game/.../tools/audio/{Wav,Synth,GenerateAudio}.java` use
+  `java.nio.file`, which has no TeaVM guarantee, but `web/build.gradle.kts`'s `gdxTeaVM {}` block is
+  entirely commented out (phase 03 reverted it, phase 09 owns bringing it back). So nothing compiles
+  those classes for the web target *yet*. This is a suspicion to hand forward for phase 09's audit,
+  not a defect now — the distinction is the same one `audit-techniques.md` already draws for
+  `List.copyOf`: unverifiable is not the same as wrong. Check whether `tools.audio` gets excluded
+  from the TeaVM source set (or moved to a separate Gradle source set entirely) when phase 09 lands.
+- **The counter-example to go with pattern 21/22:** the acceptance criterion "audio starts without
+  an error in the browser, verified on a real browser" is *not* claimed met — `status.md` says
+  outright "did not confirm by ear; this sandboxed environment has no audio capture... phase 09's
+  real-browser pass is still the first time anyone actually listens to this." Same for task 5
+  (animations): marked "in progress" with the exact missing pieces named, not folded into "done".
+  This is what an honest partial-completion entry looks like next to patterns 21/22's dishonest one.
+is state an omission once in prose while the summary sentence beside it reads as complete. That is
+the residual shape in this author's status documents, and it is a note, never a rejection.
+
+## PR #29 (`feat/boss`), phase 07 — a coordinator-committed last commit that held up, and a citation gap in what a replay actually covers
+
+The largest branch reviewed so far (46 files, 16 commits) and the cleanest on the invariants: no
+`com.badlogic.gdx` in `core`, no `Math.random`/clock read, no `Thread`/`ExecutorService`, JSON read
+through `JsonReader`/`JsonValue` only, `SystemOrder` extended with two new stages (`SPAWNER`,
+`ENEMY_WEAPON`, `BOSS`) each placed with a written reason and none out of order. Worth recording
+because it is the reference case for a good last-minute, unreviewed commit rather than a bad one.
+
+32. **A commit finished by the coordinator after a spend-limit cut, with a self-reported test count,
+    checked out exactly.** `b33f302`'s message claims "277 tests green at the point of the cut";
+    `grep -rn "@Test" core/src/test --include=*.java | wc -l` on the tree as committed returns exactly
+    277. The commit itself is otherwise unremarkable: a new component (`EnemyWeapon`), a new stateless
+    system (`EnemyWeaponSystem`) mirroring `SpawnerSystem`'s own shape, and `CleanupSystem` emitting
+    `EnemyDestroyed` — the first concrete `GameEvent` this codebase has built, closing the empty seam
+    pattern 25 named two phases ago. No invariant violated, no shortcut taken under pressure. The
+    lesson is not "trust a coordinator-committed cut" but "the self-reported number is free to check
+    and worth checking every time" — `grep -c` here, not a rebuild.
+33. **A status document can go stale from a commit that lands *after* it, not just from one that
+    precedes it.** `docs/plan/07-boss/status.md` (dated the same day) lists "no enemy `weapon`
+    component factory exists yet" as an open gap in its own "gap this phase did not close" section —
+    true when written, and then the branch's own next and final commit closed exactly that gap.
+    Pattern 4 usually fires because memory or status stops being updated; here the *order* inverted
+    it — check commit timestamps against a status doc's own date before treating a documented gap as
+    still open, in either direction.
+34. **A criterion's replay evidence and its unit-test evidence can point at different scenarios, only
+    one of which is boss-specific.** The acceptance table cites `BossReplayTest.defeatIsDeterministic`
+    for "the boss can... kill the player, to the right screen", but `defeatContent()` in that file
+    never calls `.withBoss(...)` — `hasBoss("level-01")` is false for that scenario, so it exercises
+    the ordinary, pre-phase-07 rammer-kills-the-player path, not a boss fight. The actual boss-specific
+    rule (`DEFEATED` wins a same-tick tie against `bossDefeated`) is genuinely covered, just at the
+    unit level (`BossSystemTest.defeatWinsATieWithBossDefeat`, which does call `.withBoss(...)`), not
+    by the full-pipeline replay the criteria table cites for it. Worth a follow-up, not a blocker:
+    whenever a criteria table cites a "replay" test for a rule, open the fixture builder and check it
+    actually configures the subsystem the rule is about, separately from checking that a unit test
+    somewhere does.
+35. **Content built ahead of a real consumer, correctly labelled as such, in the same commit that
+    builds the capability.** `EnemyWeaponSystem` and its `"weapon"` `ComponentFactoryRegistry` entry
+    ship in `b33f302`, but `assets/data/enemies.json`'s `enemy-shooter` carries no `"weapon"`
+    component — the capability exists and nothing in shipped content uses it yet. Not a defect: this
+    is `game`/content's job in a later step, not `core-domain`'s in this commit, and nothing in the
+    commit or `status.md` overclaims it as wired. Recorded as the calibration case for pattern 14 (an
+    extension seam wired to nothing) — the difference here is the seam *is* reachable through the
+    ordinary content pipeline (`ComponentFactoryRegistry.withDefaults()`, not a private static test
+    fixture), so it is a gap to close later, not a boundary hole.
+
+Calibration from this phase: the drop-slot fix (issue #23, `SpawnEvent`'s sixth field) and the
+`level-01.json` content pass both cross-checked cleanly against their own stated verification —
+every `atX`, `dropSlot` and drop-kind claim in `status.md`'s "What was verified" section reproduces
+by reading the file. The one place content underclaimed rather than overclaimed: `status.md` flags
+`:game:compileJava` as failing before the boss-loading fix landed, and it genuinely did (confirmed by
+reading `JsonContentSource` before and after `2ddab6e`) — an honest, checkable "not yet" rather than a
+premature "done".
