@@ -9,3 +9,4 @@
 - [Temporary content edit to verify a late-game boss live](project_temp-content-edit-for-boss-verification.md) — edit-and-revert level-01.json to reach a 5-minute-deep boss in seconds; screenshot cadence vs. tell beat timing gotcha.
 - [Sprite atlas generation from 01-sprites.js](project_sprite-atlas-generation.md) — Node `new Function` loads the JS engine intact (sym() pre-expanded); id mismatches between art and the ECS; PackedSpriteAtlas needed zero code changes.
 - [Ramming the boss lands one hit per invulnerability window](project_boss-ram-does-not-damage-player.md) — the decided rule, not a bug; still a slow way to force a DEFEATED. Check `docs/planning/` before recording "the game does not do X".
+- [BitmapFont.draw's y is already the top of the text, not a baseline](project_bitmapfont-draw-y-is-top-not-baseline.md) — reusing the rect y-flip helper (which subtracts height for a bottom-left corner) for text double-subtracts and pushes labels down a full line.
