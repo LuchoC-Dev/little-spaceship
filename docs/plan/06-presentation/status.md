@@ -1,7 +1,7 @@
 # Phase 06 — Presentation · status
 
-**State:** visual direction done, art production not started
-**Updated:** 20/08/2026
+**State:** visual direction done; art production done, tasks 6 to 11 closed
+**Updated:** 22/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the
 `plan.md` next to it says what to do and does not change to reflect progress.
@@ -44,9 +44,70 @@ each page's interface in node without a browser. **Task 13 is partly answered by
 `screens.html`** — the layout of every screen in the flow is settled; building them in
 `scene2d.ui` is still integration work.
 
-## In progress
+**Art production, tasks 6 to 11** — issue #24, branch `feat/sprite-production`.
 
-Nothing. Art production, tasks 6 to 11, has not started.
+The 21/08/2026 session that opened the branch had no shell, so the review loop this phase depends on
+was unavailable and it stopped after the boss's structure, the palette corrections and one redrawn
+tank. That was the right call and the memory note explaining why is kept. The 22/08/2026 session had
+a shell and a renderer, and finished the lane.
+
+| Task | Delivered |
+|---|---|
+| 6. Player ship | `ship-basic`, `ship-bank`, `ship-tilt`, `ship-hit`, `fx-thrust-a/b` |
+| 7. Six archetypes | all six redrawn, `enemy-carrier` drawn for the first time |
+| 7. Boss | `boss-core` 47x87, `boss-pod` 25x25, `boss-arm` 31x45 |
+| 8. Projectiles | player levels 1-4 from `shot-p1`/`shot-p2` by count, enemy small/heavy/bolt, plus `fx-muzzle` |
+| 9. Pickups | one capsule, five marks, `pickup-module` one size up, `module-satellite` |
+| 9. Structures | `structure-tower` 31x39 |
+| 10. Explosions | four sizes, 29 frames, generated |
+| 10. Fonts | `font-mini` 95 glyphs, `font-title` 43, both exported as sheets |
+| 11. Background | [`08-background.md`](../../design/08-background.md) — layers, speeds, four sections, ambient events |
+| 11. Skin | [`07-skin.md`](../../design/07-skin.md) plus a generated atlas, `.atlas` and `skin.json` |
+
+**The six archetypes now separate in a crowd, which they did not.** The first pass gave them a
+shared vocabulary — a rounded violet mass, a ringed orange eye, yellow legs — so `enemy-basic` and
+`enemy-shooter` were one enemy and `enemy-light` and `enemy-rush` were another. Three rules replaced
+it: one silhouette primitive each and no two share it (pod, fork, anvil, needle, bunker, wing); the
+ringed iris belongs to the boss alone; and the warm mark says *how* the enemy hurts you, which is
+why the carrier has none. `render.py flat` runs the silhouette test of `05-legibility-rules.md`.
+
+**The one-violet question is closed at every size.** It held at 23 px on the tank and it holds at
+119 px on the boss, for the reason `06-boss-presentation.md` gives: the boss's dark regions are the
+channels the player flies through, so N0 there is negative space rather than shading that failed. No
+second violet was needed anywhere.
+
+### Three things in the frozen documents turned out to be wrong
+
+Each was found by drawing against it, each is corrected in place with the arithmetic, and two of
+them belong to whoever owns the collider rather than to the art.
+
+- **Rule 3's "85% of opaque pixels inside the radius" is unreachable** for anything elongated:
+  `enemy-rush` peaks near 53% however it is drawn and the player ship reaches 24% by design. Replaced
+  in `02-sprite-sizes.md` by a depth measured on hull pixels — nothing more than 3 px past the
+  collider — which `check.js` now enforces for every `enemy-`.
+- **The boss's five colliders do not cover its art.** 25 px of the core's keel is pass-through, and
+  the player shoots upward into exactly that. `06-boss-presentation.md` proposes one more entity,
+  `core-keel` r 13.0 at 0, -27, and moving the arms to 0, -22. **Phase 07's to accept or replace.**
+- **The 31x39 structure on a 15.0 radius cannot be covered by any drawing** — its outermost row is
+  4.5 px past the circle whatever shape is in it, and as drawn the base corners are 7.8 px out.
+  `02-sprite-sizes.md` proposes two colliders of radius 11.0 at 0, +10 and 0, -10.
+
+A fourth, smaller: `font-title`'s sheet was specified as 40 cells for 43 glyphs. Corrected upwards,
+to the same ASCII grid `font-mini` uses, so one loader serves both.
+
+### What the code lane can take now
+
+- **The fonts.** `docs/design/fonts/font-mini.png` 96x60 and `font-title.png` 128x78, white on
+  transparent. One indexing rule for both: cell = `code - 32`, 16 columns, cell 6x10 and 8x13. No
+  `.fnt`, no metric table — `03-typography.md` has the arithmetic and the reason.
+- **The Skin.** `docs/design/skin/skin.png`, `skin.atlas` and `skin.json`. Register `font-mini` and
+  `font-title` into the Skin before loading the JSON; they are deliberately not in the widget atlas.
+- **The explosions.** Four PNG frame strips under `docs/design/fx/`.
+- **The boss.** Its three part sprites are settled, so phase 07 is not waiting on art.
+
+Everything else still lives as characters in `mockups/src/01-sprites.js`, which is the source the
+mock, the checker and the renderer all read. Turning those into an atlas is synchronisation point 2
+and belongs to phase 04.
 
 ## Blocked
 
@@ -92,21 +153,20 @@ at it at 1x next to the rest. A silhouette that reads on its own and disappears 
 normal failure, and the mock is where it shows up cheaply. The loop is in
 [`mockups/README.md`](../../design/mockups/README.md).
 
-**The sprites still owe the game an identity.** Accepted on 20/08/2026 as a starting point, with
-the explicit note that they have to go further. What the mocks carry are block silhouettes at the
-right footprint — correct size, correct collider, legal colours, and no character. Tasks 6 to 11 are
-where each archetype earns a shape you recognise before you read it.
+~~**The sprites still owe the game an identity.**~~ **Settled 22/08/2026.** The note below was
+written when the mocks carried block silhouettes at the right footprint and no character. Both
+worries it raised were answered by drawing:
 
-Two things that pass will fight that pass, and both were seen in the mock rather than guessed:
+- **The one gameplay violet was enough**, at 13 px, at 23 px and at 119 px. The palette was not
+  widened and does not need to be. ~~If a second violet is genuinely needed it belongs between V3 and
+  V4.~~ Corrected 21/08/2026: it would have to sit between V4 and N5.
+- **The carrier's 39x31 footprint holds**, including in pairs. Its wing came out `N0 / N0 / V4 / V4`
+  rather than the proposed `N0 / V4 / V4 / N0`, because with hull in the second column the outermost
+  violet sits 3.3 px past the collider. It also looks better that way.
 
-- **There is one gameplay violet.** V4 is the only alien colour above the gameplay floor, so an
-  enemy has an outline, one hull tone and metal highlights. Enough at 13 px, tight at 23, probably
-  thin on a 119 px boss. Do not widen the palette on that suspicion — draw the tank and the boss
-  first, and if a second violet is genuinely needed it belongs between V3 and V4, where it stays
-  clear of the reserved band.
-- **The carrier is the awkward one.** 39 px wide against a 30 px circle, so its outer 4 px each
-  side have to read as wing. It is the archetype most likely to need its footprint revisited, and
-  changing it means changing task 2 first.
+What replaced the identity worry is the rule the redraw produced: **one silhouette primitive per
+archetype, and the next archetype has to take one nobody is using.** The pod, the fork, the anvil,
+the needle, the bunker and the wing are spent.
 
 **Where the plan was thin.** It asked for sprite sizes "for hitboxes" without saying that
 `core.domain.component.Collider` is a circle with no offset. That shapes the art: visual mass has to

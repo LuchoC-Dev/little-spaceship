@@ -117,7 +117,25 @@ invisible until the level is running and something disappears behind it.
 - **No dithering in gameplay sprites.** At 480x270 a dithered enemy at speed reads as noise, and
   noise is what bullets hide in. Dithering is allowed in background ramps, where it is stationary.
 - **No anti-aliasing anywhere.** There is no in-between colour available for it.
-- **Ramps are for shading, not for inventing colour.** Human metal shades N3 -> N5 -> N6, alien
-  hull V2 -> V3 -> V4, fire W2 -> W3 -> W4 -> F1.
+- **Ramps are for shading, not for inventing colour**, and a ramp never crosses the split. A
+  gameplay sprite may use gameplay colours plus N0; a background may use background colours plus N0.
+  Nothing mixes.
+
+  | Ramp | Steps | For |
+  |---|---|---|
+  | Human metal | N0 -> N5 -> N6 -> N7 | the player ship, structures, HUD plates |
+  | Alien hull | N0 -> **V4** -> N5 -> N6 | every enemy, campaign-wide |
+  | Fire | W2 -> W3 -> W4 -> F1 | backgrounds may start it at W2; sprites start at W3 |
+  | Enemy fire | H1 -> H2 -> H3 | nothing else, ever |
+
+  **The alien ramp has one chromatic step.** V4 is the only violet above the gameplay floor, so an
+  enemy is violet mass with *cold metal* highlights, not with lighter violet, and its interior
+  shadow is N0 rather than a darker violet. V1, V2 and V3 are scenery — they exist for stage 4's
+  biomechanical walls, which are background, and they may never appear inside an enemy.
+
+  If a second gameplay violet is ever needed it goes **between V4 (48.1) and N5 (64.0)**, around
+  `L*` 56. It cannot go between V3 and V4: anything below 48.1 is background-class by rule 3 and the
+  audit rejects it inside a sprite. An earlier note in `../plan/06-presentation/status.md` said the
+  opposite and was wrong.
 - **Transparency is binary.** A pixel is drawn or it is not. The only place alpha varies is the
   invulnerability blink, which is a tint applied at draw time and not a colour in the sprite.

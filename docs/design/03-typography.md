@@ -20,6 +20,7 @@ The working font. HUD labels, menu entries, options, credits, ship characteristi
 | Line height | 10 px |
 | Coverage | ASCII 32-126, 95 glyphs |
 | Sheet | 16 columns x 6 rows = 96 cells, **96 x 60 px** |
+| File | [`fonts/font-mini.png`](fonts/font-mini.png) |
 
 The advance is **fixed**, which makes every number tabular for free: a score does not jitter as its
 digits change, and the width of a string is `characters * 6` without measuring anything. At this
@@ -40,15 +41,61 @@ else uses `font-mini`.
 | Descender | none |
 | Advance | 8 px, fixed |
 | Line height | 13 px |
-| Coverage | `A-Z`, `0-9`, space, `. , : - ! ?` |
-| Sheet | 10 columns x 4 rows = 40 cells, **80 x 52 px** |
+| Coverage | `A-Z`, `0-9`, space, `. , : - ! ?` - 43 glyphs |
+| Sheet | 16 columns x 6 rows, **128 x 78 px**, 43 cells filled |
+| File | [`fonts/font-title.png`](fonts/font-title.png) |
 
 Uppercase only, and there is no lowercase to fall back to. A string with lowercase in it is a
 mistake in the caller, not in the font — the loader uppercases before drawing rather than showing a
 gap.
 
+The sheet was specified here as 10 x 4 = 40 cells at 80 x 52 px, and that was wrong: the coverage
+above is 43 glyphs and never fitted in 40 cells. Corrected on 22/08/2026 while drawing it, and
+corrected *upwards* rather than by cutting punctuation, because the fix is described below and it
+costs nothing worth having.
+
 It is a **hand-drawn** font and not `font-mini` scaled x2. Scaling would be exact, since only
 integer factors are allowed, but a 10x14 letter made of 2x2 blocks reads as a placeholder.
+
+## The sheet, and how the code lane reads it
+
+**Both sheets use the same grid**: 16 columns, one cell per ASCII code from 32 to 126, row-major.
+
+    cell index  = code - 32
+    cell column = index % 16
+    cell row    = index / 16
+
+That is the whole loader. `font-title` covers only 43 of the 95 codes and the rest of its cells are
+transparent, which wastes 5 KB of texture and buys one indexing rule instead of two. It also means
+an unsupported character draws as a blank rather than as whatever glyph happened to sit at that
+offset, which is the failure mode worth paying for.
+
+| Font | Sheet | Cell | Glyph box | Origin inside the cell |
+|---|---|---|---|---|
+| `font-mini` | 96 x 60 | 6 x 10 | 5 x 7, descenders to 9 | top-left, 0, 0 |
+| `font-title` | 128 x 78 | 8 x 13 | 7 x 11 | top-left, 0, 0 |
+
+The glyph is drawn at the cell's top-left corner; the spare column and rows on the right and bottom
+are the advance and the line gap, already inside the cell. So the code lane can take the whole cell
+as the texture region and step by the cell width - there is no per-glyph metric table, no kerning
+pairs and no XML. A `BitmapFont` built from a `.fnt` would work; so would a hand-built
+`TextureRegion[95]` indexed by `code - 32`, which is one loop and no parser, and is what this font
+was drawn for.
+
+Descenders live **inside** the cell: `g j p q y , ;` occupy rows 7-8 of a 10-row cell, so nothing
+overflows and no glyph needs a Y offset.
+
+**The sheets are generated, not hand-edited.** The glyph bitmasks live in
+`mockups/src/00-palette.js`, because the mock pages draw text with them and a font that exists in
+two places diverges. [`fonts/build-fonts.py`](fonts/build-fonts.py) is what turns them into PNGs:
+
+```
+python docs/design/fonts/build-fonts.py
+```
+
+It writes `font-mini.png`, `font-title.png` and `specimen.png`. The specimen is both fonts set as
+running text at 4x, and it is there because a sheet of glyphs in a grid does not tell you whether a
+sentence reads.
 
 ## How both are drawn
 
