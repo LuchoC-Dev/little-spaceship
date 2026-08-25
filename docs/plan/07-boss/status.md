@@ -3,8 +3,87 @@
 **State:** all three lanes done. `core` (boss, spawner, victory condition), content (level 1's real
 curve plus the boss/carrier numbers, "Content lane — level 1 written" below), and now rendering —
 `JsonContentSource`'s two parsing gaps closed, the boss wired to the screen. See "Rendering lane —
-the boss on screen" at the end of this file.
-**Updated:** 22/08/2026
+the boss on screen" at the end of this file. Enemy fire across the roster and the boss's cadence were
+tuned afterwards — see "25/08/2026 — enemy fire across the roster" below.
+**Updated:** 25/08/2026
+
+## 25/08/2026 — enemy fire across the roster
+
+A play session found that the player saw no enemy fire at all in the first ~166 s of level 1, because
+`enemy-shooter` was the only archetype with a `"weapon"` component. `02-mvp-functional-spec.md`'s
+roster prose (around line 176) says four of the six archetypes should shoot; this closes that gap in
+content, using `EnemyWeapon`'s new `"firstShotDelay"` field (`core`, this same day) so an archetype
+with no `Health` — one player hit destroys it — actually gets to fire before it can die, instead of
+waiting out a full `"rate"` cooldown first.
+
+**Roster-to-id mapping**, `02-mvp-functional-spec.md`'s prose against `assets/data/enemies.json`'s
+real ids:
+- Basic → `enemy-basic`
+- Fast light → `enemy-light`
+- Evolved basic/shooter → `enemy-shooter`
+- Super-fast → `enemy-rush`
+- Tank → `enemy-tank` (no shot in the spec; unchanged)
+- Heavy carrier → `enemy-carrier` (no shot in the spec; unchanged)
+
+**Numbers added**, all `"pattern": "straight-single"` — no second pattern exists, per the deferred
+decision; a "different" shot for `enemy-light` is expressed only through cadence and projectile speed
+for now:
+
+| id | rate (cooldown) | speed | firstShotDelay | reasoning |
+|---|---|---|---|---|
+| `enemy-basic` | 3.2 | 70 | 1.0 | slowest cooldown and slowest projectile of the four, matching "slow shot"; short delay so it fires once even though it dies to one hit |
+| `enemy-light` | 2.4 | 130 | 0.9 | faster cooldown and markedly faster projectile than the basic — the only two levers available to read as a "different" shot without a second pattern |
+| `enemy-shooter` | 1.8 (unchanged) | 90 (unchanged) | 0.7 (new) | already the fastest cooldown of the four, satisfying "higher rate of fire than the basic" relative to `enemy-basic`'s new 3.2; only `firstShotDelay` is new, so it stops needing 1.8 s before its first shot |
+| `enemy-rush` | 4.0 | 120 | 1.4 | slowest cooldown of the four (`shoots little`), checked against `dive`'s screen time (`vy -80`, ~3 s crossing a ~240-unit playfield): a 4.0 s cooldown all but guarantees at most one shot per rush enemy, which is the read the spec asks for |
+
+`enemy-tank` and `enemy-carrier` were left unarmed — the spec names no shot for either.
+
+**The low-health/slow-shot tension, stated as a recommendation, not silently resolved.** `enemy-basic`
+and `enemy-light` still carry no `Health` component, so a single player projectile destroys either
+outright regardless of `firstShotDelay`. A short delay (1.0 s / 0.9 s here) makes each individually
+likely to get one shot off against a player who is not already aiming at it the instant it spawns, and
+the visual check below confirms both do fire when left alone briefly — but a player clearing waves
+aggressively will still rarely see either fire more than once, and never see the higher-rate-of-fire
+contrast against `enemy-shooter` read clearly from a `enemy-basic` that is usually dead before its
+second shot. The honest alternative is giving `enemy-basic` and `enemy-light` a small `Health` (2-3
+points, i.e. surviving one player hit before the second in most weapon levels) so the rate difference
+is actually visible in play — but that is a real balance change with real consequences (clear time,
+chip damage against the player, `weaponProjectileDamage` currently 10 makes even 2 points a
+non-trivial change) that this pass does not make. Recorded here as open rather than picked silently;
+whoever plays this next should watch specifically whether `enemy-basic`/`enemy-light` ever fire twice
+in ordinary play, and if the answer is consistently no, that is the concrete case for adding `Health`.
+
+**Boss `patternCooldown`: `1.3` → `0.7`.** Reported from real play as firing far too little for a
+boss. The cycle is `patternCooldown` + the fixed `0.75 s` tell (`BossSystem.TELL_DURATION`), so `1.3`
+meant one attack every `2.05 s`; `0.7` brings that to `1.45 s`, roughly 30% more frequent, while
+leaving the tell itself — the thing actually teaching the player to read spread vs. sweep — untouched.
+Chosen by feel against "the fight's own description", not computed: `08-decisions-and-open-items.md`
+and this file both already treat the tell as the fixed, load-bearing part of the pattern and the
+cooldown around it as the free dial.
+
+**Verified visually, not only reasoned about.** Using the established throwaway-content technique
+(`.claude/agent-memory/game-presentation/project_temp-content-edit-for-boss-verification.md`):
+`level-01.json` was overwritten locally to spawn `enemy-basic` and `enemy-shooter` at `t=1.0` (offset
+to the sides, `atX 0.2`/`0.8`, to avoid an immediate ram at the player's centre spawn), launched
+through `:desktop:run`, and screenshotted at `t≈2s` into the run. Both archetypes had already fired —
+a pink `shot-e-small` projectile visible below each sprite, descending toward the player. This is
+concrete confirmation the `firstShotDelay` fix works through the real content pipeline, not only
+through `core`'s unit tests. `enemy-light` and `enemy-rush` were not separately screenshotted firing
+(their `firstShotDelay` is reasoned from the same code path and the same
+`ComponentFactoryRegistry.attachEnemyWeapon` that was visually confirmed for the other two, not
+independently observed). The boss `patternCooldown` change was not re-verified visually against the
+real fight in this pass — the earlier boss-verification session already confirmed the tell/fire cycle
+renders correctly at the old cooldown, and this change only shortens the wait between cycles, not the
+cycle's shape. The file was restored from a backup afterwards; `git status` on `level-01.json` and
+`enemies.json` shows only the intended numeric changes.
+
+**What the next play session should watch first:** whether `enemy-basic` reads as noticeably weaker
+than `enemy-shooter` in fire frequency now that both fire, or whether `enemy-basic` still dies too
+fast to ever prove it; whether the boss at `0.7` feels like enough pressure or still needs to move
+further (the tell itself is the hard floor — it cannot go faster without redesigning it); and whether
+`enemy-rush`'s single likely shot per spawn actually reads as "shoots little" rather than "does not
+shoot" from the player's seat, since a single projectile against a fast-moving dive is easy to miss
+entirely.
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the
 `plan.md` next to it says what to do and does not change to reflect progress.
@@ -308,9 +387,10 @@ lives.
   - `offsetY -24` clears the carrier's radius-15 collider by 3.5 px against the child's own 5.5, so a
     child is never born inside its parent's silhouette, and `slow-descent` (-18) pulls it away from
     `crawl` (-9) immediately, so the two separate on their own.
-- **Boss:** `entersAt 302`, `combatY 175`, `entranceSpeed 25` (a 5.4 s descent), `patternCooldown 1.3`
-  (a 2.05 s cycle with the fixed 0.75 s tell), `spreadProjectileSpeed 95`, `sweepProjectileSpeed 140`,
-  health 1800/500/500, points 1500/500/500.
+- **Boss:** `entersAt 302`, `combatY 175`, `entranceSpeed 25` (a 5.4 s descent), `patternCooldown 0.7`
+  (a 1.45 s cycle with the fixed 0.75 s tell — moved down from `1.3`/2.05 s during the enemy-fire pass,
+  see "25/08/2026 — enemy fire across the roster" below), `spreadProjectileSpeed 95`,
+  `sweepProjectileSpeed 140`, health 1800/500/500, points 1500/500/500.
   - **`combatY 175` is a pacing number, not an art one.** `BossSystem`'s spread and sweep ratios are
     fixed, so where a projectile leaves the playfield is decided entirely by how high the boss sits. At
     `combatY 175` a spread shot crosses the side edge at y≈41 and a sweep shot at y≈25 — inside the

@@ -66,3 +66,27 @@ As of this pass, `JsonContentSource.loadLevel` reads five fields and uses `Spawn
 five-argument constructor, so `dropSlot` silently defaults to 0, and no code reads a `"boss"` object
 at all. Unknown JSON keys are ignored, not rejected — content can therefore look correct, load clean
 and do something else. Re-check both before trusting a drop placement or a boss's numbers.
+
+## `EnemyWeapon`'s `firstShotDelay` vs. an archetype's screen time (25/08/2026)
+
+`"rate"` (cooldown) alone was silently double-duty before this: an enemy without a `firstShotDelay`
+had to survive one whole cooldown before firing once. For a fragile, no-`Health` archetype (basic,
+light, rush all have no `Health` component), that reads as "never fires" even with a correct rate,
+because one player projectile kills it well before its first cooldown elapses. `firstShotDelay` is now
+a separate, shorter field for exactly this — set it to something an inattentive player still leaves
+alone for, not to `rate` itself.
+
+When picking `firstShotDelay`/`rate` for a fast trajectory, check it against the archetype's own
+screen time (`(270 + radius) / |vy|`, from the note above) rather than against the player's weapon
+cooldown: `enemy-rush` on `dive` (vy -80) is only on screen for ~3 s, so a `rate` of 4.0 s reliably
+caps it at one shot per spawn — that is what makes "shoots little" a property of the number, not a
+hope. A slower archetype's `rate` can safely be longer than its own screen time too; it just means
+some spawns of it never get a second shot, which is fine for a "weak" archetype but would defeat the
+purpose for one whose whole point is rate of fire (`enemy-shooter`).
+
+## Verifying enemy fire visually needs the player off the enemy's column
+
+Spawning a test enemy at the player's own starting `x` (`atX 0.5`, player start `x=104` of 208) on a
+non-drifting trajectory (`slow-descent`, `vx 0`) rams the player almost immediately — game over at
+score 0 before any projectile is visible, indistinguishable on screen from "the weapon never fired."
+Spawn verification enemies off-center (e.g. `atX 0.2`/`0.8`) so the ram doesn't pre-empt the shot.

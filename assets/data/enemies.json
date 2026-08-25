@@ -6,7 +6,8 @@
         "motion": { "trajectory": "slow-descent" },
         "sprite": { "id": "enemy-basic" },
         "collider": { "radius": 5.5, "fragile": true },
-        "scoreValue": { "points": 100 }
+        "scoreValue": { "points": 100 },
+        "weapon": { "pattern": "straight-single", "rate": 3.2, "speed": 70, "firstShotDelay": 1.0 }
       }
     },
     {
@@ -15,7 +16,8 @@
         "motion": { "trajectory": "swoop" },
         "sprite": { "id": "enemy-light" },
         "collider": { "radius": 4.5, "fragile": true },
-        "scoreValue": { "points": 150 }
+        "scoreValue": { "points": 150 },
+        "weapon": { "pattern": "straight-single", "rate": 2.4, "speed": 130, "firstShotDelay": 0.9 }
       }
     },
     {
@@ -25,7 +27,7 @@
         "sprite": { "id": "enemy-shooter" },
         "collider": { "radius": 6.5, "fragile": true },
         "scoreValue": { "points": 200 },
-        "weapon": { "pattern": "straight-single", "rate": 1.8, "speed": 90 }
+        "weapon": { "pattern": "straight-single", "rate": 1.8, "speed": 90, "firstShotDelay": 0.7 }
       }
     },
     {
@@ -34,7 +36,8 @@
         "motion": { "trajectory": "dive" },
         "sprite": { "id": "enemy-rush" },
         "collider": { "radius": 4.0, "fragile": true },
-        "scoreValue": { "points": 250 }
+        "scoreValue": { "points": 250 },
+        "weapon": { "pattern": "straight-single", "rate": 4.0, "speed": 120, "firstShotDelay": 1.4 }
       }
     },
     {
