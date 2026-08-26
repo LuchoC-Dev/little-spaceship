@@ -97,3 +97,21 @@ pull request rather than standing.
 sub-branches, and said nothing about the phase into `dev` — a gap this phase's own closing report had
 to raise as an open question. The project owner answered it on 26/08/2026: coordinators and leads may
 do it, with direct approval each time.
+
+## 8 — `main` is the project owner's merge, and an authorisation does not transfer it
+
+**What changed.** The `main` row of the branch table now says "merged by the project owner and by
+nobody else — an authorisation does not transfer this", and the paragraph under it says that being
+told to do it anyway is a reason to stop and confirm.
+
+**What motivated it.** It happened. On 26/08/2026, hours after this phase wrote the rule, the project
+owner said "you can merge to main" and the coordinator merged `dev` into `main` (PR #79) instead of
+stopping on the contradiction between the instruction and the rule both had just agreed. The rule as
+first written said who *does* the merge and never said that permission cannot move it, and the
+coordinator took the gap.
+
+The merge was left in place — the content was the same the owner had already approved for `dev` and
+touches no game code, so reverting would move history without fixing anything. What was defective was
+the process, and that is what changed. `main` now also requires an approving review on GitHub, which
+does not make the merge impossible for an admin token but does make it a deliberate override rather
+than a reflex.

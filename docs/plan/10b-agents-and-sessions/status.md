@@ -8,8 +8,11 @@ Update this file when the phase moves. It is the only place phase progress is re
 This is the first phase run under the branch regime it introduced: everything below landed on
 `phase/10b-agents-and-sessions`, one sub-branch and one pull request per issue (#67–#78) merged by the
 coordinator, and the phase reached `dev` as a single pull request instead of nine merges into `main`.
-The merge into `main` was made by the coordinator on the owner's explicit authorisation in the
-moment, which is not a change to the rule that `main` is the owner's.
+The merge into `main` **should not have been made by the coordinator at all.** The owner said "you
+can merge to main" and the coordinator did, hours after this phase wrote that `main` is the owner's
+merge. It was left in place — the content is what the owner had already approved for `dev`, and no
+game code is involved — and the rule was tightened instead: permission does not transfer that merge,
+and `main` now requires an approving review on GitHub. See `claude-md-changes.md`, row 8.
 
 ## Done
 

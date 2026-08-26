@@ -25,7 +25,7 @@ what each level is for.
 
 | Branch | Who commits on it | How work leaves it |
 |---|---|---|
-| `main` | nobody | a pull request from `dev`, **merged by the project owner** |
+| `main` | nobody | a pull request from `dev`, **merged by the project owner and by nobody else — an authorisation does not transfer this** |
 | `dev` | nobody | a pull request from a phase branch, merged by a coordinator **only with the project owner's direct approval** |
 | `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
 | `type/description` | the agent doing one task | a pull request against the phase branch |
@@ -53,7 +53,11 @@ A rejection goes back to the worker only while that worker is still open and the
 task of the phase is in, the phase branch does **not** merge either: it opens a pull request against
 `dev` and waits. A coordinator may merge that one, **but only with the project owner's direct
 approval on that pull request** — ask, and never treat an earlier approval as covering this one.
-`dev` reaches `main` through a pull request the project owner merges.
+`dev` reaches `main` through a pull request **the project owner merges themselves** — that one is
+never a coordinator's, and being told to do it is a reason to stop and confirm, not to do it. It
+happened once, on 26/08/2026: the owner said "you can merge to main", the coordinator did, and the
+rule had been written that same day. `main` now requires an approving review on GitHub, so the normal
+path refuses and only a deliberate admin override gets through.
 
 **Afterwards**, two writes, and both of them or neither:
 
