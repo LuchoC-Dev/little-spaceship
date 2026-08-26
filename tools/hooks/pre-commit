@@ -17,7 +17,10 @@ set -u
 STAGED_MEMORY="$(git diff --cached --name-only | grep '^\.claude/agent-memory/' || true)"
 [ -z "$STAGED_MEMORY" ] && exit 0
 
-GIT_DIR_PATH="$(git rev-parse --absolute-git-dir)"
+# Both sides go through `cd ... && pwd`: on Windows --absolute-git-dir answers
+# "C:/..." while the common dir resolves to "/c/...", and comparing the two raw
+# strings marks the main checkout as a worktree.
+GIT_DIR_PATH="$(cd "$(git rev-parse --absolute-git-dir)" && pwd)"
 COMMON_DIR_PATH="$(cd "$(git rev-parse --git-common-dir)" && pwd)"
 [ "$GIT_DIR_PATH" = "$COMMON_DIR_PATH" ] && exit 0
 

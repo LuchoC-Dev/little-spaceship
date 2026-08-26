@@ -94,7 +94,10 @@ fi
 # 3. The memory-path trap. .claude/agent-memory/ is tracked, so an agent standing
 #    in a linked worktree writes its memory into that checkout instead of the
 #    canonical one. Corrected by hand three times during phase 09 alone.
-GIT_DIR_PATH="$(git rev-parse --absolute-git-dir)"
+# Both sides go through `cd ... && pwd`: on Windows --absolute-git-dir answers
+# "C:/..." while the common dir resolves to "/c/...", and comparing the two raw
+# strings marks the main checkout as a worktree.
+GIT_DIR_PATH="$(cd "$(git rev-parse --absolute-git-dir)" && pwd)"
 COMMON_DIR_PATH="$(cd "$(git rev-parse --git-common-dir)" && pwd)"
 MEMORY_TOUCHED="$(printf '%s\n' "$CHANGED" | grep '^\.claude/agent-memory/' || true)"
 if [ -n "$MEMORY_TOUCHED" ] && [ "$GIT_DIR_PATH" != "$COMMON_DIR_PATH" ]; then
