@@ -71,3 +71,18 @@ in one phase — and the measurement in `measurement.md` shows the coordinator s
 it, including one `SendMessage` correcting the previous one a minute later. An instruction had
 already been tried; a path that resolves the same way from every worktree, and a hook in the shared
 git directory, do not depend on anyone remembering.
+
+## 6 — A claim about a system cites an observation of that system · issue [#62](https://github.com/LuchoC-Dev/little-spaceship/issues/62)
+
+**What changed.** The Conventions section gained the evidence rule, with "not checked" named as an
+always-acceptable answer and the phase 09 CI case named as what it prevents.
+
+**What motivated it.** In phase 09 a worker wrote, in three places at once, that `ci.yml` "has never
+been run on an actual GitHub Actions runner". Four runs had already completed — two red, two green —
+and `gh run list` would have shown them. The instruction it was following, "say what you verified",
+was obeyed to the letter and produced a false statement, which is what makes it insufficient rather
+than ignored. The full case is in [`evidence.md`](evidence.md).
+
+**Why in `CLAUDE.md` as well as in the six agent definitions.** Five of phase 09's eight subagents
+never opened `CLAUDE.md`; three did. Neither location covers everyone on its own, and this is a rule
+about the sentence being written at the moment it is written.

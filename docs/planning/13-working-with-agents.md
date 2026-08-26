@@ -138,6 +138,26 @@ reaches `main` only when the project owner decides.
 `docs/plan/how-to-run-a-phase.md` holds the operational version of this, next to the rest of the
 cycle.
 
+## Evidence: a claim about a system cites an observation of it
+
+Added on 26/08/2026, after phase 09. A worker wrote — in its report, in `status.md` and in its own
+memory file — that `ci.yml` "has never been run on an actual GitHub Actions runner". It had run four
+times by then, twice red and twice green, and `gh run list` would have shown all four. The reviewer
+caught it and rejected the pull request.
+
+The worker was not careless: it was told to say what it had verified, and it did. What failed is that
+**reasoning about a file was allowed to stand in for an observation of the system**, and both arrive
+as the same confident prose.
+
+> Naming what a system does, does not do, cannot do or has never done means naming the command that
+> was run and what it printed — or the run id, the URL, the file and line. With no observation, the
+> claim is written as **"not checked"**, which is always acceptable and never a failure.
+
+"Not checked" is the half that does the work: an agent that cannot say it invents a verdict instead.
+`tools/pre-pr-check` lists sentences shaped like an unobserved claim — *never run*, *cannot be
+verified*, *unverifiable* — without failing on them, because each of those is legitimate when it is
+true. The full case is in `docs/plan/10b-agents-and-sessions/evidence.md`.
+
 ## The check before the pull request
 
 Also decided on 26/08/2026. An implementing agent runs **`tools/pre-pr-check`** before opening its
