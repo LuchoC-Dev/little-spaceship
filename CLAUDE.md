@@ -34,6 +34,8 @@ Each of these cost hours during the spike.
 - Conversation with the user is always in Spanish.
 - Composition over inheritance. Components are plain data with no logic.
 - **Comments carry the why, not the what.** The code already says what it does. Explain a choice only when it is genuinely counter-intuitive and breaking it would fail silently — the class javadoc, once, briefly. An inline comment is for the line that looks like a mistake and is not. A rule that belongs to the project rather than to one class lives in this file or in `docs/`, not repeated in the code. Everything else is defended by tests whose names state the rule.
+- **A claim about a system cites an observation of that system.** Saying what something does, does not do, cannot do or has never done means naming the command that was run and what it printed — or the run id, the URL, the file and line. With no observation, write **"not checked"**: that is always an acceptable answer and is never treated as a failure. In phase 09 a worker reported CI as never having run on a runner while four real runs sat in the API, following the instruction "say what you verified" to the letter. See `docs/plan/10b-agents-and-sessions/evidence.md`.
+- **Name the file, or say "Not built".** A passage in `docs/` that describes behaviour either names, in backticks, the file that implements it — or says "Not built". It costs a backtick and it is what lets a reader tell a rule that is enforced from one that is only written down. Decided in phase 10a; the argument is in `docs/plan/10a-honest-documentation/mechanism.md`.
 - Logical resolution 480×270, playfield 208 px wide, integer scaling, nearest-neighbour.
 - Drawing is the cost, not simulation. Optimise batching and atlases first, spatial structures for collision only if it ever becomes necessary, concurrency never.
 
@@ -43,7 +45,18 @@ Every commit goes through the `/git-commit` skill — never a bare `git commit`.
 
 Conventional Commits: `type(scope): description`, present tense, imperative mood, under 72 characters. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 
-Work happens on branches, never directly on `main`. Branch names follow `type/description`, lowercase, only `a-z 0-9 . _ -`. Merge back into `main` when the change is complete.
+Nothing is ever committed on `main` or on `dev`. Four levels of branch, each receiving a pull request from the one below:
+
+| Branch | Who commits on it | How work leaves it |
+|---|---|---|
+| `main` | nobody | a pull request from `dev`, **merged by the project owner** |
+| `dev` | nobody | a pull request from a phase branch, merged by a coordinator **only with the project owner's direct approval** |
+| `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
+| `type/description` | the agent doing one task | a pull request against the phase branch |
+
+A phase branch is merged into `dev` by the coordinator **only after the project owner approves it directly**, per pull request — an approval given once is not a standing one. Branch from `dev` only to open a phase. Every agent branches from the **phase branch**, never from `dev`, and names its branch `type/description`, lowercase, only `a-z 0-9 . _ -`. **An agent opens a pull request and stops there — it merges nothing**, not its own branch and not anyone else's. The coordinator merges sub-branches into the phase branch. The full regime is in `docs/plan/how-to-run-a-phase.md`.
+
+**Run `tools/pre-pr-check --base <the phase branch>` before opening a pull request**, and paste its output into it. It is a script and costs no tokens. A red check means no pull request.
 
 When several Claude sessions work in parallel — separate sessions, not subagents — each one gets its own git worktree so they cannot touch each other's files.
 
@@ -66,9 +79,11 @@ Two stores, and the boundary between them matters more than either.
 
 If something matters to the project rather than only to the agent, it belongs in `status.md`, not in a memory file.
 
+**Agent memory lives in the main checkout, never in a worktree.** `.claude/agent-memory/` is tracked, so an agent standing in a worktree writes its memory into that checkout, on that branch, where the next agent will not find it. Run `tools/agent-memory-path <agent>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook in `tools/hooks/` refuses the commit if you forget; install it once per clone with `tools/install-hooks`.
+
 ## Agents
 
-Defined in `.claude/agents/`, each with persistent memory under `.claude/agent-memory/`. Boundaries come from the module architecture, so two agents cannot collide.
+Defined in `.claude/agents/`. Boundaries come from the module architecture, so two agents cannot collide. An agent that declares `memory: project` keeps persistent memory under `.claude/agent-memory/<agent>/`, and the directory appears the first time it writes there — five of the six have one, `test-engineer` has never written.
 
 | Agent | Owns |
 |---|---|

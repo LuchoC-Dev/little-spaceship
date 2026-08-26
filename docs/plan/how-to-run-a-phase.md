@@ -14,29 +14,51 @@ To launch an agent by hand, see [writing prompts for agents](agent-prompts.md).
 ## The cycle
 
 ```
-issue  →  branch  →  work  →  PR  →  reviewer  →  merge  →  status
+issue  →  branch  →  work  →  pre-pr-check  →  PR  →  reviewer  →  merge  →  status
 ```
 
 **Issue.** One per task in the plan. Title from the task, body with the relevant acceptance criteria.
 
-**Branch.** `type/description`, lowercase, only `a-z 0-9 . _ -`. Never work on `main`.
+**Branch.** Four levels, and each one only ever receives a pull request from the level below.
+Decided by the project owner on 26/08/2026; see [the branch regime](#the-branch-regime) below for
+what each level is for.
+
+| Branch | Who commits on it | How work leaves it |
+|---|---|---|
+| `main` | nobody | a pull request from `dev`, **merged by the project owner** |
+| `dev` | nobody | a pull request from a phase branch, merged by a coordinator **only with the project owner's direct approval** |
+| `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
+| `type/description` | the agent doing one task | a pull request against the phase branch |
 
 **Work.** Stay inside your module. If the task pushes you outside it, that is a sign the task belongs to another agent — say so instead of crossing the boundary.
 
 **Commits.** Through the `/git-commit` skill, never a bare `git commit`. One logical change per commit.
 
-**PR.** Opened against `main`, closing its issue. Describe what changed and which acceptance criteria it satisfies.
+**pre-pr-check.** Run `tools/pre-pr-check --base <the phase branch>` before you open anything, and
+paste its output into the pull request. It is a script, so it costs no tokens and it does not depend
+on your judgement: branch name, commit hygiene, a clean tree, no build output, resolvable markdown
+links, the executable bit on scripts, agent memory in the right checkout, and `./gradlew build` when
+the diff touches code. **A red check means no pull request.** It is not a formality — the first time
+it ran it caught the missing executable bit that killed phase 09's first two CI runs.
+
+**PR.** Opened against **the phase branch**, closing its issue. Describe what changed and which acceptance criteria it satisfies. An agent opens the pull request and stops there: **an agent never merges its own branch**, the coordinator does.
 
 **Review.** `reviewer` audits against the acceptance criteria in the plan and the invariants in `CLAUDE.md`, and accepts or rejects. A rejection is normal: it comes back with what failed and why.
 
+A rejection goes back to the worker only while that worker is still open and the fix is inside what it just did. Once it is closed it stays closed: the coordinator takes prose fixes of one or two files, and anything larger becomes a new issue against the state already in Git. `docs/planning/13-working-with-agents.md` has the rule and what phase 09 measured behind it.
+
 **Status.** Update the phase's `status.md` **on the branch, before the PR is reviewed**. It is part of the phase's work, it travels with the code, and it lets the reviewer check whether the status tells the truth. Record what was completed, what is open, and anything the next person needs to know.
 
-**Merge** once accepted.
+**Merge** once accepted — the coordinator merges the sub-branch into the phase branch. When every
+task of the phase is in, the phase branch does **not** merge either: it opens a pull request against
+`dev` and waits. A coordinator may merge that one, **but only with the project owner's direct
+approval on that pull request** — ask, and never treat an earlier approval as covering this one.
+`dev` reaches `main` through a pull request the project owner merges.
 
 **Afterwards**, two writes, and both of them or neither:
 
 1. the phase's `status.md` **`State:` line**, to what the phase actually is now, naming the PR;
-2. the phase table in `docs/STATUS.md`, which describes what is on `main` rather than what a branch claims.
+2. the phase table in `docs/STATUS.md`, which describes what is on `dev` rather than what a branch claims.
 
 Then read back over the `status.md` you just closed and strike out anything in it written in the
 future tense — "remains", "whoever merges should", "not yet" — that the merge has answered. A status
@@ -49,6 +71,29 @@ files had drifted from the table in `docs/STATUS.md` as a result — phase 09's 
 progress" with the MVP shipped. See `docs/plan/10a-honest-documentation/audit.md`, F28 and F29.
 
 Then record in your agent memory what you learned that is **not** in `docs/`: a tool limitation, an operation that behaves differently under TeaVM, where something turned out to live. Not what the phase achieved — `status.md` already says that, and two copies of the same fact end with one of them stale.
+
+## The branch regime
+
+Decided by the project owner on 26/08/2026, and it replaces "work on a branch, merge back into
+`main`". Phases 01–09 all merged straight into `main`, so `main` was simultaneously the trunk, the
+integration branch and the thing the deploy workflow publishes — which is why a half-finished phase
+was one merge away from the live site.
+
+- **`main` is release.** Nothing is committed on it and nothing is merged into it except a pull
+  request from `dev`. **The project owner merges that one**; no coordinator and no agent does.
+- **`dev` is the trunk.** Nothing is committed on it either. Branching from `dev` happens for one
+  reason only: to open a phase.
+- **One phase branch per phase**, `phase/<phase>-<description>` — a super-branch if several phases
+  genuinely run together. When the phase is done it is not merged: it opens a pull request against
+  `dev`, so a whole phase is reviewable as one thing. A coordinator may merge that pull request once
+  the project owner approves it directly; without that approval it stays open.
+- **Every agent branches from the phase branch**, never from `dev`, with the usual
+  `type/description`. It opens a pull request against the phase branch and stops. **A subagent
+  merges nothing.** The coordinator merges the sub-branches.
+
+The point of the two extra levels is control, not ceremony: the phase branch makes a phase reviewable
+as a unit, and `dev` means nothing reaches the published site without a deliberate act by the person
+who owns the project.
 
 ## Writing anything into `docs/`
 
@@ -87,10 +132,10 @@ Three things are worth interrupting for, always:
 
 ## Parallel work
 
-If another session is working at the same time, use a worktree:
+If another session is working at the same time, use a worktree, branched from the phase branch:
 
 ```bash
-git worktree add ../little-spaceship-<task> -b <type>/<description>
+git worktree add ../little-spaceship-<task> -b <type>/<description> phase/<phase>-<description>
 ```
 
 The art lane and the code lane always run in parallel, so this is the normal case rather than the exception.

@@ -42,8 +42,23 @@ Record what you learned that the repository has no reason to hold: a tool limita
 
 **Not phase progress.** That belongs in the phase's `status.md`. When the same fact lives in both, one of them goes stale without anyone noticing — it has already happened here once.
 
+**Where memory is written.** `.claude/agent-memory/` is tracked, so from a worktree you would write it into the wrong checkout. Run `tools/agent-memory-path <your name>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook refuses the commit if you forget.
+
+
 ## Commits
 
 Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.
 
 Conventional Commits: `type(scope): description`, imperative mood, under 72 characters. One logical change per commit. No secrets, no local artifacts, no `Co-Authored-By` trailers. Never force-push, never skip hooks, never amend after a hook rejection — fix and commit again.
+
+## Evidence
+
+A claim about a system cites an observation of that system. Saying what something does, does not do, cannot do or has never done means naming the command you ran and what it printed — or the run id, the URL, the file and line. If you did not look, write **"not checked"**: it is always an acceptable answer and it is never held against you. Phase 09 reported CI as never having run on a runner while four real runs sat in the API, one `gh run list` away.
+
+## Branches and the pull request
+
+Branch from the **phase branch** the coordinator gave you, never from `dev` and never from `main`. Name it `type/description`.
+
+Before you open anything, run `tools/pre-pr-check --base <the phase branch>` and paste its output into the pull request. It is a script, so it costs you nothing and it does not depend on how the work feels: **a red check means no pull request.**
+
+Open the pull request against the phase branch, and stop there. **You merge nothing** — not your own branch, not anyone else's. The coordinator merges.
