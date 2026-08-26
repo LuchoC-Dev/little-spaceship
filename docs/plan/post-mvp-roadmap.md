@@ -75,6 +75,12 @@ It is now split into three planned phases, in this order:
 
 The sections below are what those three plans were written from.
 
+**How the group is run**, decided on 25/08: a **fresh coordinator session** owns all three — none of the
+six agents owns `docs/` or the working system, and 10b auditing agent definitions is awkward work to
+hand to an agent. **No `reviewer` pass**, on the grounds that the group changes documents rather than
+code. 10b may change `CLAUDE.md`, with a written justification for each edit. The git and worktree
+workflow is explicitly out of scope.
+
 ### Agents and the way sessions are run
 
 `docs/planning/13-working-with-agents.md` records the audit that produced the current regime: ~3,300

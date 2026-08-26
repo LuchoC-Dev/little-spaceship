@@ -1,6 +1,6 @@
 # Phase 10c — Architecture review
 
-**Lane:** process · **Owner:** coordinator, with `reviewer` and `core-domain` consulted · **Depends on:** 10a, 10b · **Last of the 10 group**
+**Lane:** process · **Owner:** a fresh coordinator session, with `core-domain` consulted · **Depends on:** 10a, 10b · **Last of the 10 group**
 
 ## Before you start
 
