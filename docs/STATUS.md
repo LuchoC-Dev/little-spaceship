@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 25/08/2026.
+Last updated: 26/08/2026.
 
 Read this first if you are picking the project up. It says where things stand and what comes next; `CLAUDE.md` says how to work here.
 
@@ -19,6 +19,11 @@ A pattern worth knowing before you trust any phase marked done: **three times in
 phase had "delivered" turned out to exist only under `docs/design/`, with nothing in `assets/` and no
 code loading it** — the sprites, then the fonts. A phase status saying the art is drawn does not mean
 the game can draw it. Check `assets/` and check what the loader actually asks for.
+
+Phase 10a found the **fourth** instance on 26/08: `docs/design/skin/` holds a generated `skin.png`,
+`skin.atlas` and `skin.json`, and `07-skin.md` announced them under "What ships". Nothing loads them —
+`GameSkin` builds the whole skin in code. Unlike the first three that is not a defect, only a
+document, and it is corrected; but four is a pattern, not bad luck.
 
 What exists in the repository:
 
@@ -244,10 +249,19 @@ The short version lives in `CLAUDE.md`: invariants, web-target pitfalls, convent
 
 ## What comes next
 
-**The MVP is shipped, so what comes next is the post-MVP work.** Four phases, in order, with the
+**The MVP is shipped, so what comes next is the post-MVP work.** Four groups, in order, with the
 reordering first so everything after it is built on a base that holds:
-[`docs/plan/post-mvp-roadmap.md`](plan/post-mvp-roadmap.md). Nothing in it is scheduled or planned in
-detail yet — each phase gets its own folder when it is picked up.
+[`docs/plan/post-mvp-roadmap.md`](plan/post-mvp-roadmap.md).
+
+**The 10 group is planned and 10a is done.** Phase 10a audited every document here against the code
+and corrected what was false — [the audit](plan/10a-honest-documentation/audit.md) is the record, and
+it is worth reading before trusting any document in this repository, because it says which ones were
+checked and what each one got wrong. **10b** (agents and sessions) is next, then **10c**
+(architecture review). None of the 10 group changes production code; it decides, and the 11 group
+executes. Four issues were handed forward: [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52),
+[#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53),
+[#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) and
+[#56](https://github.com/LuchoC-Dev/little-spaceship/issues/56).
 
 Four issues came out of playing the deployed build on 25/08:
 [#40](https://github.com/LuchoC-Dev/little-spaceship/issues/40) QUIT is dead on web,
@@ -282,6 +296,9 @@ Everything the three merged branches left unwired is closed.
 | 07 | Boss | **merged** — #29, with level 1 and enemy fire. Four archetypes shoot; the boss fans 6 projectiles a volley |
 | 08 | Audio and polish | **merged** — #31, with both dead cues wired on 25/08. Nobody has heard it yet; phase 09's browser pass is the first listen |
 | 09 | Web, CI and release | **done** — launcher (#33), CI (#35), README (#37) and Pages deploy (#39). The game is live |
+| 10a | Honest documentation | **done** — every document in `docs/` audited against the code, 33 false statements corrected, #5 resolved, #3 and #4 decided, and a mechanism chosen. See [the audit](plan/10a-honest-documentation/audit.md) |
+| 10b | Agents and sessions | not started |
+| 10c | Architecture review | not started |
 
 ## Open items that do not block
 
