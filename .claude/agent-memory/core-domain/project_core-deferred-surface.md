@@ -9,12 +9,18 @@ The core grew deliberately incomplete: each phase adds only what its own systems
 
 **How to apply:** before adding a type to `core.port` or a component to the domain, check whether it was deferred here with a reason.
 
+> **Corrected on 26/08/2026 by the phase 10b memory audit.** Two entries below had gone stale, and the
+> reason is structural rather than careless: this file tracks *what was built in which phase*, which
+> `CLAUDE.md` says belongs in `status.md` and not in memory, so every phase silently falsifies it. The
+> entries are now marked where they were wrong. Read the bullets for **why** something was left out;
+> do not trust them for **whether** it still is — `git grep` answers that in a second.
+
 - `WorldView.player()` — **built in phase 03.** `WorldView.bossStatus()` — **built in phase 07**,
   a `(present, hp, hpMax)` snapshot only; per-part tell state deliberately has no contract of its own
   — see below.
 - `ContentSource.enemy()`, `.trajectory()`, `.formation()` and `.timeline()` — **built in phase 04.**
   `ContentSource.pattern()` is not: see below. `.hasBoss()`/`.boss()` — **built in phase 07.**
-- Concrete `GameEvent` implementations — **still deferred as of phase 07**, seven phases running now.
+- Concrete `GameEvent` implementations — ~~still deferred as of phase 07~~ **partly built: `EnemyDestroyed` exists in `core/domain/event/`.** The reasoning below still holds for the ones that do not (`PlayerHit`, `AttachmentLost`).
   `DamageSystem` and `CollisionSystem` remain the natural emitters per `12-architecture.md`
   (`PlayerHit`, `AttachmentLost`); phase 07 needed a "boss fight started" signal for the music-change
   hook and deliberately did *not* become the first to build a `GameEvent` for it — `BossStatus.present`
@@ -44,8 +50,10 @@ The core grew deliberately incomplete: each phase adds only what its own systems
   flagged it as an unbuilt gap: the coordinator came back mid-phase and said the strong encounter's
   own reason for existing (two heavy carriers producing "sustained pressure" instead of two large,
   stationary targets) depended on it, so the initial "no consumer yet" call was corrected before the
-  PR closed rather than left as a follow-up issue. `enemy-shooter`'s higher rate of fire is still
-  unbuilt — no `"weapon"` factory for enemies exists — since nothing in phase 07 needed one.
+  PR closed rather than left as a follow-up issue. ~~`enemy-shooter`'s higher rate of fire is still
+  unbuilt — no `"weapon"` factory for enemies exists~~ — **built after phase 07**: `ComponentFactoryRegistry`
+  registers `"weapon"`, the component is `EnemyWeapon`, and every archetype in `assets/data/enemies.json`
+  declares one.
 - `ScoreValue`, `Drop` components — built in phase 04, **now read** (phase 05): `ScoreValue` by
   `ScoreSystem`, `Drop` by `CleanupSystem`, which turns it into an actual `Pickup` entity read in
   turn by `PickupSystem`.
