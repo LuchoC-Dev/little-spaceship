@@ -3,9 +3,17 @@
 Written on 25/08/2026, the day the MVP shipped, from the player's direction after playing the
 deployed build, and expanded the same day.
 
-This document says **what the phases after 09 are, why, and in what order**. It does not plan them in
-detail: each one gets its own folder under `docs/plan/` with a `plan.md` and a `status.md` when it is
-picked up, the same as phases 01–09. Nothing here is scheduled.
+Phases 01–09 are done. They were planned as a numbered sequence, and everything past them sat in that
+plan as a single lump called post-MVP. This document breaks that lump into **four groups of work**, in
+order.
+
+**Each group here becomes several numbered phases when it is picked up** — 11a, 11b, 11c and so on —
+each with its own folder under `docs/plan/`, its own `plan.md` with acceptance criteria and its own
+`status.md`, exactly as 01–09 had. So a group being large is not a problem to solve here: that is what
+the subdivision is for. What matters at this level is **what belongs to which group, and in what
+order**, because the order is what cannot be fixed later.
+
+Nothing here is scheduled.
 
 Read `docs/STATUS.md` first for where the project actually stands.
 
@@ -165,6 +173,10 @@ not forget, and do not have to look at the code every time.
 **This is now load-bearing**, because it is what an agent reads to build later levels (see the end of
 this document). It is not a convenience any more.
 
+**The player's intent, stated on 25/08:** the level's design lives in one place — a JSON or a
+document — so it can be seen and changed easily. The exact form is still to be worked out, but "one
+place" is the part that matters, and it is what the paragraph below is about.
+
 **And it inherits this project's worst failure mode.** Documents here drift from the code — three
 times with art, twice in phase 09 with status files. A document that describes the level *and* a JSON
 that defines it are two copies of one truth, and one of them will rot. The options are not equal:
@@ -191,13 +203,17 @@ by hand will. **This must be decided before anything is built.**
 
 #40, #41, #42 and #43 are fixed in this phase.
 
-### Risk
+### The order inside this group is not arbitrary
 
-**As written, this is several phases of work.** Waves, movement, the per-level document, a full stats
-redesign, a boss redesign, a length cut and four defects. The regime says one issue per worker and
-split past 60–80 calls. This should be broken into numbered sub-phases before it opens, with waves
-first — balance and movement are expressed *inside* waves, so rebalancing 92 flat rows and then
-regrouping them into waves is doing the work twice.
+This group becomes several numbered phases, as every group here does. What must survive the
+subdivision is the sequence:
+
+**Waves come first.** Balance and movement are expressed *inside* waves. Rebalancing 92 flat rows and
+then regrouping them into waves is doing the work twice, and redesigning the boss before the level's
+new length is known means tuning a fight against a pacing that no longer exists.
+
+The per-level document should be settled early too, since it is the format everything after it is
+written in.
 
 Also open from before: the intensity-curve tooling, carried as non-blocking since the level's length
 and climax were decided.
@@ -212,9 +228,16 @@ across its five levels.
 The story planned here is a working outline: it covers five levels while only three exist. Phase 13
 completes it.
 
-This is also the **first real test of whether phase 11 worked.** If building level 2 is not markedly
-easier than building level 1 was, the base did not do its job, and that is worth finding out at level
-2 rather than at level 5.
+This is also the **first real test of whether the code reordering worked**, and it is worth treating as
+an acceptance criterion rather than a hope.
+
+The waves, the movement system and the per-level document exist to make building levels easy. While
+only level 1 exists there is no way to know whether they did: level 1 was built with the old system
+and is already finished. The first honest measurement is someone building level 2 with the new one.
+If that costs as much as level 1 did, the base did not deliver what it was built for.
+
+Finding that out at level 2 means correcting with one level built on top. Finding it out at level 5
+means correcting with four.
 
 ---
 
