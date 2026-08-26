@@ -78,6 +78,8 @@ Two stores, and the boundary between them matters more than either.
 
 If something matters to the project rather than only to the agent, it belongs in `status.md`, not in a memory file.
 
+**Agent memory lives in the main checkout, never in a worktree.** `.claude/agent-memory/` is tracked, so an agent standing in a worktree writes its memory into that checkout, on that branch, where the next agent will not find it. Run `tools/agent-memory-path <agent>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook in `tools/hooks/` refuses the commit if you forget; install it once per clone with `tools/install-hooks`.
+
 ## Agents
 
 Defined in `.claude/agents/`. Boundaries come from the module architecture, so two agents cannot collide. An agent that declares `memory: project` keeps persistent memory under `.claude/agent-memory/<agent>/`, and the directory appears the first time it writes there — five of the six have one, `test-engineer` has never written.
