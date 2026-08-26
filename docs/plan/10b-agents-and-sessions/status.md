@@ -104,6 +104,10 @@ Nothing.
 - **`tools/install-hooks` is per clone.** A fresh clone of this repository has no hooks until someone
   runs it once. `tools/pre-pr-check` reports the same condition the hook does, so a missed install is
   caught at the pull request rather than at the commit.
+- **Who merges a phase into `dev`**: a coordinator or lead may, **only with the project owner's
+  direct approval on that pull request**, and approval of one phase does not carry to the next. This
+  was the one gap in the regime as first written; the owner answered it on 26/08/2026 and it is in
+  `CLAUDE.md`, `how-to-run-a-phase.md` and `13-working-with-agents.md` (PR #77).
 - **The measurement's biggest number is a model choice, not a workflow.** Running a coordinator on
   Opus cost roughly five times what the same traffic on Sonnet would have. Phase 10c is the next
   chance to test whether "Sonnet coordinates; Opus decides" can actually be followed, given that this
