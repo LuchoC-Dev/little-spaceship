@@ -1,8 +1,10 @@
 # Phase 10b — Agents and the way sessions are run
 
-**Lane:** process · **Owner:** coordinator · **Depends on:** 10a · **Second of the 10 group**
+**Lane:** process · **Owner:** a fresh coordinator session · **Depends on:** 10a · **Second of the 10 group**
 
 ## Before you start
+
+**This phase may change `CLAUDE.md`**, which governs every agent in the project. That is allowed, by the player's decision, **with a written justification for each edit** — the file is where the invariants, conventions and commit rules live, so a rule wrongly placed there propagates everywhere.
 
 **Read, in this order:**
 
@@ -47,12 +49,14 @@ Three things phase 09 surfaced that belong here rather than to any single agent:
 - The "verified" failure has a countermeasure, and it names the phase 09 case as the thing it prevents.
 - Agent memory has been audited: what stays, what goes, why.
 - `docs/planning/13-working-with-agents.md` reflects all of it.
+- **`CLAUDE.md` is updated where the regime changed**, and every edit to it cites what motivated it.
 
 ## What is out of scope
 
 - **Any change to game code.** This group decides and adjusts process; the 11 group touches code.
 - Adding new agents. If the audit concludes one is missing, that is a finding, not a task.
 - Changing module ownership boundaries — that depends on 10c.
+- **The git and worktree workflow.** Creating, merging and cleaning up worktrees by hand is repetitive and error-prone — one session did about ten — but the player has ruled it out of scope for this group, to stop 10b widening indefinitely. The one part that *is* in scope is task 3, because the memory path is a correctness trap rather than a convenience.
 
 ## Risks
 

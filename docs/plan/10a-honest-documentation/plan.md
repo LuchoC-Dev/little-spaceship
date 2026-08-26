@@ -1,6 +1,6 @@
 # Phase 10a — Honest documentation
 
-**Lane:** process · **Owner:** coordinator, with `reviewer` · **Depends on:** 09 · **Runs first of the 10 group**
+**Lane:** process · **Owner:** a fresh coordinator session · **Depends on:** 09 · **Runs first of the 10 group**
 
 ## Before you start
 
@@ -63,4 +63,6 @@ This is not a tidiness exercise. Documents drifting from the code has caused rea
 
 ## Workflow
 
-See [how to run a phase](../how-to-run-a-phase.md). One issue per task, one branch per issue, PR closing it, `reviewer` accepts against the criteria above, then update `status.md`.
+See [how to run a phase](../how-to-run-a-phase.md). One issue per task, one branch per issue, PR closing it, then update `status.md`.
+
+**No `reviewer` pass on this group** — the player's decision, on the grounds that it changes documents rather than code. Recorded here because it is a departure from how 01–09 ran, and because phase 09's two rejections were both false claims *in documents*, one of them written by the coordinator. If a review step is ever added back, this is the phase that most needs it.
