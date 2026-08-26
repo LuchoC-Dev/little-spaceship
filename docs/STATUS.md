@@ -24,7 +24,7 @@ What exists in the repository:
 
 - `docs/planning/` — fourteen documents covering vision, MVP spec, game systems, campaign, progression, balance values, architecture and the agent workflow.
 - `docs/sources/` — the verbatim ChatGPT transcript the planning came from. Spanish on purpose; it is evidence.
-- `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. It can be deleted once it stops being useful.
+- `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. **Not deletable yet**, and this is the one exception: `rngcheck/` is the only measurement that `Rng` produces a bit-identical stream under TeaVM, which is invariant 2 checked on the runtime that would break it silently. It moves onto the real class as a Gradle task in [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52); the spike goes when that lands. Everything else in the directory is finished with. Resolves [#5](https://github.com/LuchoC-Dev/little-spaceship/issues/5); see `docs/plan/10a-honest-documentation/decisions.md`, D1.
 - `docs/design/` — the visual direction: the closed `ls32` palette, sprite sizes in pixels per archetype, bitmap typography, HUD layout, legibility rules, and pixel-exact mocks. Synchronisation point 1, settled.
 - `.claude/agents/` — six agent definitions with project-scoped persistent memory.
 - `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring, the boss and its six colliders. **289 tests**, no libGDX on its classpath.
