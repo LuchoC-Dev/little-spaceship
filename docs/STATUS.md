@@ -253,11 +253,18 @@ The short version lives in `CLAUDE.md`: invariants, web-target pitfalls, convent
 reordering first so everything after it is built on a base that holds:
 [`docs/plan/post-mvp-roadmap.md`](plan/post-mvp-roadmap.md).
 
-**The 10 group is planned and 10a is done.** Phase 10a audited every document here against the code
-and corrected what was false — [the audit](plan/10a-honest-documentation/audit.md) is the record, and
-it is worth reading before trusting any document in this repository, because it says which ones were
-checked and what each one got wrong. **10b** (agents and sessions) is next, then **10c**
-(architecture review). None of the 10 group changes production code; it decides, and the 11 group
+**The 10 group is planned; 10a and 10b are done.** Phase 10a audited every document here against the
+code and corrected what was false — [the audit](plan/10a-honest-documentation/audit.md) is the record,
+and it is worth reading before trusting any document in this repository, because it says which ones
+were checked and what each one got wrong. Phase 10b then measured what a phase costs, audited the six
+agent definitions and nine phases of agent memory, and changed how work reaches `main`. **10c**
+(architecture review) is next.
+
+**How work reaches `main` changed on 26/08/2026**, by the project owner's decision: `main` ← `dev` ←
+one phase branch ← one sub-branch per agent. Nothing is committed on `main` or `dev`, a phase opens a
+pull request against `dev` rather than merging, an agent merges nothing, and only the project owner
+merges `dev` into `main`. Every agent runs `tools/pre-pr-check` before opening a pull request. The
+whole regime is in [how to run a phase](plan/how-to-run-a-phase.md). None of the 10 group changes production code; it decides, and the 11 group
 executes. Four issues were handed forward: [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52),
 [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53),
 [#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) and
@@ -297,7 +304,7 @@ Everything the three merged branches left unwired is closed.
 | 08 | Audio and polish | **merged** — #31, with both dead cues wired on 25/08. Nobody has heard it yet; phase 09's browser pass is the first listen |
 | 09 | Web, CI and release | **done** — launcher (#33), CI (#35), README (#37) and Pages deploy (#39). The game is live |
 | 10a | Honest documentation | **done** — every document in `docs/` audited against the code, 33 false statements corrected, #5 resolved, #3 and #4 decided, and a mechanism chosen. See [the audit](plan/10a-honest-documentation/audit.md) |
-| 10b | Agents and sessions | not started |
+| 10b | Agents and sessions | **done** — phase 09 measured (813 calls, $110.76 equivalent, 83 % of it the coordinator's model choice), the six agent definitions and 46 memory files audited, the agent-memory worktree trap closed with a hook, an evidence rule for claims about a system, and the `dev`/phase/sub-branch regime with `tools/pre-pr-check`. See [the measurement](plan/10b-agents-and-sessions/measurement.md) |
 | 10c | Architecture review | not started |
 
 ## Open items that do not block

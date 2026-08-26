@@ -1,85 +1,83 @@
 # Phase 10b — Agents and the way sessions are run · status
 
-**State:** in progress — tasks 1, 3, 7 and 8 landed on the phase branch; tasks 2, 4, 5 and 6 open
+**State:** done — all eight tasks landed on `phase/10b-agents-and-sessions`, which opens a pull request against `dev`
 **Updated:** 26/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
 
-This is the first phase run under the branch regime it introduced: everything below lands on
-`phase/10b-agents-and-sessions`, one sub-branch per issue, and the phase reaches `dev` as a single
-pull request rather than nine merges into `main`.
+This is the first phase run under the branch regime it introduced: everything below landed on
+`phase/10b-agents-and-sessions`, one sub-branch and one pull request per issue, merged by the
+coordinator, and the phase reaches `dev` as a single pull request instead of nine merges into `main`.
 
 ## Done
 
+Eight tasks, eight issues, eight pull requests merged into the phase branch (#67–#74).
+
 **Task 1, what phase 09 cost** (issue [#59](https://github.com/LuchoC-Dev/little-spaceship/issues/59),
 PR [#69](https://github.com/LuchoC-Dev/little-spaceship/pull/69)) —
-[`measurement.md`](measurement.md). 813 model calls, 72.3 M cache-read tokens, $110.76 equivalent at
-public API rates. The coordinator is 38 % of the calls and 83 % of the cost; `reviewer` on Sonnet
-held, 4 of 4; zero spend limits against fourteen in the audited period; and two thirds of the cost is
-still re-reading history, unchanged by the regime. A call at the end of the phase cost 2.3× a call at
-its start, two hours apart.
+[`measurement.md`](measurement.md). Summed from the session transcript and its eight subagent
+transcripts: **813 model calls, 72.3 M cache-read tokens, $110.76** at public API rates. The
+coordinator is 38 % of the calls and **83 % of the cost**, because it ran on Opus while every
+subagent ran on Sonnet. `reviewer` on Sonnet held, 4 of 4. Zero spend limits, against fourteen in the
+audited period. Two thirds of the cost is still re-reading history — the regime cut the total and did
+not change the shape. A call at the end of the phase cost 2.3× a call at its start, two hours apart.
 
-**Task 3, the memory-path trap** (issue [#61](https://github.com/LuchoC-Dev/little-spaceship/issues/61)).
+**Task 2, the six agent definitions** (issue [#60](https://github.com/LuchoC-Dev/little-spaceship/issues/60),
+PR [#74](https://github.com/LuchoC-Dev/little-spaceship/pull/74)) — [`agent-audit.md`](agent-audit.md).
+`level-designer` had no `memory: project`, so 141 lines of its memory had never been loaded;
+`reviewer` said "You change nothing" while having to commit its own memory, which ended two of four
+phase 09 reviews in memory logistics; the roster in `13-working-with-agents.md` listed five agents and
+argued that the sixth had been deliberately not created (F27). Three findings were deliberately **not**
+turned into rules, with the reason written down.
 
-- `tools/agent-memory-path <agent>` prints the canonical directory by resolving
-  `git rev-parse --git-common-dir`, which is shared by every worktree, so the answer is identical
-  from all of them.
-- `tools/hooks/pre-commit` refuses a commit that stages `.claude/agent-memory/` from a linked
-  worktree and names the directory to use instead. It is installed through `core.hooksPath`, which
-  lives in the clone's shared config — `tools/install-hooks`, run once, covers every worktree,
-  including ones created later. That is what makes it survive being forgotten.
-- **Tested by a `test-engineer` working from a real worktree**, told to try to walk around it. The
-  hook refused a direct `git add`, `git commit -a`, a commit from a nested subdirectory, a memory
-  file mixed into an unrelated commit, `git commit --amend`, and a worktree created *after* the hook
-  was installed. Nothing accidental got past it; the agent used `--no-verify` never. Its findings are
-  in `.claude/agent-memory/test-engineer/project_memory-path-hook-verification.md`, which is also the
-  first memory that agent has ever written (finding F32 of the 10a audit).
-- **The hook caught a defect in itself.** Committing from the main checkout, it wrongly refused:
-  `git rev-parse --absolute-git-dir` answers `C:/...` on Windows while the common dir resolves to
-  `/c/...`, and the two raw strings never match. Both sides now go through `cd … && pwd`, in the hook
-  and in `pre-pr-check`.
-- Known limit, recorded rather than hidden: git skips `pre-commit` on merge commits. That is not a
-  hole here, since a merge can only carry memory that was already committed correctly somewhere else.
+**Task 3, the memory-path trap** (issue [#61](https://github.com/LuchoC-Dev/little-spaceship/issues/61),
+PR [#70](https://github.com/LuchoC-Dev/little-spaceship/pull/70)). `tools/agent-memory-path <agent>`
+prints the canonical directory from any worktree; `tools/hooks/pre-commit` refuses a commit staging
+`.claude/agent-memory/` from a linked worktree; `core.hooksPath` makes one install cover every
+worktree, including later ones. **Tested by a `test-engineer` working from a real worktree** and told
+to try to walk around it: refused on `git add`, `git commit -a`, a nested subdirectory, a mixed
+commit, `--amend`, and a worktree created after the install. The hook then caught a defect in itself —
+`--absolute-git-dir` answers `C:/…` on Windows while the common dir resolves to `/c/…`.
+
+**Task 4, the "verified" failure** (issue [#62](https://github.com/LuchoC-Dev/little-spaceship/issues/62),
+PR [#71](https://github.com/LuchoC-Dev/little-spaceship/pull/71)) — [`evidence.md`](evidence.md). A
+claim about a system cites an observation of that system; with no observation, write **"not
+checked"**, which is always acceptable. `tools/pre-pr-check` lists added markdown lines shaped like an
+unobserved claim without failing on them. Checked against the real commit that carried phase 09's
+false sentence, `4e11d87`, which it does flag — after being fixed, because the sentence wraps across
+two lines and a line-by-line grep missed it.
+
+**Task 5, nine phases of agent memory** (issue [#63](https://github.com/LuchoC-Dev/little-spaceship/issues/63),
+PR [#73](https://github.com/LuchoC-Dev/little-spaceship/pull/73)) — [`memory-audit.md`](memory-audit.md).
+46 files, 2,142 lines, every backticked reference resolved against the repository. **Nothing deleted,
+two files corrected**: `core-deferred-surface.md`, the one file that keeps an inventory of what was
+built in which phase — forbidden by `CLAUDE.md` — and the only one that rotted; and the reviewer's
+`review-tooling-and-memory-placement.md`, which taught the memory-path trap as a technique.
+
+**Task 6, where a correction goes** (issue [#64](https://github.com/LuchoC-Dev/little-spaceship/issues/64),
+PR [#72](https://github.com/LuchoC-Dev/little-spaceship/pull/72)). Back to the worker only while it is
+still open and the fix is inside what it just did; once closed it stays closed, and the work becomes a
+new issue against the state in Git; the coordinator takes prose fixes of one or two files, which is
+what both phase 09 rejections were. The limit: a third correction absorbed in one phase means the plan
+is defective, not the work.
+
+**Task 7, the branch regime** (issue [#65](https://github.com/LuchoC-Dev/little-spaceship/issues/65),
+PR [#68](https://github.com/LuchoC-Dev/little-spaceship/pull/68)). `main` ← `dev` ←
+`phase/<phase>-<description>` ← `type/description`. Nothing is committed on `main` or `dev`; only the
+project owner merges `dev` into `main`; an agent opens a pull request and **merges nothing**. Written
+into `CLAUDE.md`, `how-to-run-a-phase.md`, `13-working-with-agents.md` and all six agent definitions.
 
 **Task 8, the pre-PR check** (issue [#66](https://github.com/LuchoC-Dev/little-spaceship/issues/66),
-PR [#67](https://github.com/LuchoC-Dev/little-spaceship/pull/67)).
+PR [#67](https://github.com/LuchoC-Dev/little-spaceship/pull/67)). `tools/pre-pr-check`, ten checks and one
+non-failing note, no tokens. **It caught a real defect on its first run, on itself** — committed mode `100644`, the same
+failure that killed phase 09's first two CI runs.
 
-- `tools/pre-pr-check` is one POSIX shell script, run as
-  `tools/pre-pr-check --base <the phase branch>`. Nine checks: the branch is not `main`/`dev` and is
-  named `type/description`; there are commits to open a pull request for; commit subjects are
-  Conventional Commits under 72 characters with no `Co-Authored-By`; the tree is clean;
-  `.claude/agent-memory/` was not written from a linked worktree; no `build/`, `.gradle/`, `.class`
-  or `.log` in the diff; markdown links in changed documents resolve; scripts under `tools/` and
-  `gradlew` carry the executable bit in the index; and `./gradlew build`, but only when the diff
-  touches code.
-- **It caught a real defect on its first run, on itself**: the script had been committed as mode
-  `100644`. That is the same defect that made phase 09's first two CI runs die in fifteen seconds
-  with `./gradlew: Permission denied`, and it is the acceptance criterion the issue asked for.
-- Code references in documents are deliberately *not* checked here — that is `docs-refs`, issue
-  [#56](https://github.com/LuchoC-Dev/little-spaceship/issues/56), handed to the 11 group.
-
-**Task 7, the branch regime** (issue [#65](https://github.com/LuchoC-Dev/little-spaceship/issues/65)).
-
-- `main` ← `dev` ← `phase/<phase>-<description>` ← `type/description`. Nothing is committed on `main`
-  or `dev`; `main` receives only a pull request from `dev` and only the project owner merges it; a
-  phase opens a pull request against `dev` instead of merging; every agent branches from the phase
-  branch and **merges nothing**, the coordinator merges the sub-branches.
-- Written into `CLAUDE.md`, `docs/plan/how-to-run-a-phase.md` (the cycle, the branch table, a "branch
-  regime" section and the worktree command) and `docs/planning/13-working-with-agents.md`.
-- All six agent definitions in `.claude/agents/` gained the same "Branches and the pull request"
-  section: branch from the phase branch, run the check, open the pull request, merge nothing.
-- `level-designer`'s stale "Work on a branch, never on `main`" line was removed rather than left to
-  contradict the new table.
-
-**`CLAUDE.md` edits so far**, each with its justification in
-[`claude-md-changes.md`](claude-md-changes.md), which is the phase plan's condition for touching that
-file: the branch regime, the pre-PR check, phase 10a's "name the file, or say Not built" convention,
-and F32 — the claim that all six agents have a memory directory, when `test-engineer` has never
-written one.
+**`CLAUDE.md`** carries six edits, each justified in [`claude-md-changes.md`](claude-md-changes.md),
+which is the plan's condition for touching that file.
 
 ## In progress
 
-Tasks 2, 4, 5 and 6 — issues [#60](https://github.com/LuchoC-Dev/little-spaceship/issues/60), [#62](https://github.com/LuchoC-Dev/little-spaceship/issues/62), [#63](https://github.com/LuchoC-Dev/little-spaceship/issues/63) and [#64](https://github.com/LuchoC-Dev/little-spaceship/issues/64).
+Nothing.
 
 ## Blocked
 
@@ -88,15 +86,25 @@ Nothing.
 ## Decisions taken while implementing
 
 - **The git workflow came back into scope**, by the project owner on 26/08/2026, after the phase had
-  started. `plan.md` listed it as out of scope; that bullet is now struck through and tasks 7 and 8
-  were added. What remains out of scope is worktree *ergonomics* — creating and cleaning them up is
-  still done by hand.
-- **The check is a script, not a checklist.** Phase 09's evidence is that instructions produce false
-  claims when an agent is tired and a command does not, which is also why task 4's countermeasure
-  points at the same instrument.
-- **The pre-PR check does not verify code references in documents.** That would duplicate `docs-refs`
-  (#56), which the 11 group owns, and two checkers with one job is how one of them rots.
+  started. `plan.md`'s out-of-scope bullet is struck through and tasks 7 and 8 were added. What stays
+  out is worktree *ergonomics* — creating and cleaning them up is still by hand.
+- **The check is a script, not a checklist**, and the claim detector inside it **warns rather than
+  fails**. Every phrase it matches is legitimate when true, and a check that failed on `CLAUDE.md`'s
+  own "headless Chrome cannot validate the web runtime" would be switched off within a phase.
+- **Nothing in agent memory was deleted.** The one file that broke the rule holds the only copy of
+  reasoning that exists nowhere else; deleting the duplicate would have taken the original with it.
+- **Three candidate rules were rejected on cost**, and the reasons are in `agent-audit.md`. Every rule
+  added is read by every agent on every phase, which is the finding that produced this regime.
 
 ## Notes for whoever comes next
 
-—
+- **The issues are still open on GitHub.** A pull request merged into a phase branch does not close
+  its issue — GitHub only auto-closes on the default branch. #59–#66 are closed by hand with a comment
+  naming their pull request.
+- **`tools/install-hooks` is per clone.** A fresh clone of this repository has no hooks until someone
+  runs it once. `tools/pre-pr-check` reports the same condition the hook does, so a missed install is
+  caught at the pull request rather than at the commit.
+- **The measurement's biggest number is a model choice, not a workflow.** Running a coordinator on
+  Opus cost roughly five times what the same traffic on Sonnet would have. Phase 10c is the next
+  chance to test whether "Sonnet coordinates; Opus decides" can actually be followed, given that this
+  project has broken it in every phase measured so far — including this one.
