@@ -57,6 +57,10 @@ looked. Not phase progress: that lives in `status.md`.
 
 Write it in the directory `tools/agent-memory-path level-designer` prints, never in a worktree's copy of `.claude/agent-memory/` — the `pre-commit` hook refuses the commit if you forget.
 
+## Evidence
+
+A claim about a system cites an observation of that system. Saying what something does, does not do, cannot do or has never done means naming the command you ran and what it printed — or the run id, the URL, the file and line. If you did not look, write **"not checked"**: it is always an acceptable answer and it is never held against you. Phase 09 reported CI as never having run on a runner while four real runs sat in the API, one `gh run list` away.
+
 ## Branches and the pull request
 
 Branch from the **phase branch** the coordinator gave you, never from `dev` and never from `main`. Name it `type/description`.

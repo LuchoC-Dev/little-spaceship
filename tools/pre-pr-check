@@ -161,7 +161,35 @@ for SCRIPT in $(printf '%s\n' "$CHANGED" | grep -E '^(tools/|gradlew$)' || true)
 done
 [ "$NOT_EXECUTABLE" -eq 0 ] && pass "scripts carry the executable bit" || fail "$NOT_EXECUTABLE script(s) would arrive at a Linux runner without the executable bit"
 
-# 7. The build, but only when the change can break it. A documentation phase that
+# 7. Claims about a system that may have no observation behind them. In phase 09
+#    a worker wrote "it has never been run on an actual GitHub Actions runner"
+#    while four real runs sat in the API. This does NOT fail the check: every one
+#    of these phrases is legitimate when it is true, and a check that failed on
+#    them would be switched off inside a phase. It makes the claim visible while
+#    running one command is still cheap.
+CLAIM_RE='never[[:space:]]+(been[[:space:]]+)?(run|ran|executed|tested)|has[[:space:]]+not[[:space:]]+been[[:space:]]+run|cannot[[:space:]]+be[[:space:]]+(verified|tested|proven)|unverifiable|no[[:space:]]+way[[:space:]]+to[[:space:]]+verify|impossible[[:space:]]+to[[:space:]]+(verify|test)'
+CLAIMS_FOUND=0
+for MD in $MD_FILES; do
+  # Added lines are joined into one stream first: a claim usually wraps across
+  # two lines, which is how phase 09's own sentence would have escaped a
+  # line-by-line grep.
+  TEXT="$(git diff "$MERGE_BASE..HEAD" -- "$MD" | grep '^+' | grep -v '^+++' | sed 's/^+//' | tr '
+' ' ')"
+  HITS="$(printf '%s' "$TEXT" | grep -oEi ".{0,45}($CLAIM_RE).{0,45}" || true)"
+  if [ -n "$HITS" ]; then
+    if [ "$CLAIMS_FOUND" -eq 0 ]; then
+      echo
+      echo "note  a claim about a system, in an added line — cite the command and what it"
+      echo "      printed, the run id or the URL, or write \"not checked\":"
+      CLAIMS_FOUND=1
+    fi
+    echo "        $MD:"
+    printf '%s
+' "$HITS" | sed 's/^/          …/;s/$/…/'
+  fi
+done
+
+# 8. The build, but only when the change can break it. A documentation phase that
 #    waits four minutes for Gradle learns nothing and stops running the check.
 CODE_TOUCHED="$(printf '%s\n' "$CHANGED" | grep -E '^(core|game|desktop|web|assets)/|\.gradle(\.kts)?$|^gradle/|^gradlew' || true)"
 if [ -n "$CODE_TOUCHED" ]; then

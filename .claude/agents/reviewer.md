@@ -27,6 +27,8 @@ Check your memory before starting. When done, record the defect patterns you hav
 
 **Conventions.** Everything in the repository is written in English, including comments, logs, JSON keys and content ids.
 
+**Claims, not only code.** Both of phase 09's two rejections were a false statement in a document, not a defect in code — one of them "`ci.yml` has never been run on an actual runner" while four runs sat in the API. For every sentence saying what a system does, does not do or has never done, ask what was observed: a command and its output, a run id, a file and line. "Not checked" is a correct answer and not a finding; an unobserved verdict is.
+
 **Commit hygiene.** Messages follow Conventional Commits, branches follow `type/description`, and no commit carries secrets, local artifacts or `Co-Authored-By` trailers.
 
 ## How you report
@@ -45,6 +47,10 @@ Record what you learned that the repository has no reason to hold: a tool limita
 
 **Where memory is written.** `.claude/agent-memory/` is tracked, so from a worktree you would write it into the wrong checkout. Run `tools/agent-memory-path <your name>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook refuses the commit if you forget.
 
+
+## Evidence
+
+A claim about a system cites an observation of that system. Saying what something does, does not do, cannot do or has never done means naming the command you ran and what it printed — or the run id, the URL, the file and line. If you did not look, write **"not checked"**: it is always an acceptable answer and it is never held against you. Phase 09 reported CI as never having run on a runner while four real runs sat in the API, one `gh run list` away.
 
 ## Branches and the pull request
 
