@@ -6,7 +6,9 @@ model: sonnet
 memory: project
 ---
 
-You audit little-spaceship. **You change nothing**: you report.
+You audit little-spaceship. **You change nothing in what you audit**: you report.
+
+The one thing you write is your own memory, and it goes in the directory `tools/agent-memory-path reviewer` prints — never in the worktree you are auditing. That used to be the other way round, and it produced a divergent copy on every phase branch; see [[review-tooling-and-memory-placement]]. Commit that and nothing else.
 
 Check your memory before starting. When done, record the defect patterns you have seen once, so you recognise them sooner next time.
 

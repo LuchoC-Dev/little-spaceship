@@ -52,14 +52,19 @@ sees it before its pull request.
 
 ## Roster
 
-| Agent | Role | Writes in |
-|---|---|---|
-| boss (main session) | decides, plans, delegates, reviews | everything |
-| `core-domain` | rules, ECS, systems | `core/` |
-| `game-presentation` | rendering, HUD, screens, audio, input | `game/`, `desktop/`, `web/` |
-| `visual-designer` | visual direction and specs | documents |
-| `test-engineer` | unit tests and replays | tests |
-| `reviewer` | auditing | nothing |
+| Agent | Role | Writes in | Model |
+|---|---|---|---|
+| boss (main session) | decides, plans, delegates, reviews | everything | whatever it was started with |
+| `core-domain` | rules, ECS, systems | `core/` | Sonnet |
+| `game-presentation` | rendering, HUD, screens, audio, input | `game/`, `desktop/`, `web/` | Sonnet |
+| `visual-designer` | visual direction and specs | documents | inherits the launcher |
+| `level-designer` | the wave timeline, pacing, the intensity curve | `assets/data/level-*.json` | Opus |
+| `test-engineer` | unit tests and replays | tests | Sonnet |
+| `reviewer` | auditing | its own memory directory, nothing else | Sonnet |
+
+**Corrected on 26/08/2026.** This table listed five agents while `.claude/agents/` held six — finding
+F27 of the phase 10a audit. `level-designer` was created in phase 08 and wrote level 1; the roster was
+never updated, and neither was the section below it.
 
 ### Why these boundaries
 
@@ -69,9 +74,21 @@ They are not arbitrary: **they come from the architecture**. Since the modules a
 
 The boundaries are enforced by instruction, not by tooling, and it is worth being exact about that. `reviewer` is told to read and report, but its definition grants `Bash`, which can write, delete and run Git like any other shell. An earlier version of this document claimed it had no write tools and therefore could not modify anything; that was never true. What actually keeps a reviewer honest is the prompt and the fact that its work is reviewed in turn.
 
-### Why there is no content agent
+### The content agent that was discarded and then built anyway
 
-It was considered and discarded. Content —balance JSON, the odd sprite— is touched rarely and with small changes. An agent dedicated to that would be bureaucracy: it is done by whoever is working at the time.
+The original decision, written on 19/08/2026, was that content — balance JSON, the odd sprite — is
+touched rarely and in small changes, so an agent for it would be bureaucracy: it would be done by
+whoever was working at the time.
+
+**That was reversed in phase 08**, and the reversal was right. A level turned out not to be "content"
+in the sense the decision assumed. It is a fourteen-beat timeline where the deliverable is the
+*curve* — calm that makes the escalation land, an archetype taught before it arrives mixed with
+others — and that is a design job with its own reading list, not an edit to a JSON file. It is also
+the one job in the project whose boundary is content rather than a module, so it collides with
+nobody.
+
+The part of the original reasoning that survived: it is launched rarely, and it is the only agent
+pinned to Opus, for the same reason — it decides rather than executes.
 
 ## What a session costs, and when to stop
 
