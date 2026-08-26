@@ -50,11 +50,11 @@ Nothing is ever committed on `main` or on `dev`. Four levels of branch, each rec
 | Branch | Who commits on it | How work leaves it |
 |---|---|---|
 | `main` | nobody | a pull request from `dev`, **merged by the project owner** |
-| `dev` | nobody | a pull request from a phase branch |
+| `dev` | nobody | a pull request from a phase branch, merged by a coordinator **only with the project owner's direct approval** |
 | `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
 | `type/description` | the agent doing one task | a pull request against the phase branch |
 
-Branch from `dev` only to open a phase. Every agent branches from the **phase branch**, never from `dev`, and names its branch `type/description`, lowercase, only `a-z 0-9 . _ -`. **An agent opens a pull request and stops there — it merges nothing**, not its own branch and not anyone else's. The coordinator merges sub-branches into the phase branch. The full regime is in `docs/plan/how-to-run-a-phase.md`.
+A phase branch is merged into `dev` by the coordinator **only after the project owner approves it directly**, per pull request — an approval given once is not a standing one. Branch from `dev` only to open a phase. Every agent branches from the **phase branch**, never from `dev`, and names its branch `type/description`, lowercase, only `a-z 0-9 . _ -`. **An agent opens a pull request and stops there — it merges nothing**, not its own branch and not anyone else's. The coordinator merges sub-branches into the phase branch. The full regime is in `docs/plan/how-to-run-a-phase.md`.
 
 **Run `tools/pre-pr-check --base <the phase branch>` before opening a pull request**, and paste its output into it. It is a script and costs no tokens. A red check means no pull request.
 

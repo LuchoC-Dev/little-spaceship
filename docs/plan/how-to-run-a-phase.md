@@ -26,7 +26,7 @@ what each level is for.
 | Branch | Who commits on it | How work leaves it |
 |---|---|---|
 | `main` | nobody | a pull request from `dev`, **merged by the project owner** |
-| `dev` | nobody | a pull request from a phase branch |
+| `dev` | nobody | a pull request from a phase branch, merged by a coordinator **only with the project owner's direct approval** |
 | `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
 | `type/description` | the agent doing one task | a pull request against the phase branch |
 
@@ -51,7 +51,9 @@ A rejection goes back to the worker only while that worker is still open and the
 
 **Merge** once accepted — the coordinator merges the sub-branch into the phase branch. When every
 task of the phase is in, the phase branch does **not** merge either: it opens a pull request against
-`dev`, and `dev` reaches `main` through a pull request the project owner merges.
+`dev` and waits. A coordinator may merge that one, **but only with the project owner's direct
+approval on that pull request** — ask, and never treat an earlier approval as covering this one.
+`dev` reaches `main` through a pull request the project owner merges.
 
 **Afterwards**, two writes, and both of them or neither:
 
@@ -83,7 +85,8 @@ was one merge away from the live site.
   reason only: to open a phase.
 - **One phase branch per phase**, `phase/<phase>-<description>` — a super-branch if several phases
   genuinely run together. When the phase is done it is not merged: it opens a pull request against
-  `dev`, so a whole phase is reviewable as one thing.
+  `dev`, so a whole phase is reviewable as one thing. A coordinator may merge that pull request once
+  the project owner approves it directly; without that approval it stays open.
 - **Every agent branches from the phase branch**, never from `dev`, with the usual
   `type/description`. It opens a pull request against the phase branch and stops. **A subagent
   merges nothing.** The coordinator merges the sub-branches.
