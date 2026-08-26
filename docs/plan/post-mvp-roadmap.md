@@ -210,6 +210,31 @@ by hand will. **This must be decided before anything is built.**
 
 **Decided, and it stays decided: balance is tuned by playing, not by arithmetic.**
 
+### Tests that assert rules, not only reproducibility
+
+Raised by the player on 25/08: more tests, especially integration tests — *the ship destroys the
+boss's module 1* — to save on manual verification and keep the code maintainable.
+[#44](https://github.com/LuchoC-Dev/little-spaceship/issues/44).
+
+The structure already exists: `core/src/test/.../application/` holds cross-system tests, 289 tests in
+35 files. Some already assert behaviour, and several replays carry an explicit anti-vacuity companion.
+**But the bulk asserts that a run reproduces itself, not that a rule holds.** `BossReplayTest` — the
+player's own example — has two tests, both determinism, and asserts nothing about the boss's modules:
+break the module rule and it stays green, because it breaks identically both times.
+
+The reason this belongs here rather than in a tidy-up later: **this project pays for the gap in manual
+verification, every phase.** Phase 09 had a reviewer reproduce gzip sizes by hand, unpack a Pages
+artifact and count test XML files. #23 — a designed drop delivered once per formation slot instead of
+once — is a live rules bug that no test caught, and it is precisely the kind of thing waves will
+depend on.
+
+It also makes the rest of this group safe. **Rebalancing without rule-asserting tests is changing
+numbers with no net underneath**, and the balance pass is a redesign of the numbers, not a tweak.
+
+Determinism replays stay — they guard invariant 2, which fails silently. This adds beside them.
+
+`game` still has no tests at all ([#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19)).
+
 ### The four web defects
 
 #40, #41, #42 and #43 are fixed in this phase.
@@ -222,6 +247,11 @@ subdivision is the sequence:
 **Waves come first.** Balance and movement are expressed *inside* waves. Rebalancing 92 flat rows and
 then regrouping them into waves is doing the work twice, and redesigning the boss before the level's
 new length is known means tuning a fight against a pacing that no longer exists.
+
+**Rule-asserting tests come early too**, because they are what makes everything after them safe to
+change. Rebalancing and restructuring waves without them is changing behaviour with nothing to catch a
+regression — and the existing replays will not catch it, since a broken rule breaks identically on
+both runs.
 
 The per-level document should be settled early too, since it is the format everything after it is
 written in.
