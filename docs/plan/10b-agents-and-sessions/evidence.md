@@ -79,6 +79,9 @@ It did not, at first: the sentence wraps across two lines, so a line-by-line gre
 presumably how it survived being read several times. The check joins a file's added lines before
 matching, and tolerates the run of spaces the join leaves behind.
 
+Its noisiest case is this document: quoting the phase 09 sentence trips the detector six times over.
+That is the argument for a note rather than a failure, made by the first branch that ran it.
+
 ## What this does not fix
 
 A claim can cite an observation and still be wrong — the observation can be of the wrong thing, which
