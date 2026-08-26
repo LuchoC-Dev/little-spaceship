@@ -28,6 +28,28 @@ It saves only what that agent discovered and is not written anywhere else: where
 
 It is written **when a task finishes**, not continuously.
 
+### Where it is written, which is not obvious
+
+`.claude/agent-memory/` is a path inside the repository, and every git worktree gets its own copy of
+every tracked path. An agent working from a worktree therefore writes its memory into *that*
+checkout, on *that* branch — invisible to the next agent, and merged only if somebody notices. It was
+corrected by hand **three times during phase 09 alone**, in the middle of the phase, by a coordinator
+sending follow-up messages to live agents.
+
+Two things close it, and neither one is an instruction to be careful:
+
+- **`tools/agent-memory-path <agent>`** prints the one canonical directory. It resolves through
+  `git rev-parse --git-common-dir`, which is shared by every worktree of a repository, so the answer
+  is identical from all of them.
+- **The `pre-commit` hook in `tools/hooks/`** refuses a commit that stages `.claude/agent-memory/`
+  from a linked worktree, and names the directory to use instead. `core.hooksPath` lives in the
+  repository's shared config, so `tools/install-hooks`, run once per clone, covers every worktree —
+  including the ones created afterwards. That is what makes it survive being forgotten, which was
+  the requirement.
+
+`tools/pre-pr-check` reports the same condition, so an agent that somehow got past the hook still
+sees it before its pull request.
+
 ## Roster
 
 | Agent | Role | Writes in |

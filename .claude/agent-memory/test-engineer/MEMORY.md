@@ -1,0 +1,1 @@
+- [Memory-path hook verification](project_memory-path-hook-verification.md) — issue #61 fix holds: tried subdir, `-a`, mixed-file, `--amend`, fresh worktree; none got past it.

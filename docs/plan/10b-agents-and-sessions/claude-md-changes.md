@@ -58,3 +58,16 @@ first time an agent writes to it.
 a guarantee, and `level-designer` had a directory without its definition ever declaring
 `memory: project` — the inverse mistake, and the reason the sentence was worth getting right rather
 than deleting.
+
+## 5 — Agent memory lives in the main checkout · issue [#61](https://github.com/LuchoC-Dev/little-spaceship/issues/61)
+
+**What changed.** The "Where state lives" section gained a paragraph: memory is written in the main
+checkout, `tools/agent-memory-path <agent>` prints it, and a `pre-commit` hook refuses the commit if
+it lands anywhere else.
+
+**What motivated it.** `.claude/agent-memory/` is tracked, so a worktree gets its own copy and an
+agent writes into whichever checkout it is standing in. Phase 09 corrected this by hand three times
+in one phase — and the measurement in `measurement.md` shows the coordinator spending live turns on
+it, including one `SendMessage` correcting the previous one a minute later. An instruction had
+already been tried; a path that resolves the same way from every worktree, and a hook in the shared
+git directory, do not depend on anyone remembering.

@@ -43,6 +43,9 @@ Record what you learned that the repository has no reason to hold: a tool limita
 
 **Not phase progress.** That belongs in the phase's `status.md`. When the same fact lives in both, one of them goes stale without anyone noticing — it has already happened here once.
 
+**Where memory is written.** `.claude/agent-memory/` is tracked, so from a worktree you would write it into the wrong checkout. Run `tools/agent-memory-path <your name>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook refuses the commit if you forget.
+
+
 ## Branches and the pull request
 
 Branch from the **phase branch** the coordinator gave you, never from `dev` and never from `main`. Name it `type/description`.
