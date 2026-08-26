@@ -61,8 +61,19 @@ Other than these, the player's verdict on the web build was that it works.
 
 ## Phase 10 — Reordering the development system
 
-**Not code.** This phase is about how the project is built: agents, documentation, and whether the
-architecture needs to change.
+**Not code.** This group is about how the project is built: agents, documentation, and whether the
+architecture needs to change. **No phase in this group changes production code** — it decides, and the
+11 group executes.
+
+It is now split into three planned phases, in this order:
+
+| # | Phase | Why it sits there |
+|---|---|---|
+| [10a](10a-honest-documentation/plan.md) | Honest documentation | Everything else in the group reads documentation to do its work |
+| [10b](10b-agents-and-sessions/plan.md) | Agents and sessions | Reviewing agent definitions against stale documents is work done twice |
+| [10c](10c-architecture-review/plan.md) | Architecture review | Needs both: trustworthy documents, and the agents that will act on the outcome |
+
+The sections below are what those three plans were written from.
 
 ### Agents and the way sessions are run
 
@@ -111,9 +122,9 @@ measured, and breaking one invalidates earlier work.
 
 ### Risk
 
-**This phase's scope is the thing most likely to go wrong.** "Reordering" attracts every complaint
-anyone has. It needs acceptance criteria that say what is out as clearly as what is in, before it
-opens.
+**This group's scope is the thing most likely to go wrong.** "Reordering" attracts every complaint
+anyone has. Each of the three plans carries an explicit "What is out of scope" section for that
+reason.
 
 ---
 

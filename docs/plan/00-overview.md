@@ -48,7 +48,20 @@ Only three, and they are the schedule's real risk:
 | 08 | [Audio and polish](08-audio-and-polish/plan.md) | art + code | `game-presentation` | 06 |
 | 09 | [Web, CI and release](09-web-ci-release/plan.md) | code | `game-presentation` | 07 |
 
-After the MVP: [beyond the MVP](10-beyond-mvp.md), sketched rather than planned.
+**The MVP shipped on 25/08/2026.** What comes after it is grouped in
+[the post-MVP roadmap](post-mvp-roadmap.md): four groups of work, each of which becomes several
+numbered phases. The first group is planned:
+
+| # | Phase | Lane | Owner | Depends on |
+|---|---|---|---|---|
+| 10a | [Honest documentation](10a-honest-documentation/plan.md) | process | coordinator | 09 |
+| 10b | [Agents and the way sessions are run](10b-agents-and-sessions/plan.md) | process | coordinator | 10a |
+| 10c | [Architecture review](10c-architecture-review/plan.md) | process | coordinator | 10a, 10b |
+
+None of the 10 group changes production code: it decides, and the 11 group executes.
+
+Longer-range directions — progression, modes, more ships, the hangar — are sketched in
+[beyond the MVP](beyond-mvp.md), which is a sketch rather than a plan and is not numbered as a phase.
 
 ## How work flows
 
