@@ -1,6 +1,6 @@
 # Phase 10b — Agents and the way sessions are run · status
 
-**State:** in progress — tasks 7 and 8 landed on the phase branch; tasks 1–6 open
+**State:** in progress — tasks 1, 3, 7 and 8 landed on the phase branch; tasks 2, 4, 5 and 6 open
 **Updated:** 26/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
@@ -10,6 +10,36 @@ This is the first phase run under the branch regime it introduced: everything be
 pull request rather than nine merges into `main`.
 
 ## Done
+
+**Task 1, what phase 09 cost** (issue [#59](https://github.com/LuchoC-Dev/little-spaceship/issues/59),
+PR [#69](https://github.com/LuchoC-Dev/little-spaceship/pull/69)) —
+[`measurement.md`](measurement.md). 813 model calls, 72.3 M cache-read tokens, $110.76 equivalent at
+public API rates. The coordinator is 38 % of the calls and 83 % of the cost; `reviewer` on Sonnet
+held, 4 of 4; zero spend limits against fourteen in the audited period; and two thirds of the cost is
+still re-reading history, unchanged by the regime. A call at the end of the phase cost 2.3× a call at
+its start, two hours apart.
+
+**Task 3, the memory-path trap** (issue [#61](https://github.com/LuchoC-Dev/little-spaceship/issues/61)).
+
+- `tools/agent-memory-path <agent>` prints the canonical directory by resolving
+  `git rev-parse --git-common-dir`, which is shared by every worktree, so the answer is identical
+  from all of them.
+- `tools/hooks/pre-commit` refuses a commit that stages `.claude/agent-memory/` from a linked
+  worktree and names the directory to use instead. It is installed through `core.hooksPath`, which
+  lives in the clone's shared config — `tools/install-hooks`, run once, covers every worktree,
+  including ones created later. That is what makes it survive being forgotten.
+- **Tested by a `test-engineer` working from a real worktree**, told to try to walk around it. The
+  hook refused a direct `git add`, `git commit -a`, a commit from a nested subdirectory, a memory
+  file mixed into an unrelated commit, `git commit --amend`, and a worktree created *after* the hook
+  was installed. Nothing accidental got past it; the agent used `--no-verify` never. Its findings are
+  in `.claude/agent-memory/test-engineer/project_memory-path-hook-verification.md`, which is also the
+  first memory that agent has ever written (finding F32 of the 10a audit).
+- **The hook caught a defect in itself.** Committing from the main checkout, it wrongly refused:
+  `git rev-parse --absolute-git-dir` answers `C:/...` on Windows while the common dir resolves to
+  `/c/...`, and the two raw strings never match. Both sides now go through `cd … && pwd`, in the hook
+  and in `pre-pr-check`.
+- Known limit, recorded rather than hidden: git skips `pre-commit` on merge commits. That is not a
+  hole here, since a merge can only carry memory that was already committed correctly somewhere else.
 
 **Task 8, the pre-PR check** (issue [#66](https://github.com/LuchoC-Dev/little-spaceship/issues/66),
 PR [#67](https://github.com/LuchoC-Dev/little-spaceship/pull/67)).
@@ -49,8 +79,7 @@ written one.
 
 ## In progress
 
-Tasks 1–6, issues [#59](https://github.com/LuchoC-Dev/little-spaceship/issues/59)–[#64](https://github.com/LuchoC-Dev/little-spaceship/issues/64).
-Task 1's measurement of phase 09 is done as analysis and not yet written down.
+Tasks 2, 4, 5 and 6 — issues [#60](https://github.com/LuchoC-Dev/little-spaceship/issues/60), [#62](https://github.com/LuchoC-Dev/little-spaceship/issues/62), [#63](https://github.com/LuchoC-Dev/little-spaceship/issues/63) and [#64](https://github.com/LuchoC-Dev/little-spaceship/issues/64).
 
 ## Blocked
 
