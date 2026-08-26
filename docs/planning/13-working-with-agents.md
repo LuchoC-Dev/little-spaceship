@@ -95,7 +95,40 @@ The boss **does not launch agents by default**. Delegating costs: each agent sta
 
 ## Branches
 
-Work happens on branches, never directly on `main`. Names follow `type/description`, and the branch merges back into `main` once the change is complete.
+**Changed on 26/08/2026 by the project owner.** Until then work happened on `type/description`
+branches that merged back into `main`, which made `main` the trunk, the integration branch and the
+branch the Pages deploy publishes, all at once.
+
+Now there are four levels, and each one only receives a pull request from the level below:
+
+| Branch | Who commits on it | How work leaves it |
+|---|---|---|
+| `main` | nobody | a pull request from `dev`, **merged by the project owner** |
+| `dev` | nobody | a pull request from a phase branch |
+| `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
+| `type/description` | the agent doing one task | a pull request against the phase branch |
+
+Branching from `dev` happens only to open a phase. Every agent branches from the phase branch and
+opens its pull request against it. **A subagent merges nothing** — not even its own branch. The
+coordinator merges sub-branches; the phase reaches `dev` as one reviewable pull request; `dev`
+reaches `main` only when the project owner decides.
+
+`docs/plan/how-to-run-a-phase.md` holds the operational version of this, next to the rest of the
+cycle.
+
+## The check before the pull request
+
+Also decided on 26/08/2026. An implementing agent runs **`tools/pre-pr-check`** before opening its
+pull request and pastes the output into it. A red check means no pull request.
+
+It is deliberately a script rather than an instruction: it costs no tokens, it does not vary with
+how tired the agent is, and it is the only kind of verification this project has not seen produce a
+false claim. It checks the branch name, commit hygiene, a clean tree, build output in the diff,
+markdown links, the executable bit on scripts, whether agent memory was written from the wrong
+checkout, and `./gradlew build` when the diff touches code.
+
+On its first run it caught a script committed as mode `100644` — the same defect that made phase
+09's first two CI runs die in fifteen seconds with `./gradlew: Permission denied`.
 
 ## Parallel work
 

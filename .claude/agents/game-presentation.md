@@ -50,3 +50,11 @@ Record what you learned that the repository has no reason to hold: a tool limita
 Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.
 
 Conventional Commits: `type(scope): description`, imperative mood, under 72 characters. One logical change per commit. No secrets, no local artifacts, no `Co-Authored-By` trailers. Never force-push, never skip hooks, never amend after a hook rejection — fix and commit again.
+
+## Branches and the pull request
+
+Branch from the **phase branch** the coordinator gave you, never from `dev` and never from `main`. Name it `type/description`.
+
+Before you open anything, run `tools/pre-pr-check --base <the phase branch>` and paste its output into the pull request. It is a script, so it costs you nothing and it does not depend on how the work feels: **a red check means no pull request.**
+
+Open the pull request against the phase branch, and stop there. **You merge nothing** — not your own branch, not anyone else's. The coordinator merges.

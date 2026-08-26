@@ -1,0 +1,60 @@
+# Every edit phase 10b made to `CLAUDE.md`, and what motivated it
+
+`CLAUDE.md` is read by every agent on every phase. The phase plan allows this phase to change it
+**with a written justification for each edit**; this file is that condition being met. One row per
+edit, in the order they landed.
+
+A rule that is not motivated by something that happened does not belong in this file, and does not
+belong in `CLAUDE.md` either.
+
+## 1 — The branch regime replaces "merge back into `main`" · issue [#65](https://github.com/LuchoC-Dev/little-spaceship/issues/65)
+
+**What changed.** The Commits section's branch paragraph became a four-level table: `main` ← `dev` ←
+`phase/<phase>-<description>` ← `type/description`, with "an agent opens a pull request and merges
+nothing" stated explicitly.
+
+**What motivated it.** A decision by the project owner on 26/08/2026. Phases 01–09 merged their
+branches directly into `main`, so `main` was the trunk, the integration branch and the branch
+`deploy-pages.yml` publishes from, all at once — a half-finished phase was one merge away from the
+live site. The regime also fixes a second thing the phase-09 measurement showed: work reached `main`
+in nine separate merges with no point at which the phase was reviewable as one thing.
+
+**Why in `CLAUDE.md` rather than only in `docs/plan/how-to-run-a-phase.md`.** An agent is launched
+with a plan and this file; the branch it creates is the first thing it does, before it has read
+anything else. The operational detail stays in `how-to-run-a-phase.md`, which is linked from here.
+
+## 2 — `tools/pre-pr-check` before every pull request · issue [#66](https://github.com/LuchoC-Dev/little-spaceship/issues/66)
+
+**What changed.** Two sentences added to the Commits section: run the check, paste its output, a red
+check means no pull request.
+
+**What motivated it.** A decision by the project owner on 26/08/2026, and phase 09's evidence behind
+it: a worker's report and its `status.md` both claimed CI had never run on a runner while four real
+runs sat in the API, and a script committed from Windows without the executable bit killed the first
+two of those runs. Both are things a command notices and a paragraph of instructions did not.
+
+**Why in `CLAUDE.md`.** It is a gate on an action every agent takes. A gate nobody reads before
+acting is not a gate.
+
+## 3 — The documentation convention: name the file, or say "Not built"
+
+**What changed.** The Conventions section gained the rule decided in phase 10a: a passage in `docs/`
+that describes behaviour either names, in backticks, the file that implements it, or says "Not
+built".
+
+**What motivated it.** Phase 10a's audit: nine of its thirty-five findings were prescriptive text in
+the same present tense as text that was true, with nothing to tell them apart, and eight more were
+dangling names. `docs/plan/10a-honest-documentation/mechanism.md` adopted the convention and recorded
+that putting it into `CLAUDE.md`'s Conventions section — where every agent actually meets it —
+belonged to this phase.
+
+## 4 — `test-engineer` has no memory directory · finding F32 of the 10a audit
+
+**What changed.** "Defined in `.claude/agents/`, each with persistent memory under
+`.claude/agent-memory/`" now says what is true: five of the six have one, and a directory appears the
+first time an agent writes to it.
+
+**What motivated it.** F32. Six agent definitions, five memory directories. The sentence was read as
+a guarantee, and `level-designer` had a directory without its definition ever declaring
+`memory: project` — the inverse mistake, and the reason the sentence was worth getting right rather
+than deleting.

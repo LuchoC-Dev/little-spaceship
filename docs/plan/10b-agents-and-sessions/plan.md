@@ -40,6 +40,11 @@ Three things phase 09 surfaced that belong here rather than to any single agent:
 4. **Address the "verified" problem.** An agent following its instructions produced a false claim about CI. Whatever the fix is — a rule that a claim about a system must cite an observation of that system, a checklist, a reviewer step — it must make that specific failure hard to repeat.
 5. **Audit agent memory.** Nine phases of files. What has rotted, what duplicates `docs/`, what turned out to be genuinely useful. `CLAUDE.md` forbids memory holding phase progress; check whether it does.
 6. **Write down when a correction goes back to the worker and when the coordinator takes it.**
+7. **Adopt the branch regime** the project owner decided on 26/08/2026: `main` ← `dev` ← one phase
+   branch ← one sub-branch per agent, nothing merged into `main` except by the owner, and no agent
+   merging anything. *(Added after the phase started; see "What is out of scope".)*
+8. **A single mandatory pre-PR check**, run by command rather than by judgement, that an implementing
+   agent runs before opening its pull request. *(Added at the same time.)*
 
 ## Acceptance criteria
 
@@ -50,13 +55,17 @@ Three things phase 09 surfaced that belong here rather than to any single agent:
 - Agent memory has been audited: what stays, what goes, why.
 - `docs/planning/13-working-with-agents.md` reflects all of it.
 - **`CLAUDE.md` is updated where the regime changed**, and every edit to it cites what motivated it.
+- The branch regime is written into `CLAUDE.md`, `how-to-run-a-phase.md`, `13-working-with-agents.md`
+  and the agent definitions, and this phase is run under it.
+- The pre-PR check exists as a script, runs on this machine, and catches at least one class of defect
+  this project has already hit.
 
 ## What is out of scope
 
 - **Any change to game code.** This group decides and adjusts process; the 11 group touches code.
 - Adding new agents. If the audit concludes one is missing, that is a finding, not a task.
 - Changing module ownership boundaries — that depends on 10c.
-- **The git and worktree workflow.** Creating, merging and cleaning up worktrees by hand is repetitive and error-prone — one session did about ten — but the player has ruled it out of scope for this group, to stop 10b widening indefinitely. The one part that *is* in scope is task 3, because the memory path is a correctness trap rather than a convenience.
+- ~~**The git and worktree workflow.** Creating, merging and cleaning up worktrees by hand is repetitive and error-prone — one session did about ten — but the player has ruled it out of scope for this group, to stop 10b widening indefinitely.~~ **Reversed by the project owner on 26/08/2026, after the phase started**: the branch regime and the pre-PR check became tasks 7 and 8. What stays out of scope is the *ergonomics* of worktrees — creating, moving and cleaning them up by hand is still done by hand. The one part that was in scope from the beginning is task 3, because the memory path is a correctness trap rather than a convenience.
 
 ## Risks
 
