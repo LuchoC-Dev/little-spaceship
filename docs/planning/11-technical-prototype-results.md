@@ -215,7 +215,16 @@ Both are LTS, so there is no urgency. Moving up to 21 later means changing two l
 
 ## What remains pending
 
-- Pointer capture for the relative mouse, which is the only control decision left unverified.
-- Firefox, Edge and Safari.
-- Audio behaviour under the browser's user interaction policy. The planned flow —load, menu, press Play— already provides that interaction, but it is worth confirming with the real menu.
-- Measurement with definitive art and audio, once they exist: the spike generates its textures in code and does not represent the real weight of the assets.
+Closed out on 26/08/2026 against the shipped MVP. Everything here was pending as of 18/08/2026.
+
+- ~~Pointer capture for the relative mouse.~~ **Built and shipped**, using the browser's Pointer Lock
+  API. It has a defect: losing the lock breaks mouse control until the page is refocused
+  ([#41](https://github.com/LuchoC-Dev/little-spaceship/issues/41)).
+- ~~Firefox, Edge and Safari.~~ **Chrome and Firefox verified by hand on 25/08/2026** against the live
+  site. Edge was dropped by the project owner's decision; Safari is still unverified.
+- ~~Audio behaviour under the browser's user interaction policy.~~ **Confirmed**: the first click
+  unlocks audio, as the planned flow expected.
+- ~~Measurement with definitive art and audio.~~ **Measured in phase 09**: the Pages artifact is
+  2,470,942 bytes across 34 files, and the thirteen main files total ~1.4 MB as actually served,
+  because the CDN gzips `app.js` from 1,027,585 to 302,393 bytes. The WAVs are served uncompressed
+  and are the single largest remaining win — see `docs/STATUS.md`'s post-MVP backlog.

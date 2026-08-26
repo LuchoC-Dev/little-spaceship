@@ -29,22 +29,22 @@ The pickup is **not wasted**: it turns into points. This avoids the dead drop an
 
 ### Movement speed — missing
 
-This document fixes the **policy** for player movement (additive devices, clamped result, slow movement as a multiplier — see Controls below) but no concrete number for the ship's top speed or the slow-movement multiplier. Phase 02 needed both to implement the clamp and added them to `BalanceValues` as `playerSpeed()` and `playerSlowFactor()`, with placeholder values (140 logical units/s, ×0.45) that exist only in test fixtures — there is no production `BalanceValues` implementation yet for them to live in instead. **Open, not decided:** replace the placeholders with real numbers once there is a playable build to tune them against, and record the result here.
+This document fixes the **policy** for player movement (additive devices, clamped result, slow movement as a multiplier — see Controls below) but no concrete number for the ship's top speed or the slow-movement multiplier. Phase 02 needed both to implement the clamp and added them to `BalanceValues` as `playerSpeed()` and `playerSlowFactor()`, with placeholder values of 140 logical units/s and ×0.45. They live in `assets/data/balance.json`, read by `JsonBalanceValues`, since phase 05. **Open, not decided:** replace the placeholders with real numbers, and record the result here.
 
 ### Player starting position — missing
 
-Nothing here fixes where the ship starts a run, only that it is inside the 208x270 playfield. Phase 04 needed a concrete point so a run never starts with an empty world, and added `BalanceValues.playerStartX()`/`.playerStartY()` with placeholder values (104, 30 — bottom-centre) that, same as the movement speed above, exist only in test fixtures. **Open, not decided:** replace with real numbers once there is a playable build.
+Nothing here fixes where the ship starts a run, only that it is inside the 208x270 playfield. Phase 04 needed a concrete point so a run never starts with an empty world, and added `BalanceValues.playerStartX()`/`.playerStartY()` with placeholder values of 104, 30 — bottom-centre. They are in `balance.json`. **Open, not decided:** replace with real numbers.
 
 ### Enemy health and weapon/bomb damage — missing
 
-`12-architecture.md` names `Health` as a component ("health points, enemies and boss") and shows `{"points": 40}` as a tank's value in its JSON schema example, but that `40` is illustrative there, not a decided balance number — no enemy hit-point value appears anywhere else in this document. Phase 05 needed `Health` to exist for a weapon upgrade to mean anything beyond more projectiles and for the bomb to be able to damage a tank or a heavy carrier instead of leaving them untouched, so it built the component and added `BalanceValues.weaponProjectileDamage()` and `.bombDamage()`, with placeholder values (10 and 50) that, same as the movement speed and starting position above, exist only in test fixtures. **Open, not decided:**
+`12-architecture.md` names `Health` as a component ("health points, enemies and boss") and shows `{"points": 40}` as a tank's value in its JSON schema example, but that `40` is illustrative there, not a decided balance number — no enemy hit-point value appears anywhere else in this document. Phase 05 needed `Health` to exist for a weapon upgrade to mean anything beyond more projectiles and for the bomb to be able to damage a tank or a heavy carrier instead of leaving them untouched, so it built the component and added `BalanceValues.weaponProjectileDamage()` and `.bombDamage()`, with placeholder values of 10 and 50. They are in `balance.json`. **Open, not decided:**
 
 - per-archetype `Health` points for the level 1 roster (basic, light, shooter, rush, tank, carrier) and the boss. `game`'s `enemies.json` gives the two non-fragile archetypes a placeholder value each (tank 40, carrier 80, tank's number matching `12-architecture.md`'s illustrative example) — the four fragile archetypes carry no `"health"` entry, since a fragile hit destroys them outright regardless of it (see `Health`'s javadoc);
 - `weaponProjectileDamage` and `bombDamage`.
 
 Per `01-vision-and-scope.md`'s "difficulty through pressure" principle, these are **not** meant to become difficulty dials — difficulty "must not depend only on raising health and damage." They are fixed per-shot/per-detonation constants, tuned once against real gameplay, not values that scale with a difficulty setting that does not exist yet in the MVP anyway.
 
-### Weapon and pickup values — missing
+### Weapon and pickup values — open
 
 Phase 05 built `WeaponSystem`, `BombSystem` and `PickupSystem`, none of which had a concrete number
 anywhere in this document. `game`'s `JsonBalanceValues`/`balance.json` carry placeholder values so the
@@ -58,9 +58,15 @@ there is a playable build to tune them against, and record the result here.
 `BossDefinition` needs thirteen values and this document had no boss row when phase 07 wrote them.
 `level-01.json` carries a starting set so the fight exists at all: `entersAt 302`, `coreHealth 1800`,
 `podHealth 500`, `armHealth 500`, `corePoints 1500`, `podPoints 500`, `armPoints 500`,
-`entranceSpeed 25`, `combatY 175`, `patternCooldown 1.3`, `spreadProjectileSpeed 95`,
-`sweepProjectileSpeed 140`. **Open, not decided**, with two things worth knowing before they are
+`entranceSpeed 25`, `combatY 175`, `patternCooldown 0.7`, `spreadProjectileSpeed 95`,
+`sweepProjectileSpeed 140`. **Open, not decided**, with four things worth knowing before they are
 retuned:
+
+- `patternCooldown` was **1.3 and is now 0.7**, changed on 25/08/2026 after a play session, which
+  takes the boss's attack cycle from 2.05 s to 1.45 s against its fixed 0.75 s tell. It is the only
+  value on this page that has been through the "tuned by playing" loop, and it was not written back
+  here — which is what the sentence at the top of this document exists to prevent. Recorded
+  26/08/2026 by phase 10a.
 
 - The fight ends when the core dies, and `core-keel` carries the core's own health, so its length is
   governed by `2 * coreHealth` divided by whatever damage the player lands on the central column —

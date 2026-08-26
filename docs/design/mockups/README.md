@@ -6,7 +6,7 @@ actually runs at.
 | Page | Shows | Answers |
 |---|---|---|
 | [`combat.html`](combat.html) | the level 1 combat screen, three moments of it | does the direction survive a real frame |
-| [`screens.html`](screens.html) | the six screens of the MVP flow | is every screen reachable, legible and free of what the spec excludes |
+| [`screens.html`](screens.html) | six of the MVP's seven screens — credits is not drawn | is every screen reachable, legible and free of what the spec excludes |
 | [`reference.html`](reference.html) | palette, sizes, colliders, silhouettes, both fonts | what do I need open while drawing |
 
 They are pixel-exact: the framebuffer holds **palette indices**, not colours, and it is blown up to

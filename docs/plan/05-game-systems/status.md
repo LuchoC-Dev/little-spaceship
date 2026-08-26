@@ -1,6 +1,6 @@
 # Phase 05 — Game systems · status
 
-**State:** implemented, pending re-review
+**State:** done — merged in [#22](https://github.com/LuchoC-Dev/little-spaceship/pull/22)
 **Updated:** 21/08/2026 (revised same day: `Health` added after a coordinator review caught it missing; revised again: `game-presentation` closed its side; revised again: review round 1 rejected on the bomb and a test guard, see below; revised again: `game-presentation` closed the silent-skip and placeholder-art gaps and added a third guaranteed drop, see round 2 below)
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.

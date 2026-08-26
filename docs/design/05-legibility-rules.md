@@ -65,14 +65,18 @@ cross the vertical third of the playfield where the player usually sits.
 
 **R11. Fire is telegraphed.** Every enemy shot is preceded by a muzzle flash on the shooter, at
 least 2 ticks before the projectile exists. A bullet that appears without warning is unreadable no
-matter how bright it is.
+matter how bright it is. **Not built** — `EnemyWeaponSystem` creates the projectile the tick the
+cooldown reaches zero, and there is no muzzle flash anywhere in the project. The boss is the
+exception and it obeys the spirit of the rule: `06-boss-presentation.md`'s three-beat tell runs for
+0.75 s before every volley.
 
 **R12. No full-screen flash lasts more than 2 ticks**, and none is pure `N7`. This is
 photosensitivity and legibility at once: a white frame over the playfield hides every bullet the
 player is about to dodge.
 
 **R13. The bomb clears visibly.** Projectiles removed by a bomb play a 3-frame dissipation rather
-than vanishing, so the player can see what was cleared and what was not.
+than vanishing, so the player can see what was cleared and what was not. **Not built** —
+`BombSystem` marks them and `CleanupSystem` removes them the same tick, so they vanish.
 
 **R14. Nothing kills without a sprite.** No invisible hitbox, no off-screen damage, no hazard
 communicated only by sound.
@@ -87,6 +91,14 @@ at 1x, with no colour and no detail. See the test below.
 
 **R17. Pickups do not read as bullets.** Green, larger than any bullet, drifting slowly downwards
 with a 4-frame float. Hue, size and motion all separate them; any one of the three would be enough.
+
+## Which of these are actually enforced
+
+Added 26/08/2026, because until then these fifteen rules were written in one voice and only some of
+them held. **R1, R2, R3, R5, R15, R16 and R17 are enforced** — by the palette's disjoint sets, by
+`palette/check.py` and `lint-art.py`, and by `mockups/check.js`, which rejects a sprite at build
+time. **R11 and R13 are not built**, and each says so above. The rest are drawing rules with no
+automated check, held by whoever draws.
 
 ## How it is verified
 

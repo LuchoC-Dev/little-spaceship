@@ -32,7 +32,7 @@ The project must exhibit, all together:
 - artistic and audiovisual finish;
 - a reproducible publication and deployment process.
 
-The repository will be private during initial development. Opening it will be reconsidered upon reaching the MVP or on finishing the product.
+The repository will be private during initial development. Opening it will be reconsidered upon reaching the MVP or on finishing the product. *(Resolved on 25/08/2026: made public on shipping the MVP.)*
 
 ## Language and build tool
 

@@ -1,7 +1,7 @@
 # Phase 09 — Web, CI and release · status
 
-**State:** in progress
-**Updated:** 25/08/2026
+**State:** done — the game is live at <https://luchoc-dev.github.io/little-spaceship/>
+**Updated:** 26/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
 
@@ -152,15 +152,23 @@ Task 8 of the plan (issue #38), deploy to GitHub Pages:
 
 ## In progress
 
-Task 8: the workflow exists, is verified to build and upload the artifact for real on a runner, and
-is confirmed to be correctly gated to `main` only by both its own trigger and GitHub's environment
-protection. What is **not yet done** is the actual deploy: that only runs on a push to `main`, which
-this session did not do (explicitly out of scope — reviewer/coordinator merges the PR). Whoever
-merges PR #38 (or reviews it) should confirm `https://luchoc-dev.github.io/little-spaceship/`
-serves a `200` afterwards, not just that the `deploy` job went green.
+Nothing. **Closed out on 26/08/2026 by phase 10a**, which found this file still saying the phase was
+in progress and the play link a 404 while `docs/STATUS.md` recorded the MVP as shipped. Everything
+below this heading is left as the record of the session that wrote it; what changed after it is
+here.
 
-Tasks 1-3, 7 and 9 are done; tasks 4-6 remain (see notes below), and task 8 needs the merge-time
-check above before it can be called done.
+- **Task 8, the deploy: done.** PR #38 merged, the `deploy` job ran on `main`, and the site was
+  confirmed serving `200` in a real browser on 25/08/2026 — `index.html`, `app.js`,
+  `startup-logo.png`, the sprite atlas and every audio file.
+- **Task 4, pointer capture: shipped, and defective.** It works, and losing the lock breaks mouse
+  control until the page is refocused
+  ([#41](https://github.com/LuchoC-Dev/little-spaceship/issues/41)). This is the criterion the phase
+  assumed rather than verified, and the defect it would have caught is the one the player hit.
+- **Task 5, the browser matrix: partly done.** Chrome and Firefox verified by hand on the live site.
+  Edge dropped by the project owner's decision. Safari never checked.
+- **Task 6, load time and framerate: not done.** The sub-second `curl` figures in `docs/STATUS.md`
+  are all there is; a real browser's network panel is the honest instrument and nobody has used one.
+  Carried in the post-MVP backlog, not here.
 
 ## Blocked
 
@@ -181,16 +189,20 @@ Nothing.
 
 ## Notes for whoever comes next
 
-- Tasks 4-6 remain: pointer capture verification, the browser matrix
-  (Chrome/Firefox/Edge/Safari), and real-asset load-time and framerate measurement. Task 7 (CI) is
-  done as of issue #34, task 9 (README) as of issue #36, task 8 (deploy) as of issue #38 modulo the
-  merge-time check noted above.
-- **The README's play link is written and the workflow that will make it live exists
+*The two entries that follow described the state before PR #38 merged. Both are resolved; see
+"In progress" above for what actually happened. They are kept because the second one is a good
+instruction and someone should follow it again the next time a deploy changes.*
+
+- ~~Tasks 4-6 remain: pointer capture verification, the browser matrix
+  (Chrome/Firefox/Edge/Safari), and real-asset load-time and framerate measurement.~~ Task 7 (CI) is
+  done as of issue #34, task 9 (README) as of issue #36, task 8 (deploy) as of issue #38.
+- ~~**The README's play link is written and the workflow that will make it live exists
   (`.github/workflows/deploy-pages.yml`, PR #38), but the link itself is still a 404 as of this
-  writing** — the `deploy` job is correctly gated to `main` only (both by its own trigger and by
+  writing**~~ — the `deploy` job is correctly gated to `main` only (both by its own trigger and by
   GitHub's `github-pages` environment protection, which only allows `main`), and this session did
   not merge. Whoever merges PR #38 should watch the workflow run on `main` and open the link in a
-  real browser before telling anyone it works, not just trust that the job went green.
+  real browser before telling anyone it works, not just trust that the job went green. **This was
+  done on 25/08 and the link resolves.**
 - `.github/workflows/ci.yml` proves the build compiles and the tests pass. It cannot prove the web
   build *runs*; a human does that, in a real browser, every time.
 - **It has run on real GitHub Actions runners, and all three acceptance criteria were checked

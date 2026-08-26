@@ -144,12 +144,16 @@ Today `level-01.json` is **92 spawn events**, each an absolute time, an archetyp
 x position. It is a transcript, not a design.
 
 **The design it is a transcript of already exists.** `docs/planning/04-campaign-and-levels.md`, under
-"Level 1 design → Provisional sequence", lists level 1 as thirteen beats:
+"Level 1 design → Provisional sequence", lists level 1 as **fourteen** beats:
 
-> initial calm · first isolated basics · light/fast · combined formations · tanks and shifts in
-> priority · super-fast · one or two heavy carriers · evolved basics/shooters · high-pressure
-> combinations · **a difficult encounter that delivers the attachment** · brief rest · final
-> escalation · boss
+> audiovisual introduction · initial calm · first isolated basics · light/fast · combined formations ·
+> tanks and shifts in priority · super-fast · one or two heavy carriers · evolved basics/shooters ·
+> high-pressure combinations · **a difficult encounter that delivers the attachment** · brief rest ·
+> final escalation · boss
+
+*(This said thirteen and dropped the introduction until 26/08/2026. The count matters: it is the list
+the waves get rebuilt from, and `08-decisions-and-open-items.md` and `08-background.md` both say
+fourteen.)*
 
 Those are waves. Progression, a deliberate rest before the climax, and a reward tied to a specific
 encounter. **The structure was designed and then flattened away in translation to JSON.** The player's

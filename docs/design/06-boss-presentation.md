@@ -16,8 +16,14 @@ decision rather than a convenience:
 | Part | Sprite | Centre offset | Radius |
 |---|---|---|---|
 | Core | `boss-core` 47x87 | 0, 0 | 18.0 |
+| Core keel | none — inside the core's silhouette | 0, -27 | 13.0 |
 | Pod, left / right | `boss-pod` 25x25 | -34, +6 / +34, +6 | 12.0 |
-| Arm, left / right | `boss-arm` 31x45 | -44, -18 / +44, -18 | 14.0 |
+| Arm, left / right | `boss-arm` 31x45 | -44, -22 / +44, -22 | 14.0 |
+
+The keel is a collider with no sprite of its own; it sits under the core, inside the drawn
+silhouette. It and the arms' -22 are the outcome of "The five colliders do not cover the drawn boss"
+below, which phase 07 accepted. **So the boss is six colliders and five sprites**, and the sentence
+above is about the art.
 
 Offsets are as in `Transform`: x grows right, y grows up. The arms at ±44 with a 31 px sprite reach
 x = ±59, which is what makes the boss 119 px wide; the core at 87 px tall is what makes it 87 tall.
@@ -36,10 +42,12 @@ Four reasons the split is the right one, in order of weight:
    still large but they are mirrorable and countable; the mock's own source already says this about
    the carrier and the boss, which is why both were drawn from primitives.
 
-`SPRITES` in the mock therefore gains `boss-core`, `boss-pod` and `boss-arm`, and `drawBoss` in
-`src/03-scenes.js` becomes five `blit` calls at the offsets above instead of the primitive stack it
-holds today. **The right-hand parts are the left-hand sprites mirrored**, drawn by the renderer, not
-two entries in the atlas.
+`SPRITES` in the mock gained `boss-core`, `boss-pod` and `boss-arm` when the parts were drawn on
+22/08/2026. **`drawBoss` in `src/03-scenes.js` was not converted and is still the primitive ellipse
+stack**, so the combat mock draws a boss that is not the boss that was drawn — worth knowing before
+trusting that page for the boss. Converting it to five `blit` calls at the offsets above is the
+remaining half of this section. **The right-hand parts are the left-hand sprites mirrored**, drawn by
+the renderer, not two entries in the atlas.
 
 ## What the boss is made of
 
@@ -148,7 +156,7 @@ drawing.
 The crown is the opposite case and can be left alone — it is the part furthest from the player and
 the last thing he is ever aiming at.
 
-**Proposed, for phase 07 to accept or replace:** one more entity, and one offset moved.
+**Proposed, and accepted by phase 07 on 22/08/2026:** one more entity, and one offset moved.
 
 | Change | Value |
 |---|---|
@@ -157,6 +165,11 @@ the last thing he is ever aiming at.
 
 That makes six entities instead of five, leaves at most 5 px of any part unhittable, and keeps the
 channels the player flies through open, which is the constraint that must not be traded away.
+
+Both are in `BossSystem` — `CORE_KEEL_RADIUS`, `CORE_KEEL_OFFSET_Y` and `ARM_OFFSET_Y` — and the part
+table at the top of this page and the one in `02-sprite-sizes.md` were corrected to match on
+26/08/2026. The keel carries the core's own health and points, so the fight's length is governed by
+`2 * coreHealth` against the central column, which `10-mvp-initial-values.md` records.
 
 ## Open, for whoever draws it
 
