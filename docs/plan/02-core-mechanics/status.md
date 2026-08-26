@@ -1,6 +1,6 @@
 # Phase 02 — Core mechanics · status
 
-**State:** in review
+**State:** done — merged in [#10](https://github.com/LuchoC-Dev/little-spaceship/pull/10)
 **Updated:** 20/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.

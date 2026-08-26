@@ -108,3 +108,5 @@ Neither the architecture nor the platform should yet be considered closed.
 ## Project visibility
 
 The repository will be private during the initial stage. Upon reaching the MVP it will be evaluated whether it is worth making it public at that point or waiting until the product is finished. There is no confirmed target date yet.
+
+*Resolved on 25/08/2026: the repository was made public on shipping the MVP.*

@@ -67,6 +67,11 @@ anything informative that appears there is a defect.
 
 ### What each slot looks like
 
+**Specified, not drawn.** `HudRenderer` draws all six as flat rectangles at these coordinates and in
+these colours — the geometry, the flashes and the tick counts below are all built and correct, the
+*iconography* is not. The five `icon-*` sprites exist in `assets/atlas/sprites.atlas` and nothing
+references them. Recorded 26/08/2026; the work belongs to the 11 group, not to this page.
+
 | Element | Filled | Empty |
 |---|---|---|
 | Life slot | ship silhouette, `N6` body, `C1` engine | `N3` outline only |
@@ -137,14 +142,21 @@ Every one of them is a change to something already on screen; nothing new appear
 | Attachment lost | the whole `MODULE` block flashes `N7` 3 ticks, then hides |
 | Bomb used | leftmost filled bomb slot flashes `N7` 2 ticks, then empties |
 | Weapon level gained | the newly lit segment flashes `F1` for 4 ticks |
-| Pickup collected at maximum | the score value flashes `W4` for 6 ticks |
+| Pickup collected at maximum | the score value flashes `W4` for 6 ticks — **not built, see below** |
 
 There is no full-screen flash for damage. The playfield rules are enough, and a white frame over
 208 px of bullets hides exactly what the player needs to see next.
 
-The score has no floating popups. The value flashing on a bonus covers the one case
+The score has no floating popups. The value flashing on a bonus was meant to cover the one case
 — `10-mvp-initial-values.md`'s 500 points for a wasted pickup — where the player would otherwise
 wonder what happened.
+
+**That one case is the only row of this table that is not built**, and it cannot be built from what
+crosses the boundary today: `enemy-tank`'s kill score and `maxedPickupBonus` are both 500, so a
+same-size jump in `score` is ambiguous, and `HudRenderer` has only the `PlayerStatus` snapshot to
+diff. Flashing on every score increase would fire on every kill. Closing it needs a signal from
+`core` naming the cause — work for the 11 group, weighed against whether the case is worth an event.
+`HudRenderer`'s class javadoc has said this since it was written; this page had not.
 
 ## Conformance with the specification
 
@@ -168,13 +180,14 @@ numeral, and the player's hitbox.
 
 ## Screens
 
-The five screens of the flow are laid out on the full 480x270, not in the plates. They are built
-with `scene2d.ui` over a Skin, and the only thing this document fixes about them is the frame they
-share:
+The screens of the flow are laid out on the full 480x270, not in the plates. There are seven —
+menu, ship selection, options, play with its pause overlay, victory, defeat and credits. They are
+built with `scene2d.ui` over a Skin, and the only thing this document fixes about them is the frame
+they share:
 
 | Element | Value |
 |---|---|
-| Screen background | `N1`, with the level's parallax at 30% behind the menu |
+| Screen background | `N1`. A parallax at 30% behind the menu is specified and unbuilt — there is no parallax in the game |
 | Title | `font-title` in `N7`, top-left at 40, 32 |
 | Menu entry | `font-mini`, 10 px line height, 16 px between entries |
 | Entry, selected | `W4`, with a 5x7 `>` marker 12 px to its left |

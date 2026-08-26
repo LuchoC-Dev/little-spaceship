@@ -46,8 +46,10 @@ else uses `font-mini`.
 | File | [`fonts/font-title.png`](fonts/font-title.png) |
 
 Uppercase only, and there is no lowercase to fall back to. A string with lowercase in it is a
-mistake in the caller, not in the font — the loader uppercases before drawing rather than showing a
-gap.
+mistake in the caller, not in the font: **nothing uppercases on the way out**, so it draws as gaps.
+An earlier version of this page said the loader uppercases before drawing; it never did, and the
+only `toUpperCase` in the project turns a content id into a HUD plate label
+(`HudRenderer.attachmentLabel`). Corrected 26/08/2026.
 
 The sheet was specified here as 10 x 4 = 40 cells at 80 x 52 px, and that was wrong: the coverage
 above is 43 glyphs and never fitted in 40 cells. Corrected on 22/08/2026 while drawing it, and
@@ -87,15 +89,21 @@ overflows and no glyph needs a Y offset.
 
 **The sheets are generated, not hand-edited.** The glyph bitmasks live in
 `mockups/src/00-palette.js`, because the mock pages draw text with them and a font that exists in
-two places diverges. [`fonts/build-fonts.py`](fonts/build-fonts.py) is what turns them into PNGs:
+two places diverges. Two scripts turn them into files, and both are needed:
 
 ```
-python docs/design/fonts/build-fonts.py
+python docs/design/fonts/build-fonts.py   # the sheets, into docs/design/fonts/
+node   docs/design/fonts/build-fnt.js     # the game's fonts, into assets/fonts/
 ```
 
-It writes `font-mini.png`, `font-title.png` and `specimen.png`. The specimen is both fonts set as
-running text at 4x, and it is there because a sheet of glyphs in a grid does not tell you whether a
-sentence reads.
+`build-fonts.py` writes `font-mini.png`, `font-title.png` and `specimen.png`. The specimen is both
+fonts set as running text at 4x, and it is there because a sheet of glyphs in a grid does not tell
+you whether a sentence reads.
+
+**`build-fnt.js` is the one that puts the fonts in the game**, emitting the AngelCode `.fnt` and its
+page into `assets/fonts/`, which is what `GameSkin` loads. It was added on 25/08/2026 and this page
+did not mention it, so following this page produced sheets nothing could load — which is exactly what
+happened: every screen rendered in libGDX's bundled Arial until the gap was found.
 
 ## How both are drawn
 
@@ -113,10 +121,14 @@ colour is baked into the glyphs.
 | Menu entry, selected | `W4` |
 | Warning, destructive confirmation | `W3` |
 
-**Text over the playfield carries a shadow.** One pixel of `N0` at offset `+1, +1`, drawn as a
-second pass before the glyph. Over the HUD plates it does not: the plate is already `N2` and the
+**Text over the playfield should carry a shadow** — one pixel of `N0` at offset `+1, +1`, drawn as
+a second pass before the glyph. Over the HUD plates it should not: the plate is already `N2` and the
 shadow only muddies the letter. The rule is about what is behind the text, not about which font it
 is.
+
+**Not built.** No renderer draws a second pass, and nothing in the MVP puts text over the playfield,
+so the case has not arisen. Stated as a rule for whoever first does, rather than as a description of
+the code — it read as the latter until 26/08/2026.
 
 **No kerning, no ligatures, no letter-spacing tricks.** Position is `x + index * advance`, an
 integer, always.

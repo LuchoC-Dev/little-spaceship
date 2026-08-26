@@ -112,8 +112,8 @@ game/
   adapter/render/      WorldView → SpriteBatch
   adapter/audio/       GameEvent → Sound
   adapter/input/       keyboard and mouse → InputFrame
-  screens/             scene2d.ui
-  Composition.java     composition root
+  screen/              scene2d.ui
+  ui/                  the Skin and the palette
 ```
 
 Adapters are interchangeable by definition: replacing libGDX, changing JSON for another format or adding a new target touches `game`, never `core`.
@@ -130,9 +130,14 @@ This holds inside `core` too: the domain is modelled with named concepts —ship
 
 ```java
 public interface ContentSource {
-    EnemyDefinition enemy(String id);
-    WaveTimeline timeline(String levelId);
     BalanceValues balance();
+    EnemyDefinition enemy(String id);
+    TrajectoryDefinition trajectory(String id);
+    FormationDefinition formation(String id);
+    WaveTimeline timeline(String levelId);
+    AttachmentDefinition attachment(String id);
+    boolean hasBoss(String levelId);
+    BossDefinition boss(String levelId);
 }
 
 public interface GameEventSink {
@@ -148,7 +153,9 @@ public interface GameEventSink {
 public interface WorldView {
     void forEachSprite(SpriteVisitor visitor);
     PlayerStatus player();
-    BossStatus boss();
+    BossStatus bossStatus();
+    LevelOutcome outcome();
+    CompletionBonus completionBonus();
 }
 
 public interface SpriteVisitor {
@@ -172,7 +179,13 @@ The boundary is not held up by good intentions. It is checked mechanically:
 
 - `core` does not declare the libGDX dependency, so it cannot import it even if it wanted to;
 - `core` does not declare a dependency on `game`, so the arrow can never be inverted;
-- an architecture test verifies the dependency rule between layers and that no public type of `core` exposes implementation classes.
+- an architecture test verifies the dependency rule between layers, and that no type of `core`
+  *reachable from `game`* exposes implementation classes. `PublicContractTest` inspects `core.port`
+  and `core.application`, not `core.domain`, where `World` publicly hands `ComponentStore`,
+  `EntityRegistry` and `Rng` to the systems that must mutate them. That is the design rather than a
+  hole — `Simulation.world()` is package-private and `view()` returns a `WorldView`, so `game` can
+  never reach a running `World` — but the criterion has been worded more broadly than the test
+  before, which is [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4).
 
 ## The loop
 
@@ -216,11 +229,12 @@ Pure data, with no logic and no behaviour methods. The MVP ones:
 |---|---|
 | `Transform` | position |
 | `Motion` | velocity and, optionally, trajectory |
-| `Collider` | radius and collision layer |
+| `Collider` | radius, collision layer, and `fragile` — whether ramming destroys it |
 | `Health` | health points (enemies and boss) |
 | `Player` | lives, bombs, shot level |
-| `Weapon` | rate of fire, pattern, timer |
-| `Lifetime` | remaining duration, for projectiles |
+| `Weapon` | rate of fire, pattern, timer, for the player |
+| `EnemyWeapon` | the same for an enemy archetype, including its first-shot delay |
+| `BombState` | charges held, and whether one was requested this tick |
 | `Sprite` | reference to the resource and current animation |
 | `ScoreValue` | points on being destroyed |
 | `Drop` | what it drops on death, if it drops anything |
@@ -234,18 +248,37 @@ Pure data, with no logic and no behaviour methods. The MVP ones:
 
 Functions over the world, executed **in a fixed order**. The order is part of the game rules, not a detail: changing it changes the behaviour.
 
+**The order lives in `core.domain.system.SystemOrder`, and that enum is the authority.** It is
+reproduced here because a reader learning the architecture needs to see it, and the enum carries a
+per-stage javadoc saying what breaks if a stage moves. If this list and the enum ever disagree, the
+enum is right and this document is stale.
+
 ```
-1  InputSystem        translates the InputFrame into player intent
-2  MotionSystem       applies velocities and trajectories
-3  WeaponSystem       resolves rates of fire and creates projectiles
-4  SpawnSystem        advances the level timeline
-5  LifetimeSystem     expires projectiles and effects
-6  CollisionSystem    detects hits and emits collision events
-7  DamageSystem       applies the defensive priority
-8  PickupSystem       resolves power-ups and attachments
-9  ScoreSystem        accumulates score
-10 CleanupSystem      destroys what is marked and frees identifiers
+1  INPUT          translates the InputFrame into player intent
+2  MOTION         applies velocities and trajectories
+3  WEAPON         resolves the player's rate of fire and creates projectiles
+4  BOMB           detonates the bomb, before COLLISION on purpose
+5  SPAWN          advances the level timeline
+6  SPAWNER        ticks each carrier's periodic child spawn
+7  ENEMY_WEAPON   resolves every enemy's cooldown and creates its projectile
+8  BOSS           entrance, the pattern state machine and its fire
+9  LIFETIME       expires projectiles and effects
+10 COLLISION      detects hits and emits collision events
+11 DAMAGE         applies the defensive priority, and damage dealt to enemies
+12 PICKUP         resolves power-ups and attachments
+13 SCORE          accumulates score
+14 CLEANUP        destroys what is marked and frees identifiers
 ```
+
+`INPUT` is a declared stage with no system in it: the player's intent is read straight from the
+`InputFrame` by the systems that need it. A stage with no system is skipped, which is how the enum
+was written so that a phase can fill one in without renumbering anything.
+
+`BOMB` sitting before `COLLISION` is the one placement that is load-bearing rather than tidy.
+`BombSystem` only *marks* entities for destruction and leaves their colliders in place, so it is
+`CollisionSystem`'s own rule — skip anything already marked this tick — that turns the marking into
+actual protection. Move `BOMB` after `COLLISION` and a bomb stops saving the player from what it
+just cleared.
 
 `DamageSystem` is the only place where the confirmed defensive priority lives —invulnerability → shield → attachment → life— and where invulnerability is granted after any damage. Concentrating it in a single system is what makes it testable and what prevents it from scattering into conditionals across the code.
 
@@ -270,9 +303,15 @@ They exist, but with a strict boundary:
 - **Towards presentation**, the core emits events and the `game` layer consumes them. Audio, HUD, particles and camera shakes hook in there.
 
 ```
-core emits:  EnemyDestroyed, PlayerHit, PowerUpTaken, BombFired,
-             AttachmentLost, BossPhaseStarted, LevelCleared
+core emits:  EnemyDestroyed
 ```
+
+**One event, deliberately.** Phase 01 decided not to invent an event's fields before a system emits
+it (`docs/plan/01-foundations/status.md`), and nothing since has needed a second one: audio reads
+`EnemyDestroyed` through `GameEventSink`, and the HUD gets everything else by diffing the
+`PlayerStatus` snapshot it already receives every frame. `PlayerHit`, `PowerUpTaken`, `BombFired`,
+`AttachmentLost`, `BossPhaseStarted` and `LevelCleared` were named here as the expected set and were
+never built. Add one when a consumer exists for it, not before.
 
 That way the core does not know sound exists, and adding a new effect touches no game rule. It is the decoupling the specification asked for, applied where it really pays off.
 
@@ -285,23 +324,27 @@ The files live in `assets/data/`. `game` reads them with `JsonReader`/`JsonValue
 ```
 assets/data/
   enemies.json      archetypes and their components
-  patterns.json     shot patterns
   trajectories.json trajectories
   formations.json   formations
-  level-01.json     level timeline
+  attachments.json  attachments and their durability
+  level-01.json     level timeline and the boss
   balance.json      values from 10-mvp-initial-values.md
 ```
+
+Shot patterns never became a file of their own: a pattern is a string on the weapon component, and a
+`patterns.json` holding one entry would be an abstraction with no case behind it.
 
 An enemy is a list of components, not a class:
 
 ```json
 {
-  "id": "tank",
+  "id": "enemy-tank",
   "components": {
     "health":     { "points": 40 },
-    "motion":     { "speed": 18, "trajectory": "slow-descent" },
-    "weapon":     { "rate": 2.2, "pattern": "straight-single" },
-    "collider":   { "radius": 7, "layer": "enemy" },
+    "motion":     { "trajectory": "crawl" },
+    "weapon":     { "pattern": "straight-single", "rate": 4.8, "speed": 60,
+                    "firstShotDelay": 1.6 },
+    "collider":   { "radius": 10.5, "fragile": false },
     "scoreValue": { "points": 500 }
   }
 }
@@ -318,10 +361,9 @@ A level is a sequence of timestamped events, which is the executable form of the
 ```json
 {
   "events": [
-    { "at": 8.0,  "spawn": "basic",  "formation": "line-3",   "atX": 0.5 },
-    { "at": 12.0, "spawn": "light",  "formation": "diagonal", "atX": 0.2 },
-    { "at": 45.0, "spawn": "tank",   "formation": "single",   "drop": "shield" },
-    { "at": 95.0, "spawn": "heavy-encounter",                 "drop": "attachment" }
+    { "at": 8.0,  "spawn": "enemy-basic", "formation": "line-3", "atX": 0.5 },
+    { "at": 12.0, "spawn": "enemy-light", "formation": "diagonal", "atX": 0.2 },
+    { "at": 45.0, "spawn": "enemy-tank", "formation": "single", "drop": "shield" }
   ]
 }
 ```
@@ -334,8 +376,13 @@ Manual, by constructor, with a single composition root.
 
 No Guice, Dagger or Spring: all three rely on reflection or annotation processors and would add risk with TeaVM in exchange for nothing. In a project of this size, a class that assembles the object graph is clearer than a framework.
 
+There is no `Composition` class. The object graph is assembled in `LittleSpaceshipGame` (the skin,
+the atlas, the content source) and in `PlayScreen` (the simulation and the renderers), each building
+what it owns. A single root class was the sketch below; two owners turned out to be enough, and a
+third class holding both would only pass them straight through.
+
 ```java
-// composition root, in game
+// the shape of it, in game
 var rng = new Rng(seed);
 var content = contentLoader.load();
 var world = new World(content, rng);
@@ -354,12 +401,14 @@ Systems receive what they need and do not consult singletons. That is what allow
 
 **Deterministic replays.** A replay is a seed plus the sequence of `InputFrame` per tick. The test reproduces it in full and compares the final state against the expected one.
 
-```
-core/src/test/resources/replays/
-  level-01-victory.replay
-  level-01-defeat.replay
-  attachment-absorbs.replay
-```
+There is no replay file format and no `core/src/test/resources/`. A replay is a JUnit test that
+builds its seed and its input sequence in code — `BombReplayTest`, `BossReplayTest`,
+`DamageReplayTest`, `LevelScoreReplayTest`, `SpawnerReplayTest`. An external format was the plan and
+was never needed, since no replay has yet had to outlive the test that produces it.
+
+**What most of them assert today is that a run reproduces itself, not that a rule holds**, which is
+[#44](https://github.com/LuchoC-Dev/little-spaceship/issues/44) and work for the 11 group: a broken
+rule breaks identically on both runs, so the test stays green.
 
 They detect what unit tests do not see: two systems that are correct separately interacting badly. And they act as a safety net when refactoring, which is exactly when it is most needed.
 
@@ -374,7 +423,7 @@ With a limitation the spike made clear: **the web runtime cannot be validated in
 ## Conventions
 
 - **All code in English**: identifiers, comments, log messages, content file names and JSON keys.
-- Packages according to the hexagonal layers: `core.domain.*`, `core.application`, `core.port`, `game.adapter.*`, `game.screens`.
+- Packages according to the hexagonal layers: `core.domain.*`, `core.application`, `core.port`, `game.adapter.*`, `game.screen`.
 - Components have no logic; systems have no state of their own beyond the strictly necessary.
 - No static singletons in `core`.
 

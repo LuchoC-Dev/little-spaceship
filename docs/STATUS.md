@@ -27,9 +27,9 @@ What exists in the repository:
 - `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. It can be deleted once it stops being useful.
 - `docs/design/` — the visual direction: the closed `ls32` palette, sprite sizes in pixels per archetype, bitmap typography, HUD layout, legibility rules, and pixel-exact mocks. Synchronisation point 1, settled.
 - `.claude/agents/` — six agent definitions with project-scoped persistent memory.
-- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring. 236 tests, no libGDX on its classpath.
-- `game/` and `desktop/` — the LWJGL3 launcher, the input adapter that sums keyboard and relative mouse, an allocation-free renderer reading through `WorldView`, integer-scaled viewport, placeholder art at the sizes the visual direction fixed, and the JSON content loader. No tests yet. `web/` is still an empty skeleton; phase 09 owns it.
-- `assets/data/` — the content as JSON: six archetypes, four trajectories, three formations and one timeline.
+- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring, the boss and its six colliders. **289 tests**, no libGDX on its classpath.
+- `game/` and `desktop/` — the LWJGL3 launcher, the input adapter that sums keyboard and relative mouse, an allocation-free renderer reading through `WorldView`, integer-scaled viewport, placeholder art at the sizes the visual direction fixed, the real sprite atlas and bitmap fonts, the Skin, the seven screens, audio, and the JSON content loader. Still no tests ([#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19)). `web/` carries `WebLauncher` and the TeaVM build that ships the live site.
+- `assets/data/` — the content as JSON: six archetypes, four trajectories, **eight** formations, one attachment, and one timeline carrying the boss.
 - `.github/workflows/ci.yml` — CI on every push and pull request: compiles, runs the tests, builds the
   desktop and TeaVM web targets. It cannot prove the web build *runs*; a human does that.
 - `README.md` and `LICENSE` (MIT) — written for the repository going public. The licence covers the
@@ -200,8 +200,9 @@ None of these block the MVP. Each is a real thing someone chose not to fix under
   edge ("the top of most capital letters"), not a bottom-left corner, so the cap height was subtracted
   twice and every label landed one line down, on its own icon row. A separate `yGdxTop` helper now
   serves text. The score value was silently mispositioned by the same bug. Still open from this entry:
-  the five `icon-*` sprites exist in the atlas and `HudRenderer` does not use them; it is still
-  text-only.
+  the five `icon-*` sprites exist in the atlas and `HudRenderer` does not use them. It is not
+  "text-only", which this entry said until 26/08: it draws flat rectangles at the design's exact
+  coordinates and colours, and what is missing is the iconography.
 - ~~Ramming the boss does not repeatedly damage the player.~~ **Withdrawn on 25/08 after a play
   session.** Ramming damages the player normally. The "one hit then nothing" an agent saw under
   sustained overlap is `03-game-systems.md`'s decided rule — all damage taken grants temporary
@@ -227,9 +228,11 @@ None of these block the MVP. Each is a real thing someone chose not to fix under
 - ~~The Skin integration is reflective and needs TeaVM declarations.~~ **It was not.** `GameSkin`
   builds the entire skin in code from `Pixmap`/`NinePatch`/style objects; the only file it reads is a
   plain-text AngelCode `.fnt`, which is not reflective. There is no `Skin(FileHandle, TextureAtlas)`
-  and no `skin.load(...)` anywhere. **`docs/design/07-skin.md` still describes the reflective path and
-  is now wrong about the code** — that stale doc is what put this warning here in the first place.
-  Fix the doc, or a future phase will re-raise this same non-problem.
+  and no `skin.load(...)` anywhere. `docs/design/07-skin.md` described the reflective path and was
+  wrong about the code; that stale doc is what put this warning here in the first place.
+  **Corrected on 26/08/2026 by phase 10a**, which also found the drift was wider than this entry
+  knew: none of that page's fourteen drawables, five named colours or focus nine-patch is in the
+  game either. See `docs/plan/10a-honest-documentation/audit.md`, F10.
 
 ## What is settled
 
@@ -307,6 +310,6 @@ All of these are in `CLAUDE.md`, but they are worth repeating because they are s
 
 One issue per task, one branch per issue, merged through a pull request that closes it. Commits go through the `/git-commit` skill. `reviewer` accepts or rejects a phase against the acceptance criteria in its `plan.md`.
 
-Repository: <https://github.com/LuchoC-Dev/little-spaceship> — private. Several parallel Claude sessions each get their own git worktree.
+Repository: <https://github.com/LuchoC-Dev/little-spaceship> — **public** since 25/08/2026, when the MVP shipped, under MIT. Several parallel Claude sessions each get their own git worktree.
 
 Six agents own different modules, so their boundaries come from the architecture rather than from goodwill. Each keeps its own memory under `.claude/agent-memory/`, and that memory records only what the agent learned that is not already written in `docs/`.

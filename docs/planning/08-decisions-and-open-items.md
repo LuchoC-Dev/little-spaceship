@@ -58,11 +58,14 @@
 
 Decided on 22/08/2026 by the project owner, once level 1 was written and the gaps became visible.
 
-- **Enemy weapons get built before the MVP.** Nothing but the boss shoots today: `WeaponSystem` arms
-  the player, and enemy firing patterns were deferred through phases 04, 05 and 07 without anyone
-  deciding they were out of scope. The consequence is that `enemy-shooter` — the "evolved basic" the
-  spec describes as the archetype that shoots — reads as a larger, slower basic, and the only danger
-  in the level is collision. The palette already reserves a value and hue no background may repeat
+- **Enemy weapons get built before the MVP.** *(Done. `EnemyWeapon`, `EnemyWeaponSystem` and the
+  `ENEMY_WEAPON` stage landed in phase 07; the four archetypes the spec arms — basic, light, shooter
+  and super-fast — carry a `weapon` component as of 25/08/2026, tank included. The state described
+  below is the one that produced this decision, not the current one.)* Nothing but the boss shot when
+  this was written: `WeaponSystem` armed the player, and enemy firing patterns were deferred through
+  phases 04, 05 and 07 without anyone deciding they were out of scope. The consequence was that
+  `enemy-shooter` — the "evolved basic" the spec describes as the archetype that shoots — read as a
+  larger, slower basic, and the only danger in the level was collision. The palette already reserves a value and hue no background may repeat
   for enemy bullets, and `05-legibility-rules.md` is built around them, so the presentation side is
   specified and waiting.
 - **Enemy health is tuned by playing, not by arithmetic.** At the placeholder numbers a heavy carrier
@@ -108,7 +111,7 @@ them, and phase 05's guaranteed drops have nowhere to anchor.
 - Save and quit resumes from the last safe checkpoint, not from the exact position.
 - Continue recovers the run's saved state; starting from the checkpoint creates a new run with a default loadout.
 - The portfolio must demonstrate architecture, tests, CI, performance, documentation, art and deployment.
-- The repository stays private initially; making it public will be evaluated upon reaching the MVP or the final product.
+- ~~The repository stays private initially; making it public will be evaluated upon reaching the MVP or the final product.~~ **Resolved 25/08/2026: made public on shipping the MVP**, under MIT, with a description and topics.
 
 ## Provisional decisions
 
@@ -139,9 +142,10 @@ Durability: the same for all attachments by default, but modelled as data config
 bonus and one scaled by how much remains, and the second reading is the one that actually rewards
 "finishing in good shape" — a flat bonus would pay the same whether the player has one life left or
 five. Resolved by phase 05 as per-unit: `lives * 1000 + bombs * 300`. Implemented as
-`ScoreSystem.completionBonus(BalanceValues, Player)`, a pure function with no caller yet, since
-nothing in the core detects "the level is complete" before a boss and a victory condition exist
-(phase 07).
+`ScoreSystem.completionBonus(BalanceValues, Player)`. It had no caller when phase 05 wrote it,
+since nothing in the core detected "the level is complete" before a boss and a victory condition
+existed; phase 07 supplied both, and the result now crosses the boundary as
+`WorldView.completionBonus()`.
 
 ### Build tool
 
@@ -185,8 +189,8 @@ Resolved by the prototype, as planned: **Gradle**. The gdx-teavm plugin is a Gra
 
 ## Technical items to verify
 
-- Real compatibility in Firefox, Edge and Safari; Chrome already verified.
-- Pointer capture for the relative mouse.
+- ~~Real compatibility in Firefox, Edge and Safari; Chrome already verified.~~ **Chrome and Firefox verified by hand on 25/08/2026 against the live site. Edge was dropped by the project owner's decision. Safari remains unverified.**
+- Pointer capture for the relative mouse — built and shipped, and it has a defect: losing the lock breaks mouse control until the page is refocused ([#41](https://github.com/LuchoC-Dev/little-spaceship/issues/41)).
 - Measurement with definitive art and audio; the spike generates its textures in code.
 - Compatibility of Java dependencies.
 - Final hosting.

@@ -141,7 +141,7 @@ At 119 px the boss occupies 57% of the 208 px playfield: dominant, with dodging 
 sides.
 
 **A boss that wide cannot be one circle.** A single collider large enough to cover it would swallow
-the gaps the player is meant to fly through. It is built from **five entities** on the `ENEMY`
+the gaps the player is meant to fly through. It is built from **six entities** on the `ENEMY`
 layer, moved together:
 
 Offsets are in pixels from the boss centre, x growing right and y growing up, as in `Transform`.
@@ -149,11 +149,19 @@ Offsets are in pixels from the boss centre, x growing right and y growing up, as
 | Part | Radius | Offset from the boss centre |
 |---|---|---|
 | Core | 18.0 | 0, 0 |
+| Core keel | 13.0 | 0, -27 |
 | Pod, left and right | 12.0 | -34, +6 and +34, +6 |
-| Arm, left and right | 14.0 | -44, -18 and +44, -18 |
+| Arm, left and right | 14.0 | -44, -22 and +44, -22 |
 
-Phase 07 owns the boss's behaviour, phases and look; this fixes only its footprint and how it takes
-hits. If phase 07 needs different parts it should change them here first, because the art is drawn
+**This table was five rows until phase 07.** `06-boss-presentation.md` measured, while the parts were
+being drawn, that the original five colliders left 25 px of the core's keel unhittable — the first
+thing a player shooting upward reaches — and proposed `core-keel` plus moving the arms from -18 to
+-22. Phase 07 accepted both; `BossSystem` builds them, and its class javadoc carries the reasoning.
+Updated here on 26/08/2026, which is five days later than it should have been: this page says the
+art is drawn against this map, so the map has to be the one the code holds.
+
+Phase 07 owned the boss's behaviour, phases and look; this fixes only its footprint and how it takes
+hits. A later phase needing different parts changes them here first, because the art is drawn
 against this map.
 
 ## Pickups and structures

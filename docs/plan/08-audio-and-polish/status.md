@@ -1,6 +1,6 @@
 # Phase 08 — Audio and polish · status
 
-**State:** tasks 1-4 done, task 5 partially done (see Blocked)
+**State:** done — merged in [#31](https://github.com/LuchoC-Dev/little-spaceship/pull/31), with both dead cues wired on 25/08/2026
 **Updated:** 22/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.

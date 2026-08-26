@@ -31,6 +31,12 @@ descriptive, because that is how they are used.
 Every markdown file under `docs/`, plus `README.md`, was read. `docs/sources/` is out of scope by the
 plan: it is a verbatim transcript kept as evidence.
 
+### `docs/STATUS.md`
+
+| Document | Verdict |
+|---|---|
+| `STATUS.md` | **F13, F33, F34, F35.** The document a newcomer is told to read first, and the one carrying the most live claims. Most reproduce — the 289 tests, the served byte counts, the phase table, the whole post-MVP backlog. Four do not. |
+
 ### `docs/design/` — the visual direction
 
 | Document | Verdict |
@@ -431,6 +437,26 @@ module graph, both Gradle commands, the MIT licence, the browser matrix.
 
 Six agent definitions, five memory directories. `test-engineer` has none. Recorded for 10b, which
 owns that file.
+
+### F33 — `docs/STATUS.md` says `core` carries 236 tests · Low · 10a
+
+It says 289 in one place, in the phase-09 section, and 236 in the repository inventory eight lines
+from the top. `./gradlew core:test` on 26/08: **289 tests, 0 failures**. The inventory line is the
+one a newcomer reads.
+
+### F34 — `docs/STATUS.md` miscounts the content · Low · 10a
+
+"six archetypes, four trajectories, **three** formations and one timeline". `formations.json` holds
+**eight** (`single`, `line-3`, `line-5`, `column-3`, `diagonal`, `diagonal-mirror`, `vee-5`, `pair`),
+and the list omits `attachments.json` and the boss carried inside `level-01.json`. Six archetypes and
+four trajectories are right.
+
+### F35 — `docs/STATUS.md`: "`web/` is still an empty skeleton; phase 09 owns it" · Medium · 10a
+
+`web/` carries `WebLauncher` and the TeaVM build that produces the site the same document links to
+twice. The same sentence describes `game/` as carrying "placeholder art at the sizes the visual
+direction fixed", which stopped being true on 25/08 when the real atlas and the real bitmap fonts
+landed.
 
 ---
 

@@ -446,15 +446,25 @@ health decides whether it fills it. The same arithmetic makes the tank (40 hp) a
 rather than the priority shift the 1:26 stretch is built around. Those are balance numbers, not pacing
 ones, so they are recorded there rather than changed here.
 
-## A gap this lane did not close
+## A gap this lane did not close — closed on 25/08/2026
 
-**`enemy-shooter` does not shoot.** The machinery to make it shoot now exists — `core-domain` records
+**`enemy-shooter` does not shoot.** *(No longer true. Closed on 25/08/2026, before the MVP shipped:
+`enemy-basic`, `enemy-light`, `enemy-shooter` and `enemy-rush` all carry a `"weapon"` component in
+`enemies.json`, and `EnemyWeapon` gained a `"firstShotDelay"` because initialising the cooldown to
+its full value meant an enemy that dies to one hit never fired at all. Recorded in `docs/STATUS.md`.
+Struck through here on 26/08/2026 by phase 10a; the paragraph is kept because the pacing consequence
+below is still live.)*
+
+The machinery to make it shoot now exists — `core-domain` records
 above how `b33f302` closed that half — but no archetype in `enemies.json` declares a `"weapon"`
 component, so the behaviour is still absent from the game. So beat 9 of `04-campaign-and-levels.md`'s sequence currently reads as
 "a larger, slower basic worth more points" rather than as the pressure it is meant to introduce, and
 the 2:46–2:57 stretch will need rewriting, not just retuning, once enemies can fire. It is written to
 be replaced: the shooter waves sit in their own contiguous stretch rather than being scattered
 through the level.
+
+**The rewrite the last sentence asks for has not happened.** Enemies fire now and that stretch was
+never rebuilt around it; it belongs to the 11 group's wave work.
 
 ---
 

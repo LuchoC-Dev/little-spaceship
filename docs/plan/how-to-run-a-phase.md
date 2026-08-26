@@ -33,7 +33,20 @@ issue  →  branch  →  work  →  PR  →  reviewer  →  merge  →  status
 
 **Merge** once accepted.
 
-**Afterwards**, update the phase table in `docs/STATUS.md`, which describes what is on `main` rather than what a branch claims.
+**Afterwards**, two writes, and both of them or neither:
+
+1. the phase's `status.md` **`State:` line**, to what the phase actually is now, naming the PR;
+2. the phase table in `docs/STATUS.md`, which describes what is on `main` rather than what a branch claims.
+
+Then read back over the `status.md` you just closed and strike out anything in it written in the
+future tense — "remains", "whoever merges should", "not yet" — that the merge has answered. A status
+file is a dated record and stays one; a *forward-looking* sentence in it is read as current by the
+next person, and that is how phase 09's file ended up telling its reader the play link was a 404
+three weeks after it went live.
+
+**The first of those two writes did not exist before 26/08/2026**, and four of the nine phase status
+files had drifted from the table in `docs/STATUS.md` as a result — phase 09's still said "in
+progress" with the MVP shipped. See `docs/plan/10a-honest-documentation/audit.md`, F28 and F29.
 
 Then record in your agent memory what you learned that is **not** in `docs/`: a tool limitation, an operation that behaves differently under TeaVM, where something turned out to live. Not what the phase achieved — `status.md` already says that, and two copies of the same fact end with one of them stale.
 
