@@ -50,6 +50,23 @@ progress" with the MVP shipped. See `docs/plan/10a-honest-documentation/audit.md
 
 Then record in your agent memory what you learned that is **not** in `docs/`: a tool limitation, an operation that behaves differently under TeaVM, where something turned out to live. Not what the phase achieved — `status.md` already says that, and two copies of the same fact end with one of them stale.
 
+## Writing anything into `docs/`
+
+One convention, decided in phase 10a and justified in
+[`10a-honest-documentation/mechanism.md`](10a-honest-documentation/mechanism.md):
+
+> **A passage that describes behaviour either names, in backticks, the file that implements it — or
+> says "Not built".**
+
+It costs a backtick. It buys three things: a reader can tell a rule that is enforced from one that is
+only written down, which nine of phase 10a's findings turned on; a named file breaks loudly when the
+code moves, where prose rots silently; and the `docs-refs` check
+([#56](https://github.com/LuchoC-Dev/little-spaceship/issues/56)) can see the reference and fail the
+build on it.
+
+`docs/design/04-hud-layout.md` and `HudRenderer` are what it looks like done properly — the most
+accurate document/code pair in the repository, and the one where each side quotes the other by name.
+
 ## Two failures and you stop
 
 If the same thing fails twice, stop and report. Do not try a third variation.
