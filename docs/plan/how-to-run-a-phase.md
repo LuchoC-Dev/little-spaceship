@@ -45,6 +45,8 @@ it ran it caught the missing executable bit that killed phase 09's first two CI 
 
 **Review.** `reviewer` audits against the acceptance criteria in the plan and the invariants in `CLAUDE.md`, and accepts or rejects. A rejection is normal: it comes back with what failed and why.
 
+A rejection goes back to the worker only while that worker is still open and the fix is inside what it just did. Once it is closed it stays closed: the coordinator takes prose fixes of one or two files, and anything larger becomes a new issue against the state already in Git. `docs/planning/13-working-with-agents.md` has the rule and what phase 09 measured behind it.
+
 **Status.** Update the phase's `status.md` **on the branch, before the PR is reviewed**. It is part of the phase's work, it travels with the code, and it lets the reviewer check whether the status tells the truth. Record what was completed, what is open, and anything the next person needs to know.
 
 **Merge** once accepted — the coordinator merges the sub-branch into the phase branch. When every

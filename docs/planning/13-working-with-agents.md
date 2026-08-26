@@ -106,6 +106,45 @@ sent back to the same agent instead of closing it and reopening against the stat
 **Keep image inspection short and separate.** A screenshot's tokens stay in context for every turn
 that follows. Look, write the conclusion down, and close the context.
 
+## Where a correction goes
+
+Written on 26/08/2026, after phase 09 handled two rejections without a rule and got it right by
+instinct. The question is what happens when a review rejects work: back to the worker, or the
+coordinator fixes it.
+
+**While the worker is still open, and the fix is inside what it just did, send it back.** It has the
+context loaded and pays nothing to reload it. Phase 09 did this once, on the web launcher — the
+worker stayed open across its own review — and that worker also reached 103 model calls, the largest
+in the phase. The exception is real but it is not free.
+
+**Once the worker is closed, it is closed.** Reopening it makes it re-read everything: phase 09's
+workers each pulled between 1.8 M and 6.6 M cached tokens getting started. Phase 05 is the warning —
+correction rounds sent back to a closed agent produced a single run of 312 calls and 104 M processed
+tokens. The alternative is not "the coordinator does everything": it is a **new issue and a fresh
+agent against the state already in Git**, which is what `status.md` and the pull request exist for.
+
+**The coordinator takes it when all of these hold**, which is the common case:
+
+- the fix is prose — a status file, a document, a memory note, a pull request body;
+- it is one or two files, and the reviewer already said exactly where;
+- it needs nothing the coordinator would otherwise have to learn about the module.
+
+Both of phase 09's rejections were exactly this shape — a false claim in `status.md` and a stale
+caveat in the README — and both were fixed in minutes. That is the default.
+
+**It goes back as a new issue when any of these hold:**
+
+- it touches production code in a module the coordinator does not own;
+- it spans more than a couple of files, or the fix requires a decision rather than an edit;
+- the fix would itself need a review. A coordinator fix that needs auditing is not a coordinator fix.
+
+**And wherever the fix lands, it lands everywhere the wrong claim did.** Phase 09's false CI sentence
+was written into `status.md` *and* the agent's memory file; the status file was corrected and the
+memory file was not, and phase 10a found it still wrong days later.
+
+**The limit.** If a coordinator is taking a third correction in one phase, the plan or the brief is
+what is defective, not the work. Stop and say so instead of absorbing it.
+
 ## How a task is distributed
 
 1. The boss decides what has to be done and against which documents it is validated.
