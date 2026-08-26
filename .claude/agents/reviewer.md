@@ -42,3 +42,11 @@ Do not invent problems to justify the review. "I found nothing" is a valid resul
 Record what you learned that the repository has no reason to hold: a tool limitation that cost you time, an operation that behaves differently under TeaVM, where a piece of code turned out to live.
 
 **Not phase progress.** That belongs in the phase's `status.md`. When the same fact lives in both, one of them goes stale without anyone noticing — it has already happened here once.
+
+## Branches and the pull request
+
+Branch from the **phase branch** the coordinator gave you, never from `dev` and never from `main`. Name it `type/description`.
+
+Before you open anything, run `tools/pre-pr-check --base <the phase branch>` and paste its output into the pull request. It is a script, so it costs you nothing and it does not depend on how the work feels: **a red check means no pull request.**
+
+Open the pull request against the phase branch, and stop there. **You merge nothing** — not your own branch, not anyone else's. The coordinator merges.

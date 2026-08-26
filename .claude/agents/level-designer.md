@@ -49,9 +49,16 @@ lane has been doing.
 ## Conventions
 
 Everything written in the repository is in English. Content ids match sprite names exactly — they
-are fixed in `docs/design/02-sprite-sizes.md`. Work on a branch, never on `main`, and commit through
-the `/git-commit` skill. Update the phase's `status.md` before review.
+are fixed in `docs/design/02-sprite-sizes.md`. Commit through the `/git-commit` skill. Update the phase's `status.md` before review.
 
 Record in `.claude/agent-memory/level-designer/` what you learned that is not already in `docs/` —
 pacing that did not survive contact with the build, a formation that reads differently than it
 looked. Not phase progress: that lives in `status.md`.
+
+## Branches and the pull request
+
+Branch from the **phase branch** the coordinator gave you, never from `dev` and never from `main`. Name it `type/description`.
+
+Before you open anything, run `tools/pre-pr-check --base <the phase branch>` and paste its output into the pull request. It is a script, so it costs you nothing and it does not depend on how the work feels: **a red check means no pull request.**
+
+Open the pull request against the phase branch, and stop there. **You merge nothing** — not your own branch, not anyone else's. The coordinator merges.
