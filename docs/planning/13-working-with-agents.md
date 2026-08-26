@@ -182,7 +182,7 @@ Now there are four levels, and each one only receives a pull request from the le
 | Branch | Who commits on it | How work leaves it |
 |---|---|---|
 | `main` | nobody | a pull request from `dev`, **merged by the project owner** |
-| `dev` | nobody | a pull request from a phase branch |
+| `dev` | nobody | a pull request from a phase branch, merged by a coordinator **only with the project owner's direct approval** |
 | `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
 | `type/description` | the agent doing one task | a pull request against the phase branch |
 
@@ -190,6 +190,11 @@ Branching from `dev` happens only to open a phase. Every agent branches from the
 opens its pull request against it. **A subagent merges nothing** — not even its own branch. The
 coordinator merges sub-branches; the phase reaches `dev` as one reviewable pull request; `dev`
 reaches `main` only when the project owner decides.
+
+**The one merge a coordinator needs permission for is the phase into `dev`.** It is allowed, and it
+is not the coordinator's call: the project owner approves that pull request directly, per pull
+request. Approval of one phase says nothing about the next. Sub-branches into the phase branch need
+no approval — that is the coordinator's own job — and `main` is never a coordinator's merge at all.
 
 `docs/plan/how-to-run-a-phase.md` holds the operational version of this, next to the rest of the
 cycle.

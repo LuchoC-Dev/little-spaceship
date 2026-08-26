@@ -86,3 +86,14 @@ than ignored. The full case is in [`evidence.md`](evidence.md).
 **Why in `CLAUDE.md` as well as in the six agent definitions.** Five of phase 09's eight subagents
 never opened `CLAUDE.md`; three did. Neither location covers everyone on its own, and this is a rule
 about the sentence being written at the moment it is written.
+
+## 7 — Who merges a phase into `dev` · issue [#65](https://github.com/LuchoC-Dev/little-spaceship/issues/65)
+
+**What changed.** The `dev` row of the branch table now says the merge is a coordinator's to make
+**only with the project owner's direct approval**, and the paragraph under it says the approval is per
+pull request rather than standing.
+
+**What motivated it.** The regime as first written said who merges into `main` and who merges
+sub-branches, and said nothing about the phase into `dev` — a gap this phase's own closing report had
+to raise as an open question. The project owner answered it on 26/08/2026: coordinators and leads may
+do it, with direct approval each time.
