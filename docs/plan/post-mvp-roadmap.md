@@ -1,36 +1,47 @@
 # Post-MVP roadmap
 
 Written on 25/08/2026, the day the MVP shipped, from the player's direction after playing the
-deployed build.
+deployed build, and expanded the same day.
 
-This document says **what the phases after 09 are and why**. It does not plan them: each one gets
-its own folder under `docs/plan/` with a `plan.md` and a `status.md` when it is picked up, the same
-as phases 01–09. Nothing here is scheduled.
+This document says **what the phases after 09 are, why, and in what order**. It does not plan them in
+detail: each one gets its own folder under `docs/plan/` with a `plan.md` and a `status.md` when it is
+picked up, the same as phases 01–09. Nothing here is scheduled.
 
 Read `docs/STATUS.md` first for where the project actually stands.
 
+## Scope: stage 1 only
+
+`docs/planning/04-campaign-and-levels.md` defines a campaign of **five stages**, each aiming for 3–5
+levels — an indicative 15–25 levels — plus a possible second campaign that is explicitly out of scope.
+
+**Everything in this roadmap is stage 1, "Invasion of Earth".** Levels 2 through 5 are that stage's
+levels; the story completed in phase 13 is that stage's story. Stages 2–5 already have their narrative
+function, setting and escalation sketched in that document and are not touched here.
+
+The reason for that concentration is the point of the whole plan: build the system on one stage, and
+the later stages become far cheaper — see "How later levels get built" at the end.
+
 ## Where this came from
 
-The MVP is live and playable. Playing it produced three defects and a longer list of things that are
+The MVP is live and playable. Playing it produced four defects and a longer list of things that are
 not defects but decisions the MVP deferred. Rather than fixing them one at a time, the player asked
-for the remaining work to be split into four phases, in this order, with the reordering done **first**
-so that everything after it is built on a base that holds.
+for the remaining work to be split into four phases, with the reordering done **first** so that
+everything after it is built on a base that holds.
 
 That ordering is the point. It is cheaper to fix the process and the foundations now, with one level
 in the repository, than after five.
 
 ## What playing the web build found
 
-Three issues, all open, none blocking:
-
 | Issue | What |
 |---|---|
+| [#40](https://github.com/LuchoC-Dev/little-spaceship/issues/40) | QUIT does nothing on the web target |
 | [#41](https://github.com/LuchoC-Dev/little-spaceship/issues/41) | Losing pointer lock breaks mouse control until the page is refocused |
 | [#42](https://github.com/LuchoC-Dev/little-spaceship/issues/42) | No in-game options: volume cannot be changed while playing |
 | [#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) | The shield and the attachment are invisible — no sprite, no animation |
 
-[#40](https://github.com/LuchoC-Dev/little-spaceship/issues/40), QUIT doing nothing on the web
-target, was found the same day.
+All four are assigned to **phase 11**, by the player's decision: they are code work and they travel
+with the code reordering rather than being handled separately.
 
 **#41 is worth singling out.** Phase 09's task 4 was "verify pointer capture", it was never actually
 verified, and the defect it would have caught is the one the player hit. Everything else about that
@@ -38,151 +49,218 @@ phase was checked against reality; that one criterion was assumed, and assuming 
 
 Other than these, the player's verdict on the web build was that it works.
 
-## Phase 10 — Reordering: process, architecture, documents
+---
 
-**Why first:** the MVP shipped, but the way it was built failed in ways that will get more expensive
-with every level added. The evidence is already written down:
+## Phase 10 — Reordering the development system
 
-- **Cost.** `docs/planning/13-working-with-agents.md` records ~3,300 model calls, 665 million cached
-  input tokens and **fourteen spend limits across nine contexts**, two thirds of it re-reading
-  conversation history rather than doing new work. The regime written after that audit — one
-  coordinator per phase, `reviewer` on Sonnet, one issue per worker — was followed in phase 09 and
-  held. It should be checked against phase 09's actual numbers and tightened where it did not.
-- **Documents going stale, repeatedly.** `docs/design/07-skin.md` still describes a reflective Skin
-  integration the code does not use, and that stale document is what put a false warning into
-  `docs/STATUS.md` for a future phase to trip over. Phase 09 caught two more of the same shape: a
-  `status.md` claiming CI had never run when four real runs existed, and a licence claim corrected in
-  the README but left false in the status file. The reviewer's memory now catalogues this as a
-  recurring pattern, which means it is a process defect, not bad luck.
-- **Art delivered to nowhere.** Three times in one day, art a phase called delivered existed only
-  under `docs/design/` with nothing in `assets/`. The sprites and fonts were fixed; `module-satellite`,
-  `ship-bank`, `ship-tilt`, `ship-hit`, `structure-tower` and the five `icon-*` glyphs are still in the
-  atlas, referenced by nothing (see #43).
-- **Architecture and code structure**, to be audited before more levels are built on top.
+**Not code.** This phase is about how the project is built: agents, documentation, and whether the
+architecture needs to change.
 
-**Not decided:** the specific scope. What counts as "reordering" needs to be settled before the phase
-opens, or it will absorb anything anyone dislikes.
+### Agents and the way sessions are run
 
-## Phase 11 — Reordering 2: the game itself
+`docs/planning/13-working-with-agents.md` records the audit that produced the current regime: ~3,300
+model calls, 665 million cached input tokens, and **fourteen spend limits across nine contexts**, two
+thirds of it re-reading conversation history rather than doing new work.
 
-Same spirit, aimed at the code, the MVP and level 1 rather than at process. The goal is a base the
-`level-designer` agent can build levels on **easily**, which today it cannot.
+That regime — one coordinator per phase, `reviewer` on Sonnet, one issue per worker, any limit stops
+the flow — was followed in phase 09 and held. This phase checks it against phase 09's real numbers
+and tightens what did not work. Also in scope: the six agent definitions, their prompts, and their
+memory files, which have accumulated across nine phases without a pass.
 
-### Level 1 is too long
+Two process defects phase 09 surfaced that belong here rather than to any one agent:
 
-Measured, not estimated: `assets/data/level-01.json` has **92 spawn events** and the boss enters at
-**302 s — 5.03 minutes**.
+- **A worker reported CI as unverifiable while four real runs sat in the API.** The workflow triggers
+  on push; it had already run twice red and twice green. Reasoning about a YAML file was submitted in
+  place of evidence that was one command away.
+- **Agent memory keeps being written into the main working copy.** `.claude/agent-memory/` is a
+  tracked path, so an agent working from a worktree writes to whichever checkout it happens to be in.
+  This had to be corrected by hand three times in one phase. It is structural, not carelessness.
 
-The player's judgement is that five minutes is too long, and the figure discussed was somewhere around
-2.5–3 minutes. **That number is deliberately not fixed here** — it is decided in the phase that does
-the work, once the wave structure below exists and the pacing can be felt rather than arithmetic'd.
-What is settled is the direction: shorter, with the boss arriving earlier. Whatever the number turns
-out to be, this is close to halving the timeline rather than trimming it.
+### Documentation
 
-### The boss changes
+`docs/` has drifted from the code, and the drift causes real damage rather than just being untidy:
 
-Both because it arrives earlier and because it is still too easy. `docs/STATUS.md` already records
-the player's own diagnosis, which is better than the fix that was tried: the spread always points
-*outward* and the sweep *inward*, so a player parked in the centre is never threatened. The fight is a
-positioning problem solved once, not a dodge. Tripling the fan did not move it. What was suggested:
-five rays, aimed at the player rather than at fixed outward angles — weighed against keeping the tell
-honest, which is what makes the fight fair.
+- `docs/design/07-skin.md` still describes a reflective Skin integration the code does not use. That
+  stale document is what put a false warning into `docs/STATUS.md` for a future phase to trip over,
+  and it took a reviewer reading `GameSkin` to establish it was never true.
+- Phase 09 caught two more of the same shape: a `status.md` claiming CI had never run, and a licence
+  claim corrected in the README but left false in the status file.
+- Three times in one day, art a phase called delivered existed only under `docs/design/` with nothing
+  in `assets/`.
 
-### Stats need a real pass
+The reviewer's memory now catalogues this as a recurring pattern with several variants, which makes it
+a process defect rather than bad luck. This phase audits `docs/` against the code and decides what
+keeps documents honest going forward.
 
-Enemy, ship, projectile and drop values are still largely placeholder — a heavy carrier dies in about
-1.2 s against the 32 s its stretch reserves. The player's verdict after playing the web build is that
-the game is **too easy**. This is a redesign of the numbers, not a tweak.
+### Architecture
 
-The open tension `docs/STATUS.md` already records belongs here: the spec asks the basic enemy for
-"low health and a slow shot", and those fight each other, because an enemy that dies to one hit rarely
-lives long enough for its rate of fire to read.
+**A discussion, not a rewrite.** Whether the current architecture holds for four more levels, the
+wave system and the movement system — and if not, what changes. The eight open technical issues from
+earlier phases (#3, #4, #5, #11, #12, #17, #19, #23) are the concrete input.
 
-**Decided, and it stays decided: balance is tuned by playing, not by arithmetic.**
+The invariants in `CLAUDE.md` are the thing to argue *against* if anything is to change: they were
+measured, and breaking one invalidates earlier work.
 
-### Levels should be built out of waves, not a flat list of timestamps
+### Risk
+
+**This phase's scope is the thing most likely to go wrong.** "Reordering" attracts every complaint
+anyone has. It needs acceptance criteria that say what is out as clearly as what is in, before it
+opens.
+
+---
+
+## Phase 11 — Reordering the code
+
+The goal is a base the `level-designer` agent can build levels on **easily**, which today it cannot.
+
+### Waves, first — everything else depends on it
 
 Today `level-01.json` is **92 spawn events**, each an absolute time, an archetype, a formation and an
-x position. It is a transcript, not a design: there is nothing in it that says "this is the opening",
-and no way to reuse a piece of it.
+x position. It is a transcript, not a design.
 
-The player's proposal is to group spawns into **waves** as the unit of level design. Roughly, as
-described:
+**The design it is a transcript of already exists.** `docs/planning/04-campaign-and-levels.md`, under
+"Level 1 design → Provisional sequence", lists level 1 as thirteen beats:
 
-> wave 1 is one, two, then three basic ships; wave 2 is when they start coming three at a time and
-> the faster ones begin to appear; wave 3 is the next step up, and so on.
+> initial calm · first isolated basics · light/fast · combined formations · tanks and shifts in
+> priority · super-fast · one or two heavy carriers · evolved basics/shooters · high-pressure
+> combinations · **a difficult encounter that delivers the attachment** · brief rest · final
+> escalation · boss
 
-Two reasons, both real: **a level becomes readable as a design** rather than as 92 rows, and **waves
-can be reused** — across a level, and potentially across levels.
-
-This is the piece the per-level document and the movement work below both hang off, which is why it
-is written first.
+Those are waves. Progression, a deliberate rest before the climax, and a reward tied to a specific
+encounter. **The structure was designed and then flattened away in translation to JSON.** The player's
+proposal — group spawns into waves as the unit of level design, reusable across a level and between
+levels — is recovering it, not inventing it.
 
 **Open, and each of these changes what a wave is:**
 
-- **What ends a wave.** A fixed duration, or "the wave is cleared"? Clearing is the more interesting
-  design — pacing follows the player rather than the clock — but it makes level length depend on how
-  the player performs, which is exactly what "the boss arrives at 2.5 minutes" stops meaning. Note it
-  does *not* break determinism: the core reads world state, not the clock, so a cleared-based trigger
-  stays reproducible. The invariant survives; the schedule does not.
+- **What ends a wave.** A fixed duration, or "the wave is cleared"? Clearing is the better design —
+  pacing follows the player rather than the clock — but then level length depends on how the player
+  performs, and "the boss arrives at minute 3" stops meaning anything exact. It does **not** break
+  determinism: the core reads world state, not the clock, so a cleared-based trigger stays
+  reproducible.
 - **How a wave is placed.** Absolute time, or relative to the previous wave ending? Reuse pushes hard
-  towards relative — an absolute time is not reusable anywhere.
-- **Whether a wave takes parameters.** The same wave at a higher difficulty, mirrored, or entering
-  from a different side, is the difference between reuse and copy-paste. It is also the difference
-  between a simple format and a small language, and this project's sixth invariant is no abstraction
-  without a real case in the MVP.
-- **Where waves live.** `assets/data/` alongside formations, or a level-level construct. Formations
-  already exist as a grouping below this one; waves sit above them, and the two should not blur.
+  towards relative.
+- **Whether a wave takes parameters.** The same wave harder, mirrored, or entering from another side
+  is the difference between reuse and copy-paste — and between a simple format and a small language.
+  Invariant 6 says no abstraction without a real case.
+- **Where waves live.** Formations already exist as a grouping below this one; waves sit above them
+  and the two should not blur.
 
-None of this is decided. It is written down so the phase that picks it up starts from the questions
-rather than rediscovering them.
+### Movement as a described thing
 
-### Movement needs to be a system, not a value
+An enemy's behaviour should vary by where it appears in the level. The player's example: a fast enemy
+enters from one direction with one movement early, from another direction with a different movement at
+the midpoint, and does something else again at the end.
 
-Today a spawn event names a formation and an x position. What the player wants is for an enemy's
-*behaviour* to vary by where it appears in the level:
+That needs movement to be describable — shapes like a U-shaped attack run, a straight 30° diagonal, or
+a curve following something like an inverted logarithmic function. Today there are four trajectories
+in `assets/data/`.
 
-> a fast enemy might enter from one direction with one movement early in the level, from another
-> direction with a different movement at the midpoint, and do something else again at the end.
+### A document per level
 
-Two pieces come out of that:
+For each enemy, projectile and appearance: its stats and what it actually does, so that changing
+something means reading that document rather than reading the code. In the player's words: so we do
+not forget, and do not have to look at the code every time.
 
-1. **Movement as a described thing** — a class, interface or data description covering shapes like a
-   U-shaped attack run, a straight 30° diagonal, or a curve following something like an inverted
-   logarithmic function. Today there are four trajectories in `assets/data/`.
-2. **A per-level document** giving, for each enemy, projectile and appearance, its stats and what it
-   actually does — so that changing something means reading that document rather than reading the
-   code. The player's reason, in their words: so we do not forget, and do not have to look directly at
-   the code every time we want to change something.
+**This is now load-bearing**, because it is what an agent reads to build later levels (see the end of
+this document). It is not a convenience any more.
 
-**Open, and it matters:** whether that per-level document is authored by hand and consumed by the
-game, generated from the level data, or a view produced for reading only. Those are three different
-things with three different failure modes — the first can drift from the code, the second cannot but
-constrains the format, the third is safe and does the least. This needs deciding before anything is
-built, and it interacts with `core`'s invariant that content is data read without reflection.
+**And it inherits this project's worst failure mode.** Documents here drift from the code — three
+times with art, twice in phase 09 with status files. A document that describes the level *and* a JSON
+that defines it are two copies of one truth, and one of them will rot. The options are not equal:
+generating the JSON from the document, or the document from the JSON, cannot drift; maintaining both
+by hand will. **This must be decided before anything is built.**
 
-Also open from before: the intensity-curve tooling, which `docs/STATUS.md` has been carrying as a
-non-blocking item since the level's length and climax were decided.
+### Balance, the boss, and level length
 
-## Phase 12 — Levels 2 and 3, and the shape of the story
+- **Stats need a real pass.** Enemy, ship, projectile and drop values are still largely placeholder —
+  a heavy carrier dies in about 1.2 s against the 32 s its stretch reserves. The player's verdict
+  after playing the web build is that the game is **too easy**. This is a redesign of the numbers.
+- **The boss changes.** `docs/STATUS.md` records the player's diagnosis, which is better than the fix
+  that was tried: the spread always points outward and the sweep inward, so a player parked in the
+  centre is never threatened. It is a positioning problem solved once, not a dodge. Suggested: five
+  rays aimed at the player rather than at fixed outward angles — weighed against keeping the tell
+  honest, which is what makes the fight fair.
+- **Level 1 gets shorter.** The boss currently enters at **302 s (5.03 minutes)**. Five minutes is too
+  long; the figure discussed was around 2.5–3 minutes. **The number is deliberately not fixed here** —
+  it is decided in this phase, once waves exist and pacing can be felt rather than arithmetic'd.
 
-Build levels 2 and 3 on the base phase 11 produces, and plan the story across the first five levels.
+**Decided, and it stays decided: balance is tuned by playing, not by arithmetic.**
 
-The story planned here is **not final** — it covers five levels while only three exist, so it is a
-working outline that phase 13 completes.
+### The four web defects
 
-## Phase 13 — Through level 5, and the finished story
+#40, #41, #42 and #43 are fixed in this phase.
 
-- Levels 4 and 5.
-- **The final story**, complete rather than outlined.
+### Risk
+
+**As written, this is several phases of work.** Waves, movement, the per-level document, a full stats
+redesign, a boss redesign, a length cut and four defects. The regime says one issue per worker and
+split past 60–80 calls. This should be broken into numbered sub-phases before it opens, with waves
+first — balance and movement are expressed *inside* waves, so rebalancing 92 flat rows and then
+regrouping them into waves is doing the work twice.
+
+Also open from before: the intensity-curve tooling, carried as non-blocking since the level's length
+and climax were decided.
+
+---
+
+## Phase 12 — Levels 2 and 3, and the story of stage 1
+
+Build levels 2 and 3 of "Invasion of Earth" on the base phase 11 produces, and plan the stage's story
+across its five levels.
+
+The story planned here is a working outline: it covers five levels while only three exist. Phase 13
+completes it.
+
+This is also the **first real test of whether phase 11 worked.** If building level 2 is not markedly
+easier than building level 1 was, the base did not do its job, and that is worth finding out at level
+2 rather than at level 5.
+
+---
+
+## Phase 13 — Levels 4 and 5, and stage 1 finished
+
+- **Levels 4 and 5**, with level 5 closing the stage by destroying the mothership, per
+  `04-campaign-and-levels.md`.
+- **The stage's story, complete** rather than outlined.
 - **Animations.**
 - **Backgrounds per level.**
 - **Progression**, and whatever else the game needs by then to be a whole rather than a sequence of
   levels.
 
+After this, stage 1 is a finished game with five levels, and stages 2–5 are the same shape of work on
+a system that has been proven.
+
+---
+
+## How later levels get built
+
+The player's intent, and the reason phases 10 and 11 come first:
+
+> the later stages get generated by one or more agents, after a technical and informative conversation
+> with an agent before building the implementation.
+
+So the target is **not** a procedural generator and **not** just "easy to hand-author". It is that
+`level-designer` — possibly with others — can produce a level by reading the stage's design and the
+per-level documents, preceded by a design conversation rather than a prompt.
+
+Three things follow, and they are constraints on phase 11 rather than nice-to-haves:
+
+1. **The per-level document is the interface.** It is what the agent reads. It must be complete and
+   readable enough to design from, which is a higher bar than being a reference for a human who
+   already knows the game.
+2. **Waves and movements must be nameable and composable.** An agent reusing "the opening of level 1,
+   harder" needs that to be a thing with a name, not a range of rows.
+3. **The drift problem becomes critical.** An agent generating a level from a stale document produces
+   a level that is wrong in a way nobody notices — the same failure as art delivered to `docs/design/`,
+   with more surface area.
+
+None of that argues for building a generator now. It argues for deciding the format with this use in
+view, because retrofitting it later is the expensive path.
+
 ## What this document is not
 
 It is not a schedule, and it is not a plan. Each phase needs its own `plan.md` with acceptance
 criteria before work starts, written the way phases 01–09 were. Several things above are marked open
-on purpose: deciding them here, in a summary written the day the MVP shipped, would be exactly the
-kind of guess `docs/planning/08-decisions-and-open-items.md` exists to prevent.
+on purpose: deciding them here would be exactly the kind of guess
+`docs/planning/08-decisions-and-open-items.md` exists to prevent.
