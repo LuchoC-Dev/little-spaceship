@@ -1,6 +1,9 @@
 # Phase 11a — Tests that assert rules · status
 
-**State:** in progress on `phase/11a-rule-asserting-tests`
+**State:** done. All seven tasks merged into `phase/11a-rule-asserting-tests` through seven pull
+requests (#100-#103, #105-#107); `reviewer` accepted the branch; the phase opened
+[PR #109](https://github.com/LuchoC-Dev/little-spaceship/pull/109) against `dev` and is waiting for
+the project owner's approval, which no earlier approval covers.
 **Updated:** 27/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
@@ -406,7 +409,8 @@ contributes and which cost nothing.
 
 ## In progress
 
-The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
+Nothing. The table below is the phase's final shape: the plan's seven tasks became eight pieces of
+work — task 5 split, see D1 — of which seven went to a worker.
 
 | Task | Issue | Worker |
 |---|---|---|
@@ -545,4 +549,25 @@ one substantive contribution is the argument against D5, which is incorporated a
 
 ## Notes for whoever comes next
 
-—
+**The premise you inherit is not the roadmap's.** 167 of the 289 tests already asserted a rule. What
+was thin was the five cross-system replay files and a handful of specific clauses, and that is what
+this phase closed. Read `baseline.md` before assuming the suite is weak.
+
+**Two things go to `core-domain`, and one of them is worth doing before 11b:**
+[#104](https://github.com/LuchoC-Dev/little-spaceship/issues/104), the unreachable `alive` conjunct
+in `World.View.outcome()`, in a method 11b will be reading closely; and
+[#108](https://github.com/LuchoC-Dev/little-spaceship/issues/108), the pinned sequences duplicated
+between `RngTest` and `rngparity/Main.java`.
+
+**11b inherits a described gap**, not a vague one: nothing reaches the bossless `COMPLETED` through
+the real spawn-and-clear pipeline. Task 4's entry above says exactly which tests reach it and how
+they cheat.
+
+**11e inherits two things.** The boss's structural rules are in `docs/plan/07-boss/status.md` rather
+than `docs/planning/`, and `02-mvp-functional-spec.md:184` still calls the boss's patterns open.
+And `DamageSystemTest.invulnerabilityAlsoProtectsAgainstConsequencesForTheOther` pins a reading of an
+item `08-decisions-and-open-items.md` lists as open — when that item is settled, the test moves with
+the decision rather than counting as a vote for the current behaviour.
+
+**`spikes/web-viability/` is now deletable and still there.** #52's blocker is gone; removing the
+directory is a separate act and the project owner's.

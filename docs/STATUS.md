@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 26/08/2026.
+Last updated: 27/08/2026.
 
 Read this first if you are picking the project up. It says where things stand and what comes next; `CLAUDE.md` says how to work here.
 
@@ -9,7 +9,7 @@ Read this first if you are picking the project up. It says where things stand an
 **`main` is now the whole picture, and the game is finished except for shipping it.** The three branches
 that held the MVP were reviewed and merged on 25/08/2026 — sprites (#30), audio (#31), boss (#29) — and
 everything they left unwired was closed the same day, along with a balance pass driven by playing, two
-defects and a UI pass. `./gradlew build` is green and `core` carries 289 tests.
+defects and a UI pass. `./gradlew build` is green and `core` carries 289 tests on `dev`, 303 on phase 11a's branch.
 
 **The MVP is shipped.** The game is live at <https://luchoc-dev.github.io/little-spaceship/>, it runs
 in a browser with no install, and phase 09 closed on 25/08/2026. What follows is polish, and the
@@ -320,6 +320,7 @@ Everything the three merged branches left unwired is closed.
 | 10a | Honest documentation | **done** — every document in `docs/` audited against the code, 33 false statements corrected, #5 resolved, #3 and #4 decided, and a mechanism chosen. See [the audit](plan/10a-honest-documentation/audit.md) |
 | 10b | Agents and sessions | **done** — phase 09 measured (813 calls, $110.76 equivalent, 83 % of it the coordinator's model choice), the six agent definitions and 46 memory files audited, the agent-memory worktree trap closed with a hook, an evidence rule for claims about a system, and the `dev`/phase/sub-branch regime with `tools/pre-pr-check`. See [the measurement](plan/10b-agents-and-sessions/measurement.md). Merged into `dev` in #76 and into `main` in #79 |
 | 10c | Architecture review | **done** — the architecture holds for the 11 group with four named additive extensions (#84, #85, #86, #87) and no change to its shape; all fifteen open issues triaged, #23 closed as already fixed and #11 decided; invariant 6's expired wording put to the project owner as #91. No production code changed. See [the decision](plan/10c-architecture-review/decision.md) and [the assessment](plan/10c-architecture-review/assessment.md). Merged into `dev` in #93 |
+| 11a | Tests that assert rules | **done on its branch, not yet on `dev`** — the baseline measured by reading all 289 tests (167 assert a rule, 9 reproducibility, 4 both, 117 infrastructure), which **falsifies the roadmap's suite-wide claim** and confirms it only for the five replay files; five rule-asserting tests added where nothing went red before, including the boss-module test #44 was raised for; #3/#53, #4/#54 and #52 closed, the `Rng` parity check moved onto the real class in `:rngparity`, and #104 and #108 opened. `reviewer` accepted. Waiting on the project owner in [#109](https://github.com/LuchoC-Dev/little-spaceship/pull/109) |
 
 ## Open items that do not block
 
