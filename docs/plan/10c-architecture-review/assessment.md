@@ -348,4 +348,4 @@ doing its job, and the flips are traceable to a named document rather than to a 
 | G — the per-level document | Holds, and the contract is the answer: `core` reads a `ContentSource`, never a file. |
 | H — tests | Prerequisite, not a strain. [#44](https://github.com/LuchoC-Dev/little-spaceship/issues/44) gates the rest safely. |
 
-The decision this feeds is in [`decision.md`](decision.md).
+The decision this feeds is `decision.md`, in this folder — written by tasks 4 and 5 of the same phase.
