@@ -262,6 +262,82 @@ literal-scanning corner cases in a new `JavaSourceTest`, since they are about `J
 isolation rather than about the determinism rule itself. A different worker might have put all nine
 in one place; naming the split here so it does not look accidental.
 
+**Task 5b · `PublicContractTest` scope** ([#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) = [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4)) —
+`test-engineer`, branch `test/public-contract-scope`. Both halves of D3
+(`docs/plan/10a-honest-documentation/decisions.md`): the criterion reworded and the test's scope
+stated in its own javadoc, plus the two smaller softnesses named alongside it.
+
+**Where the criterion actually lived.** #54's reworded criterion — "no type of `core` reachable from
+`game` exposes an implementation class" — has nowhere else to go: `docs/plan/01-foundations/plan.md`
+is explicitly left alone by D3's own "Not done in this phase" note, and
+`docs/planning/12-architecture.md` was already corrected by phase 10a on 26/08/2026. Grepping the
+repository for the old wording (`exposes an implementation class`) after those two exclusions turns up
+exactly one live occurrence: `PublicContractTest`'s own class javadoc, which read "No public type of
+the core hands an implementation class to the outside" — no `game`-reachability, no scope, no reason.
+That is not a second place carrying the overstated claim; it is the only one left, and it is also
+where #54 asks the scope statement to go. Reworded in place, with the three facts D3 lists as making
+the `core.domain` exclusion safe, verified rather than repeated:
+- `GameSystem` (`core.domain.system.GameSystem`) takes a `World` argument, so systems must mutate it
+  directly — `grep -n "World" core/src/main/java/dev/luchoc/littlespaceship/core/domain/system/GameSystem.java`.
+- `Simulation.world()` is package-private and `Simulation.view()` is public and returns `WorldView` —
+  `grep -n "world()\|WorldView view" core/src/main/java/dev/luchoc/littlespaceship/core/application/Simulation.java`,
+  lines 142 (`public WorldView view()`) and 219 (`World world()`, no modifier).
+- Java without JPMS having no "public within a module" visibility is a language fact, not something to
+  grep.
+
+All three still hold; nothing in this task's diff touches `core.domain`, `Simulation`, or `GameSystem`.
+
+**The two narrowings, each demonstrated blind-before and caught-after.**
+
+*`isAllowed` no longer accepts all of `java.util.*`.* Read every public port/application signature
+(`grep -rn "java\.util\." core/src/main/java/dev/luchoc/littlespaceship/core/{port,application}`,
+then checked which of those imports actually appear in a *public* member, not an internal local): only
+`List` and `Map` cross the boundary today (`SimpleEnemyDefinition`, `SimpleFormationDefinition`,
+`SimpleWaveTimeline`, `WaveTimeline`, `EnemyDefinition`, `FormationDefinition` for `List`;
+`MapComponentSpec`'s constructor for `Map`). `Simulation`'s own public API uses no `java.util` type at
+all — its one `ArrayList` is a private local. Narrowed `ALLOWED_JAVA_UTIL_TYPES` to exactly
+`{List, Map}`. Demonstrated blind: added a temporary public `ArrayList<String> keys()` to
+`MapComponentSpec` (a concrete class, not `ArrayList` itself, per the issue's own example), ran
+`./gradlew :core:test --tests "*PublicContractTest*"` before narrowing — green, proving the old check
+missed it — then narrowed and re-ran the same command:
+```
+PublicContractTest > what crosses the boundary is a contract, never the machinery behind it FAILED
+    org.opentest4j.AssertionFailedError at PublicContractTest.java:87
+2 tests completed, 1 failed
+```
+then reverted `MapComponentSpec.java` (`git checkout --`) and confirmed `./gradlew :core:test` green
+again with the narrowed check against the real, unplanted code — no false positive from the narrowing.
+
+*`LayerDependencyTest`'s `MACHINERY` list becomes a whitelist of the one domain package a port may
+name (`domain.event`), instead of a hand-written blocklist of the rest.* The blocklist's gap was wider
+than the issue's own example: it named `component`, `entity`, `system`, `World` and `rng`, but not
+`collision` or `content`, both of which are domain machinery of the same kind
+(`core/src/main/java/dev/luchoc/littlespaceship/core/domain/collision/`,
+`.../domain/content/`) and both invisible to it. Demonstrated blind: added a temporary unused
+`import dev.luchoc.littlespaceship.core.domain.collision.CollisionHit;` to `SpriteVisitor.java`, ran
+`./gradlew :core:test --tests "*LayerDependencyTest*"` before the fix — green, an unnamed-machinery
+import passing — then rewrote the check to whitelist `domain.event` and reject every other `domain.*`
+import structurally, re-ran the same command:
+```
+LayerDependencyTest > the ports do not expose the machinery of the domain FAILED
+    org.opentest4j.AssertionFailedError at LayerDependencyTest.java:70
+4 tests completed, 1 failed
+```
+then reverted `SpriteVisitor.java` and confirmed `./gradlew :core:test` and `./gradlew build` both
+green with the whitelist against the real code — the one legitimate case (`GameEventSink` importing
+`domain.event.GameEvent`) still passes, and nothing else in `core.port` or `core.application` imports
+`core.domain` at all.
+
+No permanent fixture test was added for either narrowing: unlike task 5a's `JavaSource.strip`, which
+operates on fixture strings by design, `PublicContractTest` and `LayerDependencyTest` only ever scan
+`CoreSources.all()` — the project's real files — so there is no fixture seam to assert against without
+either creating a fake source file the scanner would pick up or reaching into `core/src/main`, which is
+out of this task's boundary. The blind-before/caught-after demonstration above, on real files planted
+and reverted, is the evidence instead.
+
+`git diff -- '*/src/main/*'` is empty on the branch that was committed;
+`git status --short` shows only the two test files changed.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
@@ -273,7 +349,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 | 3 · the boss's rules | [#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98) | `test-engineer` — done |
 | 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` — done |
 | 5a · forbidden-API check | [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) (= [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) | `test-engineer` — done |
-| 5b · `PublicContractTest` scope | [#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) (= [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4)) | `test-engineer` |
+| 5b · `PublicContractTest` scope | [#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) (= [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4)) | `test-engineer` — done |
 | 6 · `Rng` parity as a Gradle task | [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) | `test-engineer` |
 | 7 · where [#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19) goes | — | the coordinator |
 
