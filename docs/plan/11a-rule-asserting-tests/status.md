@@ -1,9 +1,11 @@
 # Phase 11a — Tests that assert rules · status
 
-**State:** done. All seven tasks merged into `phase/11a-rule-asserting-tests` through seven pull
-requests (#100-#103, #105-#107); `reviewer` accepted the branch; the phase opened
-[PR #109](https://github.com/LuchoC-Dev/little-spaceship/pull/109) against `dev` and is waiting for
-the project owner's approval, which no earlier approval covers.
+**State:** done and on `dev`. All seven tasks merged into `phase/11a-rule-asserting-tests` through
+seven pull requests (#100-#103, #105-#107); `reviewer` accepted the branch; the phase merged into
+`dev` in [PR #109](https://github.com/LuchoC-Dev/little-spaceship/pull/109) on 27/08/2026, with the
+project owner's direct approval, who also instructed the deletion of `spikes/web-viability/` in the
+same act. `dev` carries 303 tests. It has **not** reached `main`; that merge is the project owner's
+alone.
 **Updated:** 27/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
