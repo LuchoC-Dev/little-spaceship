@@ -207,6 +207,16 @@ the gap task 4's own note in `plan.md` already named, confirmed by re-reading ra
 
 **`./gradlew build` green** after the two additions.
 
+**Coordinator's addition to that finding, and where it went.** The boss branch's
+`bossDefeated && alive` is dead for exactly the same reason and was outside the demonstration above:
+the early guard settles `alive` for the whole method, not for one branch of it. So `outcome()` carries
+the redundancy twice. Opened as [#104](https://github.com/LuchoC-Dev/little-spaceship/issues/104)
+against `core-domain` rather than fixed here — `test-engineer` does not modify production code, and
+the choice between deleting both occurrences and restructuring the method so the defeat-beats-
+completion priority is expressed once is a design call in `core`. Flagged as worth settling **before
+11b**, which changes what advances the spawn cursor and what "cleared" means and will be reading this
+method closely.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
