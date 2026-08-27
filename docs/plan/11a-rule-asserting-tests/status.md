@@ -569,5 +569,14 @@ And `DamageSystemTest.invulnerabilityAlsoProtectsAgainstConsequencesForTheOther`
 item `08-decisions-and-open-items.md` lists as open — when that item is settled, the test moves with
 the decision rather than counting as a vote for the current behaviour.
 
-**`spikes/web-viability/` is now deletable and still there.** #52's blocker is gone; removing the
-directory is a separate act and the project owner's.
+**`spikes/web-viability/` was deleted on 27/08/2026**, on the project owner's instruction once #52
+removed the one thing that kept it. What was done alongside the deletion, so the citations it leaves
+behind stay worth something: the last commit containing the directory is `68d002e0560c`, recorded in
+`docs/STATUS.md`, in `docs/planning/11-technical-prototype-results.md` — whose every number was
+measured on that code and is **not** re-runnable from a checkout of `dev` — and in
+`CollisionSystem`'s class javadoc, which cites the benchmark by path. `docs/STATUS.md`'s 8181-vs-8080
+trap no longer sends anyone to a README that is gone.
+
+The references left untouched on purpose are in phase plans and status files (01, 03, 09, 10a): those
+are dated records of what was true when they were written, and the convention here is that a status
+file stays one. The named commit is what makes them chaseable.
