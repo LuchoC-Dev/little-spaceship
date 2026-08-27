@@ -181,6 +181,13 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   tell, and the strong encounter being two heavy carriers — are untouched.
 - **The boss's redesign travels with the balance pass**, in the same phase, because tuning a fight
   against a pacing that no longer exists is doing the work twice.
+- **`level-designer`'s boundary is widened to all level content under `assets/data/`** — levels,
+  waves, formations and movement shapes — from `assets/data/level-*.json` and nothing else. The old
+  line left the wave and movement-shape content that phases 11b and 11c create belonging to no agent,
+  and put the migration of `level-01.json` into a phase owned by `core-domain`, which would have been
+  an agent writing outside its module. **The line did not move in the direction that matters:**
+  content is `level-designer`'s, and the systems that read it stay `core-domain`'s. Applied to
+  `.claude/agents/level-designer.md` and to the agent table in `CLAUDE.md`.
 - **Invariant 6 is reworded, resolving
   [#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91).** The wording 10c proposed is
   accepted and applied to `CLAUDE.md`: *"No abstraction without a real case you can point at. A case

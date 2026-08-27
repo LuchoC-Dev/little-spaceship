@@ -1,6 +1,6 @@
 # Phase 11c — Movement as a described thing
 
-**Lane:** code · **Owner:** `core-domain`, with `level-designer` consulted on which shapes exist · **Depends on:** 11a, 11b
+**Lane:** code + content · **Owner:** `core-domain` for `core/`, `level-designer` for the shapes in `assets/data/` · **Depends on:** 11a, 11b
 
 ## Before you start
 

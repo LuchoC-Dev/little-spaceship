@@ -58,8 +58,8 @@ numbered phases. The first two groups are planned:
 | 10b | [Agents and the way sessions are run](10b-agents-and-sessions/plan.md) | process | coordinator | 10a |
 | 10c | [Architecture review](10c-architecture-review/plan.md) | process | coordinator | 10a, 10b |
 | 11a | [Tests that assert rules](11a-rule-asserting-tests/plan.md) | code | `test-engineer` | 10c |
-| 11b | [The wave system](11b-wave-system/plan.md) | code | `core-domain` | 11a |
-| 11c | [Movement as a described thing](11c-movement-shapes/plan.md) | code | `core-domain` | 11a, 11b |
+| 11b | [The wave system](11b-wave-system/plan.md) | code + content | `core-domain`, `level-designer` | 11a |
+| 11c | [Movement as a described thing](11c-movement-shapes/plan.md) | code + content | `core-domain`, `level-designer` | 11a, 11b |
 | 11d | [The per-level document](11d-per-level-document/plan.md) | process + code | coordinator | 11b, 11c |
 | 11e | [Level 1 redesigned, balance and the boss](11e-level-one-redesigned/plan.md) | code + content | `level-designer` | 11a–11d |
 | 11f | [The four web defects](11f-web-defects/plan.md) | presentation | `game-presentation` | — |

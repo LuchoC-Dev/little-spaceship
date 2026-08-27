@@ -1,6 +1,6 @@
 # Phase 11b — The wave system
 
-**Lane:** code · **Owner:** `core-domain` · **Depends on:** 11a · **The centre of the 11 group**
+**Lane:** code + content · **Owner:** `core-domain` for `core/`, `level-designer` for `assets/data/` · **Depends on:** 11a · **The centre of the 11 group**
 
 ## Before you start
 
@@ -96,7 +96,8 @@ They are now closed, and recorded in `docs/planning/08-decisions-and-open-items.
 5. **[#87](https://github.com/LuchoC-Dev/little-spaceship/issues/87) — `JsonContentSource` loads a
    level by id.** Three lines carry the hardcoding today and the class javadoc already names what it
    would take. Independent of the other three; it can go at any point in the phase.
-6. **Migrate `level-01.json` to waves, one-to-one.** Same spawns, same times, same behaviour. Where a
+6. **Migrate `level-01.json` to waves, one-to-one — `level-designer`'s task, not `core-domain`'s.**
+   Same spawns, same times, same behaviour. Where a
    group of the existing 92 events is obviously one beat, it becomes one wave with a fixed duration;
    where it is not obvious, keep it mechanical rather than clever. **This is a translation, not a
    design.** The design is 11e.
@@ -118,6 +119,9 @@ They are now closed, and recorded in `docs/planning/08-decisions-and-open-items.
 - The web target still builds, and `assets/startup-logo.png` is still there.
 - #84, #85 and #87 are closed, and the carrier-children rule is written into
   `docs/planning/08-decisions-and-open-items.md`.
+- **`.claude/agents/level-designer.md` no longer says a level is a timeline of timestamped spawn
+  events.** That paragraph is marked "Not built yet" today and this phase is what falsifies it — the
+  agent that reads it to design level 2 is the one who pays if it is left stale.
 - **No enemy is ever removed while it is on screen**, and there is a test that fails if one is. The
   safety box's coordinates are written down with what they clear, and a spawn landing inside them
   turns a test red rather than a level silently losing enemies.

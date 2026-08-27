@@ -90,7 +90,7 @@ Defined in `.claude/agents/`. Boundaries come from the module architecture, so t
 | `core-domain` | `core/` — ECS, systems, game rules |
 | `game-presentation` | `game/`, `desktop/`, `web/` — rendering, HUD, audio, input |
 | `visual-designer` | visual direction; produces documents, not code |
-| `level-designer` | `assets/data/level-*.json` — the wave timeline, pacing and the intensity curve |
+| `level-designer` | all level content under `assets/data/` — levels, waves, formations, movement shapes, pacing and the intensity curve. Widened from `level-*.json` on 27/08/2026 |
 | `test-engineer` | unit tests and deterministic replays |
 | `reviewer` | reads and reports only |
 
