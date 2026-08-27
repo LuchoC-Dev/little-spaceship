@@ -54,6 +54,29 @@ They are now closed, and recorded in `docs/planning/08-decisions-and-open-items.
    keeps `World.noEnemyLeft()` false for ever. This is a correctness defect on its own, independent of
    waves. Note the asymmetry it has to preserve: `MotionSystem`'s javadoc states "Enemies leave
    freely" (line 99), which is a movement rule, not a lifetime one.
+
+   **The mechanism is decided** — by the project owner on 27/08/2026 — and it is two things, not one:
+
+   - **A lifetime, which never kills an enemy on screen.** An enemy carries a maximum lifetime; when
+     it expires, the enemy is removed **only once it is off screen**. An enemy still visible at the
+     end of its lifetime waits. Nothing vanishes in front of the player, which is the rule the whole
+     mechanism exists to protect. The duration is **data, per archetype, not a constant in code** —
+     the same call `08-decisions-and-open-items.md` already made for attachment durability.
+   - **A safety box, well outside the playfield, that removes anything touching it at once.** This is
+     the backstop for an entity a lifetime never catches. It is a generalisation of what
+     `LifetimeSystem` already does for projectiles: a position check with a `MARGIN` of 16 logical
+     units past the playfield edge (`LifetimeSystem.java:33,62-65`) against
+     `MotionSystem.PLAYFIELD_WIDTH` (208) and `SpawnSystem.PLAYFIELD_HEIGHT` (270).
+
+   **The box's size is the part that can break the game silently, and it has a number to clear.**
+   Enemies are spawned *outside* the playfield today: `SpawnSystem.positionSpawned` (lines 170-180)
+   places a formation's lowest slot at `PLAYFIELD_HEIGHT + radius` and every other slot higher by its
+   `offsetY` spread. Measured against `assets/data/formations.json` on 27/08/2026, the largest spread
+   is **`column-3` at 44 units**, so its top slot is born at `y ≥ 270 + radius + 44 = 314` — while
+   the existing 16-unit margin ends at 286. **A box at today's projectile margin would destroy two
+   thirds of a `column-3` on the frame it spawns.** Write down the box's coordinates, write down what
+   they clear, and make a test fail if a spawn ever lands inside them. 11c makes this worse, not
+   better: a movement shape that leaves and re-enters is exactly what the box must not eat.
 2. **[#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85) — an entity records which wave
    spawned it.** `git grep waveId` and `git grep originWave` return nothing today. `SpawnSystem.spawnWave`
    is the only place a wave's entities are created, so it is one component or one field plus one write
@@ -95,6 +118,9 @@ They are now closed, and recorded in `docs/planning/08-decisions-and-open-items.
 - The web target still builds, and `assets/startup-logo.png` is still there.
 - #84, #85 and #87 are closed, and the carrier-children rule is written into
   `docs/planning/08-decisions-and-open-items.md`.
+- **No enemy is ever removed while it is on screen**, and there is a test that fails if one is. The
+  safety box's coordinates are written down with what they clear, and a spawn landing inside them
+  turns a test red rather than a level silently losing enemies.
 
 ## What is out of scope
 
@@ -120,6 +146,14 @@ decision is the defence. Every field added to a wave is a field an agent has to 
 
 **"Cleared" meaning something the code cannot answer.** It is answerable only once #84 and #85 exist.
 Do not write a cleared-based wave into any level before both are merged.
+
+**Sizing the safety box by eye.** It is the one number in this phase that fails silently: too small
+and a level quietly loses enemies at spawn or mid-shape, and the symptom is a wave that never clears
+rather than an error. The 44-unit measurement above is the floor, not the answer — it is what exists
+today, and 11c will add shapes that travel further.
+
+**Treating the lifetime as a balance knob.** It is a safety mechanism. An enemy dying on a timer that
+the player can perceive is a game rule nobody decided, and it is not this one.
 
 **Deciding a game rule by implementing it.** The carrier-children question in task 2 is a real
 decision. Write it in `08-decisions-and-open-items.md`; do not let it be whatever the first

@@ -153,6 +153,18 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
 - **Waves live in their own file as named content** — `assets/data/waves.json`, beside
   `formations.json` and `trajectories.json` — and a level references them by id. Formations stay the
   grouping below; the two do not blur.
+- **An enemy leaves the simulation by two mechanisms, and neither may remove it on screen.** A
+  **lifetime** per archetype, expressed as data rather than as a constant in code, which removes the
+  enemy only once it is off screen — an enemy still visible when its lifetime expires waits. And a
+  **safety box** well outside the playfield that removes anything touching it at once, as the backstop
+  for whatever a lifetime does not catch. **The box's coordinates must be written down and must clear
+  every legitimate spawn and trajectory**, because enemies are spawned outside the playfield today:
+  `SpawnSystem.positionSpawned` places a formation's lowest slot at `PLAYFIELD_HEIGHT + radius`, and
+  the largest vertical spread in `assets/data/formations.json` is `column-3` at 44 units, against the
+  16-unit margin `LifetimeSystem` uses for projectiles. This **activates a deferral phase 10c had
+  closed**: `assessment.md`'s Part 3 evaluated a `Lifetime` timer component and concluded "No.
+  Nothing in the 11 group needs a timer-expiring entity." The project owner named the case on
+  27/08/2026, which is the standard invariant 6 now sets.
 - **A movement shape is chosen in the spawn event, with the archetype supplying the default.** This is
   the half of [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) that 10c named and left
   open. **Still open:** which shapes exist, decided by the phase that builds them against the beats
