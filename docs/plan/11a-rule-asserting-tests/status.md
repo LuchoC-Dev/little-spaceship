@@ -128,6 +128,25 @@ reverted the one line. `git diff -- '*/src/main/*'` is empty on the branch that 
 **`./gradlew build` green** after the addition; `BossReplayTest` grew from two tests to three, none of
 the earlier two changed.
 
+**Coordinator's correction, and the finding under it.** The new test's javadoc originally sourced the
+module rule to `BossSystem`'s and `BossStatus`'s own javadoc — the implementation, which is what this
+phase exists to stop tests from asserting. It now cites `docs/plan/07-boss/status.md`, where phase 07
+actually decided it: the `DEFEATED` state is reached on the core's destruction and "whatever keel, pods
+or arms remain are marked for destruction with it", a part's "own death alone ends nothing", and the
+bar "shortens the instant any part is hit or dies, not only the core". The javadocs restate that
+decision; they are not its source.
+
+**The finding: the boss's structural rules are not in `docs/planning/` at all.** They are in a phase's
+`status.md`. `02-mvp-functional-spec.md:184` still reads "a simple, legible boss appropriate for a
+first level; patterns and aesthetics still open", which 08's "Level 1 climax and length" answered on
+21/08/2026 and phase 07 then built. `08-decisions-and-open-items.md` decides the *shape* of the fight
+(one phase, two alternating patterns, a clear tell) and says nothing about parts, colliders or which
+death ends it. That is not wrong — 07's status is a legitimate decision record and it is precise — but
+it means "the rule comes from `docs/planning/`" is not always available, and a worker asked to obey it
+literally will reach for a javadoc instead. **Left as a finding, not fixed:** correcting
+`02-mvp-functional-spec.md` is a planning document edit and outside this phase's scope. It belongs
+with 11e, which redesigns the boss and will have to write its rules down somewhere.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:

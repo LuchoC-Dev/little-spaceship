@@ -53,10 +53,13 @@ class BossReplayTest {
      * reproducibility"): the ship destroys one of the boss's modules and the world reflects it.
      * {@code BossReplayTest}'s other two tests never touch a module — the victory scenario aims
      * straight at the core, the defeat scenario has no boss at all — so nothing here previously
-     * exercised, through the real pipeline, either half of the decided rule: "the core is the only
-     * part whose death ends the fight" ({@code BossSystem}'s class javadoc, "Defeat") and the health
-     * bar "falls both when a part is hit and, at once, when a part dies and stops contributing
-     * anything" ({@link BossStatus}'s own javadoc). This scripts the player to shoot down the boss's
+     * exercised, through the real pipeline, either half of the decided rule. Both halves were decided
+     * by phase 07 and are recorded in {@code docs/plan/07-boss/status.md}: the {@code DEFEATED} state
+     * is reached on the core's destruction, "whatever keel, pods or arms remain are marked for
+     * destruction with it", and a part's "own death alone ends nothing"; the health bar is a sum
+     * across every part, "so the bar shortens the instant any part is hit or dies, not only the
+     * core". {@code BossSystem}'s and {@link BossStatus}'s javadoc restate them, and are the
+     * implementation, not the source. This scripts the player to shoot down the boss's
      * left pod alone, through {@code WeaponSystem}, {@code CollisionSystem}, {@code DamageSystem} and
      * {@code CleanupSystem} exactly as a real run would, and checks both halves at once.
      */
