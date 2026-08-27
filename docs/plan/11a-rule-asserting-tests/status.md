@@ -417,7 +417,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 | 5a · forbidden-API check | [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) (= [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) | `test-engineer` — done |
 | 5b · `PublicContractTest` scope | [#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) (= [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4)) | `test-engineer` — done |
 | 6 · `Rng` parity as a Gradle task | [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) | `test-engineer` — done |
-| 7 · where [#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19) goes | — | the coordinator |
+| 7 · where [#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19) goes | — | the coordinator — done, see D5 |
 
 ## Blocked
 
@@ -473,6 +473,38 @@ not add a dependency to `core/build.gradle.kts` and may not touch anything under
 Deciding where [#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19) — `game` has no tests —
 belongs is a routing decision about phases, not test engineering. It is written below and put to the
 project owner rather than handed to an agent.
+
+### D5 — #19 does not go to 11f, and it does not stay open indefinitely: it goes to the 12 group
+
+Task 7 asks where [#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19) — `game` has no
+tests at all — belongs. The three options the plan names are 11f, a later group, or open.
+
+**Not 11f.** #19's own text says the loader is "the piece with the most ways to fail quietly" and
+names its error paths as what a suite would cover: malformed content must fail naming the file and
+the offending id, never a `NullPointerException`. Those paths are in `JsonContentSource`, and
+**11b rewrites it** — task 5 of `docs/plan/11b-wave-system/plan.md` is
+[#87](https://github.com/LuchoC-Dev/little-spaceship/issues/87), loading a level by id, and task 7
+is reading `waves.json` and a level's wave references. Tests written in 11f would be written against
+a file format with a known expiry date, which is the same "doing the work twice" the roadmap uses to
+justify putting waves before balance.
+
+11f's plan already anticipates both halves of this: its task 5 says "decide #19, or execute the
+decision 11a made about it", and its "Why this runs in parallel" section calls `game`'s missing suite
+"this phase's first question rather than a reason to wait".
+
+**Not open, either.** It has been open since phase 03 and "open" is what let phase 03's coordinate bug
+(`Transform.x` is playfield-local `[0,208]`, not logical `[0,480]`) survive a whole phase.
+
+**The 12 group.** `post-mvp-roadmap.md` calls phase 12 "the first real test of whether the code
+reordering worked", and levels 2 and 3 are what first exercise a loader keyed by level id — the code
+#87 will have just written. The loader is worth testing when there is more than one level to load and
+the format has stopped moving, and that is exactly where 12 starts.
+
+**What this phase owes it:** nothing in code. #19 stays open with this decision recorded on it, and
+the question it says to answer first — how to test a loader that depends on `FileHandle` without
+dragging LWJGL into the suite — is still the first thing whoever picks it up has to solve.
+
+**Put to the project owner**, because it adds scope to a group that is not planned yet.
 
 ## Notes for whoever comes next
 
