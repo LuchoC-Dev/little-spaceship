@@ -7,7 +7,18 @@ Update this file when the phase moves. It is the only place phase progress is re
 
 ## Done
 
-Nothing yet.
+**Task 1 · baseline count** ([#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96)) —
+`test-engineer`, branch `docs/test-suite-baseline`. All 289 tests in `core/src/test/` read by hand
+against a stated criterion. Headline: 165 assert a rule, 9 assert reproducibility, 2 overlap (both in
+the same test method), 117 are infrastructure/contract tests that are neither. Full method, per-file
+table and the reproducible denominator command are in
+[`baseline.md`](baseline.md). Taken at commit `4e388067bf7ff01d527c72db9fa8828c79318b8f`.
+
+The roadmap's "the bulk asserts reproducibility" holds for the narrow slice it was actually about — the
+five cross-system replay files (9 tests, 6 reproducibility-leaning) — not for `core/src/test/` as a
+whole, where the 151 `domain/system/*Test.java` unit tests are already overwhelmingly rule-asserting.
+`baseline.md` says so explicitly so tasks 2–4 do not read the roadmap's line as "most of the suite is
+weak" when it is not.
 
 ## In progress
 
@@ -15,7 +26,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 
 | Task | Issue | Worker |
 |---|---|---|
-| 1 · baseline count | [#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96) | `test-engineer` |
+| 1 · baseline count | [#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96) | `test-engineer` — done |
 | 2 · defensive chain | [#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97) | `test-engineer` |
 | 3 · the boss's rules | [#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98) | `test-engineer` |
 | 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` |
