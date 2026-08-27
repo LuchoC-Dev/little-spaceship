@@ -6,3 +6,5 @@
 - [Verifying dead conjuncts](feedback_verifying-dead-conjuncts.md) — delete one operand of an `&&`, run the full suite; if nothing reds, it's shadowed by an earlier guard, not independently testable.
 - [Amend targets HEAD, not the commit you mean](project_amend-targets-head-not-the-commit-you-mean.md) — fixing an earlier commit's subject needs reset+amend+cherry-pick, not `--amend` from a later HEAD.
 - [Architecture tests have no fixture seam](project_architecture-test-narrowing-has-no-fixture-seam.md) — prove a narrowing by planting-and-reverting on a real `core/src/main` file, not a fixture test.
+- [TeaVM's Node runner is hand-written](project_teavm-node-runner-is-hand-written.md) — generateJavaScript never emits a run.cjs; check git ls-files before trusting a leftover one.
+- [Rng parity task wiring](project_rng-parity-task-wiring.md) — how `:rngparity`/`rngParityCheck` (#52) is built, and how to confirm a TeaVM subproject stays out of `./gradlew build`.
