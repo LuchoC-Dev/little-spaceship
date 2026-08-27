@@ -12,10 +12,14 @@ Update this file when the phase moves. It is the only place phase progress is re
   testable statements, eight areas assessed against the code at commit `96e6878`, every claim
   carrying a file and line or a command and its output. [`assessment.md`](assessment.md).
 
+- **Task 3 — triage of the open technical issues**
+  ([#82](https://github.com/LuchoC-Dev/little-spaceship/issues/82)). All fifteen open issues, not
+  only the six the plan names. Two closed as already resolved or decided: **#23** was fixed by commit
+  `9e7607f` on 22/08/2026 and nobody closed it; **#11** asked for a decision and got one — the layer
+  stays. [`issue-triage.md`](issue-triage.md).
+
 ## In progress
 
-- Task 3 — triage the open technical issues
-  ([#82](https://github.com/LuchoC-Dev/little-spaceship/issues/82)).
 - Tasks 4 and 5 — decide and write it down
   ([#83](https://github.com/LuchoC-Dev/little-spaceship/issues/83)).
 
