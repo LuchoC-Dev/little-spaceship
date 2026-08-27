@@ -50,15 +50,28 @@ Only three, and they are the schedule's real risk:
 
 **The MVP shipped on 25/08/2026.** What comes after it is grouped in
 [the post-MVP roadmap](post-mvp-roadmap.md): four groups of work, each of which becomes several
-numbered phases. The first group is planned:
+numbered phases. The first two groups are planned:
 
 | # | Phase | Lane | Owner | Depends on |
 |---|---|---|---|---|
 | 10a | [Honest documentation](10a-honest-documentation/plan.md) | process | coordinator | 09 |
 | 10b | [Agents and the way sessions are run](10b-agents-and-sessions/plan.md) | process | coordinator | 10a |
 | 10c | [Architecture review](10c-architecture-review/plan.md) | process | coordinator | 10a, 10b |
+| 11a | [Tests that assert rules](11a-rule-asserting-tests/plan.md) | code | `test-engineer` | 10c |
+| 11b | [The wave system](11b-wave-system/plan.md) | code | `core-domain` | 11a |
+| 11c | [Movement as a described thing](11c-movement-shapes/plan.md) | code | `core-domain` | 11a, 11b |
+| 11d | [The per-level document](11d-per-level-document/plan.md) | process + code | coordinator | 11b, 11c |
+| 11e | [Level 1 redesigned, balance and the boss](11e-level-one-redesigned/plan.md) | code + content | `level-designer` | 11a–11d |
+| 11f | [The four web defects](11f-web-defects/plan.md) | presentation | `game-presentation` | — |
 
 None of the 10 group changes production code: it decides, and the 11 group executes.
+
+**The 11 group runs in two lanes**, the same way the MVP ran art beside code. 11a through 11e are one
+sequence in `core/` and `assets/data/`, and **11a is not negotiable as the first of them**: everything
+after it is a behaviour change under a suite that mostly proves a run reproduces itself. 11f touches
+only `game/`, `desktop/` and `web/`, depends on nothing, and runs beside them from day one.
+
+Phases 12 and 13 stay as the roadmap describes them; they are not planned yet.
 
 Longer-range directions — progression, modes, more ships, the hangar — are sketched in
 [beyond the MVP](beyond-mvp.md), which is a sketch rather than a plan and is not numbered as a phase.

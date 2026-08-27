@@ -264,6 +264,16 @@ records what was rejected as well as what was chosen. **The 11 group is next**, 
 [#44](https://github.com/LuchoC-Dev/little-spaceship/issues/44): rule-asserting tests, because
 everything 10c named is a behaviour change under a suite that mostly proves a run reproduces itself.
 
+**The 11 group was planned on 27/08/2026** into six phases — [11a](plan/11a-rule-asserting-tests/plan.md)
+through [11f](plan/11f-web-defects/plan.md) — in a conversation with the project owner that closed
+every question the roadmap left open: what ends a wave, how it is placed, whether it takes parameters,
+where waves live, where a movement shape is chosen, what form the per-level document takes, and how
+long level 1 runs. Those answers are in
+[the decision record](planning/08-decisions-and-open-items.md), "The 11 group, 27/08/2026". The same
+conversation resolved [#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91): **invariant 6
+in `CLAUDE.md` now reads "no abstraction without a real case you can point at"**, which is 10c's
+proposed wording accepted unchanged. **No production code has been written for the 11 group yet.**
+
 **How work reaches `main` changed on 26/08/2026**, by the project owner's decision: `main` ← `dev` ←
 one phase branch ← one sub-branch per agent. Nothing is committed on `main` or `dev`, a phase opens a
 pull request against `dev` rather than merging, an agent merges nothing, and only the project owner
