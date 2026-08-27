@@ -234,6 +234,32 @@ class WorldTest {
     }
 
     @Test
+    @DisplayName("a bossless level does not complete while the wave timeline is not exhausted, "
+        + "even with no enemy left and the player alive")
+    void outcomeStaysInProgressWhileTheWaveTimelineIsNotExhausted() {
+        int player = world.createEntity();
+        world.players().set(player, new Player(1, 0, 1));
+        // No enemy collider exists and the player is alive, so noEnemyLeft() and "alive" both hold;
+        // waveTimelineExhausted alone is left false, which is exactly the conjunct this asserts.
+
+        assertEquals(dev.luchoc.littlespaceship.core.port.LevelOutcome.IN_PROGRESS, world.view().outcome());
+    }
+
+    @Test
+    @DisplayName("a bossless level reports defeat, not completion, when the last life is lost "
+        + "on the same tick the timeline empties with no enemy left")
+    void outcomeReportsDefeatOverCompletionWhenTheLastLifeIsLostTheSameTick() {
+        int player = world.createEntity();
+        world.players().set(player, new Player(0, 0, 1));
+        world.markWaveTimelineExhausted();
+        // No enemy collider exists, so noEnemyLeft() also holds: every other clause of the bossless
+        // COMPLETED rule is satisfied here on purpose, isolating that losing the last life still wins
+        // — "defeat on losing all lives" (02-mvp-functional-spec.md) is not overridden by completion.
+
+        assertEquals(dev.luchoc.littlespaceship.core.port.LevelOutcome.DEFEATED, world.view().outcome());
+    }
+
+    @Test
     @DisplayName("the view reports a zero completion bonus with no player entity")
     void completionBonusIsZeroWithNoPlayerEntity() {
         var bonus = world.view().completionBonus();
