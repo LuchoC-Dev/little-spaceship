@@ -147,6 +147,66 @@ literally will reach for a javadoc instead. **Left as a finding, not fixed:** co
 `02-mvp-functional-spec.md` is a planning document edit and outside this phase's scope. It belongs
 with 11e, which redesigns the boss and will have to write its rules down somewhere.
 
+**Task 4 · level completion** ([#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99)) —
+`test-engineer`, branch `test/level-completion-rules`. Read `World.View.outcome()`'s bossless branch
+(`waveTimelineExhausted && noEnemyLeft() && alive`) and `ScoreSystem.completionBonus` against
+`docs/planning/02-mvp-functional-spec.md` ("Victory on defeating the boss while keeping at least one
+life, or defeat on losing all lives") and `08-decisions-and-open-items.md`, "End-of-level completion
+bonus" (`lives * 1000 + bombs * 300`, resolved against a flat-bonus reading). Two of the three
+conjuncts, plus the bonus rule, already had a test that fails when broken; one conjunct had none.
+
+| Rule (quoted from planning) | Test |
+|---|---|
+| The run does not complete before the wave timeline is exhausted (implicit in "Victory on defeating the boss"/completing the level; `waveTimelineExhausted` conjunct) | **Gap, closed.** New `WorldTest.outcomeStaysInProgressWhileTheWaveTimelineIsNotExhausted` |
+| The run does not complete while an enemy survives (`noEnemyLeft()` conjunct) | Pre-existing `SpawnSystemTest.notCompleteWhileASpawnedEnemySurvives` — already red-when-broken: after its single `SpawnEvent` fires, `waveTimelineExhausted` is already true for the rest of the test, so this test isolates `noEnemyLeft()` specifically |
+| "defeat on losing all lives" (02) wins over completion when both would apply the same tick (`alive` conjunct, in substance) | **Gap, closed.** New `WorldTest.outcomeReportsDefeatOverCompletionWhenTheLastLifeIsLostTheSameTick` |
+| "1000 and 300 respectively... per-unit, not flat" (08, "End-of-level completion bonus") | Pre-existing `ScoreSystemTest.completionBonusScalesByRemainingLivesAndBombs` (unit level, calls `ScoreSystem.completionBonus` directly) and `WorldTest.completionBonusReflectsLivesAndBombs` (through `WorldView.completionBonus()`, the real boundary crossing) — both already use differing lives (3) and bombs (2) counts, which is exactly what makes a flat bonus distinguishable from the per-unit one; no gap |
+
+**The `alive` conjunct, read literally, is dead code — a finding, not a gap this task could close by
+writing a test for the literal conjunct.** `outcome()` returns `DEFEATED` in an early guard
+(`state != null && state.lives <= 0`) *before* the bossless branch's `if (waveTimelineExhausted &&
+noEnemyLeft() && alive)` is ever reached, and `alive` is computed right after that guard as
+`state == null || state.lives > 0` — so at the point the bossless `if` runs, `alive` is provably always
+`true`. Demonstrated directly: removed `&& alive` from that one line (nothing else), ran
+`./gradlew :core:test`, and the full suite — 291 tests at the time, none touched — stayed green:
+
+```
+BUILD SUCCESSFUL in 6s
+```
+
+then reverted. No test, existing or new, can turn red from deleting that literal conjunct, because no
+reachable state has `alive == false` there. What the decided rule ("defeat on losing all lives")
+actually needs, and what the new `outcomeReportsDefeatOverCompletionWhenTheLastLifeIsLostTheSameTick`
+test asserts and is red-when-broken for, is the early guard itself: broke it by loosening
+`state.lives <= 0` to `state.lives < 0` (so zero lives no longer trip the guard) and ran
+`./gradlew :core:test --tests "*WorldTest.outcomeReportsDefeatOverCompletionWhenTheLastLifeIsLostTheSameTick*"`:
+
+```
+WorldTest > a bossless level reports defeat, not completion, when the last life is lost on the same
+tick the timeline empties with no enemy left FAILED
+    org.opentest4j.AssertionFailedError at WorldTest.java:259
+1 test completed, 1 failed
+```
+
+then reverted. Also demonstrated the `waveTimelineExhausted` conjunct going red the same way: dropped
+it from the bossless `if`, ran
+`./gradlew :core:test --tests "*WorldTest.outcomeStaysInProgressWhileTheWaveTimelineIsNotExhausted*"`,
+got `AssertionFailedError at WorldTest.java:245`, reverted. And the per-unit bonus: changed
+`ScoreSystem.completionBonus` to a capped/flat shape (`lives > 0 ? bonus : 0`), ran both bonus tests,
+got both `FAILED`, reverted. `git diff -- '*/src/main/*'` is empty on the branch that was committed.
+
+**The bossless branch's coverage gap for 11b, precisely.** Every test above that reaches
+`LevelOutcome.COMPLETED` through the bossless branch — the pre-existing
+`SpawnSystemTest.completesOnceTheTimelineIsExhaustedAndNothingIsAlive` (line 340 as of this branch) and
+this task's two new tests — drives `noEnemyLeft()` to true by destroying the one spawned enemy by hand
+(`world.destroyEntity(enemy)`) or by never spawning one at all, never by advancing a real wave clearing
+through combat, drops or the collision pipeline. 11b changes what advances the spawn cursor and what
+"cleared" means; nothing in this task's diff, or in the suite before it, exercises the bossless
+`COMPLETED` path through the real spawn-and-clear flow `LevelScoreReplayTest` uses for score. That is
+the gap task 4's own note in `plan.md` already named, confirmed by re-reading rather than widened.
+
+**`./gradlew build` green** after the two additions.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
@@ -156,7 +216,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 | 1 · baseline count | [#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96) | `test-engineer` — done |
 | 2 · defensive chain | [#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97) | `test-engineer` — done |
 | 3 · the boss's rules | [#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98) | `test-engineer` — done |
-| 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` |
+| 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` — done |
 | 5a · forbidden-API check | [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) (= [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) | `test-engineer` |
 | 5b · `PublicContractTest` scope | [#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) (= [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4)) | `test-engineer` |
 | 6 · `Rng` parity as a Gradle task | [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) | `test-engineer` |
