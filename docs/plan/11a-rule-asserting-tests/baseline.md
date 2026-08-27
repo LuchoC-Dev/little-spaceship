@@ -62,31 +62,49 @@ measurement.
 | Bucket | Count | Share |
 |---|---:|---:|
 | Rule only | 163 | 56.4% |
-| Reproducibility only | 7 | 2.4% |
-| Both | 2 | 0.7% |
+| Reproducibility only | 5 | 1.7% |
+| Both | 4 | 1.4% |
 | Neither / infrastructure | 117 | 40.5% |
 | **Total** | **289** | 100% |
 
 Headline numbers, each counting "Both" once:
 
-- **Asserts a rule: 165** (163 rule-only + 2 both).
-- **Asserts reproducibility: 9** (7 reproducibility-only + 2 both).
-- **Overlap: 2.**
+- **Asserts a rule: 167** (163 rule-only + 4 both).
+- **Asserts reproducibility: 9** (5 reproducibility-only + 4 both).
+- **Overlap: 4.**
 
-## The two tests that are both
+## The four tests that are both
 
-Both are cross-system replays in `core/src/test/java/.../application/`, and both follow the same
-pattern: a committed literal `GOLDEN_FINGERPRINT` turns the self-comparison into a real regression net.
+All four are cross-system replays in `core/src/test/java/.../application/`. Two pin a whole-run
+fingerprint, which turns the self-comparison into a real regression net; two pin the level's outcome.
 
 - `BombReplayTest.bombedRunIsDeterministic` — `assertEquals(first, second)` **and**
   `assertEquals(GOLDEN_FINGERPRINT, first)`.
 - `LevelScoreReplayTest.levelScoreIsDeterministic` — same shape, its own pinned fingerprint.
+- `BossReplayTest.victoryIsDeterministic` — `assertEquals(first, second)` **and**
+  `assertEquals(LevelOutcome.COMPLETED, ...)` (line 38).
+- `BossReplayTest.defeatIsDeterministic` — asserts `LevelOutcome.DEFEATED` against two separate runs
+  (lines 44-45), so it is a self-comparison and a pinned value in the same two statements.
+
+**These last two were classified as reproducibility-only in the first pass of this document and
+corrected by the coordinator before review**, by reading the file rather than by re-reasoning: the
+`assertEquals(LevelOutcome.COMPLETED, ...)` on line 38 is a pinned expected value tied to a decided
+rule, which this document's own criterion calls "Both". The correction moves two tests and changes the
+rule headline from 165 to 167. **The other five reproducibility-only tests were re-read at the same
+time and all five hold** — `DamageReplayTest.damageSequenceIsDeterministic`,
+`SimulationTest.isDeterministic`, `SimulationTest.loopAndDirectTicksAgree`,
+`SpawnerReplayTest.twoCarriersSpawningIsDeterministic` and `RngTest.sameSeedSameStream` are pure
+self-comparisons. (`loopAndDirectTicksAgree` also asserts `120 == looped.tickCount()`, which is loop
+plumbing rather than a decided game rule, so it stays where it is.)
 
 ## Where the reproducibility-only tests are, and why the roadmap's claim still holds
 
-The roadmap's own example, `BossReplayTest`, is exactly this: `victoryIsDeterministic` and
-`defeatIsDeterministic` are both pure self-comparisons, no pinned value, nothing asserted about the
-boss's modules. That prediction was correct on inspection, not just carried forward.
+The roadmap's own example, `BossReplayTest`, is **not quite** what the roadmap says. Its two tests do
+pin a value — the level's `LevelOutcome` — so they are not pure self-comparisons. What the roadmap
+gets exactly right is the part that matters: **nothing in that file asserts anything about the boss's
+modules**, which is the gap task 3 closes. Break the module rule and both tests stay green, because a
+run that still ends in `COMPLETED` still ends in `COMPLETED`. Checked by reading the file, not carried
+forward.
 
 But **the reproducibility-only bucket is small relative to the whole suite (7 of 289)** — the roadmap's
 "the bulk asserts reproducibility" is not a claim about `core/src/test/` as a whole; the 151
@@ -95,17 +113,15 @@ already (that is what "System unit tests" in this project's brief mean: a minima
 rule, an assertion that fails when the rule breaks). The claim is accurate about a narrower, specific
 slice: the five cross-system replay files
 (`BombReplayTest`, `BossReplayTest`, `DamageReplayTest`, `LevelScoreReplayTest`, `SpawnerReplayTest`),
-9 tests total, of which 6 are reproducibility-asserting (4 pure + 2 both) against 5 rule-asserting
-(3 pure + 2 both). **Within that slice, reproducibility is the majority** — which is exactly the gap
+9 tests total, of which 8 are reproducibility-asserting (4 pure + 4 both) against 5 rule-asserting
+(1 pure + 4 both). **Within that slice, reproducibility is the majority** — which is exactly the gap
 tasks 2–4 close, by adding rule assertions to the systems these replays exercise (the defensive chain,
 the boss, level completion) rather than by rewriting the replays themselves.
 
-The seven pure-reproducibility tests:
+The five pure-reproducibility tests:
 
 | Test | File |
 |---|---|
-| `victoryIsDeterministic` | `application/BossReplayTest.java` |
-| `defeatIsDeterministic` | `application/BossReplayTest.java` |
 | `damageSequenceIsDeterministic` | `application/DamageReplayTest.java` |
 | `isDeterministic` | `application/SimulationTest.java` |
 | `loopAndDirectTicksAgree` | `application/SimulationTest.java` |
@@ -120,7 +136,7 @@ Rule / Reproducibility / Both / Infrastructure, test counts per file (all 35 fil
 | File | Rule | Repro | Both | Infra | Total |
 |---|---:|---:|---:|---:|---:|
 | `application/BombReplayTest.java` | 1 | 0 | 1 | 0 | 2 |
-| `application/BossReplayTest.java` | 0 | 2 | 0 | 0 | 2 |
+| `application/BossReplayTest.java` | 0 | 0 | 2 | 0 | 2 |
 | `application/DamageReplayTest.java` | 0 | 1 | 0 | 0 | 1 |
 | `application/GameLoopTest.java` | 0 | 0 | 0 | 12 | 12 |
 | `application/LevelContentIntegrationTest.java` | 3 | 0 | 0 | 0 | 3 |
@@ -154,7 +170,7 @@ Rule / Reproducibility / Both / Infrastructure, test counts per file (all 35 fil
 | `port/InputFrameTest.java` | 0 | 0 | 0 | 5 | 5 |
 | `port/MapComponentSpecTest.java` | 0 | 0 | 0 | 11 | 11 |
 | `port/SpriteIdTest.java` | 0 | 0 | 0 | 3 | 3 |
-| **Total** | **163** | **7** | **2** | **117** | **289** |
+| **Total** | **163** | **5** | **4** | **117** | **289** |
 
 Two notes on individual calls inside this table:
 
@@ -185,12 +201,12 @@ count applies. This is the single largest judgement call in the whole classifica
 30–40 of the 151, since that is the rough share of guard/defensive-input tests across those thirteen
 files. Re-running this classification with the stricter reading (excluding guard/defensive tests from
 "rule") would move that share from "rule" to "infrastructure" and would not change the two headline
-numbers (165 rule, 9 reproducibility, 2 overlap) at all, since none of those guard tests is a
+numbers (167 rule, 9 reproducibility, 4 overlap) at all, since none of those guard tests is a
 reproducibility test.
 
 ## Reproducing this count
 
-There is no single command that outputs "164/7/2/116" — the criterion needs one read per test, stated
+There is no single command that outputs "163/5/4/117" — the criterion needs one read per test, stated
 above precisely enough that a second reader applying it to the same commit should land in the same
 bucket for the overwhelming majority of the 289 (the guard/defensive-test judgement call noted above is
 the one place two readers could reasonably disagree, and it does not move the headline numbers). What
