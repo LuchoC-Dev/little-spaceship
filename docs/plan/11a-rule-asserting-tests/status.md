@@ -217,6 +217,51 @@ completion priority is expressed once is a design call in `core`. Flagged as wor
 11b**, which changes what advances the spawn cursor and what "cleared" means and will be reading this
 method closely.
 
+**Task 5a · forbidden-API check strips comments and literals** ([#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) = [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) —
+`test-engineer`, branch `test/forbidden-api-strips-comments`. `JavaSource` gained `strip(String)`:
+line comments, block comments and string/char literals (escaped quotes, an escaped backslash right
+before a closing quote, char literals like `'"'`) are each blanked to a single space before
+`containsToken` runs, so a name spelled out in a comment or a string literal no longer counts as a
+call. `DeterminismRulesTest.noForbiddenApi` now strips each file before searching it. What `strip`
+explicitly does not handle: text blocks (`"""`) — none exist under `core/src/main` today (checked
+with `grep -rl '"""' core/src/main --include=*.java`, no output) — documented as a live limitation
+in the method's own javadoc rather than guessed at.
+
+**The risk named in the issue — stripping too much and blinding the check — is what most of the new
+tests are for**, not the easy "comments are ignored" half. `DeterminismRulesTest` gained five fixture
+tests (`stillCatchesARealForbiddenCallAfterStripping`, `ignoresAForbiddenNameInsideALineComment`,
+`ignoresAForbiddenNameInsideABlockComment`, `ignoresAForbiddenNameInsideAStringLiteral`,
+`catchesARealCallSharingALineWithAMentioningComment`) and a new `JavaSourceTest` gained four more for
+the literal-scanning corners named in the plan (an escaped quote inside a string, an escaped
+backslash right before a closing quote, a char literal holding a quote, an escaped quote inside a
+char literal). All run the same `strip` → `containsToken` pipeline `noForbiddenApi` runs, on fixture
+strings, so they do not depend on what `core` happens to contain.
+
+**Red demonstrated, both directions.** First, the case where a defect removes stripping entirely:
+temporarily made `strip` a no-op (`return content` before the real body). Ran
+`./gradlew :core:test --tests "...DeterminismRulesTest" --tests "...JavaSourceTest"`, got 5 of 13
+tests failing (the three comment/literal-ignoring fixtures plus two of the new `JavaSourceTest`
+escape cases), then reverted. Second, and this is the one the issue calls the actual risk — a
+stripper that strips too much and silently stops catching real calls: temporarily made the string
+scanner also trigger on `.` (`c == '"' || c == '.'`), which eats real code after any period. Ran the
+same two test classes and got exactly the two "still catches a real call" fixtures red
+(`stillCatchesARealForbiddenCallAfterStripping`, `catchesARealCallSharingALineWithAMentioningComment`)
+— the ones that exist specifically to catch this failure mode — then reverted. `./gradlew :core:test`
+green after both reverts.
+
+**Step 3, the one exception to this agent's boundary (D2).** Rewrote only the class javadoc of
+`Rng.java`: it now names `Math.random()` and `java.util.Random` outright and drops the three lines
+explaining why it was being coy, since the check no longer reads a javadoc comment as a call.
+`git diff phase/11a-rule-asserting-tests -- '*/src/main/*'` shows only that one file, only comment
+lines changed — pasted in the pull request.
+
+**Ambiguity in the plan, worth flagging.** Neither the plan nor #53 says where the new fixture tests
+should live. Put the five pipeline-level ones (strip + containsToken, mirroring `noForbiddenApi`
+exactly) in `DeterminismRulesTest` next to the existing `searchesWholeWords`, and the four
+literal-scanning corner cases in a new `JavaSourceTest`, since they are about `JavaSource` in
+isolation rather than about the determinism rule itself. A different worker might have put all nine
+in one place; naming the split here so it does not look accidental.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
@@ -227,7 +272,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 | 2 · defensive chain | [#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97) | `test-engineer` — done |
 | 3 · the boss's rules | [#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98) | `test-engineer` — done |
 | 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` — done |
-| 5a · forbidden-API check | [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) (= [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) | `test-engineer` |
+| 5a · forbidden-API check | [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) (= [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) | `test-engineer` — done |
 | 5b · `PublicContractTest` scope | [#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) (= [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4)) | `test-engineer` |
 | 6 · `Rng` parity as a Gradle task | [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) | `test-engineer` |
 | 7 · where [#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19) goes | — | the coordinator |
