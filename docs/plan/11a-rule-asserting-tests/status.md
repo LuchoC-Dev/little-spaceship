@@ -7,7 +7,33 @@ Update this file when the phase moves. It is the only place phase progress is re
 
 ## Done
 
-Nothing yet.
+**Task 1 · baseline count** ([#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96)) —
+`test-engineer`, branch `docs/test-suite-baseline`. All 289 tests in `core/src/test/` read by hand
+against a stated criterion. Headline: **167 assert a rule, 9 assert reproducibility, 4 overlap** (both
+in the same test method), 117 are infrastructure/contract tests that are neither. Full method, per-file
+table and the reproducible denominator command are in
+[`baseline.md`](baseline.md). Taken at commit `4e388067bf7ff01d527c72db9fa8828c79318b8f`.
+
+**The coordinator corrected two classifications before review**, by reading the file rather than by
+re-reasoning: `BossReplayTest`'s two tests each pin a `LevelOutcome` as well as self-comparing, which
+this document's own criterion calls "Both", so they moved out of reproducibility-only and the rule
+headline went 165 → 167. The other five reproducibility-only tests were re-read at the same time and
+all five hold. The per-file table was also verified mechanically against
+`for f in $(find core/src/test -name "*.java"); do echo "$(grep -c '@Test' "$f") $f"; done` — all 35
+rows match.
+
+The roadmap's "the bulk asserts reproducibility" holds for the narrow slice it was actually about — the
+five cross-system replay files (9 tests, 8 reproducibility-asserting) — not for `core/src/test/` as a
+whole, where the 151 `domain/system/*Test.java` unit tests are already overwhelmingly rule-asserting.
+`baseline.md` says so explicitly so tasks 2–4 do not read the roadmap's line as "most of the suite is
+weak" when it is not.
+
+**And the roadmap's flagship example is not quite what it says.** `BossReplayTest` was cited as
+asserting nothing but determinism; it does pin the level's outcome. What the roadmap gets right is the
+half that matters — nothing in that file asserts anything about the boss's modules, so breaking the
+module rule leaves both tests green. Task 3 ([#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98))
+closes that, and should state the rule about modules rather than about the outcome, which is already
+pinned.
 
 ## In progress
 
@@ -15,7 +41,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 
 | Task | Issue | Worker |
 |---|---|---|
-| 1 · baseline count | [#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96) | `test-engineer` |
+| 1 · baseline count | [#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96) | `test-engineer` — done |
 | 2 · defensive chain | [#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97) | `test-engineer` |
 | 3 · the boss's rules | [#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98) | `test-engineer` |
 | 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` |
