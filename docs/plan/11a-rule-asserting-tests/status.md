@@ -500,11 +500,48 @@ reordering worked", and levels 2 and 3 are what first exercise a loader keyed by
 #87 will have just written. The loader is worth testing when there is more than one level to load and
 the format has stopped moving, and that is exactly where 12 starts.
 
-**What this phase owes it:** nothing in code. #19 stays open with this decision recorded on it, and
-the question it says to answer first — how to test a loader that depends on `FileHandle` without
-dragging LWJGL into the suite — is still the first thing whoever picks it up has to solve.
+**Amended after `reviewer`'s pass, which was asked to argue with this and did.** #19 bundles two
+questions, and only one of them is blocked. *What to assert about `JsonContentSource`'s error
+messages* depends on the format, and that is the half 11b rewrites. *How to unit-test anything
+depending on `FileHandle` without dragging LWJGL into the suite* does not: it is a harness design
+question, and #19's own text calls it "the question to answer first". A JDK dynamic-proxy stand-in
+for `Gdx.input`/`Gdx.graphics` — which is what phase 03's two throwaway programs used, and
+`docs/plan/03-first-playable/status.md` transcribes their output without them ever being committed —
+is indifferent to which JSON shape 11b lands on.
+
+So the decision splits:
+
+- **The harness question is not blocked** and can be answered whenever `game-presentation` and
+  `test-engineer` next have reason to. Answering it early is what makes the 12 group's half cheap,
+  and it is the piece that has been quietly costing this project since phase 03.
+- **The assertions about the loader's error paths go to the 12 group**, for the reason above.
+
+Nobody had written that split down before `reviewer` read it this way; it is the finding of the
+review pass.
+
+**What this phase owes it:** nothing in code. #19 stays open with this decision recorded on it.
 
 **Put to the project owner**, because it adds scope to a group that is not planned yet.
+
+## The review
+
+`reviewer` audited the whole phase branch on 27/08/2026 against the plan's acceptance criteria and
+`CLAUDE.md`'s invariants, and **accepted it**. It was told what the coordinator had already run, so
+it spent the pass on what a command cannot see.
+
+What it re-derived rather than took on trust: the `src/main` diff scope; `BossReplayTest`'s aiming
+geometry, recomputed by hand from `BossSystem`'s constants (player column x 80, arm centre x 60
+radius 14 — missed; pod centre x 70 radius 12 — hit) and the `survivingPods` radius band, which
+excludes `CORE_KEEL_RADIUS` 13.0 by strict `<` and every other collider in the scenario; the
+unreachability of `alive` in both branches of `outcome()`; every rule-to-test row in tasks 2-4
+against the test bodies; and both narrowings, checked for over- and under-narrowing by grepping every
+`java.util.*` and `domain.*` import in `core.port` and `core.application`. It confirmed the two open
+gameplay items are named and not asserted, and that
+`invulnerabilityAlsoProtectsAgainstConsequencesForTheOther` is pre-existing (phase 04, `32b0c80`)
+rather than added here.
+
+**No invariant violations, no false claims in this file, no coverage lost by the narrowings.** Its
+one substantive contribution is the argument against D5, which is incorporated above.
 
 ## Notes for whoever comes next
 
