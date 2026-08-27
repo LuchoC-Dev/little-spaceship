@@ -1,38 +1,39 @@
 ---
 name: rule-vs-reproducibility-classification
-description: How the core test suite was classified into rule-asserting vs reproducibility-asserting vs infrastructure for phase 11a's baseline, and what did not match the roadmap's inherited claim.
+description: What classifying core's 289 tests into rule vs reproducibility taught, beyond the numbers themselves, which live in the phase's baseline.md.
 metadata:
   type: project
 ---
 
-For phase 11a task 1 (issue #96), all 289 tests in `core/src/test/` (35 files) were read by hand and
-classified. Full method and per-file table: `docs/plan/11a-rule-asserting-tests/baseline.md`, taken at
-commit `4e388067bf7ff01d527c72db9fa8828c79318b8f`.
+For phase 11a task 1, all 289 tests in `core/src/test/` were read by hand and classified. **The numbers
+and the criterion live in `docs/plan/11a-rule-asserting-tests/baseline.md`** and are deliberately not
+repeated here — two copies of a count end with one of them stale, and this file already did that once
+before the coordinator corrected it.
 
-**The result contradicted the roadmap's framing, and the correction matters if this measurement is
-ever redone or cited.** `docs/plan/post-mvp-roadmap.md` says "the bulk asserts that a run reproduces
-itself, not that a rule holds" as a claim about `core/src/test/` generally. Measured: only 9 of 289
-tests assert reproducibility (2 of those also assert a rule); 165 assert a rule; 117 are
-infrastructure/contract tests (ECS mechanics, port DTO validation, architecture checks) that are
-neither. The roadmap's claim is accurate only for a narrow slice — the five cross-system replay files
-(`BombReplayTest`, `BossReplayTest`, `DamageReplayTest`, `LevelScoreReplayTest`, `SpawnerReplayTest`;
-9 tests, 6 reproducibility-leaning) — because `domain/system/*Test.java` (151 tests) is already
-overwhelmingly rule-asserting. **Why:** a figure repeated across three documents (roadmap, 10c
-assessment, this phase's plan) without anyone re-measuring it drifted from what a full read actually
-shows. **How to apply:** when a plan cites a suite-wide count that traces back to an "inherited,
-never measured" figure, expect it to be right about its own example and wrong about the aggregate —
-measure the whole population before reusing the framing.
+What is worth keeping is the method, and the three ways it went wrong:
+
+**A figure that three documents repeat can still be wrong about the aggregate.** The roadmap's "the
+bulk asserts that a run reproduces itself" was carried into 10c's assessment and into 11a's plan
+without anyone re-measuring it. Measured, it is accurate about its own example and wrong about
+`core/src/test/` as a whole, because `domain/system/*Test.java` is already overwhelmingly
+rule-asserting. **How to apply:** when a plan cites a suite-wide count traceable to an "inherited,
+never measured" figure, expect it to be right about the example that produced it and wrong about the
+population.
 
 **A test name is a hint, not a classification.** `SimulationTest.seedChangesTheOutcome` and
-`inputChangesTheOutcome` contain "outcome"/"seed" but assert that two runs *differ*, not that they
-agree — the opposite of a reproducibility test. `RngTest.pinnedSequence` pins a literal expected value
-(looks like a "rule" test) but the value being pinned is the RNG algorithm's own numeric contract, not
-a decided game rule from `docs/planning/` — it landed in infrastructure, not rule. Every one of the 289
-needed an actual read of the assertion, not a grep for "Deterministic" or "assertEquals" shape.
+`inputChangesTheOutcome` read like determinism tests and assert that two runs *differ*.
+`RngTest.pinnedSequence` pins a literal and looks like a rule test, but what it pins is the RNG
+algorithm's numeric contract, not a decided game rule. Every one of the 289 needed the assertion read.
 
-**The two tests that assert both a rule and reproducibility in a single method** share one pattern
-worth reusing: `assertEquals(first, second)` for the self-comparison, plus `assertEquals(GOLDEN_FINGERPRINT,
-first)` against a committed literal string built from world state. Only `BombReplayTest` and
-`LevelScoreReplayTest` do this among the five replay files — `BossReplayTest`, `DamageReplayTest` and
-`SpawnerReplayTest`'s determinism tests have no pinned value, which is exactly what makes them pure
-reproducibility tests and nothing else: a broken rule that breaks identically on both runs stays green.
+**Reading the name of the *assertion* is not enough either — read the whole method.** The first pass of
+this classification put `BossReplayTest`'s two tests in reproducibility-only on the strength of their
+names and their `assertEquals(first, second)`. Both also pin a `LevelOutcome` on the next line, which
+makes them "both" by the criterion this very document had written. **Why it matters:** the mistake
+pointed the wrong way — it made the suite look weaker than it is, in the one file the roadmap holds up
+as its example. **How to apply:** a determinism test with an extra `assertEquals` below the
+self-comparison is the common shape here; check every assertion in the method before bucketing it.
+
+The pattern worth reusing when a replay should be more than a self-comparison: `assertEquals(first,
+second)` plus `assertEquals(GOLDEN_FINGERPRINT, first)` against a committed literal built from world
+state. `BombReplayTest` and `LevelScoreReplayTest` do it; `DamageReplayTest` and `SpawnerReplayTest`
+do not, and a rule that breaks identically on both runs leaves them green.
