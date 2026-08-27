@@ -5,3 +5,4 @@
 - [Boss stage runs before COLLISION/DAMAGE](project_boss-stage-ordering.md) — BossStatus.hp lags a tick behind an actual kill; read it after the run settles, not right on the kill tick.
 - [Verifying dead conjuncts](feedback_verifying-dead-conjuncts.md) — delete one operand of an `&&`, run the full suite; if nothing reds, it's shadowed by an earlier guard, not independently testable.
 - [Amend targets HEAD, not the commit you mean](project_amend-targets-head-not-the-commit-you-mean.md) — fixing an earlier commit's subject needs reset+amend+cherry-pick, not `--amend` from a later HEAD.
+- [Architecture tests have no fixture seam](project_architecture-test-narrowing-has-no-fixture-seam.md) — prove a narrowing by planting-and-reverting on a real `core/src/main` file, not a fixture test.
