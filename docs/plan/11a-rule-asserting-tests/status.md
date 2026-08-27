@@ -35,6 +35,61 @@ module rule leaves both tests green. Task 3 ([#98](https://github.com/LuchoC-Dev
 closes that, and should state the rule about modules rather than about the outcome, which is already
 pinned.
 
+**Task 2 · defensive chain** ([#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97)) —
+`test-engineer`, branch `test/defensive-chain-rules`. Every decided rule of the chain named in task 2
+already had a test that fails when the rule is broken, in `DamageSystemTest` and `PickupSystemTest`
+(both pre-existing, from phases 04/05, and already counted as rule-asserting in the baseline). One real
+gap found and closed: `02-mvp-functional-spec.md` names losing the attachment, alongside the shield,
+explicitly as a case that grants the shorter grace period — "Losing the shield or the attachment also
+grants those grace frames" — but no test asserted it for the attachment path;
+`shieldDamageGrantsTheShorterInvulnerability` covered the shield half only. Added
+`attachmentDamageGrantsTheShorterInvulnerability`.
+
+Rules checked against `DamageSystemTest`/`PickupSystemTest`, and where each already lives:
+
+| Rule (quoted from planning) | Test |
+|---|---|
+| "invulnerability → shield → attachment → life" (03, 08) | `invulnerabilityAbsorbsTheHitEntirely`, `shieldAbsorbsBeforeAttachmentOrLife`, `attachmentAbsorbsBeforeLife` |
+| "Any damage taken grants temporary invulnerability... shorter... than that of respawn" (02) | `shieldDamageGrantsTheShorterInvulnerability`, `lifeLossGrantsTheLongerInvulnerability`, and the new `attachmentDamageGrantsTheShorterInvulnerability` |
+| "It absorbs the hit that destroys it, avoiding that life loss" (08) | `attachmentAbsorbsBeforeLife`, `attachmentSurvivesWhileDurabilityRemains` |
+| "losing a life does not automatically remove persistent power-ups" (02, 08) | `losingALifeDoesNotClearPersistentPowerUps` |
+| Life cap / weapon-upgrade cap (10) | `extraLifeRaisesLivesUpToTheCap`, `extraLifeAtMaximumGrantsPoints`, `weaponUpgradeRaisesShotLevel`, `weaponUpgradeAtMaximumGrantsPoints` (also `bombRechargeRaisesBombsUpToTheCap`/`AtMaximumGrantsPoints`, same cap-then-points shape) |
+| "Picking up a power-up already at maximum... turns into points" (10) | one test per kind: `weaponUpgradeAtMaximumGrantsPoints`, `shieldAlreadyPresentGrantsPoints`, `extraLifeAtMaximumGrantsPoints`, `bombRechargeAtMaximumGrantsPoints`, `invulnerabilityAlreadyAtCapGrantsPoints`, `attachmentAlreadyEquippedGrantsPoints`, plus `maxedPickupIncreasesTheScoreOnceSwept` for the score side |
+| "Weak enemies... are destroyed in that crash; tanks and heavy carriers are not" (02) | `weakEnemyDiesOnCollision`, `heavyEnemySurvivesCollision` |
+| Attachment durability is data per attachment, not a constant (08) | `attachmentDurabilityComesFromDataNotAConstant` (in `PickupSystemTest`) |
+
+**Red demonstrated for the new test.** Removed the `grantInvulnerability(...)` call from the attachment
+branch of `DamageSystem.resolvePlayerHit`, ran
+`./gradlew :core:test --tests "...DamageSystemTest.attachmentDamageGrantsTheShorterInvulnerability"`,
+got:
+
+```
+DamageSystemTest > damage absorbed by the attachment also grants the shorter invulnerability, same as the shield FAILED
+    java.lang.NullPointerException at DamageSystemTest.java:97
+1 test completed, 1 failed
+```
+
+then reverted the production line. `git diff -- '*/src/main/*'` is empty on the branch that was
+committed.
+
+**One pre-existing test pins an open item; left untouched, out of scope.** `DamageSystemTest.
+invulnerabilityAlsoProtectsAgainstConsequencesForTheOther` (phase 04) asserts that an invulnerable
+player's crash does not destroy a weak enemy — exactly the behaviour `08-decisions-and-open-items.md`
+lists as **open** ("Whether invulnerability should also suppress the consequences for the other
+entity"). It predates this phase and the open-items list itself, matches the implementation, is
+correctly named, and rewriting or deleting it is out of this task's scope ("rewriting tests that are
+fine") and out of `test-engineer`'s boundary either way (the behaviour it pins lives in
+`DamageSystem`, not the test). Naming it here so whoever settles that open item in 11e knows this test
+will need to move with the decision, not be treated as a second vote for the current reading.
+
+**Not tested, and not treated as a gap:** "the attachment disappears when taking damage and **when
+losing a life**" (08, "Resolved contradictions") could read as a second, independent loss trigger
+distinct from absorbing the hit. Checked against `DamageSystem.resolvePlayerHit`: the three branches
+are mutually exclusive by construction (attachment absorbs before the life branch is ever reached), so
+there is no code path today where a life is lost while an attachment is equipped — the "and when losing
+a life" clause is satisfied structurally, not by a separate rule to assert. Worth revisiting only if a
+future damage source bypasses this ordering.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
@@ -42,7 +97,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 | Task | Issue | Worker |
 |---|---|---|
 | 1 · baseline count | [#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96) | `test-engineer` — done |
-| 2 · defensive chain | [#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97) | `test-engineer` |
+| 2 · defensive chain | [#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97) | `test-engineer` — done |
 | 3 · the boss's rules | [#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98) | `test-engineer` |
 | 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` |
 | 5a · forbidden-API check | [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) (= [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) | `test-engineer` |
@@ -104,61 +159,6 @@ not add a dependency to `core/build.gradle.kts` and may not touch anything under
 Deciding where [#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19) — `game` has no tests —
 belongs is a routing decision about phases, not test engineering. It is written below and put to the
 project owner rather than handed to an agent.
-
-**Task 2 · defensive chain** ([#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97)) —
-`test-engineer`, branch `test/defensive-chain-rules`. Every decided rule of the chain named in task 2
-already had a test that fails when the rule is broken, in `DamageSystemTest` and `PickupSystemTest`
-(both pre-existing, from phases 04/05, and already counted as rule-asserting in the baseline). One real
-gap found and closed: `02-mvp-functional-spec.md` names losing the attachment, alongside the shield,
-explicitly as a case that grants the shorter grace period — "Losing the shield or the attachment also
-grants those grace frames" — but no test asserted it for the attachment path;
-`shieldDamageGrantsTheShorterInvulnerability` covered the shield half only. Added
-`attachmentDamageGrantsTheShorterInvulnerability`.
-
-Rules checked against `DamageSystemTest`/`PickupSystemTest`, and where each already lives:
-
-| Rule (quoted from planning) | Test |
-|---|---|
-| "invulnerability → shield → attachment → life" (03, 08) | `invulnerabilityAbsorbsTheHitEntirely`, `shieldAbsorbsBeforeAttachmentOrLife`, `attachmentAbsorbsBeforeLife` |
-| "Any damage taken grants temporary invulnerability... shorter... than that of respawn" (02) | `shieldDamageGrantsTheShorterInvulnerability`, `lifeLossGrantsTheLongerInvulnerability`, and the new `attachmentDamageGrantsTheShorterInvulnerability` |
-| "It absorbs the hit that destroys it, avoiding that life loss" (08) | `attachmentAbsorbsBeforeLife`, `attachmentSurvivesWhileDurabilityRemains` |
-| "losing a life does not automatically remove persistent power-ups" (02, 08) | `losingALifeDoesNotClearPersistentPowerUps` |
-| Life cap / weapon-upgrade cap (10) | `extraLifeRaisesLivesUpToTheCap`, `extraLifeAtMaximumGrantsPoints`, `weaponUpgradeRaisesShotLevel`, `weaponUpgradeAtMaximumGrantsPoints` (also `bombRechargeRaisesBombsUpToTheCap`/`AtMaximumGrantsPoints`, same cap-then-points shape) |
-| "Picking up a power-up already at maximum... turns into points" (10) | one test per kind: `weaponUpgradeAtMaximumGrantsPoints`, `shieldAlreadyPresentGrantsPoints`, `extraLifeAtMaximumGrantsPoints`, `bombRechargeAtMaximumGrantsPoints`, `invulnerabilityAlreadyAtCapGrantsPoints`, `attachmentAlreadyEquippedGrantsPoints`, plus `maxedPickupIncreasesTheScoreOnceSwept` for the score side |
-| "Weak enemies... are destroyed in that crash; tanks and heavy carriers are not" (02) | `weakEnemyDiesOnCollision`, `heavyEnemySurvivesCollision` |
-| Attachment durability is data per attachment, not a constant (08) | `attachmentDurabilityComesFromDataNotAConstant` (in `PickupSystemTest`) |
-
-**Red demonstrated for the new test.** Removed the `grantInvulnerability(...)` call from the attachment
-branch of `DamageSystem.resolvePlayerHit`, ran
-`./gradlew :core:test --tests "...DamageSystemTest.attachmentDamageGrantsTheShorterInvulnerability"`,
-got:
-
-```
-DamageSystemTest > damage absorbed by the attachment also grants the shorter invulnerability, same as the shield FAILED
-    java.lang.NullPointerException at DamageSystemTest.java:97
-1 test completed, 1 failed
-```
-
-then reverted the production line. `git diff -- '*/src/main/*'` is empty on the branch that was
-committed.
-
-**One pre-existing test pins an open item; left untouched, out of scope.** `DamageSystemTest.
-invulnerabilityAlsoProtectsAgainstConsequencesForTheOther` (phase 04) asserts that an invulnerable
-player's crash does not destroy a weak enemy — exactly the behaviour `08-decisions-and-open-items.md`
-lists as **open** ("Whether invulnerability should also suppress the consequences for the other
-entity"). It predates this phase and the open-items list itself, matches the implementation, is
-correctly named, and rewriting or deleting it is out of this task's scope ("rewriting tests that are
-fine") and out of `test-engineer`'s boundary either way (the behaviour it pins lives in
-`DamageSystem`, not the test). Naming it here so whoever settles that open item in 11e knows this test
-will need to move with the decision, not be treated as a second vote for the current reading.
-
-**Not tested, and not treated as a gap:** "the attachment disappears when taking damage and **when
-losing a life**" (08, "Resolved contradictions") could read as a second, independent loss trigger
-distinct from absorbing the hit. Checked against `DamageSystem.resolvePlayerHit`: the three branches
-are mutually exclusive by construction (attachment absorbs before the life branch is ever reached), so
-there is no code path today where a life is lost while an attachment is equipped — the "and when losing
-a life" clause is satisfied structurally, not by a separate rule to assert. Worth revisiting only if a
-future damage source bypasses this ordering.
 
 ## Notes for whoever comes next
 
