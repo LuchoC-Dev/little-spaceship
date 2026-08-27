@@ -22,13 +22,13 @@ class LayerDependencyTest {
     private static final String APPLICATION = ROOT + ".core.application";
     private static final String PORT = ROOT + ".core.port";
 
-    /** The pieces of the ECS. A port that named any of them would be leaking the machinery. */
-    private static final List<String> MACHINERY = List.of(
-        DOMAIN + ".component",
-        DOMAIN + ".entity",
-        DOMAIN + ".system",
-        DOMAIN + ".World",
-        DOMAIN + ".rng");
+    /**
+     * The one part of the domain a port may legitimately name — the domain events, which are
+     * immutable and exist precisely to be read from outside. Everything else under {@code
+     * core.domain}, present today or added tomorrow, is machinery: a whitelist catches a new
+     * package by construction, where a list of known offenders only catches the ones already on it.
+     */
+    private static final String DOMAIN_CONTRACT = DOMAIN + ".event";
 
     @Test
     @DisplayName("the domain does not know the application layer exists")
@@ -61,10 +61,8 @@ class LayerDependencyTest {
                 if (imported.startsWith(APPLICATION)) {
                     violations.add(file.path() + " imports " + imported);
                 }
-                for (String machinery : MACHINERY) {
-                    if (imported.startsWith(machinery)) {
-                        violations.add(file.path() + " imports " + imported);
-                    }
+                if (imported.startsWith(DOMAIN) && !imported.startsWith(DOMAIN_CONTRACT + ".")) {
+                    violations.add(file.path() + " imports " + imported);
                 }
             }
         }
