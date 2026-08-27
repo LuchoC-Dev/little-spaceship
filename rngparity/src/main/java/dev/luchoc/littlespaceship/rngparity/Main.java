@@ -13,8 +13,12 @@ import dev.luchoc.littlespaceship.core.domain.rng.Rng;
  *
  * <p>The three expected sequences below are copied verbatim from {@code RngTest} (the integer
  * stream for seed 12345, the integer stream for seed 0, and the float stream for seed 12345) rather
- * than recomputed, so this check cannot drift into asserting a second set of expectations that
- * happens to agree with itself.
+ * than recomputed, so this check does not assert a second, independently derived set of
+ * expectations. They were verified identical on 27/08/2026, and <b>nothing enforces that they stay
+ * so</b> — which is the same complaint {@code #52} made about the copied {@code Rng.java} this
+ * module replaced, with a different noun. Tracked as
+ * <a href="https://github.com/LuchoC-Dev/little-spaceship/issues/108">#108</a>: the fix is to stop
+ * duplicating them, by having the JVM run produce what the Node run is compared against.
  */
 public final class Main {
 

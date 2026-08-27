@@ -387,6 +387,23 @@ but is an untracked leftover in a gitignored `build/` directory — `git ls-file
 pattern: committed at the project root, `require`s the TeaVM output by its build-relative path, and the
 `runOnNode` task sets `workingDir` to the project directory rather than the generated output directory.
 
+**Coordinator's finding on task 6: the copy moved, it did not go.** `#52` opens by objecting that
+`spikes/web-viability/rngcheck/` holds its own copy of `Rng.java`, identical today and enforced by
+nothing. The copied *class* is genuinely gone — `Main` imports the real one. But `RngTest`'s three
+pinned sequences are now transcribed into `Main.java` as literal arrays, verified identical on
+27/08/2026 and enforced by nothing. That is the same sentence with a different noun. Opened as
+[#108](https://github.com/LuchoC-Dev/little-spaceship/issues/108), with the fix that removes the
+duplication rather than checking it: `RngTest` already pins the algorithm on every push, so the
+parity task only needs to prove the two runtimes agree — have the JVM run produce what the Node run
+is compared against, and no constant is duplicated anywhere. `Main`'s javadoc, which claimed the
+arrangement "cannot drift", is corrected to say what is actually true.
+
+**Verified by the coordinator, not read:** `node --version` → `v24.19.0`;
+`./gradlew :rngparity:rngParityCheck` runs both halves and prints three `OK` lines each, on the real
+`core` `Rng`. `./gradlew build --dry-run` lists no `generateJavaScript`, `runOnJvm`, `runOnNode` or
+`rngParityCheck` for `:rngparity` — only `compileJava`/`jar`/`assemble`, which any subproject
+contributes and which cost nothing.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
