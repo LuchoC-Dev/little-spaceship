@@ -3,3 +3,4 @@
 - [Auditing rule coverage per branch](feedback_auditing-rule-coverage-per-branch.md) — check every clause of the quoted rule against tests, not "does this file look thorough".
 - [Boss replay aiming geometry](project_boss-replay-geometry.md) — how to aim a scripted shot at one boss part without clipping its neighbour's collider.
 - [Boss stage runs before COLLISION/DAMAGE](project_boss-stage-ordering.md) — BossStatus.hp lags a tick behind an actual kill; read it after the run settles, not right on the kill tick.
+- [Verifying dead conjuncts](feedback_verifying-dead-conjuncts.md) — delete one operand of an `&&`, run the full suite; if nothing reds, it's shadowed by an earlier guard, not independently testable.
