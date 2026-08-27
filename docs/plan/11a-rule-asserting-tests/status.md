@@ -338,6 +338,55 @@ and reverted, is the evidence instead.
 `git diff -- '*/src/main/*'` is empty on the branch that was committed;
 `git status --short` shows only the two test files changed.
 
+**Task 6 · `Rng` parity as a Gradle task** ([#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52)) —
+`test-engineer`, branch `build/rng-parity-task`. New `:rngparity` subproject, registered in
+`settings.gradle.kts`, depending on `:core` and applying the raw `org.teavm` plugin (version `0.15.0`,
+same as `spikes/web-viability/rngcheck`) directly rather than the `gdx-teavm` wrapper `:web` uses —
+there is no libGDX involved. Per D3, `core/build.gradle.kts` was not touched and nothing under
+`core/src/main` was touched.
+
+`rngparity/src/main/java/.../Main.java` runs the real `dev.luchoc.littlespaceship.core.domain.rng.Rng`
+and checks it against the three sequences copied verbatim from `RngTest` (`pinnedSequence`, `zeroSeed`,
+`pinnedFloatSequence`) — not a second, independently derived set. Both runtimes compare against this one
+fixed expectation rather than against each other; a JVM/JS divergence still fails the check, because it
+would make one of the two runs diverge from the shared expectation. Three Gradle tasks: `runOnJvm`
+(`JavaExec`), `runOnNode` (`Exec`, depends on `generateJavaScript`, runs a committed `run.cjs` —
+`generateJavaScript` produces the TeaVM module but not a way to invoke it, same as the precedent in
+`spikes/web-viability/threadprobe/run.cjs`), and `rngParityCheck`, which depends on both and is the one
+task to run:
+
+```
+./gradlew :rngparity:rngParityCheck
+```
+
+None of the three is wired into `check` or `build` — confirmed with `./gradlew clean build`, which
+shows `:rngparity:compileTeavmJava NO-SOURCE` and no `generateJavaScript` anywhere in the log, only
+`compileJava`/`jar`/`assemble` for the module. Confirmed the task itself works from a clean state with
+`./gradlew clean :rngparity:rngParityCheck`, both runtimes printing:
+
+```
+OK   ints[seed=12345]: -598146918, 1963845983, -856963892, 976339029, 1163348040, 664654471, 610463809, 926368756
+OK   ints[seed=0]: 2075758394, 25405621, -432837345, -108408265, -1171969584, -50598465, -1463423431, -1252371528
+OK   floats[seed=12345]: 0.86073303, 0.4572435, 0.8004725, 0.22732162, 0.27086306, 0.1547519
+Rng parity check: all three pinned sequences match on this runtime.
+```
+
+**Red demonstrated.** Changed one pinned int in `Main.java`'s `EXPECTED_INTS_SEED_12345`, ran
+`./gradlew :rngparity:rngParityCheck`, got `:rngparity:runOnJvm FAILED` with `FAIL
+ints[seed=12345]: …` printed and an `IllegalStateException`, then reverted.
+
+`RngTest`'s `pinnedSequence` javadoc now names the task and says it is not part of the per-push CI job.
+Node (`v24.19.0`) was available in this environment, so both runtimes were actually run, not just built.
+
+**One deviation from the literal reading of point 1.** `generateJavaScript`'s own output has no runner;
+Node needs something that calls `exports.main([])`. `spikes/web-viability/threadprobe/run.cjs` is the
+repository's only precedent for this and is a hand-written, committed file, not a Gradle-generated one
+(`spikes/web-viability/rngcheck/build/generated/teavm/js/run.cjs` looked auto-generated at first glance
+but is an untracked leftover in a gitignored `build/` directory — `git ls-files` confirms nothing under
+`spikes/web-viability` other than `threadprobe/run.cjs` is tracked). `rngparity/run.cjs` follows the same
+pattern: committed at the project root, `require`s the TeaVM output by its build-relative path, and the
+`runOnNode` task sets `workingDir` to the project directory rather than the generated output directory.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
@@ -350,7 +399,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 | 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` — done |
 | 5a · forbidden-API check | [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) (= [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) | `test-engineer` — done |
 | 5b · `PublicContractTest` scope | [#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) (= [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4)) | `test-engineer` — done |
-| 6 · `Rng` parity as a Gradle task | [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) | `test-engineer` |
+| 6 · `Rng` parity as a Gradle task | [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) | `test-engineer` — done |
 | 7 · where [#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19) goes | — | the coordinator |
 
 ## Blocked
