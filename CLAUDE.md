@@ -15,7 +15,7 @@ Decided and measured. These are not preferences — breaking one invalidates ear
 3. **Single-threaded.** The web target offers no real parallelism, and `ExecutorService`, `CompletableFuture` and `ReentrantLock` do not exist in TeaVM — they break the build. It is also unnecessary: logic costs fractions of a millisecond against ~10 ms of drawing.
 4. **Contracts at the boundaries.** No module exposes concrete classes to another. Whatever crosses is immutable or read-only. `game` never manipulates the ECS; it reads through `WorldView`.
 5. **Fixed system order.** Execution order is part of the game rules, not an implementation detail.
-6. **No abstraction without a real case in the MVP.**
+6. **No abstraction without a real case you can point at.** A case is a written design or a shipped need, not an expectation. It read "in the MVP" until 27/08/2026, when the project owner accepted phase 10c's rewording ([#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91)): the MVP shipped, the sentence lost its subject, and the standard it set did not change.
 
 ## Web target pitfalls
 
@@ -90,7 +90,7 @@ Defined in `.claude/agents/`. Boundaries come from the module architecture, so t
 | `core-domain` | `core/` — ECS, systems, game rules |
 | `game-presentation` | `game/`, `desktop/`, `web/` — rendering, HUD, audio, input |
 | `visual-designer` | visual direction; produces documents, not code |
-| `level-designer` | `assets/data/level-*.json` — the wave timeline, pacing and the intensity curve |
+| `level-designer` | all level content under `assets/data/` — levels, waves, formations, movement shapes, pacing and the intensity curve. Widened from `level-*.json` on 27/08/2026 |
 | `test-engineer` | unit tests and deterministic replays |
 | `reviewer` | reads and reports only |
 

@@ -138,6 +138,20 @@ reason.
 
 The goal is a base the `level-designer` agent can build levels on **easily**, which today it cannot.
 
+**Split into six planned phases on 27/08/2026**, after a planning conversation with the project owner
+that closed every question this section leaves open. The answers are recorded in
+`docs/planning/08-decisions-and-open-items.md`, "The 11 group, 27/08/2026", and each plan repeats the
+ones it needs rather than restating this section:
+
+| # | Phase | Why it sits there |
+|---|---|---|
+| [11a](11a-rule-asserting-tests/plan.md) | Tests that assert rules | Everything after it is a behaviour change; this is the net |
+| [11b](11b-wave-system/plan.md) | The wave system | The unit of level design, and what balance and movement are expressed inside |
+| [11c](11c-movement-shapes/plan.md) | Movement as a described thing | The one real gap 10c found; needs waves to place a shape in |
+| [11d](11d-per-level-document/plan.md) | The per-level document | The format is settled once waves and shapes exist |
+| [11e](11e-level-one-redesigned/plan.md) | Level 1 redesigned, balance and the boss | Needs all four, and it is where playing decides |
+| [11f](11f-web-defects/plan.md) | The four web defects | Touches only `game`/`desktop`/`web`; runs in parallel from day one |
+
 ### Waves, first — everything else depends on it
 
 Today `level-01.json` is **92 spawn events**, each an absolute time, an archetype, a formation and an
