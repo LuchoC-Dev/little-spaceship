@@ -25,7 +25,9 @@ import java.util.Set;
  * structure, which is the confirmed decision in {@code 12-architecture.md}.
  *
  * <p>The naive comparison was measured, but not on this exact shape: {@code
- * docs/planning/11-technical-prototype-results.md} times {@code spikes/web-viability/collisionbench},
+ * docs/planning/11-technical-prototype-results.md} times {@code spikes/web-viability/collisionbench}
+ * — a directory deleted on 27/08/2026 and readable at commit {@code 68d002e0560c}, which that
+ * document also records —
  * which keeps each layer in its own flat {@code float[]} and compares bullets × enemies plus the two
  * "versus player" pairs against a single point — not four independent {@code ComponentStore} scans.
  * That benchmark is evidence for the decision to stay naive, not a measurement of this class; if the

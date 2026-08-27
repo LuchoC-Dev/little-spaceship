@@ -450,3 +450,28 @@ One correction was fully propagated, the sibling one was not; the difference was
 Edge fix and the License fix are the same size, so treat "the coordinator already fixed X" as a
 claim to verify per-document, not a fact that generalises across the branch's two docs once
 confirmed in one.
+
+## Phase 11a (`phase/11a-rule-asserting-tests`, PRs #100–#107) — a clean branch, and the shape a legitimate "argue with a routing decision" prompt takes
+
+38. **A phase can hold up on every axis at once, and the honest report is "accept."** Checked: the
+    `git diff dev..phase -- '*/src/main/*'` claim (exactly `Rng.java` comment lines + the new
+    `rngparity` module, confirmed by running the diff myself); the boss-replay geometry in
+    `BossReplayTest.podKillSimulation` (recomputed the pod/arm/x-distance arithmetic by hand —
+    `[[project_boss-replay-geometry]]` in `test-engineer`'s own memory independently derives the
+    same numbers, which is a second, unprompted confirmation rather than trusting one narrative);
+    the `alive`-conjunct-is-dead-code finding (read `World.View.outcome()` directly — the early
+    `state.lives <= 0` guard really does make the later `&& alive` unreachable-false in both
+    branches); every rule-to-test table row in `status.md` for tasks 2–4 against the actual test
+    bodies; both architecture-test narrowings (`ALLOWED_JAVA_UTIL_TYPES` against a grep of every
+    `java.util.*` import in `core/port`+`core/application`, `DOMAIN_CONTRACT` whitelist against the
+    one real `GameEventSink` import) for both under- and over-narrowing. Nothing failed. Do not
+    manufacture a finding to justify review effort — this phase's report was "accept, one thing
+    worth arguing with" and that was the true state.
+39. **A "route this open item to a later phase" decision (D5) can be correct about the concrete
+    assertions and still bundle in a separable, format-independent sub-question.** #19 asks two
+    things at once: what to assert about `JsonContentSource`'s error messages (genuinely blocked on
+    11b's rewrite of that class) and how to unit-test anything depending on `FileHandle` without
+    dragging LWJGL into the suite (a test-harness design question, independent of which JSON shape
+    11b lands on). D5 routed the whole issue to the 12 group on the first ground without addressing
+    that the second question could be resolved earlier. Worth naming as "worth arguing with" rather
+    than a defect: nobody had written the harness question down as separable before this reading.

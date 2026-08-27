@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 26/08/2026.
+Last updated: 27/08/2026.
 
 Read this first if you are picking the project up. It says where things stand and what comes next; `CLAUDE.md` says how to work here.
 
@@ -9,7 +9,7 @@ Read this first if you are picking the project up. It says where things stand an
 **`main` is now the whole picture, and the game is finished except for shipping it.** The three branches
 that held the MVP were reviewed and merged on 25/08/2026 — sprites (#30), audio (#31), boss (#29) — and
 everything they left unwired was closed the same day, along with a balance pass driven by playing, two
-defects and a UI pass. `./gradlew build` is green and `core` carries 289 tests.
+defects and a UI pass. `./gradlew build` is green and `core` carries 289 tests on `dev`, 303 on phase 11a's branch.
 
 **The MVP is shipped.** The game is live at <https://luchoc-dev.github.io/little-spaceship/>, it runs
 in a browser with no install, and phase 09 closed on 25/08/2026. What follows is polish, and the
@@ -29,7 +29,7 @@ What exists in the repository:
 
 - `docs/planning/` — fourteen documents covering vision, MVP spec, game systems, campaign, progression, balance values, architecture and the agent workflow.
 - `docs/sources/` — the verbatim ChatGPT transcript the planning came from. Spanish on purpose; it is evidence.
-- `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. **Not deletable yet**, and this is the one exception: `rngcheck/` is the only measurement that `Rng` produces a bit-identical stream under TeaVM, which is invariant 2 checked on the runtime that would break it silently. It moves onto the real class as a Gradle task in [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52); the spike goes when that lands. Everything else in the directory is finished with. Resolves [#5](https://github.com/LuchoC-Dev/little-spaceship/issues/5); see `docs/plan/10a-honest-documentation/decisions.md`, D1.
+- ~~`spikes/web-viability/`~~ — **deleted on 27/08/2026 by phase 11a**, on the project owner's decision. It was a throwaway prototype that validated the platform, and the one thing that kept it — `rngcheck/` being the only measurement that `Rng` produces a bit-identical stream under TeaVM — ended when [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) moved that check onto the real `core` class in the `:rngparity` subproject (`./gradlew :rngparity:rngParityCheck`), with no copy of `Rng.java` anywhere. **The evidence is not gone, it moved into history:** the last commit containing the directory is `68d002e0560ce40842dc8f72e876fa5fe78bb3ed`, and `git show 68d002e0560c:spikes/web-viability/<path>` still reads any of its files. Every citation of it elsewhere in `docs/` — the benchmark behind `11-technical-prototype-results.md`, the build commands phase 09's plan points at, the working references in phases 01 and 03 — is a dated record of a past phase and stays as written; that commit is what makes them chaseable. Resolved [#5](https://github.com/LuchoC-Dev/little-spaceship/issues/5); see `docs/plan/10a-honest-documentation/decisions.md`, D1.
 - `docs/design/` — the visual direction: the closed `ls32` palette, sprite sizes in pixels per archetype, bitmap typography, HUD layout, legibility rules, and pixel-exact mocks. Synchronisation point 1, settled.
 - `.claude/agents/` — six agent definitions with project-scoped persistent memory.
 - `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring, the boss and its six colliders. **289 tests**, no libGDX on its classpath.
@@ -320,6 +320,7 @@ Everything the three merged branches left unwired is closed.
 | 10a | Honest documentation | **done** — every document in `docs/` audited against the code, 33 false statements corrected, #5 resolved, #3 and #4 decided, and a mechanism chosen. See [the audit](plan/10a-honest-documentation/audit.md) |
 | 10b | Agents and sessions | **done** — phase 09 measured (813 calls, $110.76 equivalent, 83 % of it the coordinator's model choice), the six agent definitions and 46 memory files audited, the agent-memory worktree trap closed with a hook, an evidence rule for claims about a system, and the `dev`/phase/sub-branch regime with `tools/pre-pr-check`. See [the measurement](plan/10b-agents-and-sessions/measurement.md). Merged into `dev` in #76 and into `main` in #79 |
 | 10c | Architecture review | **done** — the architecture holds for the 11 group with four named additive extensions (#84, #85, #86, #87) and no change to its shape; all fifteen open issues triaged, #23 closed as already fixed and #11 decided; invariant 6's expired wording put to the project owner as #91. No production code changed. See [the decision](plan/10c-architecture-review/decision.md) and [the assessment](plan/10c-architecture-review/assessment.md). Merged into `dev` in #93 |
+| 11a | Tests that assert rules | **done on its branch, not yet on `dev`** — the baseline measured by reading all 289 tests (167 assert a rule, 9 reproducibility, 4 both, 117 infrastructure), which **falsifies the roadmap's suite-wide claim** and confirms it only for the five replay files; five rule-asserting tests added where nothing went red before, including the boss-module test #44 was raised for; #3/#53, #4/#54 and #52 closed, the `Rng` parity check moved onto the real class in `:rngparity`, and #104 and #108 opened. `reviewer` accepted. Waiting on the project owner in [#109](https://github.com/LuchoC-Dev/little-spaceship/pull/109) |
 
 ## Open items that do not block
 
@@ -336,8 +337,9 @@ All of these are in `CLAUDE.md`, but they are worth repeating because they are s
 - Headless Chrome cannot validate the web runtime. It fails under SwiftShader even when a real browser works.
 - `ExecutorService`, `CompletableFuture` and `ReentrantLock` do not exist in TeaVM: they break the build. The core is single-threaded by decision, and it was measured that concurrency would buy nothing.
 - Breaking determinism does not fail loudly. It silently invalidates every replay.
-- `spikes/web-viability/README.md` says `gdx_teavm_web_js_run` serves on **8181**. It does not — the
-  pinned 1.6.1 plugin serves on **8080**, and the plan sends you to that README for the commands.
+- **`gdx_teavm_web_js_run` serves on 8080, not 8181.** The pinned 1.6.1 plugin's real port. The
+  claim of 8181 came from `spikes/web-viability/README.md`, which phase 09's plan sent people to for
+  the commands; that directory was deleted on 27/08/2026 and the README is readable at `68d002e0560c`.
 - `gdx_teavm_web_js_build -Prelease` **reuses the previous non-release output**: `generateJavaScript`
   reports `UP-TO-DATE` even though release mode changes obfuscation, optimisation and source maps,
   and leaves a stale `app.js.map` behind. Run `clean` before measuring a release build.

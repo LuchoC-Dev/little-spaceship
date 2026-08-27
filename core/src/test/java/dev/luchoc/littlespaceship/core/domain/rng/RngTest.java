@@ -17,6 +17,11 @@ class RngTest {
      * depends on them: changing the algorithm changes the outcome of every game that was ever
      * captured. If this test fails, either the change was deliberate and every replay has to be
      * regenerated, or something was broken by accident.
+     *
+     * <p>This test only proves the contract on the JVM. This one, {@link #zeroSeed()} and
+     * {@link #pinnedFloatSequence()} are also asserted against the real {@link Rng} running under
+     * TeaVM/JavaScript on Node by {@code ./gradlew :rngparity:rngParityCheck} — run it after
+     * touching this algorithm. It is not part of the per-push CI job.
      */
     @Test
     @DisplayName("reproduces the pinned sequence for a pinned seed")
