@@ -90,6 +90,44 @@ there is no code path today where a life is lost while an attachment is equipped
 a life" clause is satisfied structurally, not by a separate rule to assert. Worth revisiting only if a
 future damage source bypasses this ordering.
 
+**Task 3 · the boss's rules** ([#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98)) —
+`test-engineer`, branch `test/boss-rules`. Read against `docs/planning/08-decisions-and-open-items.md`
+("Level 1 climax and length"), `docs/plan/07-boss/status.md` and `BossSystem`'s and `BossStatus`'s own
+class javadoc (which restate those decisions rather than invent new ones). Two of the three
+acceptance-criteria clauses already had a test that fails when the rule breaks, both in the
+pre-existing `BossSystemTest` (already counted as rule-asserting in the baseline): the third — the
+roadmap's own example — had none, anywhere, and is what this task closes.
+
+| Rule (quoted from planning / the code's own javadoc) | Test |
+|---|---|
+| "The boss has one phase, two alternating attack patterns and a clear tell before each" (08); tell timing from `06-boss-presentation.md`, three 0.25 s beats | `BossSystemTest.tellStepsThroughThreeBeatsThenFires` — asserts the beat progression 1→2→3→fire→0 via real per-tick steps, not a hardcoded duration |
+| "spread and sweep alternate every cycle, never chosen" (`BossSystem` javadoc); fan of `FAN_COUNT` rays per side | `BossSystemTest.volleyFansThreeRaysPerSideAndAlternatesPattern` — asserts two consecutive volleys are SPREAD then SWEEP, six rays each, matching the fixed ratio tables |
+| "the core is the only part whose death ends the fight... whatever keel, pods or arms remain are destroyed with it" (`BossSystem` javadoc, "Defeat"); the health bar "falls both when a part is hit and, at once, when a part dies and stops contributing anything" (`BossStatus` javadoc) — **the roadmap's own example: the ship destroys a module and the world reflects it** | **Gap, closed.** New `BossReplayTest.destroyingAPodDoesNotEndTheFightAndTheWorldReflectsIt`: through the real `Simulation` pipeline (`WeaponSystem` → `CollisionSystem` → `DamageSystem` → `CleanupSystem` → `BossSystem`), the ship shoots down the boss's left pod alone and the test asserts the fight stays `IN_PROGRESS`, the boss stays `present()`, and `hp` falls by exactly the destroyed pod's health — nothing at either the unit or the replay level tested a non-core part dying alone before this |
+
+`BossSystemTest.defeatingTheCoreWinsTheRun` (pre-existing) covers the other half of the same rule — the
+core's own death does end the fight and clears the remaining parts — at the unit level;
+`BossReplayTest.victoryIsDeterministic` (pre-existing, counted "Both" in the baseline) pins that the
+same thing holds through the full pipeline, but for the core, not for a module dying alone, which is
+exactly the gap the new test closes.
+
+**Red demonstrated.** Changed `BossSystem.updateSpawned`'s `if (!world.isAlive(core))` to
+`if (!world.isAlive(core) || !world.isAlive(podLeft))`, so a pod's death alone ends the fight exactly
+like the core's. Ran
+`./gradlew :core:test --tests "...BossReplayTest.destroyingAPodDoesNotEndTheFightAndTheWorldReflectsIt"`,
+got:
+
+```
+BossReplayTest > destroying a pod alone leaves the fight running, and the health bar reflects the loss FAILED
+    org.opentest4j.AssertionFailedError at BossReplayTest.java:75
+1 test completed, 1 failed
+```
+
+(line 75 is the `LevelOutcome.IN_PROGRESS` assertion, which is exactly the rule the change broke), then
+reverted the one line. `git diff -- '*/src/main/*'` is empty on the branch that was committed.
+
+**`./gradlew build` green** after the addition; `BossReplayTest` grew from two tests to three, none of
+the earlier two changed.
+
 ## In progress
 
 The phase branch exists and the issues are open. The plan's seven tasks become eight pieces of work — task 5 splits, see D1 below — of which seven go to a worker:
@@ -98,7 +136,7 @@ The phase branch exists and the issues are open. The plan's seven tasks become e
 |---|---|---|
 | 1 · baseline count | [#96](https://github.com/LuchoC-Dev/little-spaceship/issues/96) | `test-engineer` — done |
 | 2 · defensive chain | [#97](https://github.com/LuchoC-Dev/little-spaceship/issues/97) | `test-engineer` — done |
-| 3 · the boss's rules | [#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98) | `test-engineer` |
+| 3 · the boss's rules | [#98](https://github.com/LuchoC-Dev/little-spaceship/issues/98) | `test-engineer` — done |
 | 4 · level completion | [#99](https://github.com/LuchoC-Dev/little-spaceship/issues/99) | `test-engineer` |
 | 5a · forbidden-API check | [#53](https://github.com/LuchoC-Dev/little-spaceship/issues/53) (= [#3](https://github.com/LuchoC-Dev/little-spaceship/issues/3)) | `test-engineer` |
 | 5b · `PublicContractTest` scope | [#54](https://github.com/LuchoC-Dev/little-spaceship/issues/54) (= [#4](https://github.com/LuchoC-Dev/little-spaceship/issues/4)) | `test-engineer` |
