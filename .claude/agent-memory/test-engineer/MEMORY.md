@@ -1,1 +1,2 @@
 - [Memory-path hook verification](project_memory-path-hook-verification.md) — issue #61 fix holds: tried subdir, `-a`, mixed-file, `--amend`, fresh worktree; none got past it.
+- [Rule-vs-reproducibility classification](project_rule-vs-reproducibility-classification.md) — 11a baseline: the roadmap's "bulk asserts reproducibility" was true of 5 replay files, not the 289-test suite.
