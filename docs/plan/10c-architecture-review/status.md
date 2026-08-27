@@ -1,6 +1,6 @@
 # Phase 10c — Architecture review · status
 
-**State:** in progress on `phase/10c-architecture-review`
+**State:** done and merged into `dev` in PR [#93](https://github.com/LuchoC-Dev/little-spaceship/pull/93), on 27/08/2026 with the project owner's direct approval on that pull request. `dev` reaches `main` through a pull request the project owner merges themselves; that one is not a coordinator's and has not been opened by this phase
 **Updated:** 27/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
@@ -27,15 +27,15 @@ Update this file when the phase moves. It is the only place phase progress is re
 
 ## In progress
 
-The three tasks are done. What is left is the phase's own close: a pull request from
-`phase/10c-architecture-review` against `dev`, which a coordinator may merge **only with the project
-owner's direct approval on that pull request** — see
-[`../how-to-run-a-phase.md`](../how-to-run-a-phase.md). An earlier approval never covers it, and
-`main` is not a coordinator's at all.
+Nothing. The three tasks landed on the phase branch through PRs
+[#89](https://github.com/LuchoC-Dev/little-spaceship/pull/89),
+[#90](https://github.com/LuchoC-Dev/little-spaceship/pull/90) and
+[#92](https://github.com/LuchoC-Dev/little-spaceship/pull/92), and the phase branch reached `dev`
+through [#93](https://github.com/LuchoC-Dev/little-spaceship/pull/93).
 
 ## Blocked
 
-Nothing. One item needs the project owner rather than a coordinator:
+Nothing was blocked. One item is the project owner's rather than a coordinator's and is open:
 [#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91), invariant 6's wording. `CLAUDE.md`
 was not edited — 10b was the phase given permission to change it and this one was not.
 

@@ -253,12 +253,16 @@ The short version lives in `CLAUDE.md`: invariants, web-target pitfalls, convent
 reordering first so everything after it is built on a base that holds:
 [`docs/plan/post-mvp-roadmap.md`](plan/post-mvp-roadmap.md).
 
-**The 10 group is planned; 10a and 10b are done.** Phase 10a audited every document here against the
+**The 10 group is done.** Phase 10a audited every document here against the
 code and corrected what was false — [the audit](plan/10a-honest-documentation/audit.md) is the record,
 and it is worth reading before trusting any document in this repository, because it says which ones
 were checked and what each one got wrong. Phase 10b then measured what a phase costs, audited the six
-agent definitions and nine phases of agent memory, and changed how work reaches `main`. **10c**
-(architecture review) is next.
+agent definitions and nine phases of agent memory, and changed how work reaches `main`. Phase 10c
+reviewed the architecture against what the 11 group needs and found that it **holds, with four named
+additive extensions and no change to its shape** — [the decision](plan/10c-architecture-review/decision.md)
+records what was rejected as well as what was chosen. **The 11 group is next**, and its first task is
+[#44](https://github.com/LuchoC-Dev/little-spaceship/issues/44): rule-asserting tests, because
+everything 10c named is a behaviour change under a suite that mostly proves a run reproduces itself.
 
 **How work reaches `main` changed on 26/08/2026**, by the project owner's decision: `main` ← `dev` ←
 one phase branch ← one sub-branch per agent. Nothing is committed on `main` or `dev`, a phase opens a
@@ -305,7 +309,7 @@ Everything the three merged branches left unwired is closed.
 | 09 | Web, CI and release | **done** — launcher (#33), CI (#35), README (#37) and Pages deploy (#39). The game is live |
 | 10a | Honest documentation | **done** — every document in `docs/` audited against the code, 33 false statements corrected, #5 resolved, #3 and #4 decided, and a mechanism chosen. See [the audit](plan/10a-honest-documentation/audit.md) |
 | 10b | Agents and sessions | **done** — phase 09 measured (813 calls, $110.76 equivalent, 83 % of it the coordinator's model choice), the six agent definitions and 46 memory files audited, the agent-memory worktree trap closed with a hook, an evidence rule for claims about a system, and the `dev`/phase/sub-branch regime with `tools/pre-pr-check`. See [the measurement](plan/10b-agents-and-sessions/measurement.md). Merged into `dev` in #76 and into `main` in #79 |
-| 10c | Architecture review | not started |
+| 10c | Architecture review | **done** — the architecture holds for the 11 group with four named additive extensions (#84, #85, #86, #87) and no change to its shape; all fifteen open issues triaged, #23 closed as already fixed and #11 decided; invariant 6's expired wording put to the project owner as #91. No production code changed. See [the decision](plan/10c-architecture-review/decision.md) and [the assessment](plan/10c-architecture-review/assessment.md). Merged into `dev` in #93 |
 
 ## Open items that do not block
 
