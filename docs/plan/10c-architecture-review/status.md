@@ -18,14 +18,26 @@ Update this file when the phase moves. It is the only place phase progress is re
   `9e7607f` on 22/08/2026 and nobody closed it; **#11** asked for a decision and got one — the layer
   stays. [`issue-triage.md`](issue-triage.md).
 
+- **Tasks 4 and 5 — the decision, written down**
+  ([#83](https://github.com/LuchoC-Dev/little-spaceship/issues/83)). **The architecture holds, with
+  four named additive extensions and no change to its shape.** Six alternatives recorded as rejected,
+  including the two the plan warned about — designing the 11 group, and touching the invariants
+  without cause. [`decision.md`](decision.md), and one subsection added to
+  [`../../planning/08-decisions-and-open-items.md`](../../planning/08-decisions-and-open-items.md).
+
 ## In progress
 
-- Tasks 4 and 5 — decide and write it down
-  ([#83](https://github.com/LuchoC-Dev/little-spaceship/issues/83)).
+The three tasks are done. What is left is the phase's own close: a pull request from
+`phase/10c-architecture-review` against `dev`, which a coordinator may merge **only with the project
+owner's direct approval on that pull request** — see
+[`../how-to-run-a-phase.md`](../how-to-run-a-phase.md). An earlier approval never covers it, and
+`main` is not a coordinator's at all.
 
 ## Blocked
 
-Nothing.
+Nothing. One item needs the project owner rather than a coordinator:
+[#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91), invariant 6's wording. `CLAUDE.md`
+was not edited — 10b was the phase given permission to change it and this one was not.
 
 ## Decisions taken while implementing
 
@@ -46,9 +58,18 @@ Record here anything decided that the plan did not specify, and why. If it chang
 
 ## Notes for whoever comes next
 
-- The five issues this phase opened for later groups are
+- The issues this phase opened for later groups are
   [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84),
   [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85),
-  [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86),
-  [#87](https://github.com/LuchoC-Dev/little-spaceship/issues/87) for the 11 group and
-  [#88](https://github.com/LuchoC-Dev/little-spaceship/issues/88) for phase 12.
+  [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) and
+  [#87](https://github.com/LuchoC-Dev/little-spaceship/issues/87) for the 11 group,
+  [#88](https://github.com/LuchoC-Dev/little-spaceship/issues/88) for phase 12, and
+  [#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91) for the project owner.
+- **Two issues closed**, both because the work was already done or was this phase's to do:
+  [#23](https://github.com/LuchoC-Dev/little-spaceship/issues/23), fixed by commit `9e7607f` on
+  22/08/2026 and never closed, and [#11](https://github.com/LuchoC-Dev/little-spaceship/issues/11),
+  which asked for a decision.
+- **The plan was self-sufficient.** One gap, small and worth recording: it lists the open technical
+  issues as #11, #12, #19, #23, #3 and #4, and its acceptance criterion says *every* open technical
+  issue. Five more were open (#44, #52, #53, #54, #56). The criterion was read as authoritative and
+  all fifteen were triaged.

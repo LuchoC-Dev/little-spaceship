@@ -91,6 +91,43 @@ them, and phase 05's guaranteed drops have nowhere to anchor.
   with its calm, escalation, rest and climax rather than a compressed version of it. The cost is
   content to produce and balance, and that is accepted.
 
+### Architecture review, 27/08/2026
+
+Decided by phase 10c, the architecture review, against the code rather than against the design
+documents. The evidence is in `docs/plan/10c-architecture-review/assessment.md`, the backlog triage in
+`issue-triage.md` and the reasoning including what was rejected in `decision.md`.
+
+- **The architecture holds for the 11 group, with four named additive extensions and no change to its
+  shape.** Nothing in the module boundary, the hexagonal layering, the content contracts, the fixed
+  system order or the determinism rules changes. The four extensions are issues
+  [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84),
+  [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85),
+  [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) and
+  [#87](https://github.com/LuchoC-Dev/little-spaceship/issues/87), ordered behind
+  [#44](https://github.com/LuchoC-Dev/little-spaceship/issues/44).
+- **A wave may end on world state rather than on a clock without breaking determinism.** This is not
+  an inference from the invariants: `World.View.outcome()` already decides `COMPLETED` by reading the
+  world, through `noEnemyLeft()`. Two mechanisms are missing before "cleared" means anything — nothing
+  removes an enemy that leaves the playfield (`LifetimeSystem` expires only the two projectile layers),
+  and no entity records which wave spawned it.
+- **`SPAWN` stays fifth in `SystemOrder`.** A world-state trigger there resolves one tick after the
+  last kill, deterministically. Moving the stage after `CLEANUP` to make it immediate was rejected:
+  it would spawn waves after the tick's collision pass, which is a different and worse rule.
+- **`CollisionLayer.PLAYER` stays**, resolving [#11](https://github.com/LuchoC-Dev/little-spaceship/issues/11).
+  It is written by `Simulation` and never matched on, and that asymmetry is the design: the player is
+  resolved through `World.playerEntity()` because there is exactly one of it. Deleting the constant
+  would force a "none" layer or an unrelated one onto the player's collider, which is worse.
+- **Movement as a described thing is the one real gap.** `Motion` is a bare velocity and a trajectory
+  is a constant vector resolved once at spawn, so the same archetype cannot enter differently at two
+  points of a level without being duplicated. Mechanism only; the shapes and the format are the 11
+  group's design.
+- **Not decided here, on purpose:** what a wave is, and what form the per-level document takes. The
+  architecture permits every arrangement of the second except two hand-maintained artefacts, so the
+  choice is a design and process decision rather than an architectural one.
+- **Open, and put to the project owner:** invariant 6 in `CLAUDE.md` reads "no abstraction without a
+  real case in the MVP", and the MVP has shipped. `CLAUDE.md` was not edited;
+  [#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91) carries the proposed wording.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.
