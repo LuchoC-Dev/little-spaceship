@@ -73,18 +73,17 @@ else
 fi
 
 # 2. Commit hygiene. CLAUDE.md fixes the format; a hook does not enforce it here.
-TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+# One source of truth, shared with tools/hooks/commit-msg. These two used to keep
+# separate lists of what is exempt and they drifted: the hook welcomed git's own
+# `Revert "…"` wording and this gate rejected it, so a legitimate revert passed at
+# write time and failed here, with nothing saying why. Issue #154.
 BAD_SUBJECTS=0
 for SHA in $(git rev-list "$MERGE_BASE..HEAD"); do
   SUBJECT="$(git log -1 --format=%s "$SHA")"
-  case "$SUBJECT" in
-    "Merge "*) continue ;;
-  esac
-  if ! printf '%s' "$SUBJECT" | grep -Eq "^($TYPES)(\([a-z0-9._-]+\))?: .+"; then
-    BAD_SUBJECTS=$((BAD_SUBJECTS + 1)); detail "not a conventional subject: $SHA $SUBJECT"
-  elif [ "${#SUBJECT}" -gt 71 ]; then
-    BAD_SUBJECTS=$((BAD_SUBJECTS + 1)); detail "subject is not under 72 characters: $SHA $SUBJECT"
+  if REASON="$(./tools/commit-subject-ok "$SUBJECT")"; then
+    continue
   fi
+  BAD_SUBJECTS=$((BAD_SUBJECTS + 1)); detail "$REASON: $SHA $SUBJECT"
 done
 [ "$BAD_SUBJECTS" -eq 0 ] && pass "commit subjects" || fail "$BAD_SUBJECTS commit subject(s) break the convention"
 
