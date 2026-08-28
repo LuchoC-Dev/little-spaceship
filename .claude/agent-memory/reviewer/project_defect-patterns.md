@@ -475,3 +475,33 @@ confirmed in one.
     11b lands on). D5 routed the whole issue to the 12 group on the first ground without addressing
     that the second question could be resolved earlier. Worth naming as "worth arguing with" rather
     than a defect: nobody had written the harness question down as separable before this reading.
+
+## Calibration from phase 11b task 1 (`feat/entity-lifetime`, PR #116), a clean branch
+
+Recorded so "accept, nothing new" stays calibrated against a real example, not just the rejections.
+
+Every checkable claim in the branch held: the `SAFETY_MARGIN` derivation (`column-3` 44-unit spread x
+`enemy-carrier` 15-unit radius -> y=329, 314 from its own edge) reproduced exactly by hand from
+`assets/data/formations.json`/`enemies.json` and `SpawnSystem.positionSpawned`'s formula; the escape
+rule (no score, no drop, no `EnemyDestroyed`) verified by reading `ScoreSystem`, `CleanupSystem` and
+`ComponentStore.remove` and confirmed by a full-pipeline unit test in the same PR
+(`anEscapedEnemyGivesNothing`); the two-pass structure in `expireEnemies` genuinely needed (`Component
+Store.remove` is a swap-remove that reorders the dense array mid-iteration — confirmed by reading the
+class) and the two-pass version has no version of the same bug (pass 2 iterates a separate `ArrayList`,
+never the store pass 1 walked); `CleanupSystem`'s "converges uniformly" claim stayed true with zero
+change to that class, because the strip happens upstream and both consumers were already conditional
+on component presence. Full clean build (`./gradlew clean build --rerun-tasks`) green across all five
+modules including `web`; 310 core tests, 0 failures/skipped/errors.
+
+The one thing worth naming as a *pattern to watch for, not a defect here*: a worst-case measurement
+combining the extreme value of two independent data files (largest formation spread, largest enemy
+radius) is only a real bound if the spawn system actually allows that combination to occur — checked
+by reading `SpawnSystem.spawnWave`, which assigns one `enemyId` to every slot of a formation, so any
+(formation, enemy) pairing the schema allows is reachable by a future wave even if no current level
+uses it. Worth re-deriving on every phase that touches `formations.json`, `enemies.json`, or the
+spawn-positioning formula, since the bound silently goes stale if either file's extremes move.
+
+Also worth naming: the `new ArrayList<>()` allocated once per tick in `LifetimeSystem.expireEnemies`
+(populated in the near-totality of ticks with nothing) is the same shape as the phase 05 boxed-`Integer`
+finding calibrated as noise — thousands of tiny, short-lived allocations across a multi-minute level
+against ~10ms/frame of drawing cost. Named, not blocking.

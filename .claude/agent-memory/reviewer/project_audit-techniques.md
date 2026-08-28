@@ -166,3 +166,27 @@ Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
   what you compare against a "what a visitor downloads" figure, since a release build (`-Prelease`)
   should not ship them but a stale incremental build directory can still contain them from an earlier
   non-release run.
+
+## For auditing a single-task PR against a phase branch with no worktree left
+
+- **`git show <rev>:<path>` on Windows Git Bash mangles a `origin/branch:path/to/file` argument** into
+  `origin\branch;path\to\file` (MSYS's path-conversion heuristic fires on the colon+slash mix) and
+  fails with "unknown revision or path not in the working tree" even though the object exists. Prefix
+  the command with `MSYS_NO_PATHCONV=1` and it resolves correctly. Cheaper than re-adding a worktree
+  just to read one file.
+- **A worst-case geometric claim ("formation X's spread carrying enemy Y's radius") does not need X
+  and Y to co-occur anywhere in current level content to be a valid bound**, when the spawn system
+  uses one enemy id for every slot of a formation in a given wave (confirmed by reading
+  `SpawnSystem.spawnWave`/`positionSpawned`: `event.enemyId()` is shared across all slots). Nothing
+  stops a *future* wave from pairing them, so the bound is over all (formation, enemy) pairs the
+  content schema allows, not over pairs actually present in `level-01.json`. Verified for PR #116
+  (`SAFETY_MARGIN`/issue #84): `column-3` (44-unit `offsetY` spread, the largest of eight formations)
+  paired with `enemy-carrier` (15-unit radius, the largest of six enemies) gives `y = 329`, exactly
+  the class javadoc's figure, even though `level-01.json` never actually spawns `enemy-carrier` in
+  `column-3`.
+- **A golden fingerprint that goes A → B → A across a PR's commit history is stronger evidence than
+  one that never moved.** Reading the intermediate commit (`git show <sha>` on the test file) proved
+  the score path was genuinely exercised by the fix — B was the bug's real value before the rule was
+  implemented, not a typo — which is the difference between "the golden pins the fix" and "the golden
+  never had a chance to catch the fix's absence." PR #116: `entities=12→11` alone across the PR, but
+  `score=1350→1600→1350` across three commits, only the middle one uncommitted-and-reverted.
