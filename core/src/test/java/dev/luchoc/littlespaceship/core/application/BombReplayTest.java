@@ -13,8 +13,9 @@ import dev.luchoc.littlespaceship.core.port.SimpleAttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
-import dev.luchoc.littlespaceship.core.port.SimpleWaveTimeline;
+import dev.luchoc.littlespaceship.core.port.SimpleWaveDefinition;
 import dev.luchoc.littlespaceship.core.port.SpawnEvent;
+import dev.luchoc.littlespaceship.core.port.WaveEndCondition;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.List;
 import java.util.Map;
@@ -105,11 +106,13 @@ class BombReplayTest {
                 motion("crawl"), sprite("enemy-basic"), collider(5.5f, true), score(100f))))
             .withFormation(new SimpleFormationDefinition("single",
                 List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(List.of(
+            .withWave(new SimpleWaveDefinition(LEVEL + "-wave", List.of(
                 new SpawnEvent(1f, "enemy-basic", "single", 0.3f, null),
                 new SpawnEvent(3f, "enemy-basic", "single", 0.5f, "shield"),
                 new SpawnEvent(5f, "enemy-basic", "single", 0.7f, null),
-                new SpawnEvent(7f, "enemy-basic", "single", 0.4f, null))));
+                new SpawnEvent(7f, "enemy-basic", "single", 0.4f, null)),
+                new WaveEndCondition.FixedDuration(20f)))
+            .withSingleWavePlacement(LEVEL, LEVEL + "-wave");
     }
 
     private static ComponentSpec motion(String trajectory) {

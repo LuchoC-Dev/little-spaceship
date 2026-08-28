@@ -120,7 +120,7 @@ class WorldTest {
         world.spawners().set(entity, new Spawner("enemy-basic", 1f, 0f, 0f));
         world.enemyWeapons().set(entity, new EnemyWeapon("straight-single", 1f, 90f));
         world.lifetimes().set(entity, new Lifetime(1f));
-        world.waveOrigins().set(entity, new WaveOrigin(1));
+        world.waveOrigins().set(entity, new WaveOrigin("wave-1"));
     }
 
     /**

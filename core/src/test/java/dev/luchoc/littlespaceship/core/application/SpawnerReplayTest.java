@@ -11,8 +11,9 @@ import dev.luchoc.littlespaceship.core.port.MapComponentSpec;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
-import dev.luchoc.littlespaceship.core.port.SimpleWaveTimeline;
+import dev.luchoc.littlespaceship.core.port.SimpleWaveDefinition;
 import dev.luchoc.littlespaceship.core.port.SpawnEvent;
+import dev.luchoc.littlespaceship.core.port.WaveEndCondition;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.List;
 import java.util.Map;
@@ -71,8 +72,10 @@ class SpawnerReplayTest {
                     Map.of("enemyId", "enemy-basic", "interval", 2f, "offsetX", 0f, "offsetY", -20f)))))
             .withFormation(new SimpleFormationDefinition("pair", List.of(
                 new FormationSlot(-30f, 0f), new FormationSlot(30f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(0.5f, "enemy-carrier", "pair", 0.5f, "attachment", 0))));
+            .withWave(new SimpleWaveDefinition(LEVEL + "-wave",
+                List.of(new SpawnEvent(0.5f, "enemy-carrier", "pair", 0.5f, "attachment", 0)),
+                new WaveEndCondition.FixedDuration(20f)))
+            .withSingleWavePlacement(LEVEL, LEVEL + "-wave");
     }
 
     private static ComponentSpec motion(String trajectory) {
