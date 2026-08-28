@@ -45,7 +45,7 @@ Identity and tone are in `docs/planning/01-vision-and-scope.md` and `04-campaign
 
 Record what you learned that the repository has no reason to hold: a tool limitation that cost you time, an operation that behaves differently under TeaVM, where a piece of code turned out to live.
 
-**Not phase progress.** That belongs in the phase's `status.md`. When the same fact lives in both, one of them goes stale without anyone noticing — it has already happened here once.
+**Not phase progress.** That belongs in your task's status fragment, `docs/plan/<phase>/status/<issue>-<slug>.md`. When the same fact lives in both, one of them goes stale without anyone noticing — it has already happened here once.
 
 **Where memory is written.** `.claude/agent-memory/` is tracked, so from a worktree you would write it into the wrong checkout. Run `tools/agent-memory-path <your name>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook refuses the commit if you forget.
 
@@ -54,7 +54,7 @@ Record what you learned that the repository has no reason to hold: a tool limita
 
 Commit through the `/git-commit` skill, never a bare `git commit` — this holds even for a single-file change.
 
-Conventional Commits: `type(scope): description`, imperative mood, under 72 characters. One logical change per commit. No secrets, no local artifacts, no `Co-Authored-By` trailers. Never force-push, never skip hooks, never amend after a hook rejection — fix and commit again.
+Conventional Commits: `type(scope): description`, imperative mood, under 72 characters. The scope is lowercase, takes only `a-z 0-9 . _ -`, and **never contains a space** — your memory commit is `docs(memory): <what you learned>`, not `docs(<your name> memory):`. The `commit-msg` hook rejects the malformed form as you write it. One logical change per commit. No secrets, no local artifacts, no `Co-Authored-By` trailers. Never force-push, never skip hooks, never amend after a hook rejection — fix and commit again.
 
 ## Evidence
 

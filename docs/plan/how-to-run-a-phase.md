@@ -17,7 +17,9 @@ To launch an agent by hand, see [writing prompts for agents](agent-prompts.md).
 issue  →  branch  →  work  →  pre-pr-check  →  PR  →  reviewer  →  merge  →  status
 ```
 
-**Issue.** One per task in the plan. Title from the task, body with the relevant acceptance criteria.
+**Issue.** One per task in the plan — and one for every defect found while the phase runs, which is not "a task in the plan" and needs an issue just as much. Title from the task, body with the relevant acceptance criteria.
+
+**Every pull request against a phase branch closes exactly one issue.** The coordinator's documentation pull requests are the one named exception: opening a phase, closing it, correcting a document. They close no issue and carry no status fragment, and that is the same category `tools/pre-pr-check` exempts by asking whether the branch changed anything outside `docs/`.
 
 **Branch.** Four levels, and each one only ever receives a pull request from the level below.
 Decided by the project owner on 26/08/2026; see [the branch regime](#the-branch-regime) below for
@@ -29,6 +31,14 @@ what each level is for.
 | `dev` | nobody | a pull request from a phase branch, merged by a coordinator **only with the project owner's direct approval** |
 | `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
 | `type/description` | the agent doing one task | a pull request against the phase branch |
+
+**The coordinator creates the branch and the worktree**, from the phase branch, before launching anything, and the launch prompt names an absolute working directory that already exists. **An agent never runs `git worktree add`.**
+
+```bash
+git worktree add ../little-spaceship-<task> -b <type>/<description> phase/<phase>-<description>
+```
+
+Decided by the project owner on 28/08/2026, after phase 11b, where an agent worked directly in the main checkout — on the phase branch — leaving six modified files there. It was caught because a *different* agent noticed the dirty checkout and reported it instead of touching it. The instruction to create a worktree existed only in that agent's launch prompt, and in none of the six definitions under `.claude/agents/`, so the rule it broke was one line in one prompt rather than anything the project had written down. A step that cannot be skipped beats an instruction that can.
 
 **Work.** Stay inside your module. If the task pushes you outside it, that is a sign the task belongs to another agent — say so instead of crossing the boundary.
 
@@ -47,7 +57,11 @@ it ran it caught the missing executable bit that killed phase 09's first two CI 
 
 A rejection goes back to the worker only while that worker is still open and the fix is inside what it just did. Once it is closed it stays closed: the coordinator takes prose fixes of one or two files, and anything larger becomes a new issue against the state already in Git. `docs/planning/13-working-with-agents.md` has the rule and what phase 09 measured behind it.
 
-**Status.** Update the phase's `status.md` **on the branch, before the PR is reviewed**. It is part of the phase's work, it travels with the code, and it lets the reviewer check whether the status tells the truth. Record what was completed, what is open, and anything the next person needs to know.
+**Status.** Write your task's own file, `docs/plan/<phase>/status/<issue>-<slug>.md`, **on the branch, before the PR is reviewed**. It is part of the phase's work, it travels with the code, and it lets the reviewer check whether the status tells the truth. Record what was completed, what was decided that the plan did not specify, what is open, and anything the next person needs to know.
+
+**One file per task, never a shared one.** Two tasks running at the same time never write the same path, so they cannot conflict — not "rarely", not "if the insertions land far enough apart". Phase 11b learned this the expensive way: every parallel agent edited one `docs/plan/11b-wave-system/status.md`, an agent hit a conflict there and force-pushed to escape it, and `reviewer` found that two other branches had auto-merged cleanly only because their two paragraphs happened to land at different offsets. The same shared file also produced the opposite failure — two merged pull requests touched it not at all, so a real defect and its fix were missing from the record until the coordinator noticed at close.
+
+**The phase's own `status.md` is the coordinator's**, and holds only the `State:` line, the date and the phase narrative. It is written twice: when the phase opens and when it closes, assembled from the fragments. Do not edit it for per-task progress — that is what your fragment is for.
 
 **Merge** once accepted — the coordinator merges the sub-branch into the phase branch. When every
 task of the phase is in, the phase branch does **not** merge either: it opens a pull request against
@@ -136,10 +150,8 @@ Three things are worth interrupting for, always:
 
 ## Parallel work
 
-If another session is working at the same time, use a worktree, branched from the phase branch:
+Parallel work is the normal case rather than the exception — the art lane and the code lane always run at once — and every parallel worker gets its own worktree, branched from the phase branch, so no two of them share a working tree.
 
-```bash
-git worktree add ../little-spaceship-<task> -b <type>/<description> phase/<phase>-<description>
-```
+**The coordinator creates them**, with the command in the **Branch** step above, and hands each worker an absolute path that already exists. A worker never creates its own.
 
-The art lane and the code lane always run in parallel, so this is the normal case rather than the exception.
+One thing does not move into the worktree: **agent memory**. `.claude/agent-memory/` is tracked, so a commit made from a worktree writes it onto that branch, where the next agent will not find it, and the `pre-commit` hook refuses it. `tools/agent-memory-path <agent>` prints the one correct directory from anywhere. Those commits therefore land on the phase branch and appear in no sub-branch's diff, which is why the `commit-msg` hook exists — for an agent-memory commit it is the only check that runs before the phase closes.

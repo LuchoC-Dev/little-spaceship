@@ -7,6 +7,8 @@
 #
 #   tools/pre-pr-check                 # compare against dev
 #   tools/pre-pr-check --base <ref>    # compare against the phase branch, usually
+#   tools/pre-pr-check --no-build      # skip Gradle; for CI, which builds separately
+#   tools/pre-pr-check --branch <name> # name the branch; a CI checkout is detached
 #
 # Every check below exists because this repository already paid for it once. The
 # reason is written above each one; do not add a check without one.
@@ -14,9 +16,13 @@
 set -u
 
 BASE="dev"
+RUN_BUILD=1
+BRANCH_OVERRIDE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) BASE="${2:-}"; shift 2 ;;
+    --no-build) RUN_BUILD=0; shift ;;
+    --branch) BRANCH_OVERRIDE="${2:-}"; shift 2 ;;
     -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -30,7 +36,13 @@ fail() { FAILURES=$((FAILURES + 1)); report "FAIL" "$1"; }
 pass() { report "pass" "$1"; }
 detail() { printf '       %s\n' "$1"; }
 
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+# A pull-request checkout is detached, so --abbrev-ref answers "HEAD" and the
+# branch-name check below rejects it. CI passes the real name with --branch.
+if [ -n "$BRANCH_OVERRIDE" ]; then
+  BRANCH="$BRANCH_OVERRIDE"
+else
+  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+fi
 if ! git rev-parse --verify --quiet "$BASE" >/dev/null; then
   if git rev-parse --verify --quiet "origin/$BASE" >/dev/null; then
     BASE="origin/$BASE"
@@ -189,10 +201,84 @@ for MD in $MD_FILES; do
   fi
 done
 
-# 8. The build, but only when the change can break it. A documentation phase that
+# 8. The status fragment. A branch that does work records what it did, in its own file,
+#    so two tasks running at once can never write the same path. Phase 11b had both
+#    failures a shared status.md produces: an agent force-pushed to escape a conflict in
+#    it, and two merged pull requests never touched it at all, so a defect and its fix
+#    were missing from the record until the phase closed.
+#    Exempt: a branch that changes only docs/. That is the coordinator's bookkeeping —
+#    opening a phase, closing it, correcting a document — which closes no issue either.
+#    Deliberately wider than the build check below, which asks "can this break Gradle".
+#    This asks "is this work someone will want the record of", and a change to tools/,
+#    .github/ or .claude/ is exactly that.
+#    Only presence is checked. The name carries an issue number this script cannot know:
+#    it runs before the pull request exists, which is the point of it. Checking the name
+#    against the issue the pull request closes is pr-check's job.
+NON_DOCS="$(printf '%s
+' "$CHANGED" | grep -vE '^docs/' | grep -c . || true)"
+if [ "$NON_DOCS" -gt 0 ]; then
+  FRAGMENTS="$(printf '%s
+' "$CHANGED" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
+  FRAGMENT_COUNT="$(printf '%s
+' "$FRAGMENTS" | grep -c . || true)"
+  case "$BRANCH" in
+    # A phase branch aggregates every task in the phase, so it carries one
+    # fragment per task. "Exactly one" is the sub-branch's rule, not this one.
+    # A named category, not an escape hatch anyone can claim.
+    phase/*)
+      if [ "$FRAGMENT_COUNT" -gt 0 ]; then
+        pass "$FRAGMENT_COUNT status fragment(s), one per task of this phase"
+      else
+        fail "a phase branch with no status fragment at all"
+      fi ;;
+    *)
+      if [ "$FRAGMENT_COUNT" -eq 1 ]; then
+        pass "status fragment: $FRAGMENTS"
+      elif [ "$FRAGMENT_COUNT" -eq 0 ]; then
+        fail "this branch does work and records nothing in the phase status"
+        detail "add one file at docs/plan/<phase>/status/<issue>-<slug>.md describing what"
+        detail "this task did, what it decided, and what it leaves open"
+      else
+        fail "$FRAGMENT_COUNT status fragments in one branch; a task writes exactly one"
+        printf '%s
+' "$FRAGMENTS" | while IFS= read -r F; do [ -n "$F" ] && detail "$F"; done
+      fi ;;
+  esac
+else
+  pass "docs-only branch, so no status fragment is required"
+fi
+
+# 9. A workflow that does not parse does not run, and its absence is silent:
+#    GitHub reports a failed run rather than a missing one, and only to whoever
+#    looks. Phase 10d shipped a pr-check.yml with a literal newline inside a shell
+#    string, written by a scripted edit whose escaping collapsed one level too far.
+#    It was caught by GitHub, after the merge, not before it.
+WORKFLOWS="$(printf '%s
+' "$CHANGED" | grep -E '^\.github/workflows/.*\.ya?ml$' || true)"
+if [ -n "$WORKFLOWS" ]; then
+  if python3 -c 'import yaml' 2>/dev/null; then
+    BAD_YAML=0
+    for WF in $WORKFLOWS; do
+      [ -f "$WF" ] || continue
+      if ! python3 -c "import sys,yaml;yaml.safe_load(open(sys.argv[1],encoding='utf-8'))" "$WF" 2>/dev/null; then
+        BAD_YAML=$((BAD_YAML + 1)); detail "does not parse: $WF"
+      fi
+    done
+    [ "$BAD_YAML" -eq 0 ] && pass "workflow files parse as YAML" || fail "$BAD_YAML workflow file(s) do not parse"
+  else
+    pass "workflow YAML not checked: python3 with PyYAML is not available here"
+  fi
+else
+  pass "no workflow file in the diff"
+fi
+
+# 9. The build, but only when the change can break it. A documentation phase that
 #    waits four minutes for Gradle learns nothing and stops running the check.
 CODE_TOUCHED="$(printf '%s\n' "$CHANGED" | grep -E '^(core|game|desktop|web|assets)/|\.gradle(\.kts)?$|^gradle/|^gradlew' || true)"
-if [ -n "$CODE_TOUCHED" ]; then
+if [ -n "$CODE_TOUCHED" ] && [ "$RUN_BUILD" -eq 0 ]; then
+  pass "code changed, but --no-build was passed: the build runs in ci.yml"
+  detail "ci.yml also runs gdx_teavm_web_js_build, which ./gradlew build does not"
+elif [ -n "$CODE_TOUCHED" ]; then
   echo
   echo "code changed — running ./gradlew build"
   if ./gradlew build --console=plain -q; then

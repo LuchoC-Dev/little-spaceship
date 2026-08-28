@@ -43,7 +43,11 @@ Each of these cost hours during the spike.
 
 Every commit goes through the `/git-commit` skill — never a bare `git commit`. This applies to one-file and docs-only commits, and it applies to agents as well as to the main session.
 
-Conventional Commits: `type(scope): description`, present tense, imperative mood, under 72 characters. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+Conventional Commits: `type(scope): description`, present tense, imperative mood, under 72 characters. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. **The scope is lowercase and takes only `a-z 0-9 . _ -`** — the same characters a branch name takes, and **no spaces**. An agent-memory commit is `docs(memory): <what was learned>`; three agents in phase 11b each invented a different scope with a space in it, and correcting three subjects afterwards cost a history rewrite. The `commit-msg` hook in `tools/hooks/` now refuses a malformed subject as it is written.
+
+**Every pull request against a phase branch closes exactly one issue** — a task from the plan, or a defect found while the phase runs. The coordinator's documentation pull requests are the one exception: they close no issue and carry no status fragment.
+
+**A branch that does work records it** in `docs/plan/<phase>/status/<issue>-<slug>.md`, its own file, written before review. Never in the phase's shared `status.md` — that one is the coordinator's. `tools/pre-pr-check` fails a branch that changes anything outside `docs/` and writes no fragment.
 
 Nothing is ever committed on `main` or on `dev`. Four levels of branch, each receiving a pull request from the one below:
 
@@ -73,13 +77,15 @@ Two stores, and the boundary between them matters more than either.
 | `docs/STATUS.md`, each phase's `status.md`, GitHub issues and PRs | what happened and where the work stands |
 | `.claude/agent-memory/<agent>/` | what that agent learned while working |
 
-**The repository is the state.** Every phase moves through an issue, a branch, a `status.md` updated before review, and a merged PR, so the state is always versioned and readable by anyone.
+**The repository is the state.** Every phase moves through an issue, a branch, a status fragment written before review, and a merged PR, so the state is always versioned and readable by anyone.
 
 **Agent memory is not a second copy of it.** It holds what a repository has no reason to record: a tool limitation that cost an hour, an operation that behaves differently under TeaVM, where a piece of code turned out to live. Never phase progress — that already exists in `status.md`, and when both hold it, one of them silently rots. That has already happened once here.
 
 If something matters to the project rather than only to the agent, it belongs in `status.md`, not in a memory file.
 
 **Agent memory lives in the main checkout, never in a worktree.** `.claude/agent-memory/` is tracked, so an agent standing in a worktree writes its memory into that checkout, on that branch, where the next agent will not find it. Run `tools/agent-memory-path <agent>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook in `tools/hooks/` refuses the commit if you forget; install it once per clone with `tools/install-hooks`.
+
+Those commits land on the phase branch, so they appear in **no sub-branch's diff** and no sub-branch's `pre-pr-check` can see them. That is why the `commit-msg` hook exists: for an agent-memory commit it is the only check that ever runs before the phase closes.
 
 ## Agents
 

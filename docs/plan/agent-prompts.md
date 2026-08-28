@@ -29,12 +29,25 @@ This closes GitHub issue #<n>.
 and its limit explicitly, or omit this section.>
 
 ## Working method
-- Branch from `main`: `<type>/<description>`. Never commit to `main`.
+- Your worktree is `<absolute path>`, already on branch `<type>/<description>`,
+  branched from `phase/<phase>-<description>`. Work there and nowhere else. Do
+  not create a worktree or a branch — the coordinator made both.
+- Never commit on `main`, on `dev` or on the phase branch. Your own branch only.
 - Commit through the `/git-commit` skill. Several small commits beat one large one.
-- Update the phase's `status.md` on the branch, before review.
-- Push and open a **draft** pull request against `main` closing the issue.
+  A scope takes only `a-z 0-9 . _ -` and never a space; the `commit-msg` hook
+  refuses anything else as you write it.
+- Record your task in its own file, `docs/plan/<phase>/status/<issue>-<slug>.md`,
+  before review. Never the phase's shared `status.md` — that one is the
+  coordinator's.
+- Run `tools/pre-pr-check --base phase/<phase>-<description>` before you open
+  anything and paste its output into the pull request. A red check means no
+  pull request.
+- Push and open a **draft** pull request **against the phase branch**, closing
+  the issue. **You merge nothing** — the coordinator merges.
 - Record in your agent memory what you learned that is not already in `docs/` —
-  gotchas and constraints, not phase progress.
+  gotchas and constraints, not phase progress. It goes in the directory
+  `tools/agent-memory-path <your name>` prints, which is the main checkout and
+  not your worktree, and its subject is `docs(memory): <what you learned>`.
 
 ## Watch out for
 <One or two real risks. Not a checklist — the things that would actually go
@@ -57,6 +70,8 @@ criteria pass and which do not.
 **Ask for the plan's defects.** Agents will paper over a gap rather than report it unless told otherwise. That feedback is the only way the remaining plans improve.
 
 **Draft pull requests, not ready ones.** The review happens before the PR is marked ready, so nothing merges on the author's own say-so.
+
+**Hand over a path, not a command.** The working-method block above names a worktree that already exists, because in phase 11b an agent given the `git worktree add` command simply did not run it and worked in the main checkout instead — on the phase branch, where two other agents were committing their memory. A step the coordinator has already taken cannot be skipped.
 
 **Say what not to do when the temptation is real.** "Do not over-build the ECS" worked because the pull towards archetypes and queries is genuine. Prohibitions nobody would have violated are noise.
 
