@@ -58,6 +58,35 @@ Update this file when the phase moves. It is the only place phase progress is re
   projectiles) inherits a `WaveOrigin` — the decided rule names carriers and their `Spawner`-spawned
   children specifically. Nothing reads the component yet; the `cleared` end condition is #112.
 
+- **Task 7, [#113](https://github.com/LuchoC-Dev/little-spaceship/issues/113) — `JsonContentSource`
+  reads `waves.json` and a level's wave references.** Branch `feat/wave-loader`. `waves.json` is
+  optional (a data directory without it loads with an empty wave registry, since `level-01.json`
+  still carries `"events"` and no shipped content uses the new format yet) and, when present, is
+  parsed into `WaveDefinition`s keyed by id, backing `ContentSource.wave(id)` directly — each spawn's
+  `at` left exactly as declared, relative to the wave's own start. Its `"end"` block discriminates on
+  a `"type"` string (`"fixedDuration"` needs `"seconds"`, `"cleared"` needs nothing else); any other
+  value is rejected rather than defaulted.
+  A level file's top-level block gained a third allowed key, `"waves"`, an ordered list of
+  `{"wave", "offset"}` placements — mutually exclusive with the legacy `"events"` list, and one of
+  the two is required. **First cut flattened a level's placements at load time into an absolute-time
+  `SpawnEvent` list**, bridging the gap while `SpawnSystem` still only read the flat `WaveTimeline`
+  — and rejected any placement naming a `Cleared` wave, since flattening cannot know a `Cleared`
+  wave's end ahead of time. **Once #112 merged into this branch** (`SpawnSystem` now reads
+  `ContentSource.wave(id)`/`placements(levelId)` directly and resolves `Cleared` itself), that
+  bridge was deleted: `placements(levelId)` now returns the level's `List<WavePlacement>` exactly as
+  declared — offsets and wave ids untouched, each wave id resolved against `waves.json` at load time
+  so a typo fails loudly naming the level and the id, but no shifting, no merging, no rejecting
+  `Cleared`. `timeline(String)` stays abstract in `ContentSource` (per #112) and this class still
+  implements it for a level using the legacy `"events"` block; a level using `"waves"` populates
+  `placements(levelId)` instead and is not present in `timelines`. `level-01.json` was not touched
+  (out of scope, #114) and still loads exactly as before, through `timeline()`.
+  Verified with a scratch program compiled against the real `core.jar`/`game` classes (rebuilt after
+  merging #112) and a small fixture `waves.json` (two waves, one `FixedDuration` referenced twice in
+  a level to demonstrate reuse, one `Cleared`) — eleven checks, including the two that changed
+  meaning after #112: a `Cleared` placement now loads intact instead of being rejected, and
+  `placements()` itself is what rejects an unknown wave id. See the task's PR description for the
+  full list.
+
 ## In progress
 
 Nothing else yet.
