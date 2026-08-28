@@ -1,6 +1,7 @@
 # Phase 11b — The wave system · status
 
-**State:** in progress
+**State:** done — every task merged into `phase/11b-wave-system`, which is open as a pull request
+against `dev`
 **Updated:** 28/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
@@ -94,13 +95,19 @@ Update this file when the phase moves. It is the only place phase progress is re
   - **Grouping principle:** the file's own blank-line separation, already 11 groups summing to
     exactly 92 events, became the base waves. Three of those groups were further split around a spawn
     that turned out to repeat verbatim elsewhere (below), for 15 placements total.
-  - **The reuse pair, found rather than forced:** `enemy-tank`/`single`/`atX 0.5`, with no drop, is
-    the *only* exact spawn-composition duplicate anywhere in the 92 events (checked every block
-    pairwise and every same-archetype single-event spawn; nothing else repeats verbatim once atX and
-    drop are compared). It appears three times — at the original 86.0s, 126.5s and 297.0s — so it was
+  - **The reuse pair, found rather than forced:** `enemy-tank`/`single`/`atX 0.5`, with no drop. It
+    appears three times — at the original 86.0s, 126.5s and 297.0s — so it was
     pulled out as its own one-spawn wave, `l1-tank-solo`, carved out of whichever block it fell inside
     (splitting that block into an `-a`/`-b` pair around it). Referenced by three separate
     `WavePlacement`s, not two, which is stronger evidence than the acceptance criterion asks for.
+    **Corrected on 28/08/2026:** this entry originally called it *the only* exact
+    spawn-composition duplicate among the 92 events. That was false, and `reviewer` disproved it
+    while auditing #125 with a three-line frequency count over
+    `(spawn, formation, atX, drop, dropSlot)`: `enemy-rush`/`column-3`/`atX 0.5` repeats six times
+    and `enemy-basic`/`line-5`/`atX 0.5` five, among others. Neither the migration nor the reuse
+    criterion depends on the claim — the tank reuse is genuine and the times reproduce exactly — but
+    the sentence was wrong and is not left standing. Those other repeats are candidates for further
+    reuse whenever someone has a reason to take them; a one-to-one translation was not that reason.
   - **Why `l1-tank-solo`'s own duration is 1.0s, not the real gap to what follows it:** a
     `WaveDefinition`'s `FixedDuration` is one value shared by every placement that references it, but
     the three real gaps after each occurrence differ (6.0s, 2.5s, and "nothing — it's the level's last
@@ -128,6 +135,34 @@ Update this file when the phase moves. It is the only place phase progress is re
     actioned by this branch — that file is outside `assets/data/`, which is this agent's whole
     boundary per its own "What you own" section ("Nothing else"). It still needs updating before
     `level-designer` is asked to design level 2 against it.
+
+- **[#122](https://github.com/LuchoC-Dev/little-spaceship/issues/122) — `ContentSource`'s defaulted
+  wave lookups retired.** Branch `refactor/abstract-wave-lookups`, PR #124. `wave(String)` and
+  `placements(String)` are abstract again, so the interface is back to **zero** defaulted methods,
+  where it was before this phase. Both were bridges across a module boundary `core-domain` may not
+  cross — `JsonContentSource` lives in `game/` — and the bridge's reason expired the moment #113
+  landed. A defaulted contract method would let a future `ContentSource` resolve no waves silently,
+  where the compiler used to stop it.
+- **[#126](https://github.com/LuchoC-Dev/little-spaceship/issues/126) — a negative offset did
+  nothing, and now overlaps two waves.** Branch `fix/negative-offset-overlap`, PR #127. **Found by
+  `level-designer` while migrating the level, not by a test.** `resolveEnded` scheduled the next
+  placement with `scheduleNext(world, levelTime)`, and `scheduleNext` computed
+  `Math.max(previousEndTime + offsetSeconds, levelTime)` — where `previousEndTime` *was* `levelTime`,
+  so every negative offset was clamped away and behaved exactly like zero. Overlapping waves are a
+  decided behaviour of this phase and they did not work.
+
+  The fix schedules a `FixedDuration` wave's follower **predictively**, from the end its own duration
+  already determines, chaining through consecutive `FixedDuration` placements; the reactive clamp
+  stays only for `Cleared`, whose true end is genuinely discovered a tick late. That shape was forced
+  rather than chosen: `resolveEnded` removes an ended wave from `activeWaves` before scheduling its
+  follower in the same pass, so **no reactive formula could ever have produced overlap** — two waves
+  could not be active at once by construction.
+
+  `SpawnSystemTest.negativeOffsetOverlapsTwoWaves` was part of the defect: it asserted that both
+  waves' entities exist after one tick, which **a zero offset satisfies equally well**. It was
+  rewritten and then falsified twice, independently, by its author and by `reviewer`: reverting to
+  reactive scheduling fails exactly one assertion, the `-2s` one, while the `0s` assertion stays
+  green.
 
 ## In progress
 
