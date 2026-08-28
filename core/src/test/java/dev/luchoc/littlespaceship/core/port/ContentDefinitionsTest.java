@@ -97,6 +97,50 @@ class ContentDefinitionsTest {
         assertEquals(2, timeline.events().size());
     }
 
+    @Test
+    @DisplayName("a fixed wave duration rejects zero, negative, NaN and infinite durations")
+    void fixedDurationValidates() {
+        assertThrows(IllegalArgumentException.class, () -> new WaveEndCondition.FixedDuration(0f));
+        assertThrows(IllegalArgumentException.class, () -> new WaveEndCondition.FixedDuration(-1f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new WaveEndCondition.FixedDuration(Float.NaN));
+        assertThrows(IllegalArgumentException.class,
+            () -> new WaveEndCondition.FixedDuration(Float.POSITIVE_INFINITY));
+    }
+
+    @Test
+    @DisplayName("a wave definition needs an id, at least one spawn, spawns in order and an end condition")
+    void waveDefinitionValidates() {
+        List<SpawnEvent> oneSpawn = List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null));
+        WaveEndCondition fixed = new WaveEndCondition.FixedDuration(3f);
+
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("", oneSpawn, fixed, 0f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", List.of(), fixed, 0f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", oneSpawn, null, 0f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", oneSpawn, fixed, Float.NaN));
+
+        List<SpawnEvent> outOfOrder = List.of(
+            new SpawnEvent(2f, "enemy-basic", "single", 0.5f, null),
+            new SpawnEvent(1f, "enemy-light", "single", 0.5f, null));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", outOfOrder, fixed, 0f));
+    }
+
+    @Test
+    @DisplayName("a wave accepts a negative offset, to overlap the wave before it")
+    void waveDefinitionAcceptsNegativeOffset() {
+        List<SpawnEvent> oneSpawn = List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null));
+        WaveDefinition wave =
+            new SimpleWaveDefinition("wave-1", oneSpawn, new WaveEndCondition.Cleared(), -2f);
+
+        assertEquals(-2f, wave.offsetSeconds());
+        assertEquals(1, wave.spawns().size());
+    }
+
     private static void assertEqualsFalse(boolean value) {
         assertEquals(false, value);
     }
