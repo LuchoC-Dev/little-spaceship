@@ -5,6 +5,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
+import dev.luchoc.littlespaceship.core.domain.component.Lifetime;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Spawner;
@@ -72,7 +73,10 @@ public final class ComponentFactoryRegistry {
      * "weapon"} — a per-archetype firing pattern for enemies — was the same kind of gap, closed once
      * {@code enemy-shooter} needed to actually shoot: no enemy fired at all before this, per {@code
      * 08-decisions-and-open-items.md}. The boss does not go through this registry — see {@code
-     * BossSystem} — since its fire is a fixed state machine, not an archetype component.
+     * BossSystem} — since its fire is a fixed state machine, not an archetype component. {@code
+     * "lifetime"} was added for issue #84: an archetype's maximum time to live, expressed as data
+     * rather than as a constant, and optional per archetype — an entity with no {@code "lifetime"}
+     * spec relies on the safety box alone, exactly like every archetype does today.
      *
      * @return a registry ready to attach the MVP's archetypes
      */
@@ -84,7 +88,8 @@ public final class ComponentFactoryRegistry {
             .register("scoreValue", ComponentFactoryRegistry::attachScoreValue)
             .register("health", ComponentFactoryRegistry::attachHealth)
             .register("spawner", ComponentFactoryRegistry::attachSpawner)
-            .register("weapon", ComponentFactoryRegistry::attachEnemyWeapon);
+            .register("weapon", ComponentFactoryRegistry::attachEnemyWeapon)
+            .register("lifetime", ComponentFactoryRegistry::attachLifetime);
     }
 
     /**
@@ -167,5 +172,15 @@ public final class ComponentFactoryRegistry {
         float speed = spec.number("speed");
         float firstShotDelay = spec.numberOr("firstShotDelay", cooldown);
         world.enemyWeapons().set(entity, new EnemyWeapon(pattern, cooldown, speed, firstShotDelay));
+    }
+
+    /**
+     * Reads the one field {@link Lifetime}'s constructor needs. Required, not defaulted, like every
+     * other numeric field this registry reads for a component an archetype opts into: the field
+     * exists at all only for archetypes that declare a {@code "lifetime"} spec.
+     */
+    private static void attachLifetime(World world, int entity, ComponentSpec spec) {
+        float seconds = spec.number("seconds");
+        world.lifetimes().set(entity, new Lifetime(seconds));
     }
 }

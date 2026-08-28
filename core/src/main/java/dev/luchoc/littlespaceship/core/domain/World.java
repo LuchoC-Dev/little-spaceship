@@ -10,6 +10,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
+import dev.luchoc.littlespaceship.core.domain.component.Lifetime;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
@@ -70,6 +71,7 @@ public final class World {
     private final ComponentStore<BombState> bombStates = new ComponentStore<>();
     private final ComponentStore<Spawner> spawners = new ComponentStore<>();
     private final ComponentStore<EnemyWeapon> enemyWeapons = new ComponentStore<>();
+    private final ComponentStore<Lifetime> lifetimes = new ComponentStore<>();
 
     /**
      * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
@@ -174,6 +176,7 @@ public final class World {
         bombStates.remove(entity);
         spawners.remove(entity);
         enemyWeapons.remove(entity);
+        lifetimes.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -304,6 +307,13 @@ public final class World {
      */
     public ComponentStore<EnemyWeapon> enemyWeapons() {
         return enemyWeapons;
+    }
+
+    /**
+     * @return the maximum-lifetime countdown for the entities that carry one
+     */
+    public ComponentStore<Lifetime> lifetimes() {
+        return lifetimes;
     }
 
     /**
