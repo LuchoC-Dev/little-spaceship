@@ -71,18 +71,11 @@ public interface ContentSource {
      * what lets the same wave id be placed twice in one level, or once in two different levels,
      * without copying its declaration.
      *
-     * <p>Defaults to failing loudly rather than forcing every {@link ContentSource} to implement a
-     * wave lookup before an adapter exists for one — the JSON loader that overrides this is issue
-     * #113. A test double built by hand overrides it too.
-     *
      * @param id the wave's content id
      * @return the wave definition, never null
      * @throws IllegalArgumentException if no wave has that id
      */
-    default WaveDefinition wave(String id) {
-        throw new UnsupportedOperationException(
-            "this content source resolves no waves — override wave(String) or use one that does");
-    }
+    WaveDefinition wave(String id);
 
     /**
      * A level's ordered sequence of {@link WavePlacement}s — issue #112's replacement for the flat,
@@ -90,20 +83,11 @@ public interface ContentSource {
      * {@link WavePlacement#waveId()} through {@link #wave(String)}, so the same wave id can appear in
      * this list twice, or in two different levels' lists, without copying its declaration.
      *
-     * <p>Defaults to failing loudly, the same reasoning as {@link #wave(String)}: {@code
-     * JsonContentSource} does not implement this yet (issue #113), so every {@link ContentSource} in
-     * production would otherwise have to grow this method before that loader exists. A test double
-     * built by hand overrides it too.
-     *
      * @param levelId the level's content id
      * @return the level's placements, in the order they run, never null or empty
      * @throws IllegalArgumentException if no level has that id
      */
-    default List<WavePlacement> placements(String levelId) {
-        throw new UnsupportedOperationException(
-            "this content source resolves no wave placements — override placements(String) or use "
-                + "one that does");
-    }
+    List<WavePlacement> placements(String levelId);
 
     /**
      * Tells whether a level has a boss to fight, so {@code Simulation} can decide whether to run
