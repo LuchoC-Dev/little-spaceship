@@ -10,7 +10,9 @@ So `tools/hooks/commit-msg` is new, alongside the existing `pre-commit`. `tools/
 
 ## What it checks, and why on every commit
 
-Every commit's subject, against the same rule `tools/pre-pr-check` applies: one of the eleven types, an optional scope of `[a-z0-9._-]` with **no spaces**, a description, and 71 characters or fewer. Merges, reverts, `fixup!`, `squash!` and an empty or comment-only message are skipped.
+Every commit's subject: one of the eleven types, an optional scope of `[a-z0-9._-]` with **no spaces**, a description, and 71 characters or fewer. Merges, reverts, `fixup!`, `squash!` and an empty or comment-only message are skipped.
+
+**Corrected on 28/08/2026.** This paragraph originally said the hook checks "against the same rule `tools/pre-pr-check` applies". That was false for four of those five exemptions: `pre-pr-check` skipped only `Merge `, so `git revert`'s own wording passed the hook and failed the gate. It was written by testing the hook and never the gate. `reviewer` found it auditing the phase; [#154](https://github.com/LuchoC-Dev/little-spaceship/issues/154) makes the parity real by giving both callers one shared rule, and `status/154-one-subject-rule.md` records what changed.
 
 **Not only memory commits**, although memory is what motivated it. A rule with one exception is a rule someone has to remember the boundary of, and this phase exists because rules that depend on remembering get broken.
 

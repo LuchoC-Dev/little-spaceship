@@ -1,0 +1,30 @@
+#!/bin/sh
+# Prints the status fragments a branch ADDS, one per line. The single source of
+# truth for what counts as a fragment.
+#
+# Two callers ask this question — tools/pre-pr-check before the pull request
+# exists, and .github/workflows/pr-check.yml on the pull request itself — and the
+# same rule written twice is the same rule drifting. It already happened twice in
+# one phase: tools/hooks/commit-msg and tools/pre-pr-check kept separate lists of
+# exempt commit subjects until a legitimate revert failed the gate (issue #154),
+# and then these two kept separate fragment logic until pre-pr-check was taught to
+# count only added files and pr-check was not — caught by pr-check failing the
+# pull request that fixed the first drift.
+#
+# ADDED, not merely changed: correcting an older fragment is not writing a new
+# one, and a branch must be able to fix a past fragment and record the fix.
+#
+# Usage: tools/status-fragments <base-ref> [head]
+#   prints zero or more paths; exit status is always 0
+
+set -u
+
+BASE="${1-}"
+HEAD_REF="${2-HEAD}"
+
+[ -n "$BASE" ] || { echo "usage: tools/status-fragments <base-ref> [head]" >&2; exit 2; }
+
+MERGE_BASE="$(git merge-base "$HEAD_REF" "$BASE")" || exit 2
+
+git diff --name-only --diff-filter=A "$MERGE_BASE..$HEAD_REF" \
+  | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true
