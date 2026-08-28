@@ -87,6 +87,48 @@ Update this file when the phase moves. It is the only place phase progress is re
   `placements()` itself is what rejects an unknown wave id. See the task's PR description for the
   full list.
 
+- **Task 6, [#114](https://github.com/LuchoC-Dev/little-spaceship/issues/114) — `level-01.json`
+  migrated to waves, one-to-one.** Branch `content/level-01-waves`, `level-designer`. The 92 events
+  became 13 `WaveDefinition`s in the new `assets/data/waves.json`, referenced through 15
+  `WavePlacement`s in `level-01.json`'s new `"waves"` block. The `"boss"` block is untouched.
+  - **Grouping principle:** the file's own blank-line separation, already 11 groups summing to
+    exactly 92 events, became the base waves. Three of those groups were further split around a spawn
+    that turned out to repeat verbatim elsewhere (below), for 15 placements total.
+  - **The reuse pair, found rather than forced:** `enemy-tank`/`single`/`atX 0.5`, with no drop, is
+    the *only* exact spawn-composition duplicate anywhere in the 92 events (checked every block
+    pairwise and every same-archetype single-event spawn; nothing else repeats verbatim once atX and
+    drop are compared). It appears three times — at the original 86.0s, 126.5s and 297.0s — so it was
+    pulled out as its own one-spawn wave, `l1-tank-solo`, carved out of whichever block it fell inside
+    (splitting that block into an `-a`/`-b` pair around it). Referenced by three separate
+    `WavePlacement`s, not two, which is stronger evidence than the acceptance criterion asks for.
+  - **Why `l1-tank-solo`'s own duration is 1.0s, not the real gap to what follows it:** a
+    `WaveDefinition`'s `FixedDuration` is one value shared by every placement that references it, but
+    the three real gaps after each occurrence differ (6.0s, 2.5s, and "nothing — it's the level's last
+    placement"). The wave's own duration is pinned to a value smaller than the tightest real gap
+    (2.5s), and each following placement's own `offset` makes up the rest — `5.0` after the first
+    occurrence, `1.5` after the second. Verified both by a from-scratch Python reconstruction of all
+    92 absolute spawn times from the wave/placement model (see the task's PR description) and by a
+    live run: a scratch program (`core.jar` + `game.jar` + `gdx.jar` on the classpath, `FileHandle`
+    over the real `assets/data`, no `Gdx.app`) ticking a real `Simulation` for 310s of `level-01`
+    logged every sprite-count change; every formation-sized jump lands within one 1/60s tick of its
+    original `at` value, including all three `l1-tank-solo` occurrences (86.02s, 126.52s, 297.13s) —
+    the residual is the same one-tick-late detection `SpawnSystem`'s own javadoc already documents for
+    any chained placement, not a migration error. The boss still enters right after its own
+    `entersAt: 302.0`, unaffected, since `BossSystem` reads that value directly rather than through the
+    wave chain.
+  - **Negative offsets were not used.** A negative offset always resolves to `previousEndTime +
+    0.0` here, since `scheduleNext`'s `previousEndTime` argument is always exactly the current
+    `levelTime` at the instant it is called — never earlier — so there is nothing for a negative value
+    to subtract from. Every placement's own `offset` in this migration is `>= 0`.
+  - `./gradlew build` (all modules except `:web`) and `./gradlew :web:build` both pass; neither
+    touches `assets/data`, so this was mechanical confirmation, not a live check of the new content —
+    the scratch program above is what actually exercised it.
+  - **Not this task's to fix, flagged for whoever owns it:** the acceptance criterion "`.claude/agents/
+    level-designer.md` no longer says a level is a timeline of timestamped spawn events" was not
+    actioned by this branch — that file is outside `assets/data/`, which is this agent's whole
+    boundary per its own "What you own" section ("Nothing else"). It still needs updating before
+    `level-designer` is asked to design level 2 against it.
+
 ## In progress
 
 Nothing else yet.
