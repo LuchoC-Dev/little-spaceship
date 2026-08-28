@@ -8,6 +8,7 @@ import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleAttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.TrajectoryDefinition;
+import dev.luchoc.littlespaceship.core.port.WaveDefinition;
 import dev.luchoc.littlespaceship.core.port.WaveTimeline;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +31,7 @@ public final class TestContent implements ContentSource {
     private final Map<String, WaveTimeline> timelines = new HashMap<>();
     private final Map<String, AttachmentDefinition> attachments = new HashMap<>();
     private final Map<String, BossDefinition> bosses = new HashMap<>();
+    private final Map<String, WaveDefinition> waves = new HashMap<>();
 
     public TestContent() {
         this(new TestBalance());
@@ -67,6 +69,16 @@ public final class TestContent implements ContentSource {
     /** Convenience for the common case: registers {@code "attachment"} with the given durability. */
     public TestContent withAttachment(int durability) {
         return withAttachment(new SimpleAttachmentDefinition("attachment", durability));
+    }
+
+    public TestContent withWave(WaveDefinition definition) {
+        waves.put(definition.id(), definition);
+        return this;
+    }
+
+    @Override
+    public WaveDefinition wave(String id) {
+        return require(waves, id, "wave");
     }
 
     @Override

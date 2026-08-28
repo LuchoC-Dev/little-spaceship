@@ -2,7 +2,7 @@ package dev.luchoc.littlespaceship.core.port;
 
 /**
  * Where the simulation gets the content it does not invent: balance values, enemy definitions,
- * trajectories, formations and level timelines.
+ * trajectories, formations, waves and level timelines.
  *
  * <p>The core parses nothing. It declares what it needs and the adapter hands it over already
  * built, which is why a test can assemble content by hand without reading a single file and why
@@ -53,6 +53,24 @@ public interface ContentSource {
      * @throws IllegalArgumentException if no attachment has that id
      */
     AttachmentDefinition attachment(String id);
+
+    /**
+     * Looked up the same way an {@link #enemy(String)} or a {@link #formation(String)} is, which is
+     * what lets the same wave id be placed twice in one level, or once in two different levels,
+     * without copying its declaration.
+     *
+     * <p>Defaults to failing loudly rather than forcing every {@link ContentSource} to implement a
+     * wave lookup before an adapter exists for one — the JSON loader that overrides this is issue
+     * #113. A test double built by hand overrides it too.
+     *
+     * @param id the wave's content id
+     * @return the wave definition, never null
+     * @throws IllegalArgumentException if no wave has that id
+     */
+    default WaveDefinition wave(String id) {
+        throw new UnsupportedOperationException(
+            "this content source resolves no waves — override wave(String) or use one that does");
+    }
 
     /**
      * Tells whether a level has a boss to fight, so {@code Simulation} can decide whether to run

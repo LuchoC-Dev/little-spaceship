@@ -97,6 +97,67 @@ class ContentDefinitionsTest {
         assertEquals(2, timeline.events().size());
     }
 
+    @Test
+    @DisplayName("a fixed wave duration rejects zero, negative, NaN and infinite durations")
+    void fixedDurationValidates() {
+        assertThrows(IllegalArgumentException.class, () -> new WaveEndCondition.FixedDuration(0f));
+        assertThrows(IllegalArgumentException.class, () -> new WaveEndCondition.FixedDuration(-1f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new WaveEndCondition.FixedDuration(Float.NaN));
+        assertThrows(IllegalArgumentException.class,
+            () -> new WaveEndCondition.FixedDuration(Float.POSITIVE_INFINITY));
+    }
+
+    @Test
+    @DisplayName("a wave definition needs an id, at least one spawn, spawns in order and an end condition")
+    void waveDefinitionValidates() {
+        List<SpawnEvent> oneSpawn = List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null));
+        WaveEndCondition fixed = new WaveEndCondition.FixedDuration(3f);
+
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("", oneSpawn, fixed));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", List.of(), fixed));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", oneSpawn, null));
+
+        List<SpawnEvent> outOfOrder = List.of(
+            new SpawnEvent(2f, "enemy-basic", "single", 0.5f, null),
+            new SpawnEvent(1f, "enemy-light", "single", 0.5f, null));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", outOfOrder, fixed));
+    }
+
+    @Test
+    @DisplayName("a wave placement needs a wave id and a finite offset, negative allowed to overlap")
+    void wavePlacementValidates() {
+        assertThrows(IllegalArgumentException.class, () -> new WavePlacement("", 0f));
+        assertThrows(IllegalArgumentException.class, () -> new WavePlacement("wave-1", Float.NaN));
+        assertThrows(IllegalArgumentException.class,
+            () -> new WavePlacement("wave-1", Float.POSITIVE_INFINITY));
+
+        WavePlacement overlapping = new WavePlacement("wave-1", -2f);
+
+        assertEquals("wave-1", overlapping.waveId());
+        assertEquals(-2f, overlapping.offsetSeconds());
+    }
+
+    @Test
+    @DisplayName("the same wave id can back two different placements, unaffected by either")
+    void waveDefinitionCarriesNoPlacementOfItsOwn() {
+        List<SpawnEvent> oneSpawn = List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null));
+        WaveDefinition wave =
+            new SimpleWaveDefinition("wave-1", oneSpawn, new WaveEndCondition.Cleared());
+
+        WavePlacement first = new WavePlacement(wave.id(), 0f);
+        WavePlacement second = new WavePlacement(wave.id(), -3f);
+
+        assertEquals(wave.id(), first.waveId());
+        assertEquals(wave.id(), second.waveId());
+        assertEquals(0f, first.offsetSeconds());
+        assertEquals(-3f, second.offsetSeconds());
+    }
+
     private static void assertEqualsFalse(boolean value) {
         assertEquals(false, value);
     }
