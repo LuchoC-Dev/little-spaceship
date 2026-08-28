@@ -13,8 +13,9 @@ import dev.luchoc.littlespaceship.core.port.LevelOutcome;
 import dev.luchoc.littlespaceship.core.port.SimpleBossDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
-import dev.luchoc.littlespaceship.core.port.SimpleWaveTimeline;
+import dev.luchoc.littlespaceship.core.port.SimpleWaveDefinition;
 import dev.luchoc.littlespaceship.core.port.SpawnEvent;
+import dev.luchoc.littlespaceship.core.port.WaveEndCondition;
 import dev.luchoc.littlespaceship.core.testsupport.TestBalance;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.List;
@@ -119,8 +120,10 @@ class BossReplayTest {
                     java.util.Map.of("radius", 3.0f, "fragile", true)),
                 new dev.luchoc.littlespaceship.core.port.MapComponentSpec("sprite",
                     java.util.Map.of("id", "filler")))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(10_000f, "filler", "single", 0.5f, null))));
+            .withWave(new SimpleWaveDefinition(LEVEL + "-wave",
+                List.of(new SpawnEvent(10_000f, "filler", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(20_000f)))
+            .withSingleWavePlacement(LEVEL, LEVEL + "-wave");
     }
 
     /** Counts colliders whose radius falls in the pod's own band — {@code BossSystem.POD_RADIUS}. */
@@ -189,8 +192,10 @@ class BossReplayTest {
                     java.util.Map.of("radius", 3.0f, "fragile", true)),
                 new dev.luchoc.littlespaceship.core.port.MapComponentSpec("sprite",
                     java.util.Map.of("id", "filler")))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(10_000f, "filler", "single", 0.5f, null))));
+            .withWave(new SimpleWaveDefinition(LEVEL + "-wave",
+                List.of(new SpawnEvent(10_000f, "filler", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(20_000f)))
+            .withSingleWavePlacement(LEVEL, LEVEL + "-wave");
     }
 
     private static TestContent defeatContent(TestBalance balance) {
@@ -208,12 +213,14 @@ class BossReplayTest {
             // Spawned in the same column as the player's own (stationary) start position, with a
             // generous 20-unit radius: descending straight down, it is guaranteed to overlap the
             // player well within TICKS, with no dodging behaviour needed to reach the collision.
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
+            .withWave(new SimpleWaveDefinition(LEVEL + "-wave",
                 List.of(new SpawnEvent(
                     0f,
                     "rammer",
                     "single",
                     balance.playerStartX / dev.luchoc.littlespaceship.core.domain.system.MotionSystem.PLAYFIELD_WIDTH,
-                    null))));
+                    null)),
+                new WaveEndCondition.FixedDuration(1f)))
+            .withSingleWavePlacement(LEVEL, LEVEL + "-wave");
     }
 }

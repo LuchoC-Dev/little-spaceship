@@ -127,13 +127,13 @@ class SpawnerSystemTest {
     @DisplayName("a child inherits the carrier's WaveOrigin, per the carrier-children rule")
     void childInheritsCarriersWaveOrigin() {
         int carrier = carrierAt(0f, 0f, 1f, 0f, 0f);
-        world.waveOrigins().set(carrier, new WaveOrigin(7));
+        world.waveOrigins().set(carrier, new WaveOrigin("wave-7"));
 
         system.update(world, 1f, InputFrame.IDLE);
 
         int child = childEntity(world);
         WaveOrigin childOrigin = world.waveOrigins().get(child);
-        assertEquals(7, childOrigin.waveId);
+        assertEquals("wave-7", childOrigin.waveId);
     }
 
     @Test

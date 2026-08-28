@@ -505,3 +505,57 @@ Also worth naming: the `new ArrayList<>()` allocated once per tick in `LifetimeS
 (populated in the near-totality of ticks with nothing) is the same shape as the phase 05 boxed-`Integer`
 finding calibrated as noise — thousands of tiny, short-lived allocations across a multi-minute level
 against ~10ms/frame of drawing cost. Named, not blocking.
+
+## PR #121 (`feat/wave-spawning`, phase 11b task 4), a hand-off between two agents on the same branch
+
+`SpawnSystem` migrated off a flat timeline cursor onto `ContentSource.placements(String)` +
+`wave(String)`, with a genuine mid-task hand-off (first author killed by a spend limit, second
+author inherited the uncommitted diff). Verdict: accept. Full clean build
+(`./gradlew clean build --console=plain`, `little-spaceship-wave-spawn` worktree) green across all
+five modules; `core/build/test-results/test` aggregated to 322 tests, 0 failures/skipped/errors.
+`pre-pr-check --base phase/11b-wave-system` reproduced the PR's own pasted output verbatim.
+
+40. **A test can be named after a rule, assert something, and never touch the system that rule
+    governs.** `SpawnSystemTest.movingAPlacementEarlierChangesNoOtherOffset` builds two
+    `List<WavePlacement>` by hand, reusing the *same* `WavePlacement` object instance in both lists,
+    and asserts `assertEquals(untouched, originalOrder.get(1))` — trivially true by object identity,
+    regardless of anything `SpawnSystem` does. Confirmed vacuous by scaling `scheduleNext`'s offset
+    arithmetic by 1000x in a scratch worktree: the test stayed green. The other three rule-asserting
+    tests in the same PR (`fixedDurationEndsExactlyAtItsOwnDuration`, `clearedWaveWaitsForEvery
+    EntityToBeGone`, `negativeOffsetOverlapsTwoWaves`) all genuinely exercise `SpawnSystem.update`
+    and all went red under a matching one-line break (`>=`→`>` on the duration check, dropping the
+    `noEntityCarries` guard, and replacing the do-while re-check loop with a single pass,
+    respectively) — so this is not a blanket problem with the phase's tests, just this one. The
+    "rule" it half-demonstrates (offset is relative-only, no absolute-position field) is actually a
+    true structural property of `WavePlacement` being an immutable record with no such field, and
+    needs no runtime test at all — the test should either construct genuinely distinct objects and
+    assert on `SpawnSystem`'s emitted spawn order, or be deleted as redundant with the record's own
+    javadoc guarantee.
+41. **A `default`-with-throw contract method copies the justification of a sibling method
+    word-for-word without checking it still applies.** `ContentSource.timeline(String)` was demoted
+    from abstract to `default` in this PR, with javadoc citing the same reasoning as `wave(String)`
+    ("kept only because `game`'s `JsonContentSource` still overrides it") — but `JsonContentSource`
+    *does* override `timeline()` on this branch (confirmed by reading the file), so nothing forces
+    the demotion; the module-boundary need that justifies `wave(String)` and the new
+    `placements(String)` (grep `implements ContentSource`: `JsonContentSource` has no override of
+    either, so an abstract method would break `game`'s compile, a module `core-domain` may not edit)
+    genuinely does not apply to `timeline()`. Net effect: this single PR takes `ContentSource` from
+    one defaulted method to three, not two as its own PR description counts ("the second defaulted
+    contract method") — `placements(String)` is real and justified, `timeline(String)`'s demotion is
+    an unforced, minor widening dressed in the justification of its neighbours. Worth flagging every
+    time a `default`-throw method's javadoc cites "the same reason as X" — reread whether the actual
+    production implementer(s) already provide an override; if they do, the default adds a silent-
+    failure mode for a case that cannot currently occur.
+
+Also confirmed correct, worth recording as the positive case: the claimed inherited bug (`update()`
+scheduling the level's first placement *after* `levelTime += step`, so `scheduleNext`'s clamp-forward
+logic delayed every one of the level's first-wave spawns by one tick) is real in the sense that the
+described mechanism would produce exactly that symptom, and the shipped fix — scheduling the first
+placement before the tick's own step is added — resolves it without touching the separate `Cleared`
+clamp path (`scheduleNext(world, levelTime)` from `resolveEnded`, called only after detection, is
+untouched code, confirmed by diff). Reconstructed by hand rather than trusting the commit body: with
+the fix, `scheduleNext(world, 0f)` runs while `levelTime` is still its initial `0f`, giving
+`start = max(0 + offset, 0)`; only then does `levelTime += step` run, so the first tick's `spawnDue`
+computes `localTime = step - 0 = step`, matching the old flat-cursor system's own first-tick check
+(`events.at() <= levelTime` after the same increment). Reversing the two statements (increment first,
+schedule second) reproduces the claimed bug exactly: `start` would clamp to `step`, not `0`.

@@ -12,9 +12,8 @@ package dev.luchoc.littlespaceship.core.port;
  * placement earlier in a level's list changes no other placement's own offset — each is relative
  * only to the one immediately before it in sequence, never to the file position of any declaration.
  *
- * <p>Not yet consumed by anything: {@code SpawnSystem} still walks the legacy {@link WaveTimeline}
- * until it migrates (issue #112), which is also the task that decides how a level's ordered list of
- * these gets from content into {@code ContentSource}.
+ * <p>Resolved by {@code SpawnSystem} through {@link ContentSource#placements(String)} — a level's
+ * ordered list of these, one per level id — decided by issue #112.
  *
  * @param waveId the {@link WaveDefinition} to place, resolved through {@link ContentSource#wave(String)}
  * @param offsetSeconds seconds after the previous placement in the sequence ends when this one

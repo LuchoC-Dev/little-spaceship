@@ -12,19 +12,23 @@ package dev.luchoc.littlespaceship.core.domain.component;
  * "the entity that originally carried it is still there". A carrier with no {@link WaveOrigin} of
  * its own — one built outside a wave, such as by a test — simply produces children with none either.
  *
- * <p>{@link #waveId} is an integer, one per call to {@code SpawnSystem.spawnWave}, not yet the string
- * id a named wave in {@code waves.json} will carry — that content contract is a later task of this
- * same phase. Nothing reads this component yet; the "cleared" end condition is a different task.
+ * <p>{@link #waveId} is the wave's own content id — {@code WaveDefinition.id()} — the string a
+ * {@code waves.json} entry is named by, not a synthetic per-call counter. It started as an {@code int}
+ * taken from {@code SpawnSystem}'s old flat-list cursor, an admitted stopgap issue #85 recorded and
+ * issue #112 promoted once a wave had a real content id to carry: two entities from two different
+ * spawns of the <em>same</em> wave id correctly compare equal here, which is exactly what {@code
+ * WaveEndCondition.Cleared} needs to ask "has every entity of this wave gone" without also caring how
+ * many times {@code spawnWave} happened to run.
  */
 public final class WaveOrigin {
 
-    /** Identifies the wave instance that spawned this entity, directly or through a carrier. */
-    public final int waveId;
+    /** The content id of the wave that spawned this entity, directly or through a carrier. */
+    public final String waveId;
 
     /**
-     * @param waveId identifier of the spawning wave instance
+     * @param waveId content id of the spawning wave
      */
-    public WaveOrigin(int waveId) {
+    public WaveOrigin(String waveId) {
         this.waveId = waveId;
     }
 }
