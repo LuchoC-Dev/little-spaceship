@@ -581,3 +581,69 @@ schedule second) reproduces the claimed bug exactly: `start` would clamp to `ste
   claim of "the web target still builds" backed only by `:web:build` or the top-level `build` is
   weaker than it sounds; run the JS build task directly when the PR touches anything under `web/` or
   makes a TeaVM-compatibility claim.
+
+## Phase 11b closing group: PRs #124, #125, #127 — the migration's real math checked out, two claims did not
+
+Merged all three into a scratch worktree (`git worktree add ../ls-review-final --detach origin/phase/11b-wave-system`, three plain `git merge --no-edit`s, no conflicts). `./gradlew build` green, 322 core tests / 0 failures, `./gradlew :web:gdx_teavm_web_js_build` green (`waves.json` and `startup-logo.png` both copied into `dist/js/webapp/assets`). Verdict: #124 accept (clean, matches #122 exactly, both implementers confirmed to override both methods, no third implementer). #125 accept on the migration itself, with one real false claim to correct. #127 accept, the falsification claims reproduced exactly.
+
+42. **A "checked every pair, nothing else repeats" claim is disprovable by one `Counter` over the same
+    92 events the author had in front of them.** #125/`status.md` claims `enemy-tank`/`single`/`atX
+    0.5` (no drop) is "the *only* exact spawn-composition duplicate anywhere in the 92 events." It
+    is not: `enemy-rush`/`column-3`/`atX 0.5` (no drop) repeats **six** times (118.5, 195.5, 215.0,
+    224.0, 276.5, 293.0), `enemy-basic`/`line-5`/`atX 0.5` five times, plus four more pairs/triples.
+    None of this touches the acceptance criterion (still genuinely reused 3x, still an honest,
+    correct reuse) or the reconstructed timing (my own independent Python re-simulation, using only
+    the placement list's offsets and the waves' durations — no access to the author's script —
+    reproduced all 92 original absolute times exactly, `diff` clean). The lesson: "checked every
+    block pairwise" is a claim about a search that was run, not about the result being correct;
+    counting duplicates by `(spawn, formation, atX, drop, dropSlot)` tuple across the whole file is
+    three lines of Python and should be run every time a content migration claims uniqueness, even
+    when the *consequence* of the false claim is zero (a stronger reuse example existed and was not
+    used).
+43. **The acceptance criterion "the determinism replay of level 1 still passes" has no committed
+    test that loads real content.** `LevelScoreReplayTest` and `LevelContentIntegrationTest` both
+    build content through `TestContent` (grepped, confirmed); `game/src/test` does not exist at all
+    (`find game -path "*/test/*"` empty). What actually verified the migration was the author's own
+    uncommitted scratch program (`FileHandle` over real `assets/data`, ticking a real `Simulation`
+    for 310s) and my own independent reconstruction — neither is a regression net that runs again on
+    the next content edit. Worth naming every time a phase's central acceptance criterion is a
+    behavioural claim about real JSON content: ask what test the CI actually runs that would fail if
+    a future edit to that JSON broke it, separately from asking whether the migration was correct
+    *this time*.
+44. **A predictive-scheduling rewrite can make an existing boundary check untestable through the
+    path that used to expose it.** #127 rewrote `FixedDuration`→`FixedDuration` follower scheduling
+    from reactive (`hasEnded` must return true before the next wave is scheduled) to predictive
+    (`start + duration.seconds()` computed once, at chain-build time). Mutating `hasEnded`'s
+    `FixedDuration` boundary (`>=` → `>`) leaves **all 24** `SpawnSystemTest` cases green —
+    `--rerun-tasks` confirmed, not a stale-cache false negative. The reason: once a `FixedDuration`
+    chain is scheduled predictively, `hasEnded` for that condition only gates removal from
+    `activeWaves` (harmless — the wave's own spawn cursor is already exhausted) and the exact tick
+    `world.markWaveTimelineExhausted()` fires; nothing in the suite pins that exact tick for a
+    `FixedDuration`-only chain (the one exact-boundary completion test, `completesOnceThe
+    TimelineIsExhaustedAndNothingIsAlive`, gives the boundary 0.5s of slack, not zero). Meanwhile the
+    two DisplayNames that read as if they test that boundary
+    (`fixedDurationEndsExactlyAtItsOwnDuration`, `movingAPlacementEarlierChangesNoOtherOffset`) *do*
+    genuinely fail under a **different** mutation — breaking the chain arithmetic itself
+    (`start + duration.seconds()` → `start + duration.seconds() - 1f`) fails both. So the tests are
+    not vacuous, they just protect a different thing than their exact-boundary framing suggests.
+    Whenever a system moves from reactive to predictive scheduling, mutate the *old* boundary check
+    on its own, separately from the arithmetic that replaced its job — they can diverge.
+45. **A phase's own unmet acceptance-criterion bullet, honestly flagged inside the very PR that
+    doesn't close it, still has to be caught at phase-boundary time.** `.claude/agents/
+    level-designer.md`'s "a level is a timeline of timestamped spawn events" paragraph is still
+    "Not built yet" as of all three PRs (`git diff ... --stat -- .claude/agents/level-designer.md`
+    empty on all three) — `status.md`'s own #114 entry says so ("Not this task's to fix, flagged for
+    whoever owns it"), correctly. Not a false claim anywhere, but it is a real, plan-listed
+    acceptance-criterion bullet with no owning PR in the closing group. When a coordinator says "I
+    close the phase after these," re-check the full acceptance list against the merge, not just
+    against each PR's own stated scope — an honestly-deferred item from three PRs ago is still open.
+- **`status.md` on the phase branch does not gain an entry for #124 or #127.** Neither branch
+  touches `docs/plan/11b-wave-system/status.md` (confirmed by `git diff <phase>...<branch> --stat`);
+  the only trace of the negative-offset bug and its fix on the phase branch itself is two agent-memory
+  commit *messages* ("record the negative-offset overlap fix" / "note wave lookup defaults retired"),
+  not a status.md line. Since `status.md` is supposed to be "the only place phase progress is
+  recorded" and the plan's own decision text already asserts negative offsets work ("A negative
+  offset overlaps them"), a reader of `status.md` alone would not learn that this was broken until
+  28/08/2026 and had to be fixed by #126/#127. Not a false statement (status.md says nothing wrong,
+  it says nothing at all), but the closing PR set should add the entry rather than leave it to two
+  memory-commit subject lines to carry the fact.
