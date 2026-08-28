@@ -499,16 +499,77 @@ class SpawnSystemTest {
     @Test
     @DisplayName("moving a placement earlier in the level changes no other placement's own offset")
     void movingAPlacementEarlierChangesNoOtherOffset() {
-        WavePlacement untouched = new WavePlacement("wave-b", 3f);
-        List<WavePlacement> originalOrder = List.of(new WavePlacement("wave-a", 0f), untouched);
-        List<WavePlacement> earlierFirst = List.of(new WavePlacement("wave-a", -5f), untouched);
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            // wave-x is placed first in both lists below, purely so wave-a is never itself the very
+            // first placement of the level in either run: the level's actual first wave starts at
+            // level time zero, one tick earlier than SpawnSystem can observe any wave scheduled from
+            // another wave's end — an unrelated, tick-quantisation artefact of there being no "tick
+            // zero," not a violation of this rule. Anchoring wave-a behind wave-x in both lists keeps
+            // that artefact out of the comparison below.
+            .withWave(new SimpleWaveDefinition("wave-x",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(1f)))
+            .withWave(new SimpleWaveDefinition("wave-a",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(2f)))
+            .withWave(new SimpleWaveDefinition("wave-b",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(2f)))
+            .withWave(new SimpleWaveDefinition("wave-c",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(3f)));
 
-        // The second placement's own declaration — its wave id and its offset from whichever comes
-        // before it — is identical in both lists; only the first placement changed.
-        assertEquals(untouched, originalOrder.get(1));
-        assertEquals(untouched, earlierFirst.get(1));
-        assertEquals(originalOrder.get(1).waveId(), earlierFirst.get(1).waveId());
-        assertEquals(originalOrder.get(1).offsetSeconds(), earlierFirst.get(1).offsetSeconds());
+        // wave-c sits last in one level, moved ahead of wave-x (earlier) in the other; wave-a and
+        // wave-b keep their own declared offsets — 0f from whichever precedes them, 4f from wave-a —
+        // in both.
+        List<WavePlacement> waveCLast = List.of(
+            new WavePlacement("wave-x", 0f),
+            new WavePlacement("wave-a", 0f),
+            new WavePlacement("wave-b", 4f),
+            new WavePlacement("wave-c", 0f));
+        List<WavePlacement> waveCFirst = List.of(
+            new WavePlacement("wave-c", 0f),
+            new WavePlacement("wave-x", 0f),
+            new WavePlacement("wave-a", 0f),
+            new WavePlacement("wave-b", 4f));
+
+        int maxTicks = 30;
+        Map<String, Integer> lastTicks = firstSpawnTicks(
+            content.withPlacements(LEVEL, waveCLast), maxTicks);
+        Map<String, Integer> firstTicks = firstSpawnTicks(
+            content.withPlacements(LEVEL, waveCFirst), maxTicks);
+
+        // wave-c moving ahead of wave-x genuinely delays wave-a's own start by wave-c's own
+        // duration — otherwise a SpawnSystem that ignored placement order entirely would pass the
+        // assertion below for the wrong reason.
+        assertTrue(firstTicks.get("wave-a") > lastTicks.get("wave-a"),
+            "wave-a should start later once wave-c is placed ahead of it");
+
+        // wave-b's own gap from wave-a — its declared 4f offset plus wave-a's own 2f duration — is
+        // unaffected by where wave-c sits: moving wave-c earlier shifts wave-a and wave-b by the
+        // same amount, leaving the interval between them exactly as declared.
+        int gapWithWaveCLast = lastTicks.get("wave-b") - lastTicks.get("wave-a");
+        int gapWithWaveCFirst = firstTicks.get("wave-b") - firstTicks.get("wave-a");
+        assertEquals(gapWithWaveCLast, gapWithWaveCFirst);
+    }
+
+    /**
+     * Runs {@code content}'s {@link #LEVEL} for up to {@code maxTicks} one-second ticks, returning
+     * the first tick (1-indexed) each distinct wave id is observed on any spawned entity's {@code
+     * WaveOrigin}. A wave id absent from the result never spawned within {@code maxTicks}.
+     */
+    private static Map<String, Integer> firstSpawnTicks(TestContent content, int maxTicks) {
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+        Map<String, Integer> firstTick = new java.util.HashMap<>();
+        for (int tick = 1; tick <= maxTicks; tick++) {
+            system.update(world, 1f, InputFrame.IDLE);
+            for (int i = 0; i < world.waveOrigins().size(); i++) {
+                firstTick.putIfAbsent(world.waveOrigins().valueAt(i).waveId, tick);
+            }
+        }
+        return firstTick;
     }
 
     @Test
