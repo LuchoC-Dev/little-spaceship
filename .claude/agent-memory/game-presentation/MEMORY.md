@@ -15,3 +15,4 @@
 - [GitHub Actions CI shape for this project](project_github-actions-ci-shape.md) — `gdx_teavm_web_js_build` is outside the `build` lifecycle so it needs its own step; `gradle/actions/setup-gradle@v4` over hand-rolled caching; what "verified" honestly means when the runner JDK isn't installed locally.
 - [GitHub Pages deploy workflow verification before merge](project_github-pages-deploy-workflow.md) — `workflow_dispatch` needs the file on the default branch first; the `github-pages` environment enforces main-only on its own; download and unpack the Pages artifact to measure real bytes.
 - [FileHandle#list() avoided for TeaVM](project_filehandle-list-avoided-for-teavm.md) — why level content stays keyed by an explicit id instead of enumerating `level-*.json` files.
+- [waves.json loader flattens placements into the legacy timeline](project_wave-loader-flattening-bridge.md) — why, until SpawnSystem migrates (#112), and why only FixedDuration can flatten.
