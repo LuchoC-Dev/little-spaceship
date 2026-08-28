@@ -44,13 +44,18 @@ class LevelScoreReplayTest {
     private static final int TICKS = 900;
 
     /**
-     * Recomputed after the tank and carrier gained {@code health} and the bomb gained its on-screen
-     * bound. If this ever needs recomputing again, print {@link #fingerprintOf(Simulation)} from a
+     * Recomputed after issue #84: {@code enemy-rush}'s "dive" trajectory carries it off the bottom of
+     * the playfield, where it used to linger forever, uncounted and unscored — the exact defect #84
+     * fixes. It is now swept by {@code LifetimeSystem}'s safety box once fully off screen, and {@code
+     * CleanupSystem} converges every destruction path uniformly regardless of cause (its own javadoc
+     * says so), so the swept enemy awards its {@code ScoreValue} the same as a defeated one: one fewer
+     * lingering entity (12 to 11) and one more {@code enemy-rush} worth of score (1350 to 1600,
+     * +250). If this ever needs recomputing again, print {@link #fingerprintOf(Simulation)} from a
      * passing {@link #levelScoreIsDeterministic()} run and paste the result here, deliberately,
      * after reading why it changed.
      */
     private static final String GOLDEN_FINGERPRINT =
-        "score=1350 lives=3 bombs=1 shotLevel=1 entities=12";
+        "score=1600 lives=3 bombs=1 shotLevel=1 entities=11";
 
     @Test
     @DisplayName("a scripted run of the level 1 roster reproduces the same final score twice")
