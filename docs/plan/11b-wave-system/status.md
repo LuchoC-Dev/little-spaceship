@@ -27,6 +27,19 @@ Update this file when the phase moves. It is the only place phase progress is re
   `GameEventSink`). `LifetimeSystem` now strips an escaping entity's `ScoreValue`, `Drop` and
   `Collider` before marking it for destruction, so `ScoreSystem` and `CleanupSystem` need no change at
   all — each already does nothing when the component it reads is absent.
+- **Task 3, [#111](https://github.com/LuchoC-Dev/little-spaceship/issues/111) — the wave content
+  contract.** Branch `feat/wave-contract`. Added `WaveDefinition` (id, spawns, endCondition,
+  offsetSeconds) and `WaveEndCondition` (`FixedDuration` or `Cleared`, sealed to those two) as the
+  ninth content kind, plus a `ContentSource.wave(id)` lookup — a **default** method, so `game`'s
+  `JsonContentSource` keeps compiling untouched until #113 overrides it. `SpawnSystem` was not
+  touched, per the task's scope. `WaveTimeline` was left with its existing shape and behaviour
+  (`SpawnSystem` still walks it as a flat, level-scoped `SpawnEvent` list) because changing its shape
+  would have broken `SpawnSystem`'s compile, which this task may not touch — its javadoc now says so
+  explicitly instead of silently disagreeing with the new contract, and names #112 as the task that
+  migrates `SpawnSystem` onto `WaveDefinition` and retires or repoints it. `SpawnEvent`'s own doc no
+  longer assumes one reference frame, since it is now reused wave-relative (inside
+  `WaveDefinition.spawns()`) as well as level-relative (inside the legacy `WaveTimeline`). See
+  `feat/wave-contract` PR against this branch.
 
 ## In progress
 
