@@ -58,6 +58,28 @@ Update this file when the phase moves. It is the only place phase progress is re
   projectiles) inherits a `WaveOrigin` — the decided rule names carriers and their `Spawner`-spawned
   children specifically. Nothing reads the component yet; the `cleared` end condition is #112.
 
+- **Task 7, [#113](https://github.com/LuchoC-Dev/little-spaceship/issues/113) — `JsonContentSource`
+  reads `waves.json` and a level's wave references.** Branch `feat/wave-loader`. `waves.json` is
+  optional (a data directory without it loads with an empty wave registry, since `level-01.json`
+  still carries `"events"` and no shipped content uses the new format yet) and, when present, is
+  parsed into `WaveDefinition`s keyed by id, backing `ContentSource.wave(id)` directly. Its `"end"`
+  block discriminates on a `"type"` string (`"fixedDuration"` needs `"seconds"`, `"cleared"` needs
+  nothing else); any other value is rejected rather than defaulted.
+  A level file's top-level block gained a third allowed key, `"waves"`, an ordered list of
+  `{"wave", "offset"}` placements — mutually exclusive with the legacy `"events"` list, and one of
+  the two is required. Since `SpawnSystem` has not migrated onto `WaveDefinition`/`WavePlacement`
+  yet (#112), a level's placements are **flattened at load time** into the same absolute-time
+  `SpawnEvent` list `"events"` would have produced by hand: each placement starts `offsetSeconds`
+  after the previous one ends, a wave's own wave-relative `at` values are shifted by that start, and
+  the merged result is sorted by absolute `at` (necessary because a negative offset intentionally
+  overlaps two placements, which can interleave their events). **Only `FixedDuration` waves can be
+  flattened this way** — a `Cleared` wave's end is a runtime fact this loader has no access to, so a
+  placement naming one fails loudly, naming the level and the wave id, rather than being flattened
+  wrong. `level-01.json` was not touched (out of scope, #114) and still loads exactly as before.
+  Verified with a scratch program compiled against the real `core.jar`/`game` classes and a small
+  fixture `waves.json` (two waves, one `FixedDuration` referenced twice in a level to demonstrate
+  reuse, one `Cleared`) — see the task's PR description for the full list of error paths exercised.
+
 ## In progress
 
 Nothing else yet.
