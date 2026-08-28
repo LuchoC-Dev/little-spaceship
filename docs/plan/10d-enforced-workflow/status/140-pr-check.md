@@ -49,7 +49,25 @@ Worth noting how this surfaced: the workflow failed on the pull request that int
 
 ## Evidence
 
-A workflow that is configured is not a workflow that runs, and this project has been wrong that way before. The run id proving it fired on a real pull request against a phase branch is in this task's pull request, along with what it printed.
+A workflow that is configured is not a workflow that runs, and this project has been wrong that way before. Two runs on this task's own pull request, against a phase branch:
+
+- **`33214287797`** — the first, on `opened`. Every pull-request assertion passed, including `pass opened as a draft`; it failed on the detached-HEAD problem above.
+- **`33214387232`** — after the fix, on `synchronize`. Green:
+
+```
+pr-check: 'ci/pr-check' into 'phase/10d-enforced-workflow' (event: synchronize)
+pass base: phase/10d-enforced-workflow
+pass closes issue #140
+pass status fragment: docs/plan/10d-enforced-workflow/status/140-pr-check.md
+pass draft state not checked on 'synchronize'; it is only meaningful at opening
+pr-check: PASS
+pre-pr-check: branch 'ci/pr-check' against 'origin/phase/10d-enforced-workflow'
+pass branch name: ci/pr-check
+...
+pre-pr-check: PASS — 3 commit(s), 3 file(s) changed
+```
+
+The draft assertion is only exercised on `opened`, so its evidence is the first run's, not the second's — which is the honest reading of both.
 
 ## Open
 
