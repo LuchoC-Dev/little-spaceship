@@ -189,7 +189,42 @@ for MD in $MD_FILES; do
   fi
 done
 
-# 8. The build, but only when the change can break it. A documentation phase that
+# 8. The status fragment. A branch that does work records what it did, in its own file,
+#    so two tasks running at once can never write the same path. Phase 11b had both
+#    failures a shared status.md produces: an agent force-pushed to escape a conflict in
+#    it, and two merged pull requests never touched it at all, so a defect and its fix
+#    were missing from the record until the phase closed.
+#    Exempt: a branch that changes only docs/. That is the coordinator's bookkeeping —
+#    opening a phase, closing it, correcting a document — which closes no issue either.
+#    Deliberately wider than the build check below, which asks "can this break Gradle".
+#    This asks "is this work someone will want the record of", and a change to tools/,
+#    .github/ or .claude/ is exactly that.
+#    Only presence is checked. The name carries an issue number this script cannot know:
+#    it runs before the pull request exists, which is the point of it. Checking the name
+#    against the issue the pull request closes is pr-check's job.
+NON_DOCS="$(printf '%s
+' "$CHANGED" | grep -vE '^docs/' | grep -c . || true)"
+if [ "$NON_DOCS" -gt 0 ]; then
+  FRAGMENTS="$(printf '%s
+' "$CHANGED" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
+  FRAGMENT_COUNT="$(printf '%s
+' "$FRAGMENTS" | grep -c . || true)"
+  if [ "$FRAGMENT_COUNT" -eq 1 ]; then
+    pass "status fragment: $FRAGMENTS"
+  elif [ "$FRAGMENT_COUNT" -eq 0 ]; then
+    fail "this branch does work and records nothing in the phase status"
+    detail "add one file at docs/plan/<phase>/status/<issue>-<slug>.md describing what"
+    detail "this task did, what it decided, and what it leaves open"
+  else
+    fail "$FRAGMENT_COUNT status fragments in one branch; a task writes exactly one"
+    printf '%s
+' "$FRAGMENTS" | while IFS= read -r F; do [ -n "$F" ] && detail "$F"; done
+  fi
+else
+  pass "docs-only branch, so no status fragment is required"
+fi
+
+# 9. The build, but only when the change can break it. A documentation phase that
 #    waits four minutes for Gradle learns nothing and stops running the check.
 CODE_TOUCHED="$(printf '%s\n' "$CHANGED" | grep -E '^(core|game|desktop|web|assets)/|\.gradle(\.kts)?$|^gradle/|^gradlew' || true)"
 if [ -n "$CODE_TOUCHED" ]; then
