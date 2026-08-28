@@ -141,8 +141,26 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   is the default.** Unless a level says otherwise, a wave behaves as `SpawnSystem` does today.
   "Cleared" means every entity the wave spawned has been destroyed **or has left the playfield**, so
   it depends on both [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84) and
-  [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85). Still open, and left to the phase
-  that builds it: whether the children a carrier spawns count towards their parent's wave.
+  [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85).
+
+  **The children a carrier spawns inherit their parent's wave — decided by the project owner on
+  28/08/2026, closing [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85).** A child
+  carries the same wave id as the carrier that created it, and a `cleared` wave is not cleared until
+  those children have also been destroyed or have left the playfield. The reason is what the player
+  reads on screen: a wave ends when the screen is clear of what that wave brought, not when the thing
+  that carried them happens to die. A carrier that escapes leaving live children no longer stalls the
+  wave for ever, because #84's lifetime and safety box remove anything that leaves the playfield.
+
+  **Built:** `core/domain/component/WaveOrigin.java` records the id of the wave instance that spawned
+  an entity, attached by `SpawnSystem.spawnWave` to every entity a wave creates. `SpawnerSystem`
+  copies the holder's `WaveOrigin` onto every child it spawns from a carrier, so a carrier with no
+  `WaveOrigin` of its own — one built outside a wave, such as by a test — produces children with none
+  either. Nothing else that creates an entity as a side effect of a wave-spawned entity — a dropped
+  pickup (`CleanupSystem`), an enemy's own projectile (`EnemyWeaponSystem`), a boss part or its
+  projectiles (`BossSystem`) — inherits a `WaveOrigin`: the decided rule names carriers and their
+  `Spawner`-spawned children specifically, not every downstream entity a wave's enemy happens to
+  produce, and nothing consumes the wave id yet — the `cleared` end condition itself is a later task
+  ([#112](https://github.com/LuchoC-Dev/little-spaceship/issues/112)).
 - **A wave is placed relative to the end of the one before it**, with an offset; a negative offset
   overlaps them. A level carries no absolute timestamps. This removes the guarantee
   `SimpleWaveTimeline`'s constructor gives today by sorting on a timestamp.

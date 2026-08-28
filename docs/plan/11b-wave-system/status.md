@@ -28,6 +28,17 @@ Update this file when the phase moves. It is the only place phase progress is re
   `Collider` before marking it for destruction, so `ScoreSystem` and `CleanupSystem` need no change at
   all — each already does nothing when the component it reads is absent.
 
+- **Task 2, [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85) — an entity records which
+  wave spawned it.** Branch `feat/entity-wave-id`. New component `WaveOrigin` (`core/domain/component/`),
+  a `World.waveOrigins()` store, attached by `SpawnSystem.spawnWave` — one wave instance is still one
+  call to that method until the wave content contract exists, so its id is the timeline cursor
+  position. `SpawnerSystem.spawnChild` copies the holder's `WaveOrigin` onto every child it creates,
+  when the holder has one — the carrier-children rule the project owner decided on 28/08/2026, written
+  into `docs/planning/08-decisions-and-open-items.md`. No other entity-creation site (`CleanupSystem`'s
+  dropped pickup, `EnemyWeaponSystem`'s and `WeaponSystem`'s projectiles, `BossSystem`'s parts and
+  projectiles) inherits a `WaveOrigin` — the decided rule names carriers and their `Spawner`-spawned
+  children specifically. Nothing reads the component yet; the `cleared` end condition is #112.
+
 ## In progress
 
 Nothing else yet.

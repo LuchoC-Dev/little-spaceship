@@ -4,6 +4,7 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.component.WaveOrigin;
 import dev.luchoc.littlespaceship.core.domain.content.ComponentFactoryRegistry;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
 import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
@@ -40,6 +41,12 @@ import java.util.List;
  * ({@link #lowestOffsetY}), so the slot closest to being visible is the one measured against the
  * playfield edge, and every other slot ends up further above it. A single-slot formation is the
  * special case of this where the lowest offset is its own, usually zero.
+ *
+ * <p>Every entity a wave spawns also carries a {@link WaveOrigin}, tagged with the wave's own
+ * cursor position in the timeline — one call to {@link #spawnWave} is one wave instance, until the
+ * content contract of a later task in this phase makes a wave a named group of events rather than
+ * one event each. {@code SpawnerSystem} copies this tag onto the children a carrier spawns, per the
+ * carrier-children rule in {@code docs/planning/08-decisions-and-open-items.md}.
  */
 public final class SpawnSystem implements GameSystem {
 
@@ -78,7 +85,7 @@ public final class SpawnSystem implements GameSystem {
         levelTime += step;
         List<SpawnEvent> events = world.content().timeline(levelId).events();
         while (cursor < events.size() && events.get(cursor).at() <= levelTime) {
-            spawnWave(world, events.get(cursor));
+            spawnWave(world, events.get(cursor), cursor);
             cursor++;
         }
         if (cursor >= events.size()) {
@@ -89,7 +96,7 @@ public final class SpawnSystem implements GameSystem {
         }
     }
 
-    private static void spawnWave(World world, SpawnEvent event) {
+    private static void spawnWave(World world, SpawnEvent event, int waveId) {
         EnemyDefinition enemy = world.content().enemy(event.enemyId());
         FormationDefinition formation = world.content().formation(event.formationId());
         if (event.hasDrop()) {
@@ -105,6 +112,7 @@ public final class SpawnSystem implements GameSystem {
             int entity = world.createEntity();
             attachComponents(world, enemy, entity);
             positionSpawned(world, entity, anchorX, lowestOffsetY, slot);
+            world.waveOrigins().set(entity, new WaveOrigin(waveId));
             if (event.hasDrop() && i == event.dropSlot()) {
                 world.drops().set(entity, new Drop(event.dropId()));
             }
