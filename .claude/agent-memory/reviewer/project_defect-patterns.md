@@ -559,3 +559,25 @@ the fix, `scheduleNext(world, 0f)` runs while `levelTime` is still its initial `
 computes `localTime = step - 0 = step`, matching the old flat-cursor system's own first-tick check
 (`events.at() <= levelTime` after the same increment). Reversing the two statements (increment first,
 schedule second) reproduces the claimed bug exactly: `start` would clamp to `step`, not `0`.
+
+## For a second-round PR whose top-level GitHub description predates the fix commit
+
+- **The PR body (`gh pr view --json body`) is not updated automatically when new commits land** —
+  it is prose the author wrote once and can leave stale. PR #120 (task 7, phase 11b) round 2 deleted
+  the load-time flattening and the `Cleared`-placement rejection its round-1 self had; the fix commit,
+  a fresh PR *comment*, and `status.md` all say so correctly, but the PR's top **description**
+  (`## What changed` / the JSON example / the verification log) still describes the deleted
+  round-1 behaviour verbatim — it was never edited after the round-2 commits. Read `gh pr view --json
+  body` *and* `gh pr view --json comments` separately and diff what each claims against the code;
+  the top description is what a reader sees first and is not guaranteed to be the current claim.
+  Not a code defect here (status.md and the latest comment are accurate, code matches them), but
+  exactly the shape of "false statement in a document" the project's own precedent (phase 09's two
+  rejections) warns about — flag it for correction even when a later comment already fixes the record,
+  because the top description is the part most likely to be read alone.
+- **`./gradlew build` never runs the actual TeaVM JS/Wasm compile** on this repo — `web:build`
+  finishes with `compileTeavmJava NO-SOURCE` and no `dist/js` output. The real check is a specific
+  task, `./gradlew :web:gdx_teavm_web_js_build` (list them with `./gradlew :web:tasks --all | grep -i
+  teavm`), which does the asset copy (confirms `startup-logo.png` ships) and the actual compile. A
+  claim of "the web target still builds" backed only by `:web:build` or the top-level `build` is
+  weaker than it sounds; run the JS build task directly when the PR touches anything under `web/` or
+  makes a TeaVM-compatibility claim.
