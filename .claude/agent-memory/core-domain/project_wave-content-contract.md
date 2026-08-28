@@ -53,3 +53,8 @@ already contradicts.**
 See [[project_content-pipeline-design]] for the general ComponentSpec/registry pattern this follows,
 and [[project_game-systems-design]] for why an optional-per-archetype component (the same shape
 `WaveEndCondition` avoids by being sealed instead) can drift the wrong way.
+
+**Update (#122, PR #124):** once `JsonContentSource` implemented both methods (#113), the defaults on
+`wave(String)` and `placements(String)` were retired — both are abstract again. Confirmed by
+`git grep -ln "implements ContentSource"` that only `JsonContentSource` (game) and `TestContent`
+(core test support) exist, so nothing else could have silently inherited the throwing default.
