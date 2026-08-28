@@ -7,6 +7,7 @@
 #
 #   tools/pre-pr-check                 # compare against dev
 #   tools/pre-pr-check --base <ref>    # compare against the phase branch, usually
+#   tools/pre-pr-check --no-build      # skip Gradle; for CI, which builds separately
 #
 # Every check below exists because this repository already paid for it once. The
 # reason is written above each one; do not add a check without one.
@@ -14,9 +15,11 @@
 set -u
 
 BASE="dev"
+RUN_BUILD=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) BASE="${2:-}"; shift 2 ;;
+    --no-build) RUN_BUILD=0; shift ;;
     -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -227,7 +230,10 @@ fi
 # 9. The build, but only when the change can break it. A documentation phase that
 #    waits four minutes for Gradle learns nothing and stops running the check.
 CODE_TOUCHED="$(printf '%s\n' "$CHANGED" | grep -E '^(core|game|desktop|web|assets)/|\.gradle(\.kts)?$|^gradle/|^gradlew' || true)"
-if [ -n "$CODE_TOUCHED" ]; then
+if [ -n "$CODE_TOUCHED" ] && [ "$RUN_BUILD" -eq 0 ]; then
+  pass "code changed, but --no-build was passed: the build runs in ci.yml"
+  detail "ci.yml also runs gdx_teavm_web_js_build, which ./gradlew build does not"
+elif [ -n "$CODE_TOUCHED" ]; then
   echo
   echo "code changed — running ./gradlew build"
   if ./gradlew build --console=plain -q; then
