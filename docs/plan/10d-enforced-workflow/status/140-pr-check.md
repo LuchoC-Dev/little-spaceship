@@ -37,6 +37,16 @@ The division that follows:
 
 Every assertion above is a fact with an exit code: a branch name, an issue number, a file name, a boolean, a script's status. **None of them reads prose.** Whether a description is faithful stays `reviewer`'s work — the project owner set that line and this workflow's header carries it, so the next person adding a check reads the reason before they add one.
 
+## What it found by running on itself
+
+The first run went green on every pull-request assertion and **red on its own last step**: `FAIL branch 'HEAD' is not 'type/description'`.
+
+`actions/checkout` leaves a pull-request checkout **detached**, so `git rev-parse --abbrev-ref HEAD` answers `HEAD`, and `pre-pr-check`'s branch-name check rejects it. Nothing was wrong with the branch — the script simply could not see its name from where CI stands.
+
+Fixed with a second new option, `tools/pre-pr-check --branch <name>`, which CI fills from the pull request's head ref. The script still reads the branch from git everywhere else; CI is the one place that has to be told.
+
+Worth noting how this surfaced: the workflow failed on the pull request that introduced it, which is the cheapest possible place for it to fail.
+
 ## Evidence
 
 A workflow that is configured is not a workflow that runs, and this project has been wrong that way before. The run id proving it fired on a real pull request against a phase branch is in this task's pull request, along with what it printed.

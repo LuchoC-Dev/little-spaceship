@@ -142,6 +142,11 @@ jobs:
       - name: Run pre-pr-check, rather than trust what was pasted
         env:
           BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         # --no-build because ci.yml compiles, tests and builds the web target for
         # this same pull request. Running Gradle twice per push buys nothing.
-        run: ./tools/pre-pr-check --base "origin/$BASE" --no-build
+        #
+        # --branch because a pull-request checkout is detached: without it the
+        # script reads the branch as "HEAD" and fails its own naming check. Found
+        # by this workflow failing on the pull request that introduced it.
+        run: ./tools/pre-pr-check --base "origin/$BASE" --branch "$HEAD_REF" --no-build
