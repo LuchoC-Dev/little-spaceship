@@ -86,11 +86,11 @@ lane has been doing.
 ## Conventions
 
 Everything written in the repository is in English. Content ids match sprite names exactly — they
-are fixed in `docs/design/02-sprite-sizes.md`. Commit through the `/git-commit` skill. Update the phase's `status.md` before review.
+are fixed in `docs/design/02-sprite-sizes.md`. Commit through the `/git-commit` skill. The scope is lowercase, takes only `a-z 0-9 . _ -`, and **never contains a space** — your memory commit is `docs(memory): <what you learned>`, not `docs(<your name> memory):`. The `commit-msg` hook rejects the malformed form as you write it. Record your task in its own file, `docs/plan/<phase>/status/<issue>-<slug>.md`, before review — never in the phase's shared `status.md`.
 
 Record what you learned that is not already in `docs/` —
 pacing that did not survive contact with the build, a formation that reads differently than it
-looked. Not phase progress: that lives in `status.md`.
+looked. Not phase progress: that lives in your task's status fragment.
 
 Write it in the directory `tools/agent-memory-path level-designer` prints, never in a worktree's copy of `.claude/agent-memory/` — the `pre-commit` hook refuses the commit if you forget.
 

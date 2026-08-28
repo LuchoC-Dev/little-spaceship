@@ -17,7 +17,9 @@ To launch an agent by hand, see [writing prompts for agents](agent-prompts.md).
 issue  →  branch  →  work  →  pre-pr-check  →  PR  →  reviewer  →  merge  →  status
 ```
 
-**Issue.** One per task in the plan. Title from the task, body with the relevant acceptance criteria.
+**Issue.** One per task in the plan — and one for every defect found while the phase runs, which is not "a task in the plan" and needs an issue just as much. Title from the task, body with the relevant acceptance criteria.
+
+**Every pull request against a phase branch closes exactly one issue.** The coordinator's documentation pull requests are the one named exception: opening a phase, closing it, correcting a document. They close no issue and carry no status fragment, and that is the same category `tools/pre-pr-check` exempts by asking whether the branch changed anything outside `docs/`.
 
 **Branch.** Four levels, and each one only ever receives a pull request from the level below.
 Decided by the project owner on 26/08/2026; see [the branch regime](#the-branch-regime) below for
