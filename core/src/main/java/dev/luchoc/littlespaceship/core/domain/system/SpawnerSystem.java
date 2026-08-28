@@ -4,6 +4,7 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.component.WaveOrigin;
 import dev.luchoc.littlespaceship.core.domain.content.ComponentFactoryRegistry;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
 import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
@@ -30,6 +31,13 @@ import java.util.Set;
  * spawner's fixed offset, never off-screen: a carrier spawning near itself, wherever it currently is,
  * is the correct behaviour for a companion appearing at a station already on screen, unlike a wave's
  * anchor which always enters from beyond the playfield edge.
+ *
+ * <p>A child also inherits the holder's {@link WaveOrigin}, when it has one — the carrier-children
+ * rule the project owner decided on 28/08/2026, recorded in
+ * {@code docs/planning/08-decisions-and-open-items.md}: a wave is not "cleared" until the children
+ * its carriers produced are also gone, because that is what the player reads on screen. A holder
+ * built outside a wave, such as one a test creates directly, carries no {@link WaveOrigin}, and its
+ * children carry none either.
  */
 public final class SpawnerSystem implements GameSystem {
 
@@ -92,5 +100,9 @@ public final class SpawnerSystem implements GameSystem {
             }
         }
         world.transforms().set(child, new Transform(origin.x + spawner.offsetX, origin.y + spawner.offsetY));
+        WaveOrigin wave = world.waveOrigins().get(holder);
+        if (wave != null) {
+            world.waveOrigins().set(child, wave);
+        }
     }
 }

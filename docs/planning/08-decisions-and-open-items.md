@@ -141,8 +141,26 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   is the default.** Unless a level says otherwise, a wave behaves as `SpawnSystem` does today.
   "Cleared" means every entity the wave spawned has been destroyed **or has left the playfield**, so
   it depends on both [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84) and
-  [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85). Still open, and left to the phase
-  that builds it: whether the children a carrier spawns count towards their parent's wave.
+  [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85).
+
+  **The children a carrier spawns inherit their parent's wave — decided by the project owner on
+  28/08/2026, closing [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85).** A child
+  carries the same wave id as the carrier that created it, and a `cleared` wave is not cleared until
+  those children have also been destroyed or have left the playfield. The reason is what the player
+  reads on screen: a wave ends when the screen is clear of what that wave brought, not when the thing
+  that carried them happens to die. A carrier that escapes leaving live children no longer stalls the
+  wave for ever, because #84's lifetime and safety box remove anything that leaves the playfield.
+
+  **Built:** `core/domain/component/WaveOrigin.java` records the id of the wave instance that spawned
+  an entity, attached by `SpawnSystem.spawnWave` to every entity a wave creates. `SpawnerSystem`
+  copies the holder's `WaveOrigin` onto every child it spawns from a carrier, so a carrier with no
+  `WaveOrigin` of its own — one built outside a wave, such as by a test — produces children with none
+  either. Nothing else that creates an entity as a side effect of a wave-spawned entity — a dropped
+  pickup (`CleanupSystem`), an enemy's own projectile (`EnemyWeaponSystem`), a boss part or its
+  projectiles (`BossSystem`) — inherits a `WaveOrigin`: the decided rule names carriers and their
+  `Spawner`-spawned children specifically, not every downstream entity a wave's enemy happens to
+  produce, and nothing consumes the wave id yet — the `cleared` end condition itself is a later task
+  ([#112](https://github.com/LuchoC-Dev/little-spaceship/issues/112)).
 - **A wave is placed relative to the end of the one before it**, with an offset; a negative offset
   overlaps them. A level carries no absolute timestamps. This removes the guarantee
   `SimpleWaveTimeline`'s constructor gives today by sorting on a timestamp.
@@ -165,6 +183,32 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   closed**: `assessment.md`'s Part 3 evaluated a `Lifetime` timer component and concluded "No.
   Nothing in the 11 group needs a timer-expiring entity." The project owner named the case on
   27/08/2026, which is the standard invariant 6 now sets.
+
+  **Built, closing [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84):
+  `core/domain/component/Lifetime.java`, `core/domain/system/LifetimeSystem.java`.** The safety box
+  is 128 logical units past every playfield edge (`x` in `[-128, 336]`, `y` in `[-128, 398]`) —
+  `LifetimeSystem.SAFETY_MARGIN`. It clears the worst legitimate spawn measured against
+  `assets/data/formations.json` and `assets/data/enemies.json` on this date (`column-3`'s 44-unit
+  spread carrying `enemy-carrier`'s 15-unit radius, born at `y = 329`, `314` from its own edge) by 84
+  units, deliberately more than that 44-unit floor for the movement shapes phase 11c adds. `Lifetime`
+  is an optional per-archetype component (a `"lifetime": {"seconds": N}` spec, read the same way
+  `"health"` is), so no existing archetype needs a content change for the safety box alone to fix the
+  defect.
+
+  **An enemy that leaves the simulation without being defeated gives the player nothing: no score, no
+  drop, no `EnemyDestroyed` — decided by the project owner on 28/08/2026.** Score rewards killing, not
+  letting something through, and the un-emitted `EnemyDestroyed` matters beyond the score: `game`'s
+  `AudioDirector` is the simulation's `GameEventSink`, so emitting it for an escape would have played
+  an explosion sound for an enemy the player never hit, off screen. `LifetimeSystem` is the only place
+  that knows an entity is escaping rather than being defeated, so it strips that entity's `ScoreValue`,
+  `Drop` and `Collider` before calling `World.markForDestruction` — `ScoreSystem`, `CleanupSystem`'s
+  drop resolution and its `EnemyDestroyed` emission are each already conditional on the component they
+  read being present, so all three naturally do nothing once it is gone. `CleanupSystem` needed no
+  change and its "converges every destruction path uniformly, regardless of what killed its holder"
+  stays exactly true: no second, source-aware branch was added to it, an escaping entity simply no
+  longer carries anything a uniform sweep would find interesting. This supersedes the non-decision
+  originally recorded here (before this date, the intermediate build awarded the score and drop
+  uniformly and left the question open).
 - **A movement shape is chosen in the spawn event, with the archetype supplying the default.** This is
   the half of [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) that 10c named and left
   open. **Still open:** which shapes exist, decided by the phase that builds them against the beats

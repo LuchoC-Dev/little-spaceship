@@ -6,6 +6,9 @@
   `combatY` decides whether the boss can hit anything.
 - [Writing content through Bash](feedback_bash-heredoc-for-content.md) — heredocs carrying long JSON
   or Markdown abort before running; write to the scratchpad and `cat` it in.
+- [Wave migration mechanics](project_wave-migration-mechanics.md) — a wave's `FixedDuration` is shared
+  across every placement that reuses it, negative offsets are a no-op in `SpawnSystem` as written, no
+  test touches the real `assets/data/level-01.json`, and how to live-run it without a full app context.
 
 This file indexes what this agent learns that `docs/` has no reason to hold:
 pacing that did not survive contact with the build, a formation that reads differently than it

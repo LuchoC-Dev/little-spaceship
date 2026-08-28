@@ -14,8 +14,9 @@ import dev.luchoc.littlespaceship.core.port.MapComponentSpec;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
-import dev.luchoc.littlespaceship.core.port.SimpleWaveTimeline;
+import dev.luchoc.littlespaceship.core.port.SimpleWaveDefinition;
 import dev.luchoc.littlespaceship.core.port.SpawnEvent;
+import dev.luchoc.littlespaceship.core.port.WaveEndCondition;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.List;
 import java.util.Map;
@@ -86,8 +87,10 @@ class LevelContentIntegrationTest {
             .withEnemy(tankOnRushTrajectory)
             .withTrajectory(new SimpleTrajectoryDefinition("dive", 0f, -80f))
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(List.of(
-                new SpawnEvent(0.5f, "enemy-tank", "single", 0.5f, null))));
+            .withWave(new SimpleWaveDefinition(LEVEL + "-wave", List.of(
+                new SpawnEvent(0.5f, "enemy-tank", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(5f)))
+            .withSingleWavePlacement(LEVEL, LEVEL + "-wave");
 
         Simulation simulation = new Simulation(content, event -> {
         }, 1, LEVEL);
@@ -127,13 +130,15 @@ class LevelContentIntegrationTest {
                 new FormationSlot(-20f, 0f), new FormationSlot(0f, 0f), new FormationSlot(20f, 0f))))
             .withFormation(new SimpleFormationDefinition("diagonal", List.of(
                 new FormationSlot(-15f, 0f), new FormationSlot(0f, -15f), new FormationSlot(15f, -30f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(List.of(
+            .withWave(new SimpleWaveDefinition(LEVEL + "-wave", List.of(
                 new SpawnEvent(1.0f, "enemy-basic", "line-3", 0.5f, null),
                 new SpawnEvent(3.0f, "enemy-light", "diagonal", 0.2f, null),
                 new SpawnEvent(5.0f, "enemy-shooter", "single", 0.8f, null),
                 new SpawnEvent(7.0f, "enemy-rush", "single", 0.3f, null),
                 new SpawnEvent(9.0f, "enemy-tank", "single", 0.5f, "shield"),
-                new SpawnEvent(9.5f, "enemy-carrier", "single", 0.6f, "attachment"))));
+                new SpawnEvent(9.5f, "enemy-carrier", "single", 0.6f, "attachment")),
+                new WaveEndCondition.FixedDuration(20f)))
+            .withSingleWavePlacement(LEVEL, LEVEL + "-wave");
     }
 
     private static ComponentSpec motion(String trajectory) {

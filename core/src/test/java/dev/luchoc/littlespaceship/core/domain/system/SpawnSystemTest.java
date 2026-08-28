@@ -6,10 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
-import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
-import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
-import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
@@ -21,8 +18,10 @@ import dev.luchoc.littlespaceship.core.port.MapComponentSpec;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
-import dev.luchoc.littlespaceship.core.port.SimpleWaveTimeline;
+import dev.luchoc.littlespaceship.core.port.SimpleWaveDefinition;
 import dev.luchoc.littlespaceship.core.port.SpawnEvent;
+import dev.luchoc.littlespaceship.core.port.WaveEndCondition;
+import dev.luchoc.littlespaceship.core.port.WavePlacement;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.List;
 import java.util.Map;
@@ -36,14 +35,14 @@ import org.junit.jupiter.api.Test;
 class SpawnSystemTest {
 
     private static final String LEVEL = "level-01";
+    private static final String WAVE = "level-01-wave";
 
     @Test
     @DisplayName("a wave due this tick spawns, positioned from the anchor and the formation slot")
     void spawnsAWaveWhenItIsDue() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -62,8 +61,7 @@ class SpawnSystemTest {
     void doesNotSpawnBeforeItsTime() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(10f, "enemy-basic", "single", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(10f, "enemy-basic", "single", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -77,8 +75,7 @@ class SpawnSystemTest {
     void neverSpawnsTheSameWaveTwice() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -94,9 +91,9 @@ class SpawnSystemTest {
     void oneTickCanFireSeveralWaves() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(List.of(
+            .withSingleWave(LEVEL, List.of(
                 new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null),
-                new SpawnEvent(2f, "enemy-basic", "single", 0.5f, null))));
+                new SpawnEvent(2f, "enemy-basic", "single", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -111,8 +108,7 @@ class SpawnSystemTest {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("line-3", List.of(
                 new FormationSlot(-10f, 0f), new FormationSlot(0f, 0f), new FormationSlot(10f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "line-3", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "line-3", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -136,8 +132,7 @@ class SpawnSystemTest {
             new FormationSlot(-15f, 0f), new FormationSlot(0f, -15f), new FormationSlot(15f, -30f));
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("diagonal", diagonal))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "diagonal", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "diagonal", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -166,8 +161,7 @@ class SpawnSystemTest {
     void designedDropAttachesToSpawnedEntities() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, "shield"))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, "shield")));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -183,8 +177,7 @@ class SpawnSystemTest {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("pair",
                 List.of(new FormationSlot(-20f, 0f), new FormationSlot(20f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "pair", 0.5f, "attachment", 1))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "pair", 0.5f, "attachment", 1)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -201,8 +194,7 @@ class SpawnSystemTest {
     void dropSlotOutsideFormationFails() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, "shield", 1))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, "shield", 1)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -216,8 +208,7 @@ class SpawnSystemTest {
     void unrecognisedDropIdFailsAtSpawnTime() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, "typo-shiled"))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, "typo-shiled")));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -239,8 +230,7 @@ class SpawnSystemTest {
             PickupSystem.KIND_INVULNERABILITY, PickupSystem.KIND_ATTACHMENT)) {
             TestContent content = baseContent()
                 .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-                .withTimeline(LEVEL, new SimpleWaveTimeline(
-                    List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, kind))));
+                .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, kind)));
             World world = worldOf(content);
             SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -255,8 +245,7 @@ class SpawnSystemTest {
     void noDropMeansNoDropComponent() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -276,9 +265,11 @@ class SpawnSystemTest {
             .withEnemy(new SimpleEnemyDefinition("enemy-tank", List.of(
                 sharedMotion, spriteSpec("enemy-tank"), colliderSpec(10.5f, false))))
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(List.of(
+            .withWave(new SimpleWaveDefinition(WAVE, List.of(
                 new SpawnEvent(1f, "enemy-rush", "single", 0.5f, null),
-                new SpawnEvent(2f, "enemy-tank", "single", 0.5f, null))));
+                new SpawnEvent(2f, "enemy-tank", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(20f)))
+            .withSingleWavePlacement(LEVEL, WAVE);
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -293,12 +284,11 @@ class SpawnSystemTest {
     }
 
     @Test
-    @DisplayName("an unknown enemy id in the timeline fails naming that id")
+    @DisplayName("an unknown enemy id in the wave fails naming that id")
     void unknownEnemyIdFailsWithMessage() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-ghost", "single", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-ghost", "single", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -314,8 +304,7 @@ class SpawnSystemTest {
             .withEnemy(new SimpleEnemyDefinition("enemy-basic",
                 List.of(new MapComponentSpec("collider", Map.of()))))
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
@@ -326,18 +315,23 @@ class SpawnSystemTest {
     }
 
     @Test
-    @DisplayName("once the timeline is exhausted and the spawned enemy is destroyed, the run completes")
+    @DisplayName("once every placement is exhausted and the spawned enemy is destroyed, the run completes")
     void completesOnceTheTimelineIsExhaustedAndNothingIsAlive() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null))));
+            .withWave(new SimpleWaveDefinition(WAVE,
+                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(1.5f)))
+            .withSingleWavePlacement(LEVEL, WAVE);
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
         system.update(world, 1f, InputFrame.IDLE);
         int enemy = world.colliders().entityAt(0);
         world.destroyEntity(enemy);
+        // The FixedDuration wave itself must end before the level counts as exhausted, not just the
+        // spawn of its last event — otherwise this test would pass even if SpawnSystem forgot to
+        // resolve end conditions at all.
         system.update(world, 1f, InputFrame.IDLE);
 
         assertEquals(LevelOutcome.COMPLETED, world.view().outcome());
@@ -348,14 +342,245 @@ class SpawnSystemTest {
     void notCompleteWhileASpawnedEnemySurvives() {
         TestContent content = baseContent()
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(
-                List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null))));
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
         system.update(world, 1f, InputFrame.IDLE);
 
         assertEquals(LevelOutcome.IN_PROGRESS, world.view().outcome());
+    }
+
+    @Test
+    @DisplayName("every entity a wave spawns carries a WaveOrigin naming that wave's content id")
+    void spawnedEntitiesCarryAWaveOrigin() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("pair",
+                List.of(new FormationSlot(-10f, 0f), new FormationSlot(10f, 0f))))
+            .withSingleWave(LEVEL, List.of(new SpawnEvent(1f, "enemy-basic", "pair", 0.5f, null)));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(2, world.waveOrigins().size());
+        String firstWaveId = world.waveOrigins().valueAt(0).waveId;
+        assertEquals(WAVE, firstWaveId);
+        assertEquals(firstWaveId, world.waveOrigins().valueAt(1).waveId);
+    }
+
+    @Test
+    @DisplayName("two different placements tag their entities with different wave ids")
+    void differentWavesGetDifferentIds() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withWave(new SimpleWaveDefinition("wave-a",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(1f)))
+            .withWave(new SimpleWaveDefinition("wave-b",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(1f)))
+            .withPlacements(LEVEL, List.of(
+                new WavePlacement("wave-a", 0f),
+                new WavePlacement("wave-b", 0f)));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        // wave-a starts at t=0 and spawns immediately; wave-b is only scheduled once wave-a's own
+        // FixedDuration(1s) has elapsed. Two ticks give both waves ample room to have run.
+        system.update(world, 1f, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(2, world.waveOrigins().size());
+        String first = world.waveOrigins().valueAt(0).waveId;
+        String second = world.waveOrigins().valueAt(1).waveId;
+        assertTrue(!first.equals(second));
+    }
+
+    @Test
+    @DisplayName("a FixedDuration wave schedules the next placement exactly at its own end, not before or after")
+    void fixedDurationEndsExactlyAtItsOwnDuration() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withWave(new SimpleWaveDefinition("wave-a",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(2f)))
+            .withWave(new SimpleWaveDefinition("wave-b",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(2f)))
+            .withPlacements(LEVEL, List.of(
+                new WavePlacement("wave-a", 0f),
+                new WavePlacement("wave-b", 0f)));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        // wave-a spawns at t=0 (levelTime 1 after this tick); its FixedDuration(2s) has not yet
+        // elapsed, so wave-b must not have started.
+        system.update(world, 1f, InputFrame.IDLE);
+        assertEquals(1, world.entityCount());
+
+        // levelTime reaches 2s exactly here: wave-a ends and wave-b is scheduled and spawns the
+        // very same tick, since its own offset is zero.
+        system.update(world, 1f, InputFrame.IDLE);
+        assertEquals(2, world.entityCount());
+    }
+
+    @Test
+    @DisplayName("a Cleared wave does not end while an entity it spawned is still alive")
+    void clearedWaveWaitsForEveryEntityToBeGone() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withWave(new SimpleWaveDefinition("wave-a",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.Cleared()))
+            .withWave(new SimpleWaveDefinition("wave-b",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(1f)))
+            .withPlacements(LEVEL, List.of(
+                new WavePlacement("wave-a", 0f),
+                new WavePlacement("wave-b", 0f)));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+        assertEquals(1, world.entityCount());
+
+        // wave-a's single entity is still alive: many more ticks must not schedule wave-b.
+        for (int i = 0; i < 20; i++) {
+            system.update(world, 1f, InputFrame.IDLE);
+        }
+        assertEquals(1, world.entityCount());
+
+        // Destroying the last entity of wave-a lets it be resolved as cleared on the *next* tick,
+        // per SystemOrder.SPAWN's own one-tick-late documentation, and only then is wave-b scheduled.
+        int survivor = world.colliders().entityAt(0);
+        world.destroyEntity(survivor);
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(1, world.entityCount());
+        assertEquals("wave-b", world.waveOrigins().valueAt(0).waveId);
+    }
+
+    @Test
+    @DisplayName("a negative offset starts wave-b while wave-a is still running, unlike a zero offset")
+    void negativeOffsetOverlapsTwoWaves() {
+        // wave-a is FixedDuration(4s), so its end (levelTime 4) is known the instant it starts at
+        // levelTime 0 — scheduleNext resolves wave-b's placement predictively, right there, rather
+        // than waiting for wave-a to actually end. wave-a's own second spawn, at its local time 3s, is
+        // deliberately placed after where wave-b starts under the negative offset, so a run that
+        // reaches that point without wave-a's second entity proves wave-a genuinely has not ended yet.
+        assertEquals(2, entityCountAtLevelTime2(-2f),
+            "a -2s offset should start wave-b at levelTime 2, two ticks in, alongside wave-a's own "
+                + "still-running first entity");
+        assertEquals(1, entityCountAtLevelTime2(0f),
+            "a 0s offset should not have started wave-b yet at levelTime 2 — it is only due once "
+                + "wave-a's known end (levelTime 4) arrives, unlike the -2s offset above");
+    }
+
+    /**
+     * Runs two 1-second ticks (to level time 2s) against a level of two {@code FixedDuration(4s)}
+     * waves — wave-a first, then wave-b offset by {@code waveBOffsetSeconds} from wave-a's own known
+     * end (levelTime 4) — and returns how many entities exist at that point. wave-a's only entity by
+     * then is its first spawn (at local time 0); its second (at local time 3) is not due yet, and
+     * wave-a's own end condition (local time 4) is nowhere close to true, so any entity beyond that
+     * first one can only be wave-b's, started before wave-a ended.
+     */
+    private static int entityCountAtLevelTime2(float waveBOffsetSeconds) {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withWave(new SimpleWaveDefinition("wave-a",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null),
+                    new SpawnEvent(3f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(4f)))
+            .withWave(new SimpleWaveDefinition("wave-b",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(4f)))
+            .withPlacements(LEVEL, List.of(
+                new WavePlacement("wave-a", 0f),
+                new WavePlacement("wave-b", waveBOffsetSeconds)));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
+
+        return world.entityCount();
+    }
+
+    @Test
+    @DisplayName("moving a placement earlier in the level changes no other placement's own offset")
+    void movingAPlacementEarlierChangesNoOtherOffset() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            // wave-x is placed first in both lists below, purely so wave-a is never itself the very
+            // first placement of the level in either run: the level's actual first wave starts at
+            // level time zero, one tick earlier than SpawnSystem can observe any wave scheduled from
+            // another wave's end — an unrelated, tick-quantisation artefact of there being no "tick
+            // zero," not a violation of this rule. Anchoring wave-a behind wave-x in both lists keeps
+            // that artefact out of the comparison below.
+            .withWave(new SimpleWaveDefinition("wave-x",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(1f)))
+            .withWave(new SimpleWaveDefinition("wave-a",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(2f)))
+            .withWave(new SimpleWaveDefinition("wave-b",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(2f)))
+            .withWave(new SimpleWaveDefinition("wave-c",
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(3f)));
+
+        // wave-c sits last in one level, moved ahead of wave-x (earlier) in the other; wave-a and
+        // wave-b keep their own declared offsets — 0f from whichever precedes them, 4f from wave-a —
+        // in both.
+        List<WavePlacement> waveCLast = List.of(
+            new WavePlacement("wave-x", 0f),
+            new WavePlacement("wave-a", 0f),
+            new WavePlacement("wave-b", 4f),
+            new WavePlacement("wave-c", 0f));
+        List<WavePlacement> waveCFirst = List.of(
+            new WavePlacement("wave-c", 0f),
+            new WavePlacement("wave-x", 0f),
+            new WavePlacement("wave-a", 0f),
+            new WavePlacement("wave-b", 4f));
+
+        int maxTicks = 30;
+        Map<String, Integer> lastTicks = firstSpawnTicks(
+            content.withPlacements(LEVEL, waveCLast), maxTicks);
+        Map<String, Integer> firstTicks = firstSpawnTicks(
+            content.withPlacements(LEVEL, waveCFirst), maxTicks);
+
+        // wave-c moving ahead of wave-x genuinely delays wave-a's own start by wave-c's own
+        // duration — otherwise a SpawnSystem that ignored placement order entirely would pass the
+        // assertion below for the wrong reason.
+        assertTrue(firstTicks.get("wave-a") > lastTicks.get("wave-a"),
+            "wave-a should start later once wave-c is placed ahead of it");
+
+        // wave-b's own gap from wave-a — its declared 4f offset plus wave-a's own 2f duration — is
+        // unaffected by where wave-c sits: moving wave-c earlier shifts wave-a and wave-b by the
+        // same amount, leaving the interval between them exactly as declared.
+        int gapWithWaveCLast = lastTicks.get("wave-b") - lastTicks.get("wave-a");
+        int gapWithWaveCFirst = firstTicks.get("wave-b") - firstTicks.get("wave-a");
+        assertEquals(gapWithWaveCLast, gapWithWaveCFirst);
+    }
+
+    /**
+     * Runs {@code content}'s {@link #LEVEL} for up to {@code maxTicks} one-second ticks, returning
+     * the first tick (1-indexed) each distinct wave id is observed on any spawned entity's {@code
+     * WaveOrigin}. A wave id absent from the result never spawned within {@code maxTicks}.
+     */
+    private static Map<String, Integer> firstSpawnTicks(TestContent content, int maxTicks) {
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+        Map<String, Integer> firstTick = new java.util.HashMap<>();
+        for (int tick = 1; tick <= maxTicks; tick++) {
+            system.update(world, 1f, InputFrame.IDLE);
+            for (int i = 0; i < world.waveOrigins().size(); i++) {
+                firstTick.putIfAbsent(world.waveOrigins().valueAt(i).waveId, tick);
+            }
+        }
+        return firstTick;
     }
 
     @Test

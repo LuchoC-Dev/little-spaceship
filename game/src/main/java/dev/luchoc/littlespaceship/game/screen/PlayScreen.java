@@ -92,12 +92,12 @@ public final class PlayScreen implements Screen {
         worldRenderer = new WorldRenderer(atlas, PLAYFIELD_LEFT);
         input = new InputAdapter(viewport);
 
-        content = new JsonContentSource(Gdx.files.internal("data"));
+        content = new JsonContentSource(Gdx.files.internal("data"), game.levelId());
         hudRenderer = new HudRenderer(game.skin(), content.balance());
         // AudioDirector doubles as the simulation's GameEventSink — see its javadoc — so it must
         // exist before Simulation does.
         audioDirector = new AudioDirector(game.audio());
-        simulation = new Simulation(content, audioDirector, game.seed(), JsonContentSource.LEVEL_ID);
+        simulation = new Simulation(content, audioDirector, game.seed(), game.levelId());
         loop = new GameLoop(simulation);
 
         buildPauseStage();

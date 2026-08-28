@@ -1,9 +1,13 @@
 package dev.luchoc.littlespaceship.core.port;
 
 /**
- * One timestamped entry of a {@link WaveTimeline} — the intensity curve in executable form.
+ * One timestamped spawn — the intensity curve in executable form. Used two ways today: as an entry
+ * of the legacy, flat {@link WaveTimeline} ({@code at} since the level started), and as an entry of
+ * a {@link WaveDefinition}'s {@link WaveDefinition#spawns()} ({@code at} since the wave itself
+ * started). This type only ever means "a timestamped spawn" — which timeline's zero point {@code at}
+ * counts from is entirely up to the container holding it, never to this record.
  *
- * @param at seconds since the level started, when this wave spawns
+ * @param at seconds since the start of whichever timeline this event belongs to, when this wave spawns
  * @param enemyId the {@link EnemyDefinition} to spawn
  * @param formationId the {@link FormationDefinition} that lays it out
  * @param atX the anchor's horizontal position, a fraction of the playfield width in {@code [0, 1]},
