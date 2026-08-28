@@ -165,6 +165,24 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   closed**: `assessment.md`'s Part 3 evaluated a `Lifetime` timer component and concluded "No.
   Nothing in the 11 group needs a timer-expiring entity." The project owner named the case on
   27/08/2026, which is the standard invariant 6 now sets.
+
+  **Built, closing [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84):
+  `core/domain/component/Lifetime.java`, `core/domain/system/LifetimeSystem.java`.** The safety box
+  is 128 logical units past every playfield edge (`x` in `[-128, 336]`, `y` in `[-128, 398]`) —
+  `LifetimeSystem.SAFETY_MARGIN`. It clears the worst legitimate spawn measured against
+  `assets/data/formations.json` and `assets/data/enemies.json` on this date (`column-3`'s 44-unit
+  spread carrying `enemy-carrier`'s 15-unit radius, born at `y = 329`, `314` from its own edge) by 84
+  units, deliberately more than that 44-unit floor for the movement shapes phase 11c adds. `Lifetime`
+  is an optional per-archetype component (a `"lifetime": {"seconds": N}` spec, read the same way
+  `"health"` is), so no existing archetype needs a content change for the safety box alone to fix the
+  defect. **One consequence not previously named here:** `CleanupSystem` converges every destruction
+  path uniformly regardless of cause, by its own existing design (a drop is honoured and
+  `EnemyDestroyed` is emitted "regardless of what killed its holder"). An enemy removed by either
+  mechanism therefore still awards its `ScoreValue` and still resolves its `Drop`, exactly like one
+  the player defeated in combat — the escape happens off screen, so nothing is seen, but the score and
+  any drop are not withheld. This was a deliberate choice not to special-case an already-uniform,
+  already-decided convergence point for a game rule ("does escaping cost or gain the player anything")
+  that issue #84 explicitly left undecided; revisit if `level-designer` finds it exploitable.
 - **A movement shape is chosen in the spawn event, with the archetype supplying the default.** This is
   the half of [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) that 10c named and left
   open. **Still open:** which shapes exist, decided by the phase that builds them against the beats
