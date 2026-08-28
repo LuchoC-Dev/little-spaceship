@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
+import dev.luchoc.littlespaceship.core.domain.component.Lifetime;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
@@ -42,15 +43,84 @@ class LifetimeSystemTest {
     }
 
     @Test
-    @DisplayName("an enemy is never expired by leaving the playfield")
-    void neverExpiresAnEnemy() {
-        int enemy = world.createEntity();
-        world.transforms().set(enemy, new Transform(100f, -500f));
-        world.colliders().set(enemy, new Collider(4f, CollisionLayer.ENEMY));
+    @DisplayName("an enemy well inside the playfield is never touched, with or without a lifetime")
+    void keepsAnEnemyInsideThePlayfield() {
+        int withoutLifetime = enemy(100f, 150f, 4f);
+        int withLifetime = enemy(60f, 150f, 4f);
+        world.lifetimes().set(withLifetime, new Lifetime(0.5f));
+
+        for (int tick = 0; tick < 120; tick++) {
+            system.update(world, STEP, InputFrame.IDLE);
+        }
+
+        assertFalse(world.pendingDestruction().contains(withoutLifetime));
+        assertFalse(world.pendingDestruction().contains(withLifetime));
+    }
+
+    @Test
+    @DisplayName("an enemy with no lifetime, merely off the playfield, is not touched by the timer path")
+    void anEnemyWithNoLifetimeIsNotExpiredByPosition() {
+        int enemy = enemy(100f, -50f, 4f);
 
         system.update(world, STEP, InputFrame.IDLE);
 
         assertFalse(world.pendingDestruction().contains(enemy));
+    }
+
+    @Test
+    @DisplayName("an enemy's lifetime expiring while it is still on screen leaves it alone")
+    void anExpiredLifetimeNeverRemovesAVisibleEnemy() {
+        int enemy = enemy(100f, 150f, 4f);
+        world.lifetimes().set(enemy, new Lifetime(0.01f));
+
+        system.update(world, STEP, InputFrame.IDLE);
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertFalse(world.pendingDestruction().contains(enemy),
+            "the lifetime expired but the enemy is still visible, so it must wait");
+    }
+
+    @Test
+    @DisplayName("an enemy's lifetime expiring once it is off screen removes it")
+    void anExpiredLifetimeRemovesAnEnemyThatHasLeft() {
+        int enemy = enemy(100f, -50f, 4f);
+        world.lifetimes().set(enemy, new Lifetime(0.01f));
+
+        system.update(world, STEP, InputFrame.IDLE);
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(world.pendingDestruction().contains(enemy));
+    }
+
+    @Test
+    @DisplayName("the safety box removes an enemy far outside the playfield, with no lifetime at all")
+    void safetyBoxRemovesAnEnemyWithNoLifetime() {
+        int enemy = enemy(100f, SpawnSystem.PLAYFIELD_HEIGHT + LifetimeSystem.SAFETY_MARGIN + 50f, 4f);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(world.pendingDestruction().contains(enemy));
+    }
+
+    @Test
+    @DisplayName("the safety box clears the worst-case spawn: column-3's 44-unit spread on enemy-carrier's 15-unit radius")
+    void safetyBoxClearsTheWorstCaseSpawn() {
+        float carrierRadius = 15f;
+        float columnThreeSpread = 44f;
+        float worstCaseSpawnY = SpawnSystem.PLAYFIELD_HEIGHT + carrierRadius + columnThreeSpread;
+        int enemy = enemy(100f, worstCaseSpawnY, carrierRadius);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertFalse(world.pendingDestruction().contains(enemy),
+            "a legitimate spawn must never be destroyed by the safety box");
+    }
+
+    private int enemy(float x, float y, float radius) {
+        int entity = world.createEntity();
+        world.transforms().set(entity, new Transform(x, y));
+        world.colliders().set(entity, new Collider(radius, CollisionLayer.ENEMY));
+        return entity;
     }
 
     private int projectile(float x, float y) {
