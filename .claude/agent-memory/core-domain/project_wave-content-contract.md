@@ -1,13 +1,13 @@
 ---
 name: wave-content-contract
-description: Adding WaveDefinition/WaveEndCondition/ContentSource.wave(id) for #111 — why the new lookup is a default method, and why WaveTimeline was left untouched in code.
+description: Adding WaveDefinition/WavePlacement/WaveEndCondition/ContentSource.wave(id) for #111 — why the new lookup is a default method, why WaveTimeline was left untouched in code, and the offset-placement correction.
 metadata:
   type: project
 ---
 
 Phase 11b, task 3 (#111, PR #119 against `phase/11b-wave-system`). Added `WaveDefinition` (id, spawns,
-endCondition, offsetSeconds), `WaveEndCondition` (sealed: `FixedDuration`/`Cleared`) and
-`SimpleWaveDefinition` to `core.port` — the ninth content kind.
+endCondition — three things), `WavePlacement` (waveId, offsetSeconds), `WaveEndCondition` (sealed:
+`FixedDuration`/`Cleared`) and `SimpleWaveDefinition` to `core.port` — the ninth content kind.
 
 **A new `ContentSource` method has to be a `default` method, or it breaks a module you don't own.**
 `ContentSource` is implemented in exactly two places: `core`'s own `TestContent` (test support, mine
@@ -35,15 +35,20 @@ the new `WaveDefinition.spawns()` (wave-relative `at`) — its doc was generalis
 reference frame, since it's genuinely just "a timestamped spawn," and the container decides what zero
 means.
 
-**Issue #111's own wording settled a design question the plan's prose left ambiguous.** The plan says a
-wave declares "an id, its spawns, one end condition and one offset" but doesn't say which type carries
-the offset. The plan's prose ("a wave is placed relative to the end of the one before it") reads as if
-placement were a property of *where a level puts a wave*, which would suggest a separate
-placement/reference record. The issue text is explicit: "its placement: an offset relative to the end
-of the wave before it" is listed as one of the four things *the wave itself* declares — so `offset()`
-lives on `WaveDefinition`, and a level's sequence is nothing more than an ordered list of wave ids. When
-the plan and the linked issue disagree on a structural detail, the issue is probably the more literal
-source — it's what the acceptance criteria are checked against.
+**Corrected after review: a "declares these four things" list is not evidence they belong on one
+type — reuse semantics outrank the literal grouping.** Issue #111 lists "an id, its spawns, one end
+condition, its placement" as what a wave declares, and I read that as license to put `offsetSeconds()`
+directly on `WaveDefinition`, since the issue phrased placement as one of *the wave's* four properties.
+That was wrong: the project owner caught it by reading my own `WaveDefinition` javadoc back at me — it
+claimed the id-lookup "lets the same wave id be referenced twice... without copying anything," which is
+false the moment the wave itself carries where it starts, since both references are then forced to
+share one offset. The tell was already sitting in my own doc; I didn't re-read it against the reuse
+claim before shipping. Fixed by moving `offsetSeconds()` onto a new `WavePlacement` record (`waveId`,
+`offsetSeconds`) — the type a level's ordered sequence becomes — leaving `WaveDefinition` with three
+properties. **Lesson: when a spec lists several properties as belonging to one thing, check each one
+against what the surrounding prose independently claims that thing can do (here, "reusable") before
+building it as one record — a list format flattens a structural distinction the surrounding text
+already contradicts.**
 
 See [[project_content-pipeline-design]] for the general ComponentSpec/registry pattern this follows,
 and [[project_game-systems-design]] for why an optional-per-archetype component (the same shape

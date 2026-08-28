@@ -11,4 +11,4 @@
 - [Boss volley density](project_boss-volley-density.md) — fanning a volley with fixed ratio arrays instead of a new content key, and a seen-set trick for testing what one tick spawned.
 - [Player vertical clamp](project_player-vertical-clamp.md) — PLAYFIELD_HEIGHT was already shared before this fix; no written vertical-range decision; single-tick tests miss an absent clamp.
 - [Entity lifetime and safety box](project_entity-lifetime-and-safety-box.md) — CleanupSystem's uniform convergence quietly scores an escaped enemy; how the 128-unit margin was measured.
-- [Wave content contract](project_wave-content-contract.md) — new ContentSource methods must be default (whole-repo build breaks game), a "don't touch system X" task can be blocked by X being the type's only consumer, issue text over plan prose on structure.
+- [Wave content contract](project_wave-content-contract.md) — new ContentSource methods must be default (whole-repo build breaks game); a "don't touch system X" task can be blocked by X's only consumer; check each declared property against the surrounding prose's own claims (reuse) before grouping them onto one type.
