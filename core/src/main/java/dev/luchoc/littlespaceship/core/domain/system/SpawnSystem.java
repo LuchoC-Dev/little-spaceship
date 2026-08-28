@@ -32,19 +32,22 @@ import java.util.List;
  *
  * <p><b>How a level's placements resolve into running waves.</b> {@link WavePlacement#offsetSeconds()}
  * is relative to the end of the placement before it, so the next placement can only be scheduled once
- * the current one's end time is known. For a {@link WaveEndCondition.FixedDuration} wave that end
- * time is deterministic — {@code startTime + seconds} — but it is still only <em>acted on</em> the
- * first tick this system observes {@code levelTime} has reached it, exactly the same one-tick
- * granularity every fixed-step system already has. For a {@link WaveEndCondition.Cleared} wave the end
+ * the current one's end time is known — and the two end conditions know that at very different
+ * moments. For a {@link WaveEndCondition.FixedDuration} wave the end time is deterministic —
+ * {@code startTime + seconds} — the instant the wave itself starts, so {@link #scheduleNext} resolves
+ * the placement after it <em>predictively</em>, right then, chaining through as many further
+ * {@code FixedDuration} placements as follow consecutively. That is what lets a negative offset
+ * genuinely overlap two waves: both are in {@link #activeWaves} at once, rather than the second only
+ * appearing on the tick the first is removed. For a {@link WaveEndCondition.Cleared} wave the end
  * time cannot be known until it actually happens: {@code CLEANUP}, the stage that removes a spawned
  * entity, runs after {@code SPAWN} in the very same tick, so a wave clearing on this tick is only
  * visible to this system on the <em>next</em> one — {@code SPAWN} stays fifth in {@link SystemOrder},
  * and a {@code cleared} wave resolves one tick late as a direct, deterministic consequence of that
- * order, not a bug. Both cases feed the same mechanism: whichever tick this system first observes a
- * wave has ended, that tick's {@code levelTime} becomes the "end of the placement before it" the next
- * one in the sequence is offset from. A negative offset can therefore place the next wave's start
- * before that detection tick; {@link #scheduleNext} clamps it forward to {@code levelTime} rather than
- * retroactively spawning anything in the past.
+ * order, not a bug. Only this reactive case clamps its start forward to {@code levelTime}: it is the
+ * one whose "end of the placement before it" is discovered after the fact, so a negative offset must
+ * not retroactively spawn anything in the past. The predictive {@code FixedDuration} case carries no
+ * such clamp — a negative offset there is free to place the next wave's start before the current
+ * {@code levelTime}, which is exactly the overlap it is for.
  *
  * <p>Several waves can be active at once — that is what a negative offset is for — so every tick
  * first lets every active wave spawn whatever of its own {@link WaveDefinition#spawns()} is now due,
@@ -115,10 +118,7 @@ public final class SpawnSystem implements GameSystem {
             // step, which is not what "clamp forward on late detection" in scheduleNext is for.
             started = true;
             placements = world.content().placements(levelId);
-            ActiveWave first = scheduleNext(world, 0f);
-            if (first != null) {
-                activeWaves.add(first);
-            }
+            activeWaves.addAll(scheduleNext(world, 0f));
         }
         levelTime += step;
 
@@ -139,10 +139,13 @@ public final class SpawnSystem implements GameSystem {
     }
 
     /**
-     * Removes every active wave whose end condition is true this tick and schedules the placement
-     * after each, returning whether at least one did. Collects newly scheduled waves separately and
-     * adds them only once the removal pass is over, since {@link #activeWaves} cannot be both
-     * iterated and appended to at the same time.
+     * Removes every active wave whose end condition is true this tick and, for a {@link
+     * WaveEndCondition.Cleared} wave, reactively schedules the placement after it — returning whether
+     * at least one wave ended. A {@link WaveEndCondition.FixedDuration} wave's own follower was already
+     * scheduled predictively back when this wave itself started (see {@link #scheduleNext}), so ending
+     * one here schedules nothing further. Collects reactively scheduled waves separately and adds them
+     * only once the removal pass is over, since {@link #activeWaves} cannot be both iterated and
+     * appended to at the same time.
      */
     private boolean resolveEnded(World world) {
         List<ActiveWave> scheduled = null;
@@ -155,12 +158,14 @@ public final class SpawnSystem implements GameSystem {
             }
             it.remove();
             anyEnded = true;
-            ActiveWave next = scheduleNext(world, levelTime);
-            if (next != null) {
-                if (scheduled == null) {
-                    scheduled = new ArrayList<>();
+            if (wave.definition.endCondition() instanceof WaveEndCondition.Cleared) {
+                List<ActiveWave> next = scheduleNext(world, levelTime);
+                if (!next.isEmpty()) {
+                    if (scheduled == null) {
+                        scheduled = new ArrayList<>();
+                    }
+                    scheduled.addAll(next);
                 }
-                scheduled.add(next);
             }
         }
         if (scheduled != null) {
@@ -171,23 +176,45 @@ public final class SpawnSystem implements GameSystem {
 
     /**
      * Resolves the next placement of the level, if any remain, into a running {@link ActiveWave}
-     * started at {@code previousEndTime + offsetSeconds}, clamped forward to {@link #levelTime} so a
-     * negative offset following a {@link WaveEndCondition.Cleared} wave — whose true end time is only
-     * ever discovered after the fact — never schedules a start in the past.
+     * started at {@code previousEndTime + offsetSeconds}. When that new wave is itself a {@link
+     * WaveEndCondition.FixedDuration} one, its own end time is already known — {@code start + seconds}
+     * — so the placement after <em>it</em> is resolved right away too, recursively, rather than waiting
+     * for {@link #resolveEnded} to notice it ended later. The chain only stops at a level's last
+     * placement or at a {@link WaveEndCondition.Cleared} wave, whose true end is discoverable only
+     * after the fact.
      *
-     * @param previousEndTime the level time the placement before this one ended, or {@code 0f} for
-     *     the level's very first placement
-     * @return the new active wave, or {@code null} when the level has no more placements
+     * <p>{@code previousEndTime} is clamped forward to {@link #levelTime} so a negative offset never
+     * schedules a start earlier than "now" for the wave whose end time this call was actually told —
+     * the only case that matters for a {@link WaveEndCondition.Cleared} predecessor, since a {@link
+     * WaveEndCondition.FixedDuration} predecessor's known end is always already {@code <= levelTime}
+     * by construction. This is deliberately the one clamp negative offsets still respect: it protects
+     * "no retroactive spawning", not "no overlap".
+     *
+     * @param previousEndTime the level time the placement before this one ends (known exactly for a
+     *     {@code FixedDuration} predecessor, or the current tick's {@code levelTime} when called
+     *     reactively for a {@code Cleared} one), or {@code 0f} for the level's very first placement
+     * @return every {@link ActiveWave} this call resolved, in order — empty once the level has no more
+     *     placements, one or more when a chain of {@code FixedDuration} placements resolves at once
      */
-    private ActiveWave scheduleNext(World world, float previousEndTime) {
+    private List<ActiveWave> scheduleNext(World world, float previousEndTime) {
+        List<ActiveWave> created = new ArrayList<>();
+        scheduleChain(world, previousEndTime, created);
+        return created;
+    }
+
+    private void scheduleChain(World world, float previousEndTime, List<ActiveWave> created) {
         if (nextPlacementIndex >= placements.size()) {
-            return null;
+            return;
         }
         WavePlacement placement = placements.get(nextPlacementIndex);
         nextPlacementIndex++;
         float start = Math.max(previousEndTime + placement.offsetSeconds(), levelTime);
         WaveDefinition definition = world.content().wave(placement.waveId());
-        return new ActiveWave(definition, start);
+        ActiveWave wave = new ActiveWave(definition, start);
+        created.add(wave);
+        if (definition.endCondition() instanceof WaveEndCondition.FixedDuration duration) {
+            scheduleChain(world, start + duration.seconds(), created);
+        }
     }
 
     private void spawnDue(World world, ActiveWave wave) {
