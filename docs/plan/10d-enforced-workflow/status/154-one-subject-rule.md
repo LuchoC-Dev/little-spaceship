@@ -55,6 +55,18 @@ It now counts only **added** files (`--diff-filter=A`). Correcting an older frag
 
 Same family as the four before it, and the same cause: the author had never modified an existing fragment, so the check was written as if that never happens. It is fixed here rather than in its own issue because **#154 cannot be closed without it** — the correction it demands is the thing the check forbade.
 
+## And then it happened again, in this pull request
+
+`pre-pr-check` was taught to count only added fragments. **`pr-check.yml` was not**, so it failed this very pull request:
+
+```
+FAIL 2 status fragments; a task writes exactly one
+```
+
+One rule, two implementations, drifting — **inside the pull request whose entire subject is that one rule in two implementations drifts.** It is the plainest possible demonstration that the fix for #154 had to be a shared script rather than two lists kept in agreement by care.
+
+So the fragment rule got the same treatment: `tools/status-fragments` prints the fragments a branch adds, and both `pre-pr-check` and `pr-check.yml` ask it. Two shared scripts now, `commit-subject-ok` and `status-fragments`, and the rule behind both: **if two things must agree, do not write it twice.**
+
 ## Open
 
 [#155](https://github.com/LuchoC-Dev/little-spaceship/issues/155) is the other gap the same audit found: neither check verifies that a status fragment sits in the phase directory its base branch names, so one phase's work can be recorded in another's status. Same family — one rule, two implementations that must agree.
