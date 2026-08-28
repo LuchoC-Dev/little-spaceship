@@ -1,7 +1,6 @@
 # Phase 11b — The wave system · status
 
-**State:** done — every task merged into `phase/11b-wave-system`, which is open as a pull request
-against `dev`
+**State:** done — merged into `dev` in [#131](https://github.com/LuchoC-Dev/little-spaceship/pull/131)
 **Updated:** 28/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
