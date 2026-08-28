@@ -20,10 +20,13 @@ Update this file when the phase moves. It is the only place phase progress is re
   removes an entity still on screen) and a safety box in `LifetimeSystem`, 128 units past every
   playfield edge, that removes an `ENEMY`-layer entity outright regardless of whether it carries a
   `Lifetime`. See `docs/planning/08-decisions-and-open-items.md`, "The 11 group, 27/08/2026", for the
-  box's exact coordinates, what they clear, and the score/drop consequence this surfaced
-  (`CleanupSystem` converges every destruction path uniformly, so an escaped enemy still awards its
-  `ScoreValue` — a deliberate choice not to special-case an already-decided convergence point for a
-  game rule #84 left open).
+  box's exact coordinates and what they clear. **The project owner then decided, on 28/08/2026, the
+  game rule the first version of this branch had correctly refused to decide by implementation: an
+  enemy that escapes gives the player nothing** — no score, no drop, no `EnemyDestroyed` (which would
+  otherwise have played an explosion sound off screen through `AudioDirector`, the simulation's
+  `GameEventSink`). `LifetimeSystem` now strips an escaping entity's `ScoreValue`, `Drop` and
+  `Collider` before marking it for destruction, so `ScoreSystem` and `CleanupSystem` need no change at
+  all — each already does nothing when the component it reads is absent.
 
 ## In progress
 
@@ -35,12 +38,20 @@ Waiting on 11a. Every task here is a behaviour change and 11a is the net.
 
 ## Decisions taken while implementing
 
-- **An escaped enemy still awards its `ScoreValue` and resolves its `Drop`.** `CleanupSystem`
-  converges every destruction path uniformly by existing design ("regardless of what killed its
-  holder"); special-casing it for "died to the safety box or an expired lifetime" would have been
-  deciding an undecided game rule (issue #84 explicitly left "whether an escaped enemy simply
-  disappears, costs the player something..." open) rather than implementing a decided one. Recorded
-  in `docs/planning/08-decisions-and-open-items.md`.
+- **First cut: an escaped enemy still awarded its `ScoreValue` and resolved its `Drop`**, deliberately
+  not special-cased — issue #84 explicitly left "does escaping cost or gain the player anything" open,
+  and special-casing it would have been deciding an undecided game rule by implementation. **The
+  project owner then decided it, on 28/08/2026: an escaped enemy gives nothing.** Implemented by
+  having `LifetimeSystem` — the only place that knows an entity is escaping rather than being
+  defeated — strip that entity's `ScoreValue`, `Drop` and `Collider` before calling
+  `World.markForDestruction`. `ScoreSystem` and `CleanupSystem` needed no change: both already do
+  nothing when the component they read is absent, and `CleanupSystem`'s own "converges every
+  destruction path uniformly, regardless of what killed its holder" stays exactly true — no
+  source-aware branch was added to it. Two passes over `world.colliders()` inside `expireEnemies`
+  (collect escaping entities first, strip and mark them only after the loop finishes) rather than one,
+  because stripping an entity's own `Collider` while a loop is still walking that same store reorders
+  its dense array and skips an element — `ComponentStore`'s own documented hazard. Recorded in
+  `docs/planning/08-decisions-and-open-items.md`.
 - **The safety box applies only to the `ENEMY` collision layer**, not to pickups or the boss's parts.
   Pickups do not move on their own (`CleanupSystem` spawns them at their source's position, `Motion`
   and `Lifetime` are never attached to one), so they cannot leave the playfield; the boss's parts stay
@@ -52,10 +63,12 @@ Waiting on 11a. Every task here is a behaviour change and 11a is the net.
   `assets/data/enemies.json` declares one yet — the safety box alone is what fixes #84 for existing
   content, since `assets/data/` is outside this agent's boundary (`core/` only). Whether any archetype
   should get an explicit, shorter lifetime is a content decision for `level-designer`.
-- Updated the golden fingerprint in `LevelScoreReplayTest` (`score=1350→1600 entities=12→11`):
-  `enemy-rush`'s "dive" trajectory carries it off the bottom of the playfield, where it used to linger
-  forever, uncounted; it is now correctly swept up and scored once fully off screen. See the test's
-  own updated comment for the exact accounting.
+- The golden fingerprint in `LevelScoreReplayTest` went through two values before settling: the
+  original bug (`entities=12`, the escaped `enemy-rush` never removed) to the first-cut fix
+  (`score=1600 entities=11`, escaping scored) to the final rule (`score=1350 entities=11`, escaping
+  scores nothing — the entity count is fixed, the score is exactly what it was before #84 since
+  nothing was ever credited for an escape). Only the final value is committed; see the test's own
+  comment for the accounting.
 
 ## Notes for whoever comes next
 

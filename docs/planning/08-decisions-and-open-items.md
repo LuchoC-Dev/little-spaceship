@@ -175,14 +175,22 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   units, deliberately more than that 44-unit floor for the movement shapes phase 11c adds. `Lifetime`
   is an optional per-archetype component (a `"lifetime": {"seconds": N}` spec, read the same way
   `"health"` is), so no existing archetype needs a content change for the safety box alone to fix the
-  defect. **One consequence not previously named here:** `CleanupSystem` converges every destruction
-  path uniformly regardless of cause, by its own existing design (a drop is honoured and
-  `EnemyDestroyed` is emitted "regardless of what killed its holder"). An enemy removed by either
-  mechanism therefore still awards its `ScoreValue` and still resolves its `Drop`, exactly like one
-  the player defeated in combat — the escape happens off screen, so nothing is seen, but the score and
-  any drop are not withheld. This was a deliberate choice not to special-case an already-uniform,
-  already-decided convergence point for a game rule ("does escaping cost or gain the player anything")
-  that issue #84 explicitly left undecided; revisit if `level-designer` finds it exploitable.
+  defect.
+
+  **An enemy that leaves the simulation without being defeated gives the player nothing: no score, no
+  drop, no `EnemyDestroyed` — decided by the project owner on 28/08/2026.** Score rewards killing, not
+  letting something through, and the un-emitted `EnemyDestroyed` matters beyond the score: `game`'s
+  `AudioDirector` is the simulation's `GameEventSink`, so emitting it for an escape would have played
+  an explosion sound for an enemy the player never hit, off screen. `LifetimeSystem` is the only place
+  that knows an entity is escaping rather than being defeated, so it strips that entity's `ScoreValue`,
+  `Drop` and `Collider` before calling `World.markForDestruction` — `ScoreSystem`, `CleanupSystem`'s
+  drop resolution and its `EnemyDestroyed` emission are each already conditional on the component they
+  read being present, so all three naturally do nothing once it is gone. `CleanupSystem` needed no
+  change and its "converges every destruction path uniformly, regardless of what killed its holder"
+  stays exactly true: no second, source-aware branch was added to it, an escaping entity simply no
+  longer carries anything a uniform sweep would find interesting. This supersedes the non-decision
+  originally recorded here (before this date, the intermediate build awarded the score and drop
+  uniformly and left the question open).
 - **A movement shape is chosen in the spawn event, with the archetype supplying the default.** This is
   the half of [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) that 10c named and left
   open. **Still open:** which shapes exist, decided by the phase that builds them against the beats
