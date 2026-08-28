@@ -47,7 +47,11 @@ it ran it caught the missing executable bit that killed phase 09's first two CI 
 
 A rejection goes back to the worker only while that worker is still open and the fix is inside what it just did. Once it is closed it stays closed: the coordinator takes prose fixes of one or two files, and anything larger becomes a new issue against the state already in Git. `docs/planning/13-working-with-agents.md` has the rule and what phase 09 measured behind it.
 
-**Status.** Update the phase's `status.md` **on the branch, before the PR is reviewed**. It is part of the phase's work, it travels with the code, and it lets the reviewer check whether the status tells the truth. Record what was completed, what is open, and anything the next person needs to know.
+**Status.** Write your task's own file, `docs/plan/<phase>/status/<issue>-<slug>.md`, **on the branch, before the PR is reviewed**. It is part of the phase's work, it travels with the code, and it lets the reviewer check whether the status tells the truth. Record what was completed, what was decided that the plan did not specify, what is open, and anything the next person needs to know.
+
+**One file per task, never a shared one.** Two tasks running at the same time never write the same path, so they cannot conflict — not "rarely", not "if the insertions land far enough apart". Phase 11b learned this the expensive way: every parallel agent edited one `docs/plan/11b-wave-system/status.md`, an agent hit a conflict there and force-pushed to escape it, and `reviewer` found that two other branches had auto-merged cleanly only because their two paragraphs happened to land at different offsets. The same shared file also produced the opposite failure — two merged pull requests touched it not at all, so a real defect and its fix were missing from the record until the coordinator noticed at close.
+
+**The phase's own `status.md` is the coordinator's**, and holds only the `State:` line, the date and the phase narrative. It is written twice: when the phase opens and when it closes, assembled from the fragments. Do not edit it for per-task progress — that is what your fragment is for.
 
 **Merge** once accepted — the coordinator merges the sub-branch into the phase branch. When every
 task of the phase is in, the phase branch does **not** merge either: it opens a pull request against
