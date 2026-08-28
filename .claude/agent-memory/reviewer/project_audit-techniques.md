@@ -218,3 +218,30 @@ Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
   "*/build/test-results/test" -name "*.xml"` can return zero on Windows Git Bash for a path that
   exists — `cd` straight into `core/build/test-results/test` and glob `*.xml` there instead of trusting
   a `find -path` pattern across a multi-module Gradle tree.
+
+## For falsifying a rule-named test by mutating the system under test in place
+
+- **Copy the file once to the scratchpad before mutating it in the worktree** (`cp SpawnSystem.java
+  SpawnSystem.java.orig` under the scratchpad, never under `/tmp` on Windows — see the memory-tooling
+  note below), then edit-run-restore per mutation. `git diff`/`git checkout --` also work but the
+  scratchpad copy survives even if the worktree gets `git worktree remove`d mid-session.
+- **Use `--rerun-tasks`, not `--rerun` or a bare re-run, when a Gradle test task must actually
+  recompile.** Plain `./gradlew :core:test --tests X` after editing a source file under an existing
+  worktree twice showed `compileJava UP-TO-DATE` and "BUILD SUCCESSFUL" with zero tests executed
+  against the mutation — not a real green, a stale-cache false negative. `--rerun-tasks` forces
+  `compileJava`/`compileTestJava`/`test` to actually run every time; treat any falsification result
+  that shows `UP-TO-DATE` on `compileJava` as unproven and rerun with the flag before trusting it.
+- **Mutate the *exact* mechanism a `@DisplayName` claims, not just any line nearby, and if the
+  obvious one-line break doesn't move the test, try the mechanism that actually produces the
+  observed behaviour before concluding the test is vacuous.** A boundary check (`>=` vs `>`) that
+  used to gate scheduling can become dead for that purpose after a predictive rewrite while the
+  arithmetic that replaced it (`start + duration.seconds()`) is what the test actually protects —
+  both are one-line mutations, only one of them moves the assertion. Try both before writing off a
+  test.
+- **`python3` on this machine is native Windows (`sys.platform == 'win32'`, at
+  `/c/Users/lucho/AppData/Local/Python`), so it cannot see Git Bash's `/tmp`.** Write scratch data
+  under the scratchpad's real Windows path
+  (`C:\Users\lucho\AppData\Local\Temp\claude\<session>\scratchpad`) when a Python script needs to read
+  a file a Bash `cp`/`cat` wrote — `/tmp/foo.json` from bash and `open('/tmp/foo.json')` from `python3`
+  are two different filesystems here. Bash sees the scratchpad fine via its `/c/...` mount, so writing
+  there from both sides is the one path that works for both tools.
