@@ -7,6 +7,8 @@ import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Lifetime;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Expires projectiles once they leave the playfield, and removes an escaped enemy from the
@@ -47,6 +49,16 @@ import dev.luchoc.littlespaceship.core.port.InputFrame;
  * 314 by 84 units, deliberately more than the 44-unit floor the formations measured on this date
  * demand, since phase 11c adds movement shapes that travel further and must not be eaten by this box
  * on the way out and back in.
+ *
+ * <p><b>An enemy that escapes by either mechanism gives the player nothing</b> — decided by the
+ * project owner on 28/08/2026: score rewards killing, not letting something through. This system is
+ * the only thing that has to know that: an escaping enemy has its {@code ScoreValue}, {@code Drop}
+ * and {@code Collider} stripped right here, before {@link World#markForDestruction(int)}, so {@code
+ * ScoreSystem}, {@code CleanupSystem}'s drop resolution and its {@code EnemyDestroyed} emission — all
+ * three already conditional on the component they read being present — simply find nothing to act on.
+ * {@code CleanupSystem}'s own "converges every destruction path uniformly, regardless of what killed
+ * its holder" stays exactly true: this system does not add a second, source-aware branch to it, it
+ * only makes sure an escaped entity no longer carries anything a uniform sweep would find interesting.
  */
 public final class LifetimeSystem implements GameSystem {
 
@@ -103,9 +115,18 @@ public final class LifetimeSystem implements GameSystem {
         }
     }
 
+    /**
+     * Finds every enemy that has escaped this tick, by either mechanism, in one pass over {@link
+     * World#colliders()} — and only then strips and marks them, in a second pass. The two passes are
+     * not a style choice: {@link ComponentStore}'s own documentation warns that removing a component
+     * from the very store a loop is walking reorders its dense array and skips an element, so {@link
+     * #strip} (which removes this entity's {@code Collider}) cannot run while this method is still
+     * mid-iteration over that same store.
+     */
     private static void expireEnemies(World world) {
         ComponentStore<Collider> colliders = world.colliders();
         ComponentStore<Transform> transforms = world.transforms();
+        List<Integer> escaped = new ArrayList<>();
         for (int i = 0; i < colliders.size(); i++) {
             int entity = colliders.entityAt(i);
             Collider collider = colliders.valueAt(i);
@@ -117,16 +138,31 @@ public final class LifetimeSystem implements GameSystem {
                 continue;
             }
             if (isPastSafetyBox(transform, collider.radius)) {
-                world.markForDestruction(entity);
+                escaped.add(entity);
                 continue;
             }
             Lifetime lifetime = world.lifetimes().get(entity);
             if (lifetime != null
                 && lifetime.remaining <= 0f
                 && isFullyOffPlayfield(transform, collider.radius)) {
-                world.markForDestruction(entity);
+                escaped.add(entity);
             }
         }
+        for (int i = 0; i < escaped.size(); i++) {
+            strip(world, escaped.get(i));
+        }
+    }
+
+    /**
+     * Removes exactly the components that would make this entity's destruction count as a kill —
+     * see the class javadoc for why stripping them here is enough, with no change needed anywhere
+     * else in the pipeline.
+     */
+    private static void strip(World world, int entity) {
+        world.scoreValues().remove(entity);
+        world.drops().remove(entity);
+        world.colliders().remove(entity);
+        world.markForDestruction(entity);
     }
 
     private static boolean isPastProjectileMargin(Transform transform) {
