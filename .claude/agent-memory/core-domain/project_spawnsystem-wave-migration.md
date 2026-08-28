@@ -1,6 +1,6 @@
 ---
 name: spawnsystem-wave-migration
-description: Migrating SpawnSystem from a flat WaveTimeline cursor to WavePlacement/WaveDefinition (#112) — the first-tick scheduling bug this produced, and how to trust an inherited uncommitted diff.
+description: Migrating SpawnSystem from a flat WaveTimeline cursor to WavePlacement/WaveDefinition (#112) — the first-tick scheduling bug, how to trust an inherited uncommitted diff, when a ContentSource method may actually be defaulted, a self-equality test trap a reviewer's mutation testing caught, and the first-wave one-tick head start.
 metadata:
   type: project
 ---
@@ -35,10 +35,21 @@ the whole module failed to build.
 
 **`WaveTimeline`'s "superseded, not yet retired" state (see [[project_wave-content-contract]]) held
 past this task too, for the same reason.** `game`'s `JsonContentSource` still populates it for
-`level-01.json`, not yet migrated (issue #114) — `ContentSource.timeline(String)` stayed a `default`
-throwing method rather than being deleted, since `core-domain` may not edit `game`. Checked this held
+`level-01.json`, not yet migrated (issue #114) — `core-domain` may not edit `game`. Checked this held
 by grepping `game/src` for `WaveOrigin`/`SimpleWaveTimeline` usage and running a whole-repo
 `./gradlew compileJava compileTestJava` before opening the PR — clean.
+
+**Correction, caught by `reviewer`: `ContentSource.timeline(String)` should not have become a
+`default`, and I wrote it as one on my first pass without checking whether the reason actually applied.**
+I copied `wave(String)`'s justification ("kept defaulted because `game`'s `JsonContentSource` still
+overrides it") without checking whether `timeline()` had the same *gap in implementers* that
+justifies a default there — it doesn't: both `JsonContentSource` and `TestContent` already implement
+`timeline()` on this branch, so nothing forces the demotion; `./gradlew build` stays green with it
+abstract. **The actual rule a `default` on `ContentSource` is for: at least one production
+implementer genuinely doesn't have the method yet** (true for `wave`/`placements`, both waiting on
+issue #113's loader), not "this method is part of the same retirement story as another one that is."
+Before defaulting a `ContentSource` method, grep every known implementer (`game`'s adapter, `core`'s
+`TestContent`) for an existing override, not just reuse a neighbouring method's stated reason.
 
 **A conditional final step in an issue comment needs the actual PR state checked, not just a local
 branch grep.** #112's issue comment said to flip `ContentSource.wave(String)` to abstract only once
@@ -47,3 +58,28 @@ branch grep.** #112's issue comment said to flip `ContentSource.wave(String)` to
 which showed #113's implementation (PR #120) still `DRAFT`, plus confirming `JsonContentSource` has no
 `wave(String)` override yet. Left the default in place, per the comment's own instruction not to block
 on it.
+
+**Correction, caught by `reviewer` via mutation: a test that reuses the same object instance across
+two "different" inputs and asserts equality proves nothing, however real the surrounding setup looks.**
+My first version of `movingAPlacementEarlierChangesNoOtherOffset` built two `List<WavePlacement>` by
+hand, put the *same* `WavePlacement` object in both, and asserted it equalled itself — it never called
+`SpawnSystem`, `World` or `update()`, so it stayed green under every mutation `reviewer` tried,
+including deleting the `do { … } while (progressed)` re-check loop that a real test
+(`negativeOffsetOverlapsTwoWaves`) correctly caught. **Lesson: a rule-named test for a
+`SpawnSystem`/timing property must actually run `SpawnSystem`; a test that only exercises the record's
+own `equals()` or constructor is testing a different, much weaker claim than its `@DisplayName` states.**
+
+**Rewriting that test surfaced a genuine, separate tick-quantisation asymmetry worth knowing about
+`SpawnSystem`: the level's very first wave gets a real one-tick head start no later-scheduled wave
+gets.** The first placement is scheduled *before* `levelTime += step` on tick 1 (see the fix above), so
+its clock starts at level time 0. Every other wave is scheduled from inside `resolveEnded`, which runs
+*after* the increment, so its clock starts at whatever `levelTime` already reached that tick — but
+thanks to the `do { … } while (progressed)` loop, it still gets to fire its own zero-offset spawn event
+in that same tick, not the next one. Net effect: comparing "tick wave-A's own spawn fires" to "tick
+wave-B's own spawn fires" is invariant to what precedes wave-A *only if wave-A is never itself the
+level's literal first placement* in either scenario being compared — otherwise the comparison silently
+mixes in this one-tick artefact and produces a real, reproducible off-by-one (measured directly: 5 vs.
+6 ticks) that has nothing to do with the property under test. Fixed by anchoring the wave under test
+behind an unrelated filler wave in both scenarios. **Lesson: a test that runs two scenarios through a
+tick-quantised system and diffs a derived tick count needs to rule out boundary-only differences
+(here, "is this entity's wave the very first one") before trusting the diff means what the test claims.**
