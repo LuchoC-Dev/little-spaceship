@@ -43,6 +43,18 @@ And the gate, against the real revert commit that failed before the fix: it pass
 
 `status/137-issue-contract.md` said the hook checks "against the same rule `tools/pre-pr-check` applies", listing all five exemptions. **False for four of them.** It was written by testing the hook and never the gate — the same shape phase 09 was caught by, and the reason this project has an evidence rule at all. Corrected in place, with a dated note rather than a silent edit.
 
+## A sixth gap, found by trying to land this one
+
+The fragment check counted **any** fragment the diff touched, so correcting `137-issue-contract.md` — which is part of closing this issue, since that document carries the false claim — registered as writing a second fragment:
+
+```
+FAIL 2 status fragments in one branch; a task writes exactly one
+```
+
+It now counts only **added** files (`--diff-filter=A`). Correcting an older fragment is not writing a new one, and the rule as written made it impossible to fix a past fragment and record the fix in the same branch.
+
+Same family as the four before it, and the same cause: the author had never modified an existing fragment, so the check was written as if that never happens. It is fixed here rather than in its own issue because **#154 cannot be closed without it** — the correction it demands is the thing the check forbade.
+
 ## Open
 
 [#155](https://github.com/LuchoC-Dev/little-spaceship/issues/155) is the other gap the same audit found: neither check verifies that a status fragment sits in the phase directory its base branch names, so one phase's work can be recorded in another's status. Same family — one rule, two implementations that must agree.

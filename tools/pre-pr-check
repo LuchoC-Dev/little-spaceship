@@ -216,8 +216,11 @@ done
 NON_DOCS="$(printf '%s
 ' "$CHANGED" | grep -vE '^docs/' | grep -c . || true)"
 if [ "$NON_DOCS" -gt 0 ]; then
-  FRAGMENTS="$(printf '%s
-' "$CHANGED" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
+  # Added, not merely changed: correcting an older fragment is not writing a
+  # second one. The first version of this check counted any touched fragment,
+  # which made it impossible to fix a past fragment and record the fix — found
+  # while doing exactly that for issue #154.
+  FRAGMENTS="$(git diff --name-only --diff-filter=A "$MERGE_BASE..HEAD" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
   FRAGMENT_COUNT="$(printf '%s
 ' "$FRAGMENTS" | grep -c . || true)"
   case "$BRANCH" in
