@@ -45,21 +45,19 @@ public interface ContentSource {
     /**
      * The flat, absolute-timestamp shape a level used to be authored in. Retired from the
      * simulation's own read path by issue #112: {@code SpawnSystem} now walks {@link
-     * #placements(String)} and {@link #wave(String)} instead, never this. Left as a {@code default}
-     * method — the same reason {@link #wave(String)} is one — because {@code game}'s
-     * {@code JsonContentSource} still overrides it to serve {@code assets/data/level-01.json}, which
-     * is not yet migrated to waves (issue #114); once that migration and issue #113 land, this
-     * method, {@link WaveTimeline} and {@link SimpleWaveTimeline} can all be deleted outright.
+     * #placements(String)} and {@link #wave(String)} instead, never this. Stays abstract, unlike
+     * {@link #wave(String)} and {@link #placements(String)}: both {@code game}'s
+     * {@code JsonContentSource} and {@code core}'s own {@code TestContent} already implement it, so
+     * defaulting it would only widen where a future {@link ContentSource} can silently resolve
+     * nothing, with no implementer it is actually protecting. Deleted outright, along with {@link
+     * WaveTimeline} and {@link SimpleWaveTimeline}, once {@code assets/data/level-01.json} migrates
+     * to waves (issue #114) and nothing calls this any more.
      *
      * @param levelId the level's content id
      * @return the level's wave timeline, never null
      * @throws IllegalArgumentException if no level has that id
      */
-    default WaveTimeline timeline(String levelId) {
-        throw new UnsupportedOperationException(
-            "this content source resolves no timelines — override timeline(String) or use one that "
-                + "does. Retired from SpawnSystem's own read path by issue #112.");
-    }
+    WaveTimeline timeline(String levelId);
 
     /**
      * @param id the attachment's content id
