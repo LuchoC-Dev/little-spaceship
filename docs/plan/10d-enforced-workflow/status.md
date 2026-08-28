@@ -13,7 +13,7 @@ Nothing yet.
 
 ## In progress
 
-The plan and this file. Task 1 creates `status/`, so this phase's own first task is the last thing recorded the old way; everything after it uses the convention it introduces.
+Tasks 2-6. Each records itself in `status/`.
 
 ## Decisions taken while implementing
 
