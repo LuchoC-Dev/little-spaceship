@@ -32,6 +32,14 @@ what each level is for.
 | `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
 | `type/description` | the agent doing one task | a pull request against the phase branch |
 
+**The coordinator creates the branch and the worktree**, from the phase branch, before launching anything, and the launch prompt names an absolute working directory that already exists. **An agent never runs `git worktree add`.**
+
+```bash
+git worktree add ../little-spaceship-<task> -b <type>/<description> phase/<phase>-<description>
+```
+
+Decided by the project owner on 28/08/2026, after phase 11b, where an agent worked directly in the main checkout — on the phase branch — leaving six modified files there. It was caught because a *different* agent noticed the dirty checkout and reported it instead of touching it. The instruction to create a worktree existed only in that agent's launch prompt, and in none of the six definitions under `.claude/agents/`, so the rule it broke was one line in one prompt rather than anything the project had written down. A step that cannot be skipped beats an instruction that can.
+
 **Work.** Stay inside your module. If the task pushes you outside it, that is a sign the task belongs to another agent — say so instead of crossing the boundary.
 
 **Commits.** Through the `/git-commit` skill, never a bare `git commit`. One logical change per commit.
@@ -142,10 +150,8 @@ Three things are worth interrupting for, always:
 
 ## Parallel work
 
-If another session is working at the same time, use a worktree, branched from the phase branch:
+Parallel work is the normal case rather than the exception — the art lane and the code lane always run at once — and every parallel worker gets its own worktree, branched from the phase branch, so no two of them share a working tree.
 
-```bash
-git worktree add ../little-spaceship-<task> -b <type>/<description> phase/<phase>-<description>
-```
+**The coordinator creates them**, with the command in the **Branch** step above, and hands each worker an absolute path that already exists. A worker never creates its own.
 
-The art lane and the code lane always run in parallel, so this is the normal case rather than the exception.
+One thing does not move into the worktree: **agent memory**. `.claude/agent-memory/` is tracked, so a commit made from a worktree writes it onto that branch, where the next agent will not find it, and the `pre-commit` hook refuses it. `tools/agent-memory-path <agent>` prints the one correct directory from anywhere. Those commits therefore land on the phase branch and appear in no sub-branch's diff, which is why the `commit-msg` hook exists — for an agent-memory commit it is the only check that runs before the phase closes.
