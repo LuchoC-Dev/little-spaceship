@@ -248,6 +248,30 @@ else
   pass "docs-only branch, so no status fragment is required"
 fi
 
+# 9. A workflow that does not parse does not run, and its absence is silent:
+#    GitHub reports a failed run rather than a missing one, and only to whoever
+#    looks. Phase 10d shipped a pr-check.yml with a literal newline inside a shell
+#    string, written by a scripted edit whose escaping collapsed one level too far.
+#    It was caught by GitHub, after the merge, not before it.
+WORKFLOWS="$(printf '%s
+' "$CHANGED" | grep -E '^\.github/workflows/.*\.ya?ml$' || true)"
+if [ -n "$WORKFLOWS" ]; then
+  if python3 -c 'import yaml' 2>/dev/null; then
+    BAD_YAML=0
+    for WF in $WORKFLOWS; do
+      [ -f "$WF" ] || continue
+      if ! python3 -c "import sys,yaml;yaml.safe_load(open(sys.argv[1],encoding='utf-8'))" "$WF" 2>/dev/null; then
+        BAD_YAML=$((BAD_YAML + 1)); detail "does not parse: $WF"
+      fi
+    done
+    [ "$BAD_YAML" -eq 0 ] && pass "workflow files parse as YAML" || fail "$BAD_YAML workflow file(s) do not parse"
+  else
+    pass "workflow YAML not checked: python3 with PyYAML is not available here"
+  fi
+else
+  pass "no workflow file in the diff"
+fi
+
 # 9. The build, but only when the change can break it. A documentation phase that
 #    waits four minutes for Gradle learns nothing and stops running the check.
 CODE_TOUCHED="$(printf '%s\n' "$CHANGED" | grep -E '^(core|game|desktop|web|assets)/|\.gradle(\.kts)?$|^gradle/|^gradlew' || true)"
