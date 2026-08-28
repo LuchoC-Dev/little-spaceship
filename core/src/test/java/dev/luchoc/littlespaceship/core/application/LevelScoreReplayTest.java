@@ -45,17 +45,17 @@ class LevelScoreReplayTest {
 
     /**
      * Recomputed after issue #84: {@code enemy-rush}'s "dive" trajectory carries it off the bottom of
-     * the playfield, where it used to linger forever, uncounted and unscored — the exact defect #84
-     * fixes. It is now swept by {@code LifetimeSystem}'s safety box once fully off screen, and {@code
-     * CleanupSystem} converges every destruction path uniformly regardless of cause (its own javadoc
-     * says so), so the swept enemy awards its {@code ScoreValue} the same as a defeated one: one fewer
-     * lingering entity (12 to 11) and one more {@code enemy-rush} worth of score (1350 to 1600,
-     * +250). If this ever needs recomputing again, print {@link #fingerprintOf(Simulation)} from a
-     * passing {@link #levelScoreIsDeterministic()} run and paste the result here, deliberately,
-     * after reading why it changed.
+     * the playfield, where it used to linger forever, uncounted and unscored — the defect #84 fixes.
+     * It is now swept by {@code LifetimeSystem}'s safety box once fully off screen, so the entity
+     * count drops (12 to 11), but the project owner decided on 28/08/2026 that escaping earns nothing:
+     * {@code LifetimeSystem} strips the escaping enemy's {@code ScoreValue} before marking it for
+     * destruction, so the score stays exactly what it was before this issue (1350) — only the
+     * lingering entity is gone, nothing was credited for it. If this ever needs recomputing again,
+     * print {@link #fingerprintOf(Simulation)} from a passing {@link #levelScoreIsDeterministic()} run
+     * and paste the result here, deliberately, after reading why it changed.
      */
     private static final String GOLDEN_FINGERPRINT =
-        "score=1600 lives=3 bombs=1 shotLevel=1 entities=11";
+        "score=1350 lives=3 bombs=1 shotLevel=1 entities=11";
 
     @Test
     @DisplayName("a scripted run of the level 1 roster reproduces the same final score twice")
