@@ -82,7 +82,24 @@ jobs:
           ISSUES="$(printf '%s' "$BODY" | grep -oiE '\b(close[sd]?|fixe?[sd]?|resolve[sd]?) #[0-9]+' | grep -oE '[0-9]+' | sort -u || true)"
           ISSUE_COUNT="$(printf '%s\n' "$ISSUES" | grep -c . || true)"
 
-          if [ "$ISSUE_COUNT" -eq 1 ]; then
+          IS_PHASE=0
+          case "$HEAD_REF" in phase/*) IS_PHASE=1 ;; esac
+
+          if [ "$IS_PHASE" -eq 1 ]; then
+            # A phase branch aggregates a whole phase: its tasks' issues are closed
+            # as each sub-branch merges, so the phase pull request closes none of
+            # its own and carries one fragment per task. A named category, not an
+            # escape hatch — see the risks in the 10d plan.
+            FRAGMENTS="$(printf '%s
+' "$CHANGED" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
+            FRAGMENT_COUNT="$(printf '%s
+' "$FRAGMENTS" | grep -c . || true)"
+            if [ "$FRAGMENT_COUNT" -gt 0 ]; then
+              pass "phase branch: $FRAGMENT_COUNT status fragment(s), one per task"
+            else
+              fail "a phase branch with no status fragment at all"
+            fi
+          elif [ "$ISSUE_COUNT" -eq 1 ]; then
             pass "closes issue #$ISSUES"
           elif [ "$ISSUE_COUNT" -eq 0 ]; then
             if [ "$NON_DOCS" -eq 0 ]; then
@@ -102,7 +119,7 @@ jobs:
           #    This is the half that can.
           FRAGMENTS="$(printf '%s\n' "$CHANGED" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
           FRAGMENT_COUNT="$(printf '%s\n' "$FRAGMENTS" | grep -c . || true)"
-          if [ "$ISSUE_COUNT" -eq 1 ]; then
+          if [ "$ISSUE_COUNT" -eq 1 ] && [ "$IS_PHASE" -eq 0 ]; then
             if [ "$FRAGMENT_COUNT" -eq 1 ]; then
               case "$(basename "$FRAGMENTS")" in
                 "$ISSUES"-*.md) pass "status fragment: $FRAGMENTS" ;;

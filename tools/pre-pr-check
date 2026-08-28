@@ -221,17 +221,29 @@ if [ "$NON_DOCS" -gt 0 ]; then
 ' "$CHANGED" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
   FRAGMENT_COUNT="$(printf '%s
 ' "$FRAGMENTS" | grep -c . || true)"
-  if [ "$FRAGMENT_COUNT" -eq 1 ]; then
-    pass "status fragment: $FRAGMENTS"
-  elif [ "$FRAGMENT_COUNT" -eq 0 ]; then
-    fail "this branch does work and records nothing in the phase status"
-    detail "add one file at docs/plan/<phase>/status/<issue>-<slug>.md describing what"
-    detail "this task did, what it decided, and what it leaves open"
-  else
-    fail "$FRAGMENT_COUNT status fragments in one branch; a task writes exactly one"
-    printf '%s
+  case "$BRANCH" in
+    # A phase branch aggregates every task in the phase, so it carries one
+    # fragment per task. "Exactly one" is the sub-branch's rule, not this one.
+    # A named category, not an escape hatch anyone can claim.
+    phase/*)
+      if [ "$FRAGMENT_COUNT" -gt 0 ]; then
+        pass "$FRAGMENT_COUNT status fragment(s), one per task of this phase"
+      else
+        fail "a phase branch with no status fragment at all"
+      fi ;;
+    *)
+      if [ "$FRAGMENT_COUNT" -eq 1 ]; then
+        pass "status fragment: $FRAGMENTS"
+      elif [ "$FRAGMENT_COUNT" -eq 0 ]; then
+        fail "this branch does work and records nothing in the phase status"
+        detail "add one file at docs/plan/<phase>/status/<issue>-<slug>.md describing what"
+        detail "this task did, what it decided, and what it leaves open"
+      else
+        fail "$FRAGMENT_COUNT status fragments in one branch; a task writes exactly one"
+        printf '%s
 ' "$FRAGMENTS" | while IFS= read -r F; do [ -n "$F" ] && detail "$F"; done
-  fi
+      fi ;;
+  esac
 else
   pass "docs-only branch, so no status fragment is required"
 fi
