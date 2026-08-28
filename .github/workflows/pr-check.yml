@@ -90,10 +90,8 @@ jobs:
             # as each sub-branch merges, so the phase pull request closes none of
             # its own and carries one fragment per task. A named category, not an
             # escape hatch — see the risks in the 10d plan.
-            FRAGMENTS="$(printf '%s
-' "$CHANGED" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
-            FRAGMENT_COUNT="$(printf '%s
-' "$FRAGMENTS" | grep -c . || true)"
+            FRAGMENTS="$(printf '%s\n' "$CHANGED" | grep -E '^docs/plan/[^/]+/status/[^/]+\.md$' || true)"
+            FRAGMENT_COUNT="$(printf '%s\n' "$FRAGMENTS" | grep -c . || true)"
             if [ "$FRAGMENT_COUNT" -gt 0 ]; then
               pass "phase branch: $FRAGMENT_COUNT status fragment(s), one per task"
             else
