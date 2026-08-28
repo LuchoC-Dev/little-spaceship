@@ -462,38 +462,49 @@ class SpawnSystemTest {
     }
 
     @Test
-    @DisplayName("a negative offset genuinely overlaps two waves in the same tick")
+    @DisplayName("a negative offset starts wave-b while wave-a is still running, unlike a zero offset")
     void negativeOffsetOverlapsTwoWaves() {
+        // wave-a is FixedDuration(4s), so its end (levelTime 4) is known the instant it starts at
+        // levelTime 0 — scheduleNext resolves wave-b's placement predictively, right there, rather
+        // than waiting for wave-a to actually end. wave-a's own second spawn, at its local time 3s, is
+        // deliberately placed after where wave-b starts under the negative offset, so a run that
+        // reaches that point without wave-a's second entity proves wave-a genuinely has not ended yet.
+        assertEquals(2, entityCountAtLevelTime2(-2f),
+            "a -2s offset should start wave-b at levelTime 2, two ticks in, alongside wave-a's own "
+                + "still-running first entity");
+        assertEquals(1, entityCountAtLevelTime2(0f),
+            "a 0s offset should not have started wave-b yet at levelTime 2 — it is only due once "
+                + "wave-a's known end (levelTime 4) arrives, unlike the -2s offset above");
+    }
+
+    /**
+     * Runs two 1-second ticks (to level time 2s) against a level of two {@code FixedDuration(4s)}
+     * waves — wave-a first, then wave-b offset by {@code waveBOffsetSeconds} from wave-a's own known
+     * end (levelTime 4) — and returns how many entities exist at that point. wave-a's only entity by
+     * then is its first spawn (at local time 0); its second (at local time 3) is not due yet, and
+     * wave-a's own end condition (local time 4) is nowhere close to true, so any entity beyond that
+     * first one can only be wave-b's, started before wave-a ended.
+     */
+    private static int entityCountAtLevelTime2(float waveBOffsetSeconds) {
         TestContent content = baseContent()
-            .withFormation(new SimpleFormationDefinition("pair",
-                List.of(new FormationSlot(-10f, 0f), new FormationSlot(10f, 0f))))
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
             .withWave(new SimpleWaveDefinition("wave-a",
-                List.of(new SpawnEvent(0f, "enemy-basic", "pair", 0.5f, null)),
-                new WaveEndCondition.FixedDuration(1f)))
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null),
+                    new SpawnEvent(3f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(4f)))
             .withWave(new SimpleWaveDefinition("wave-b",
-                List.of(new SpawnEvent(0f, "enemy-basic", "pair", 0.5f, null)),
-                new WaveEndCondition.FixedDuration(1f)))
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(4f)))
             .withPlacements(LEVEL, List.of(
                 new WavePlacement("wave-a", 0f),
-                // wave-a ends at levelTime 1s; a raw -1s offset would compute a start of 0s, before
-                // wave-a's own end is even detected, so scheduleNext clamps it forward to the
-                // detecting tick's levelTime (1s) instead of spawning into the past. Both waves'
-                // entities still land in this very same tick, genuinely overlapping rather than
-                // merely abutting the way a zero or positive offset would.
-                new WavePlacement("wave-b", -1f)));
+                new WavePlacement("wave-b", waveBOffsetSeconds)));
         World world = worldOf(content);
         SpawnSystem system = new SpawnSystem(LEVEL);
 
         system.update(world, 1f, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
 
-        // Both waves' entities exist after the single tick that resolves wave-a's end: wave-a's own
-        // pair, plus wave-b's pair spawned immediately since its clamped start already reached now.
-        assertEquals(4, world.entityCount());
-        java.util.Set<String> ids = new java.util.HashSet<>();
-        for (int i = 0; i < world.waveOrigins().size(); i++) {
-            ids.add(world.waveOrigins().valueAt(i).waveId);
-        }
-        assertEquals(java.util.Set.of("wave-a", "wave-b"), ids);
+        return world.entityCount();
     }
 
     @Test
