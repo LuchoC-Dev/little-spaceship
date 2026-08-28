@@ -55,6 +55,17 @@ public final class PlayScreen implements Screen {
     private static final float PLAYFIELD_LEFT =
         (LittleSpaceshipGame.LOGICAL_WIDTH - PLAYFIELD_WIDTH) / 2f;
 
+    /**
+     * The level this screen plays. There is no level-selection flow yet — {@code LAUNCH} always
+     * starts this one — so the id lives here rather than as a parameter nothing supplies; a second
+     * level turns this into a constructor argument, which is what issue #87 asked
+     * {@link JsonContentSource} to stop hardcoding. Package-visible because {@link ShipSelectScreen}
+     * needs a level id too, only to build a throwaway {@code JsonContentSource} for its balance
+     * values — there being one level in the whole game is exactly why that screen has no better id
+     * to reach for either.
+     */
+    static final String LEVEL_ID = "level-01";
+
     private final LittleSpaceshipGame game;
 
     private SpriteBatch batch;
@@ -92,12 +103,12 @@ public final class PlayScreen implements Screen {
         worldRenderer = new WorldRenderer(atlas, PLAYFIELD_LEFT);
         input = new InputAdapter(viewport);
 
-        content = new JsonContentSource(Gdx.files.internal("data"));
+        content = new JsonContentSource(Gdx.files.internal("data"), LEVEL_ID);
         hudRenderer = new HudRenderer(game.skin(), content.balance());
         // AudioDirector doubles as the simulation's GameEventSink — see its javadoc — so it must
         // exist before Simulation does.
         audioDirector = new AudioDirector(game.audio());
-        simulation = new Simulation(content, audioDirector, game.seed(), JsonContentSource.LEVEL_ID);
+        simulation = new Simulation(content, audioDirector, game.seed(), LEVEL_ID);
         loop = new GameLoop(simulation);
 
         buildPauseStage();
