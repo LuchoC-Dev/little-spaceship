@@ -25,6 +25,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
+import dev.luchoc.littlespaceship.core.domain.component.WaveOrigin;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
@@ -119,6 +120,7 @@ class WorldTest {
         world.spawners().set(entity, new Spawner("enemy-basic", 1f, 0f, 0f));
         world.enemyWeapons().set(entity, new EnemyWeapon("straight-single", 1f, 90f));
         world.lifetimes().set(entity, new Lifetime(1f));
+        world.waveOrigins().set(entity, new WaveOrigin(1));
     }
 
     /**

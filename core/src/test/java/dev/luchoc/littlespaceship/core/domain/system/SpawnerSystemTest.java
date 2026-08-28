@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.component.WaveOrigin;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
@@ -120,6 +121,31 @@ class SpawnerSystemTest {
         system.update(world, 1f, InputFrame.IDLE);
 
         assertEquals(1, world.entityCount());
+    }
+
+    @Test
+    @DisplayName("a child inherits the carrier's WaveOrigin, per the carrier-children rule")
+    void childInheritsCarriersWaveOrigin() {
+        int carrier = carrierAt(0f, 0f, 1f, 0f, 0f);
+        world.waveOrigins().set(carrier, new WaveOrigin(7));
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        int child = childEntity(world);
+        WaveOrigin childOrigin = world.waveOrigins().get(child);
+        assertEquals(7, childOrigin.waveId);
+    }
+
+    @Test
+    @DisplayName("a child of a carrier with no WaveOrigin carries none either")
+    void childOfWavelessCarrierCarriesNoWaveOrigin() {
+        carrierAt(0f, 0f, 1f, 0f, 0f);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        int child = childEntity(world);
+        assertEquals(0, world.waveOrigins().size());
+        assertEquals(false, world.waveOrigins().has(child));
     }
 
     @Test

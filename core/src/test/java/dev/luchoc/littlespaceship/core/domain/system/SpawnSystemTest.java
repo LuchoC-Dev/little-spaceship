@@ -359,6 +359,43 @@ class SpawnSystemTest {
     }
 
     @Test
+    @DisplayName("every entity a wave spawns carries a WaveOrigin")
+    void spawnedEntitiesCarryAWaveOrigin() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("pair",
+                List.of(new FormationSlot(-10f, 0f), new FormationSlot(10f, 0f))))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(
+                List.of(new SpawnEvent(1f, "enemy-basic", "pair", 0.5f, null))));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(2, world.waveOrigins().size());
+        int firstWaveId = world.waveOrigins().valueAt(0).waveId;
+        assertEquals(firstWaveId, world.waveOrigins().valueAt(1).waveId);
+    }
+
+    @Test
+    @DisplayName("two different waves tag their entities with different wave ids")
+    void differentWavesGetDifferentIds() {
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withTimeline(LEVEL, new SimpleWaveTimeline(List.of(
+                new SpawnEvent(1f, "enemy-basic", "single", 0.5f, null),
+                new SpawnEvent(2f, "enemy-basic", "single", 0.5f, null))));
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 2f, InputFrame.IDLE);
+
+        assertEquals(2, world.waveOrigins().size());
+        int first = world.waveOrigins().valueAt(0).waveId;
+        int second = world.waveOrigins().valueAt(1).waveId;
+        assertTrue(first != second);
+    }
+
+    @Test
     @DisplayName("rejects being built without a level id")
     void rejectsMissingLevelId() {
         assertThrows(IllegalArgumentException.class, () -> new SpawnSystem(null));
