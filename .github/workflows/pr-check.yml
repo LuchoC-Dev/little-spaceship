@@ -91,6 +91,7 @@ jobs:
             # its own and carries one fragment per task. A named category, not an
             # escape hatch — see the risks in the 10d plan.
             FRAGMENTS="$(./tools/status-fragments "origin/$BASE")"
+            MISPLACED="$(./tools/status-fragments --misplaced "origin/$BASE")"
             FRAGMENT_COUNT="$(printf '%s\n' "$FRAGMENTS" | grep -c . || true)"
             if [ "$FRAGMENT_COUNT" -gt 0 ]; then
               pass "phase branch: $FRAGMENT_COUNT status fragment(s), one per task"
@@ -117,6 +118,7 @@ jobs:
           #    This is the half that can.
           # One source of truth, shared with tools/pre-pr-check.
           FRAGMENTS="$(./tools/status-fragments "origin/$BASE")"
+          MISPLACED="$(./tools/status-fragments --misplaced "origin/$BASE")"
           FRAGMENT_COUNT="$(printf '%s\n' "$FRAGMENTS" | grep -c . || true)"
           if [ "$ISSUE_COUNT" -eq 1 ] && [ "$IS_PHASE" -eq 0 ]; then
             if [ "$FRAGMENT_COUNT" -eq 1 ]; then
@@ -132,6 +134,12 @@ jobs:
             else
               fail "$FRAGMENT_COUNT status fragments; a task writes exactly one"
             fi
+          fi
+
+          if [ -n "$MISPLACED" ]; then
+            fail "a status fragment sits in another phase's directory"
+            printf '%s\n' "$MISPLACED" | while IFS= read -r F; do [ -n "$F" ] && detail "$F"; done
+            detail "the base branch names the phase; the fragment belongs under its own status/"
           fi
 
           # 4. Draft when opened. The review happens before it is marked ready, so
