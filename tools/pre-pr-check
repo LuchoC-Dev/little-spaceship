@@ -218,6 +218,7 @@ NON_DOCS="$(printf '%s
 if [ "$NON_DOCS" -gt 0 ]; then
   # One source of truth, shared with .github/workflows/pr-check.yml.
   FRAGMENTS="$(./tools/status-fragments "$BASE")"
+  MISPLACED="$(./tools/status-fragments --misplaced "$BASE")"
   FRAGMENT_COUNT="$(printf '%s
 ' "$FRAGMENTS" | grep -c . || true)"
   case "$BRANCH" in
@@ -243,6 +244,12 @@ if [ "$NON_DOCS" -gt 0 ]; then
 ' "$FRAGMENTS" | while IFS= read -r F; do [ -n "$F" ] && detail "$F"; done
       fi ;;
   esac
+  if [ -n "$MISPLACED" ]; then
+    fail "a status fragment sits in another phase's directory"
+    printf '%s
+' "$MISPLACED" | while IFS= read -r F; do [ -n "$F" ] && detail "$F"; done
+    detail "the base branch names the phase; the fragment belongs under its own status/"
+  fi
 else
   pass "docs-only branch, so no status fragment is required"
 fi
