@@ -7,7 +7,12 @@ Update this file when the phase moves. It is the only place phase progress is re
 
 ## Done
 
-Nothing yet.
+- Task 5 / #87 — `JsonContentSource` no longer hardcodes `LEVEL_ID = "level-01"`. The constructor now
+  takes a `levelId` parameter and reads `<levelId>.json` from the data directory; `PlayScreen` owns
+  the level id it plays (`PlayScreen.LEVEL_ID`, package-visible so `ShipSelectScreen` can reuse it for
+  its throwaway balance-only content source). No directory listing was added — `FileHandle.list()` has
+  no answer under TeaVM's asset packaging, and there is still exactly one level file, so eager
+  single-level loading stays. See `feat/level-by-id` PR against this branch.
 
 ## In progress
 
