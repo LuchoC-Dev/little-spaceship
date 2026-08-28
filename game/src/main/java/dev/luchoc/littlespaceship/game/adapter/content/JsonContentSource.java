@@ -42,13 +42,6 @@ import java.util.Set;
  */
 public final class JsonContentSource implements ContentSource {
 
-    /**
-     * The one level this phase ships. A second level would need this hardcoded id turned into a
-     * parameter — not done now, per the plan's own warning against over-generalising the schema
-     * ahead of a second concrete case.
-     */
-    public static final String LEVEL_ID = "level-01";
-
     private final BalanceValues balance;
     private final Map<String, EnemyDefinition> enemies = new HashMap<>();
     private final Map<String, TrajectoryDefinition> trajectories = new HashMap<>();
@@ -58,17 +51,30 @@ public final class JsonContentSource implements ContentSource {
     private final Map<String, BossDefinition> bosses = new HashMap<>();
 
     /**
-     * Loads every content file under {@code dataDir}.
+     * Loads every content file under {@code dataDir}, plus the level named by {@code levelId} from
+     * {@code <levelId>.json} in that same directory.
+     *
+     * <p>The id is a constructor parameter rather than a hardcoded constant, per this class's own
+     * former javadoc naming exactly this as the thing a second level would need — {@code
+     * game-presentation}'s handover of issue #87. Loading stays single-level and eager: nothing
+     * here lists the directory to discover every {@code level-*.json} on disk, because {@link
+     * FileHandle#list()} has no answer for the web target's asset packaging, and there is still only
+     * one concrete level to load. Whoever calls this decides which one.
      *
      * @param dataDir the directory holding {@code balance.json}, {@code trajectories.json},
      *     {@code formations.json}, {@code enemies.json}, {@code attachments.json} and
-     *     {@code level-01.json}
+     *     {@code <levelId>.json}
+     * @param levelId the content id of the level to load; also the level file's name without the
+     *     {@code .json} extension
      * @throws IllegalArgumentException if any file is missing or malformed, naming the file and
      *     whatever it could not resolve
      */
-    public JsonContentSource(FileHandle dataDir) {
+    public JsonContentSource(FileHandle dataDir, String levelId) {
         if (dataDir == null) {
             throw new IllegalArgumentException("the content source needs a data directory");
+        }
+        if (levelId == null || levelId.isEmpty()) {
+            throw new IllegalArgumentException("the content source needs a level id");
         }
         JsonReader reader = new JsonReader();
         this.balance = loadBalance(reader, dataDir.child("balance.json"));
@@ -76,7 +82,7 @@ public final class JsonContentSource implements ContentSource {
         loadFormations(reader, dataDir.child("formations.json"));
         loadEnemies(reader, dataDir.child("enemies.json"));
         loadAttachments(reader, dataDir.child("attachments.json"));
-        loadLevel(reader, dataDir.child("level-01.json"), LEVEL_ID);
+        loadLevel(reader, dataDir.child(levelId + ".json"), levelId);
     }
 
     @Override
@@ -185,7 +191,7 @@ public final class JsonContentSource implements ContentSource {
     }
 
     /**
-     * Reads {@code level-01.json}'s two top-level blocks: the optional {@code "boss"} object and the
+     * Reads the level file's two top-level blocks: the optional {@code "boss"} object and the
      * required {@code "events"} array. {@code hasBoss}/{@code boss} answer false/throw for a level
      * whose file carries no {@code "boss"} key at all — a legitimate case per {@link ContentSource}'s
      * own contract — but any key on either object this schema does not name fails loudly through
