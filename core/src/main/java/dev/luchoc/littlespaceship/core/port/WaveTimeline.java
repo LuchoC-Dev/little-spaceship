@@ -11,14 +11,15 @@ import java.util.List;
  * {@link SpawnEvent#at()}. Implementations must enforce that themselves; {@link
  * SimpleWaveTimeline} does.
  *
- * <p><b>Superseded, not yet retired.</b> Since {@link WaveDefinition} exists, a level is no longer
- * meant to be authored as one flat list of absolute timestamps — it is a sequence of named waves,
- * each carrying its own spawns and its own offset from the wave before it. This interface still
- * describes exactly what it does today: {@code SpawnSystem}'s single cursor over a flat, absolute-
- * time list. It stays that way, and {@code ContentSource.timeline(String)} keeps returning it,
- * until issue #112 migrates {@code SpawnSystem} onto {@link WaveDefinition} and either retires this
- * type or repoints it — the boundary this class's own contract may not cross without breaking the
- * one system that reads it, which #112 owns.
+ * <p><b>Superseded, not yet retired.</b> Since {@link WaveDefinition} and {@link WavePlacement}
+ * exist, a level is no longer meant to be authored as one flat list of absolute timestamps — it is
+ * an ordered sequence of {@link WavePlacement}s, each naming a reusable {@link WaveDefinition} and
+ * its own offset from the placement before it. This interface still describes exactly what it does
+ * today: {@code SpawnSystem}'s single cursor over a flat, absolute-time list. It stays that way, and
+ * {@code ContentSource.timeline(String)} keeps returning it, until issue #112 migrates {@code
+ * SpawnSystem} onto {@link WaveDefinition} and {@link WavePlacement} and either retires this type or
+ * repoints it — the boundary this class's own contract may not cross without breaking the one
+ * system that reads it, which #112 owns.
  */
 public interface WaveTimeline {
 

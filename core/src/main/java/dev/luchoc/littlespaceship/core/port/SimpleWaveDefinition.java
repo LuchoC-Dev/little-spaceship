@@ -8,10 +8,8 @@ import java.util.List;
  * @param id the content id
  * @param spawns the spawns of this wave; rejected if empty or not sorted by {@link SpawnEvent#at()}
  * @param endCondition what ends this wave
- * @param offsetSeconds seconds after the previous wave ends when this one starts; may be negative
  */
-public record SimpleWaveDefinition(
-    String id, List<SpawnEvent> spawns, WaveEndCondition endCondition, float offsetSeconds)
+public record SimpleWaveDefinition(String id, List<SpawnEvent> spawns, WaveEndCondition endCondition)
     implements WaveDefinition {
 
     /**
@@ -36,10 +34,6 @@ public record SimpleWaveDefinition(
         }
         if (endCondition == null) {
             throw new IllegalArgumentException("wave '" + id + "' needs an end condition");
-        }
-        if (Float.isNaN(offsetSeconds) || Float.isInfinite(offsetSeconds)) {
-            throw new IllegalArgumentException(
-                "wave '" + id + "' has a non-finite offset " + offsetSeconds);
         }
         spawns = List.copyOf(spawns);
     }
