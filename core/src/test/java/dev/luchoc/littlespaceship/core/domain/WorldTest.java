@@ -15,6 +15,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
+import dev.luchoc.littlespaceship.core.domain.component.Lifetime;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
@@ -117,6 +118,7 @@ class WorldTest {
         world.bombStates().set(entity, new BombState());
         world.spawners().set(entity, new Spawner("enemy-basic", 1f, 0f, 0f));
         world.enemyWeapons().set(entity, new EnemyWeapon("straight-single", 1f, 90f));
+        world.lifetimes().set(entity, new Lifetime(1f));
     }
 
     /**
