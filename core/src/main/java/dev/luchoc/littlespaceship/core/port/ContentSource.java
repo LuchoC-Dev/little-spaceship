@@ -1,5 +1,7 @@
 package dev.luchoc.littlespaceship.core.port;
 
+import java.util.List;
+
 /**
  * Where the simulation gets the content it does not invent: balance values, enemy definitions,
  * trajectories, formations, waves and level timelines.
@@ -41,11 +43,23 @@ public interface ContentSource {
     FormationDefinition formation(String id);
 
     /**
+     * The flat, absolute-timestamp shape a level used to be authored in. Retired from the
+     * simulation's own read path by issue #112: {@code SpawnSystem} now walks {@link
+     * #placements(String)} and {@link #wave(String)} instead, never this. Left as a {@code default}
+     * method — the same reason {@link #wave(String)} is one — because {@code game}'s
+     * {@code JsonContentSource} still overrides it to serve {@code assets/data/level-01.json}, which
+     * is not yet migrated to waves (issue #114); once that migration and issue #113 land, this
+     * method, {@link WaveTimeline} and {@link SimpleWaveTimeline} can all be deleted outright.
+     *
      * @param levelId the level's content id
      * @return the level's wave timeline, never null
      * @throws IllegalArgumentException if no level has that id
      */
-    WaveTimeline timeline(String levelId);
+    default WaveTimeline timeline(String levelId) {
+        throw new UnsupportedOperationException(
+            "this content source resolves no timelines — override timeline(String) or use one that "
+                + "does. Retired from SpawnSystem's own read path by issue #112.");
+    }
 
     /**
      * @param id the attachment's content id
@@ -70,6 +84,27 @@ public interface ContentSource {
     default WaveDefinition wave(String id) {
         throw new UnsupportedOperationException(
             "this content source resolves no waves — override wave(String) or use one that does");
+    }
+
+    /**
+     * A level's ordered sequence of {@link WavePlacement}s — issue #112's replacement for the flat,
+     * absolute-timestamp {@link #timeline(String)}. {@code SpawnSystem} resolves each placement's
+     * {@link WavePlacement#waveId()} through {@link #wave(String)}, so the same wave id can appear in
+     * this list twice, or in two different levels' lists, without copying its declaration.
+     *
+     * <p>Defaults to failing loudly, the same reasoning as {@link #wave(String)}: {@code
+     * JsonContentSource} does not implement this yet (issue #113), so every {@link ContentSource} in
+     * production would otherwise have to grow this method before that loader exists. A test double
+     * built by hand overrides it too.
+     *
+     * @param levelId the level's content id
+     * @return the level's placements, in the order they run, never null or empty
+     * @throws IllegalArgumentException if no level has that id
+     */
+    default List<WavePlacement> placements(String levelId) {
+        throw new UnsupportedOperationException(
+            "this content source resolves no wave placements — override placements(String) or use "
+                + "one that does");
     }
 
     /**

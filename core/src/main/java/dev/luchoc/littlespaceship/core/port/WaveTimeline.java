@@ -3,23 +3,18 @@ package dev.luchoc.littlespaceship.core.port;
 import java.util.List;
 
 /**
- * A level as a flat sequence of timestamped events — the intensity curve in executable form, per
- * {@code 03-game-systems.md} and {@code 12-architecture.md}.
+ * A level as a flat sequence of timestamped events — the shape a level used to be authored in,
+ * before {@link WaveDefinition} and {@link WavePlacement} existed.
  *
- * <p>{@code SpawnSystem} walks {@link #events()} once per level with a single advancing cursor,
- * which only produces the correct wave at the correct time when the list is sorted by
- * {@link SpawnEvent#at()}. Implementations must enforce that themselves; {@link
- * SimpleWaveTimeline} does.
- *
- * <p><b>Superseded, not yet retired.</b> Since {@link WaveDefinition} and {@link WavePlacement}
- * exist, a level is no longer meant to be authored as one flat list of absolute timestamps — it is
- * an ordered sequence of {@link WavePlacement}s, each naming a reusable {@link WaveDefinition} and
- * its own offset from the placement before it. This interface still describes exactly what it does
- * today: {@code SpawnSystem}'s single cursor over a flat, absolute-time list. It stays that way, and
- * {@code ContentSource.timeline(String)} keeps returning it, until issue #112 migrates {@code
- * SpawnSystem} onto {@link WaveDefinition} and {@link WavePlacement} and either retires this type or
- * repoints it — the boundary this class's own contract may not cross without breaking the one
- * system that reads it, which #112 owns.
+ * <p><b>Retired from {@code SpawnSystem}'s own read path by issue #112.</b> A level is now an
+ * ordered sequence of {@link WavePlacement}s, each naming a reusable {@link WaveDefinition} and its
+ * own offset from the placement before it, which {@code SpawnSystem} walks through {@link
+ * ContentSource#placements(String)} and {@link ContentSource#wave(String)}. This type, {@link
+ * SimpleWaveTimeline} and {@link ContentSource#timeline(String)} are kept only because {@code
+ * game}'s {@code JsonContentSource} still populates them to serve {@code
+ * assets/data/level-01.json}, which is not yet migrated to waves (issue #114) — deleting them now
+ * would break that loader's compile, a module this type may not touch. Once #113 and #114 land, all
+ * three can be deleted outright; nothing in {@code core} will read any of them by then.
  */
 public interface WaveTimeline {
 
