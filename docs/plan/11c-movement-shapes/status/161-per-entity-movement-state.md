@@ -7,7 +7,7 @@
 - `core/domain/component/Trajectory.java` — a plain-data component holding one field: `elapsed`
   (mutable, seconds since spawn, accumulated from the fixed step). No logic lives on the component
   itself.
-- `World.java` — a fifteenth `ComponentStore<Trajectory>` field, an accessor `trajectories()`, and
+- `World.java` — a nineteenth `ComponentStore<Trajectory>` field, an accessor `trajectories()`, and
   removal in `destroyEntity` alongside every other store.
 - `MotionSystem.java` — a new private step, `advanceTrajectories`, called from `update()` right after
   `applyPlayerInput` and before `integrate`: it walks `world.trajectories()` and adds `step` to every
