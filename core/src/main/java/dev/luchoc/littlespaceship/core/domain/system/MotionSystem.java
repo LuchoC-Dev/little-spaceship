@@ -4,6 +4,7 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
@@ -25,6 +26,12 @@ import dev.luchoc.littlespaceship.core.port.InputFrame;
  *
  * <p>Slow movement is the same clamp with a smaller cap — a multiplier, not a separate mode, per the
  * confirmed rule in {@code 02-mvp-functional-spec.md}.
+ *
+ * <p>This is also where an entity's {@link Trajectory} advances: {@link Trajectory#elapsed} is
+ * incremented by the fixed step, once per tick, before velocities are integrated — never read from
+ * the system clock, so a replay reproduces it exactly. Evaluating that elapsed time and the entity's
+ * origin into a shape is not built yet; only the state and its advance are. See {@link Trajectory}'s
+ * own javadoc.
  */
 public final class MotionSystem implements GameSystem {
 
@@ -47,8 +54,21 @@ public final class MotionSystem implements GameSystem {
     @Override
     public void update(World world, float step, InputFrame input) {
         applyPlayerInput(world, input);
+        advanceTrajectories(world, step);
         integrate(world, step);
         clampPlayerToPlayfield(world);
+    }
+
+    /**
+     * Accumulates the fixed step into every entity's {@link Trajectory#elapsed}, before {@link
+     * #integrate} runs — a future shape evaluator reads {@code elapsed} to decide this very tick's
+     * velocity, so the value it sees must already include this tick's step.
+     */
+    private static void advanceTrajectories(World world, float step) {
+        ComponentStore<Trajectory> trajectories = world.trajectories();
+        for (int i = 0; i < trajectories.size(); i++) {
+            trajectories.valueAt(i).elapsed += step;
+        }
     }
 
     private static void applyPlayerInput(World world, InputFrame input) {
