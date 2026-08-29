@@ -1,6 +1,6 @@
 # Phase 10d — Rules the tools enforce · status
 
-**State:** done — every task merged into `phase/10d-enforced-workflow`
+**State:** done — merged into `dev` in [#152](https://github.com/LuchoC-Dev/little-spaceship/pull/152)
 **Updated:** 28/08/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
