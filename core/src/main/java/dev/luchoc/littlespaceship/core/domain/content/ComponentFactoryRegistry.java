@@ -94,8 +94,14 @@ public final class ComponentFactoryRegistry {
 
     /**
      * Resolves the {@code "trajectory"} field against {@link World#content()} and attaches its
-     * velocity as-is. Trajectories carry the whole vector on purpose — see
+     * velocity at elapsed time zero. Trajectories carry the whole vector on purpose — see
      * {@link TrajectoryDefinition} — so there is no per-archetype speed override to apply here.
+     *
+     * <p>This is a one-time snapshot, same as before this shape's kind could vary: an {@code arc}
+     * trajectory's vertical velocity keeps changing after spawn, per
+     * {@link TrajectoryDefinition#verticalVelocityAt(float)}, but nothing here re-evaluates it every
+     * tick yet — that is issue #164, which is also what attaches a {@code Trajectory} component so a
+     * later tick has the elapsed time to evaluate against.
      */
     private static void attachMotion(World world, int entity, ComponentSpec spec) {
         String trajectoryId = spec.text("trajectory");

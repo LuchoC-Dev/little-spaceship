@@ -31,6 +31,52 @@ class ContentDefinitionsTest {
     }
 
     @Test
+    @DisplayName("a constant shape's vertical velocity never changes with elapsed time")
+    void constantShapeIgnoresElapsedTime() {
+        TrajectoryDefinition slowDescent = new SimpleTrajectoryDefinition("slow-descent", 0f, -18f);
+
+        assertEquals(-18f, slowDescent.verticalVelocityAt(0f));
+        assertEquals(-18f, slowDescent.verticalVelocityAt(4.07f));
+        assertEquals(-18f, slowDescent.vy());
+    }
+
+    @Test
+    @DisplayName("an arc trajectory needs an id and every parameter finite")
+    void arcTrajectoryValidates() {
+        assertThrows(IllegalArgumentException.class,
+            () -> new ArcTrajectoryDefinition("", 0f, -110f, 27f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new ArcTrajectoryDefinition("strike-run", Float.NaN, -110f, 27f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new ArcTrajectoryDefinition("strike-run", 0f, Float.POSITIVE_INFINITY, 27f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new ArcTrajectoryDefinition("strike-run", 0f, -110f, Float.NEGATIVE_INFINITY));
+    }
+
+    @Test
+    @DisplayName("an arc's vertical velocity is vy plus ay times elapsed time, and it turns when that reaches zero")
+    void arcShapeEvaluatesTheClosedForm() {
+        // strike-run from the shape catalogue: vx 0, vy -110, ay 27 — turns at t = -vy / ay = 4.07s.
+        TrajectoryDefinition strikeRun = new ArcTrajectoryDefinition("strike-run", 0f, -110f, 27f);
+
+        assertEquals(-110f, strikeRun.verticalVelocityAt(0f));
+        assertEquals(-110f, strikeRun.vy());
+        assertEquals(-110f + 27f * 2f, strikeRun.verticalVelocityAt(2f));
+        assertEquals(0f, strikeRun.verticalVelocityAt(-strikeRun.vy() / 27f), 1e-4f,
+            "should be at rest, vertically, at its own turning point");
+        assertTrue(strikeRun.verticalVelocityAt(8f) > 0f, "should be climbing well past the turn");
+    }
+
+    @Test
+    @DisplayName("ay = 0 makes an arc behave like a constant, without being one")
+    void zeroAccelerationArcDegeneratesToConstant() {
+        TrajectoryDefinition flatArc = new ArcTrajectoryDefinition("flat", -10f, -40f, 0f);
+
+        assertEquals(-40f, flatArc.verticalVelocityAt(0f));
+        assertEquals(-40f, flatArc.verticalVelocityAt(100f));
+    }
+
+    @Test
     @DisplayName("a formation needs an id and at least one slot")
     void formationValidates() {
         assertThrows(IllegalArgumentException.class,
