@@ -38,6 +38,22 @@ Nothing.
 
 Record here anything decided that the plan did not specify, and why. If it changes how work is run, it also belongs in `docs/plan/how-to-run-a-phase.md` or in `CLAUDE.md`, which is the point of this phase.
 
+## The `reviewer` pass, done after the phase was already on `dev`
+
+The plan asked for one and the phase shipped without it. It was run afterwards, on the project owner's decision, with the brief the plan itself wrote: *"would an agent who has read only these documents do the right thing?"*
+
+**Its answer was no, in one specific case, and it found the fifth and sixth gaps by building shapes nobody had lived through.**
+
+- **[#154](https://github.com/LuchoC-Dev/little-spaceship/issues/154)** — `tools/hooks/commit-msg` exempted five commit-subject shapes and `tools/pre-pr-check` exempted one, so `git revert`'s own wording was welcomed at write time and rejected at the gate. Reverting is the **only** sanctioned way to undo here, since rebasing and force-pushing are forbidden, and no document warned of it. A fragment of this phase also claimed the two checks applied "the same rule" — false for four of five exemptions, written by testing one side and never the other.
+- **[#155](https://github.com/LuchoC-Dev/little-spaceship/issues/155)** — neither check verified which phase's directory a fragment sat in, only its name, so one phase's work could be recorded in another's status and the phase it belonged to would be silently short.
+
+**Fixing them produced two more instances of the same fault**, and they are the most useful thing this phase learned:
+
+- the fragment check counted *changed* fragments as well as added ones, so correcting the false document was itself forbidden by the check;
+- and then `pr-check.yml` failed the pull request that fixed the first drift, because `pre-pr-check` had been taught the fix and it had not — **one rule, two implementations, drifting inside the pull request whose subject was one rule in two implementations drifting.**
+
+That is why the phase now ships three shared scripts — `tools/commit-subject-ok`, `tools/status-fragments` and its `--misplaced` mode — rather than matching logic kept in agreement by care. **If two things must agree, do not write it twice.** Six of the eight faults in this phase were one rule stated from one point of view; the other two were one rule stated twice.
+
 ## Notes for whoever comes next
 
 **The gap between the two checks is real and deliberate.** `pre-pr-check` runs before the pull request exists — that is its purpose — so it cannot see the issue, and it exempts any branch whose diff is entirely under `docs/`. That exemption is meant for the coordinator's bookkeeping, but the script cannot tell bookkeeping from documentation work that closes an issue. Task 4 went through that gap in this very phase. **`pr-check` is what closes it**, because it can see the issue: closes one → a fragment named for it; closes none → the diff must be documentation only.
@@ -46,4 +62,4 @@ Record here anything decided that the plan did not specify, and why. If it chang
 
 **The limit on `pr-check` is the project owner's and it is written in the workflow's own header**: it verifies only facts checkable without reading prose. Every future annoyance will look like something the script could catch. If verifying it requires reading English and forming a view, it belongs to `reviewer`.
 
-**What this phase did not do:** a `reviewer` pass. The plan's risk section argued for one, on the grounds that the coordinator wrote the prompts these rules exist to fix and is therefore the worst person to notice a rule that only makes sense to someone who already has the context. The brief it suggested is still the right one — *"would an agent who has read only these documents do the right thing?"* — and 11c is the first phase that will answer it in practice.
+**The `reviewer` pass was done after the fact** and is recorded above; what follows was written before it and is left as the dated record it is. **What this phase did not do at the time:** a `reviewer` pass. The plan's risk section argued for one, on the grounds that the coordinator wrote the prompts these rules exist to fix and is therefore the worst person to notice a rule that only makes sense to someone who already has the context. The brief it suggested is still the right one — *"would an agent who has read only these documents do the right thing?"* — and 11c is the first phase that will answer it in practice.

@@ -647,3 +647,39 @@ Merged all three into a scratch worktree (`git worktree add ../ls-review-final -
   28/08/2026 and had to be fixed by #126/#127. Not a false statement (status.md says nothing wrong,
   it says nothing at all), but the closing PR set should add the entry rather than leave it to two
   memory-commit subject lines to carry the fact.
+
+## Phase 10d — auditing rules written from inside one lived case (workflow-enforcement phase)
+
+46. **Two sibling scripts that enforce "the same rule" almost never enforce the identical set of
+    exceptions, and only running both against the same commit proves it.** `tools/hooks/commit-msg`
+    exempts `Merge `, `Revert "`, `fixup!`, `squash!` and an empty/comment-only subject (case
+    statement, `tools/hooks/commit-msg:32-34`). `tools/pre-pr-check`'s own commit-hygiene loop
+    (step 2, around line 80) only skips `"Merge "*`. A plain `git revert --no-edit` — which the hook
+    explicitly documents as legitimate — produces a subject the hook accepts at commit time and
+    `pre-pr-check` then rejects before the pull request, with a generic "not a conventional subject"
+    error that gives no hint the two checks disagree. Confirmed by actually running
+    `git revert --no-edit <sha>` on a scratch branch and then `tools/pre-pr-check`: `FAIL 1 commit
+    subject(s) break the convention`. Worse: `docs/plan/10d-enforced-workflow/status/
+    137-issue-contract.md:13` states outright that `commit-msg` checks "the same rule
+    `tools/pre-pr-check` applies… Merges, reverts, `fixup!`, `squash!` and an empty or comment-only
+    message are skipped" — a claim about parity between the two scripts that is false for four of
+    its five listed exemptions, written the same way phase 09's "never run on a runner" claim was:
+    plausible, unverified, and contradicted by one command. This is the shape to check first
+    whenever two enforcement scripts are said to share a rule: read each one's actual exemption list
+    side by side, don't trust the sentence that says they agree.
+47. **A status-fragment naming check that verifies "the basename matches the issue number" is not
+    the same as verifying "the fragment lives under the phase actually being worked."** Neither
+    `tools/pre-pr-check` (which only checks presence — by its own comment, deliberately) nor
+    `.github/workflows/pr-check.yml` (which matches `docs/plan/[^/]+/status/[^/]+\.md` against any
+    phase directory and only checks the basename against the cited issue number) confirms that the
+    `[^/]+` phase segment matches the phase branch the pull request targets. Confirmed by
+    constructing a branch against `phase/10d-enforced-workflow` that adds
+    `docs/plan/11c-movement-shapes/status/999-misplaced.md` and citing "Closes #999" in the body: both
+    the real `tools/pre-pr-check` and a line-for-line extraction of `pr-check.yml`'s logic pass it.
+    Weaker than #46 (the gap is explicitly narrowed-by-comment in `pre-pr-check`, "checking the name
+    against the issue… is pr-check's job" — but `pr-check` doesn't close that gap either), still
+    worth naming as a second instance of the same phase's blind spot: a check specified from the one
+    case its author tested (issue number matches fragment number) rather than the full shape of
+    "illegitimate" (issue number matches, but wrong phase directory).
+
+Related: [[audit-techniques]].
