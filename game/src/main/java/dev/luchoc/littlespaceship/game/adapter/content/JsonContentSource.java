@@ -3,6 +3,7 @@ package dev.luchoc.littlespaceship.game.adapter.content;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
+import dev.luchoc.littlespaceship.core.port.ArcTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.AttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.BossDefinition;
@@ -157,12 +158,39 @@ public final class JsonContentSource implements ContentSource {
     private void loadTrajectories(JsonReader reader, FileHandle file) {
         inFile(file, () -> {
             for (JsonValue entry : reader.parse(file).get("trajectories")) {
-                TrajectoryDefinition trajectory = new SimpleTrajectoryDefinition(
-                    entry.getString("id"), entry.getFloat("vx"), entry.getFloat("vy"));
+                TrajectoryDefinition trajectory = parseTrajectory(entry);
                 trajectories.put(trajectory.id(), trajectory);
             }
             return null;
         });
+    }
+
+    /**
+     * Parses one {@code trajectories.json} entry into the {@link TrajectoryDefinition} kind its
+     * {@code "type"} names — {@code "constant"} (the default, so the four entries that shipped
+     * before {@code "type"} existed still load unchanged) or {@code "arc"}, the two kinds
+     * {@code docs/plan/11c-movement-shapes/shape-catalogue.md} decides and {@link
+     * TrajectoryDefinition} is sealed to. Any other value fails loudly naming both the trajectory id
+     * and the bad type — deliberately not defaulted to {@code "constant"}, the same reasoning {@link
+     * #parseEndCondition} already applies to a wave's end condition: a typo in {@code "type"} silently
+     * loading as a different shape is a wrong game, not a crash, and this loader used to be exactly
+     * that permissive by reading only {@code id}, {@code vx} and {@code vy} and ignoring everything
+     * else.
+     */
+    private static TrajectoryDefinition parseTrajectory(JsonValue entry) {
+        String id = entry.getString("id");
+        String type = entry.getString("type", "constant");
+        if ("constant".equals(type)) {
+            requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "type", "vx", "vy");
+            return new SimpleTrajectoryDefinition(id, entry.getFloat("vx"), entry.getFloat("vy"));
+        }
+        if ("arc".equals(type)) {
+            requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "type", "vx", "vy", "ay");
+            return new ArcTrajectoryDefinition(
+                id, entry.getFloat("vx"), entry.getFloat("vy"), entry.getFloat("ay"));
+        }
+        throw new IllegalArgumentException(
+            "trajectory '" + id + "' has an unknown type '" + type + "'");
     }
 
     private void loadFormations(JsonReader reader, FileHandle file) {
