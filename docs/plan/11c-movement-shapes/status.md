@@ -1,44 +1,55 @@
 # Phase 11c — Movement as a described thing · status
 
-**State:** in progress — opened 29/08/2026 on `phase/11c-movement-shapes`
+**State:** done — every task merged into `phase/11c-movement-shapes`
 **Updated:** 29/08/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
 
-**Per-task progress does not live here.** It lives in `status/`, one file per task, written by whoever does that task on their own branch, before review. That split is what phase 10d built: in 11b every parallel agent edited one shared `status.md`, which produced a merge conflict, a forbidden force-push to escape it, and two silent gaps in the record. `tools/pre-pr-check` now fails a branch that does work and writes no fragment, and rejects a fragment filed in another phase's directory.
-
-## The tasks
-
-Five, one issue each. The plan's task 5 is [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) itself — the handover from 10c that this whole phase exists to close.
-
-| # | Task | Owner |
-|---|---|---|
-| [#161](https://github.com/LuchoC-Dev/little-spaceship/issues/161) | Per-entity movement state: a path is a function of the entity's own elapsed time | `core-domain` |
-| [#162](https://github.com/LuchoC-Dev/little-spaceship/issues/162) | Decide which movement shapes exist, and refuse the rest | `level-designer` |
-| [#163](https://github.com/LuchoC-Dev/little-spaceship/issues/163) | A movement shape is named content, loaded from `assets/data` | `core-domain` + `level-designer` |
-| [#164](https://github.com/LuchoC-Dev/little-spaceship/issues/164) | `SpawnEvent` carries an optional shape id, the archetype supplies the default | `core-domain` |
-| [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) | Close the handover, and correct every javadoc this phase falsifies | `core-domain` |
+**Per-task progress does not live here.** It lives in `status/`, one file per task, written by whoever did that task on its own branch. Read those for what each one did; this is what the phase amounts to.
 
 ## Done
 
-Nothing yet.
+**The same archetype now enters differently at second 30 and at second 200 without being two archetypes**, which was the whole phase. One `enemy-rush` in `assets/data/enemies.json` enters on `dive` in one spawn and on `strike-run` in another, and the arc is followed as a curve — 300 ticks of strictly-decreasing descent, a climb after the turn, and `vy` at 5 s equal to the closed form `-110 + 27·5`. Demonstrated in `SpawnSystemTest` and `MotionSystemTest`, not in prose, which is what the acceptance criteria asked for.
 
-## In progress
+All five tasks, in three rounds, five pull requests: [#168](https://github.com/LuchoC-Dev/little-spaceship/pull/168), [#169](https://github.com/LuchoC-Dev/little-spaceship/pull/169), [#170](https://github.com/LuchoC-Dev/little-spaceship/pull/170), [#171](https://github.com/LuchoC-Dev/little-spaceship/pull/171) and [#172](https://github.com/LuchoC-Dev/little-spaceship/pull/172). `reviewer` audited rounds 1, 2 and 3 and accepted each.
 
-Nothing yet. The phase branch exists and the issues are open.
+**The three things 10c deliberately left undesigned are now decided and built:**
 
-**The order they run in is [`plan.md`](plan.md), "The running order"** — three rounds, the first two issues in parallel. It is written there rather than here because it is a decision about how the phase is run, not a record of progress.
+| What 10c left open | What answers it |
+|---|---|
+| which shapes exist | `shape-catalogue.md` — two kinds, `constant {vx, vy}` and `arc {vx, vy, ay}`, seven entries, eight refusals |
+| how they are described | `core/port/TrajectoryDefinition.java`, sealed over two records, read from `assets/data/trajectories.json` by `game/adapter/content/JsonContentSource.java` |
+| where the binding is chosen | `SpawnEvent.trajectoryId`, optional, with the archetype's own trajectory as the default |
 
-## Blocked
+`SystemOrder` is unchanged — the diff against it is empty — and `SystemOrder.MOTION`'s javadoc had read "Applies velocities and trajectories" since long before this phase. The stage was named for this work and it fitted inside it, exactly as 10c predicted.
 
-Nothing. 11a merged in [#109](https://github.com/LuchoC-Dev/little-spaceship/pull/109) and 11b in [#131](https://github.com/LuchoC-Dev/little-spaceship/pull/131), so the wave a shape gets placed in exists.
+## What the phase learned, and it is not the code
+
+**Three of the four defects this phase produced were one thing: a claim outliving the fact it was true about.**
+
+- `Trajectory` carried `originX`/`originY` for five commits, on the reasoning that "any position-relative shape needs a fixed reference point". #162 then decided a shape reads no position, and the fields came out. **The agent had flagged the guess in its own report rather than burying it**, which is what made the correction cheap.
+- `Motion`'s javadoc went on naming that origin two branches after it was deleted. **Three agents and two `reviewer` passes went past it**, because every audit reads what its own branch changed and this was a sentence in a file that branch did not touch, made false by a *removal* elsewhere. A javadoc rots in the diff nobody is reading.
+- #168's pull-request description still described the origin fields after the commits that removed them — the same shape `reviewer` had already recorded from #120 in phase 11b.
+
+The fourth was structural rather than textual, and is the one worth carrying forward: **the plan named one agent too few, twice.** Task 3 says "loaded from `assets/data/`" and task 4 says `SpawnEvent` carries an id, and both readings assume the JSON is read in `core`. It is not — `JsonContentSource` is in `game/`, which is `game-presentation`'s. `core-domain` stopped at the boundary both times and wrote down the diff it could not make, rather than crossing it or leaving it implicit. The plan's running-order table is corrected in place, dated, with the warning that **any later plan saying "loaded from `assets/data/`" needs three agents, not two** — 11d is the next one to read that way.
+
+## Two things that were settled by measurement rather than argument
+
+**TeaVM supports sealed interfaces.** Making `TrajectoryDefinition` sealed put a Java 17 language feature into code that is transpiled to JavaScript, and nothing in CI proves the web target still builds — `./gradlew build` reports `compileTeavmJava NO-SOURCE` ([#123](https://github.com/LuchoC-Dev/little-spaceship/issues/123)). `reviewer` ran the real task, `./gradlew :web:gdx_teavm_web_js_build`, and grepped the emitted `app.js`: `ArcTrajectoryDefinition` appears 20 times, `TrajectoryDefinition` 38. `WaveEndCondition` was already sealed and already shipping, which is the precedent the work claimed. The question does not need re-litigating.
+
+**The uniform `Trajectory` attach reaches nothing it should not.** Every entity built through `ComponentFactoryRegistry` now carries one, constant shapes included. `reviewer` checked what that reaches rather than taking the claim: only `SpawnSystem` and `SpawnerSystem` call the registry, while the player, the boss and both weapon systems set `Motion` directly, so no hand-set velocity is overwritten per tick and no `cleared` wave can deadlock behind an entity whose movement changed hands.
 
 ## Decisions taken while implementing
 
-Record here anything decided that the plan did not specify, and why. If it changes a game rule, it also belongs in `docs/planning/08-decisions-and-open-items.md`.
-
-**Already decided before the phase opened**, by the project owner on 27/08/2026: the shape is chosen in the spawn event, with the archetype supplying the default. **Which shapes exist is not decided** — that is #162, and it is the one place in this phase where invariant 6 does the most work.
+- **A shape is a function from the entity's own elapsed time to its velocity, and nothing else goes in.** No player position — that would be a homing behaviour, a game rule nobody has decided — no randomness, and **every shape must leave the playfield unattended in finite time**, because `LifetimeSystem` removes an enemy only once it is off screen and a `cleared` wave would otherwise deadlock behind one that stops. That last rule is why `enterAndHold` was refused.
+- **The arc is evaluated in closed form**, `vy + ay·t` from `Trajectory.elapsed`, never accumulated tick by tick — accumulation would drift and would falsify the turn times and apexes the catalogue states.
+- **An unknown shape id is not caught at load.** It parses and fails when `SpawnSystem` resolves it, uncaught, which is the treatment `enemyId` and `formationId` already get. An unknown *key* is still rejected immediately.
+- All of these are recorded in `docs/planning/08-decisions-and-open-items.md`.
 
 ## Notes for whoever comes next
 
-This is the first phase to run agents in parallel over `core/` and `assets/data/` at once, which is the scenario 10d built its tools for. Every worker gets its own worktree, created by the coordinator, and agent memory is written in the main checkout — `tools/agent-memory-path <agent>` prints the one correct directory.
+**No level uses a shape.** `waves.json`, `level-01.json` and `enemies.json` are untouched, deliberately: pointing a wave at `strike-run` would redesign level 1, and that is [11e](../11e-level-one-redesigned/plan.md). This phase built the mechanism and proved it; the content decision belongs to the level.
+
+**One constraint 11e must respect:** the veers have to spawn on the side they veer away from — `veer-left` at `atX >= 0.75`, `veer-right` at `atX <= 0.25` — or the shape happens off screen.
+
+**The catalogue rests on level 1 alone.** #162 asked for shapes that level 1's fourteen beats *and phase 12's two levels* point at, but phase 12's levels have no beat list anywhere, so half the question was unanswerable and was reported as such rather than filled in with invented beats. A sine or weave shape is named in the catalogue as the first candidate to revisit when a beat asks for one.
