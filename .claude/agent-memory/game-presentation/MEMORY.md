@@ -16,3 +16,4 @@
 - [GitHub Pages deploy workflow verification before merge](project_github-pages-deploy-workflow.md) — `workflow_dispatch` needs the file on the default branch first; the `github-pages` environment enforces main-only on its own; download and unpack the Pages artifact to measure real bytes.
 - [FileHandle#list() avoided for TeaVM](project_filehandle-list-avoided-for-teavm.md) — why level content stays keyed by an explicit id instead of enumerating `level-*.json` files.
 - [waves.json loader: a load-time flattening bridge that existed briefly, then was deleted](project_wave-loader-flattening-bridge.md) — what happens when a core contract lands before its consumer.
+- [SpawnEvent's "trajectory" key is read but deliberately not validated at load time](project_spawn-event-trajectory-override.md) — matches how enemyId/formationId already resolve lazily, in SpawnSystem.
