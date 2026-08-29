@@ -16,3 +16,4 @@
 - [Negative offset overlap fix](project_negative-offset-overlap-fix.md) — reactive scheduling can never overlap two waves regardless of formula; predictive-vs-reactive is the axis; check whether a golden fixture's own content even exercises a changed code path.
 - [Movement state component](project_movement-state-component.md) — a new ComponentStore needs its reflection guard test extended by hand; why origin joined elapsed time; a component nothing spawns yet still needs its own manual-attach tests.
 - [Movement shape content contract](project_movement-shape-content-contract.md) — sealing TrajectoryDefinition over arc/constant; holding the game/ boundary even when the task's own scope line and the catalogue point straight at JsonContentSource.
+- [Trajectory evaluation wiring](project_trajectory-evaluation-wiring.md) — Trajectory stores an id not a definition, attached uniformly for every kind, and the SpawnEvent constructor trick reused for a shape override.
