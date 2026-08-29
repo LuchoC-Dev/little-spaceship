@@ -10,6 +10,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
 import dev.luchoc.littlespaceship.core.port.TrajectoryDefinition;
@@ -93,20 +94,33 @@ public final class ComponentFactoryRegistry {
     }
 
     /**
-     * Resolves the {@code "trajectory"} field against {@link World#content()} and attaches its
-     * velocity at elapsed time zero. Trajectories carry the whole vector on purpose — see
-     * {@link TrajectoryDefinition} — so there is no per-archetype speed override to apply here.
+     * Resolves the {@code "trajectory"} field against {@link World#content()}, attaches its velocity
+     * at elapsed time zero, and attaches a {@link Trajectory} component naming the same id — this
+     * archetype's default shape, before {@code SpawnSystem} applies a per-spawn-event override, per
+     * issue #164. Trajectories carry the whole vector on purpose — see {@link TrajectoryDefinition} —
+     * so there is no per-archetype speed override to apply here.
      *
-     * <p>This is a one-time snapshot, same as before this shape's kind could vary: an {@code arc}
-     * trajectory's vertical velocity keeps changing after spawn, per
-     * {@link TrajectoryDefinition#verticalVelocityAt(float)}, but nothing here re-evaluates it every
-     * tick yet — that is issue #164, which is also what attaches a {@code Trajectory} component so a
-     * later tick has the elapsed time to evaluate against.
+     * <p>The {@link Trajectory} is attached for every kind, {@code constant} included: {@code
+     * MotionSystem} re-evaluates it every tick regardless of kind, and a {@code constant} shape's
+     * {@code verticalVelocityAt} returns the same value it always has, so the result is identical to
+     * the one-time snapshot this factory produced before {@link Trajectory} existed.
      */
     private static void attachMotion(World world, int entity, ComponentSpec spec) {
         String trajectoryId = spec.text("trajectory");
+        attachTrajectory(world, entity, trajectoryId);
+    }
+
+    /**
+     * Resolves {@code trajectoryId} against {@link World#content()}, attaches its velocity at
+     * elapsed time zero into {@link Motion}, and attaches a {@link Trajectory} naming it so {@code
+     * MotionSystem} can keep re-evaluating it. Shared between {@link #attachMotion} (the archetype's
+     * default) and {@code SpawnSystem} (a spawn event's override, issue #164) so both go through the
+     * exact same resolution.
+     */
+    public static void attachTrajectory(World world, int entity, String trajectoryId) {
         TrajectoryDefinition trajectory = world.content().trajectory(trajectoryId);
         world.motions().set(entity, new Motion(trajectory.vx(), trajectory.vy()));
+        world.trajectories().set(entity, new Trajectory(trajectoryId));
     }
 
     /**

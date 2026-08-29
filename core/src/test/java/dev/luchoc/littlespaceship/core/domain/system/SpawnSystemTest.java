@@ -10,6 +10,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
+import dev.luchoc.littlespaceship.core.port.ArcTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
 import dev.luchoc.littlespaceship.core.port.FormationSlot;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
@@ -281,6 +282,45 @@ class SpawnSystemTest {
             assertEquals(0f, motion.vx);
             assertEquals(-80f, motion.vy);
         }
+    }
+
+    @Test
+    @DisplayName(
+        "one archetype enters differently at two points of a level without being two archetypes")
+    void oneArchetypeTwoShapesFromOneSpawnEvent() {
+        // The phase's own acceptance criterion (docs/plan/11c-movement-shapes/plan.md): "enemy-rush
+        // enters differently at second 30 and at second 200 without being two archetypes". Here the
+        // archetype's own "motion" spec names "dive", its default; the second spawn event overrides
+        // it to "strike-run" — the same content id, "enemy-rush", both times.
+        ComponentSpec motion = new MapComponentSpec("motion", Map.of("trajectory", "dive"));
+        TestContent content = new TestContent()
+            .withTrajectory(new SimpleTrajectoryDefinition("dive", 0f, -80f))
+            .withTrajectory(new ArcTrajectoryDefinition("strike-run", 0f, -110f, 27f))
+            .withEnemy(new SimpleEnemyDefinition("enemy-rush", List.of(
+                motion, spriteSpec("enemy-rush"), colliderSpec(4.0f, true))))
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withWave(new SimpleWaveDefinition(WAVE, List.of(
+                new SpawnEvent(1f, "enemy-rush", "single", 0.5f, null, 0, null),
+                new SpawnEvent(2f, "enemy-rush", "single", 0.5f, null, 0, "strike-run")),
+                new WaveEndCondition.FixedDuration(20f)))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+        assertEquals(1, world.motions().size());
+        Motion onDefault = world.motions().valueAt(0);
+        assertEquals(-80f, onDefault.vy, "the un-overridden spawn keeps the archetype's own default");
+
+        system.update(world, 1f, InputFrame.IDLE);
+        assertEquals(2, world.motions().size());
+        boolean sawOverride = false;
+        for (int i = 0; i < world.motions().size(); i++) {
+            if (world.motions().valueAt(i).vy == -110f) {
+                sawOverride = true;
+            }
+        }
+        assertTrue(sawOverride, "the overridden spawn follows strike-run's velocity at elapsed time zero");
     }
 
     @Test

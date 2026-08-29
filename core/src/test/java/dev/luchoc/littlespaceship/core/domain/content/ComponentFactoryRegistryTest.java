@@ -12,6 +12,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.MapComponentSpec;
@@ -37,6 +38,9 @@ class ComponentFactoryRegistryTest {
         Motion motion = world.motions().get(entity);
         assertEquals(0f, motion.vx);
         assertEquals(-18f, motion.vy);
+        Trajectory trajectory = world.trajectories().get(entity);
+        assertEquals("slow-descent", trajectory.trajectoryId, "so MotionSystem can re-evaluate it per tick, issue #164");
+        assertEquals(0f, trajectory.elapsed);
     }
 
     @Test
