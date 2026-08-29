@@ -55,4 +55,4 @@ optional `trajectoryId` re-evaluated every tick by `MotionSystem`. It also keeps
 The issue's own words: "not designed here, deliberately: which shapes exist, how they are described,
 and where the binding is chosen". All three are now decided and built — #162, #163, #164 — so the
 handover is complete. What remains is content, not mechanism: **no level uses a shape**, and that is
-[11e](../11e-level-one-redesigned/plan.md) by the plan's own scope section.
+[11e](../../11e-level-one-redesigned/plan.md) by the plan's own scope section.
