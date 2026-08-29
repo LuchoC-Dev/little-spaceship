@@ -1,6 +1,6 @@
 ---
 name: defect-patterns
-description: The recurring shapes of defect found when auditing this repo — where to look first in a phase review, including second-round, data-driven, seam and design-fidelity passes
+description: The recurring shapes of defect found when auditing this repo — where to look first in a phase review, including second-round, data-driven, seam, design-fidelity, workflow-enforcement and cross-agent-handoff passes
 metadata:
   type: project
 ---
@@ -281,8 +281,6 @@ catalogue.
     dimension odd with a true centre pixel). Zero mismatches. This is the counter-example to keep
     calibration honest: "read every number, trust none of them until reconstructed" does not always
     find something, and this branch is the proof it does not have to.
-is state an omission once in prose while the summary sentence beside it reads as complete. That is
-the residual shape in this author's status documents, and it is a note, never a rejection.
 
 ## Phase 08 (`feat/audio`, PR #31): clean, and worth recording *why* nothing fired
 
@@ -320,8 +318,6 @@ present here in their *safe* form, which is the useful contrast to keep.
   real-browser pass is still the first time anyone actually listens to this." Same for task 5
   (animations): marked "in progress" with the exact missing pieces named, not folded into "done".
   This is what an honest partial-completion entry looks like next to patterns 21/22's dishonest one.
-is state an omission once in prose while the summary sentence beside it reads as complete. That is
-the residual shape in this author's status documents, and it is a note, never a rejection.
 
 ## PR #29 (`feat/boss`), phase 07 — a coordinator-committed last commit that held up, and a citation gap in what a replay actually covers
 
@@ -573,7 +569,9 @@ schedule second) reproduces the claimed bug exactly: `start` would clamp to `ste
   Not a code defect here (status.md and the latest comment are accurate, code matches them), but
   exactly the shape of "false statement in a document" the project's own precedent (phase 09's two
   rejections) warns about — flag it for correction even when a later comment already fixes the record,
-  because the top description is the part most likely to be read alone.
+  because the top description is the part most likely to be read alone. **Recurred in PR #168, phase
+  11c** (see below): same shape, same verdict (note, not blocker), so it is a real recurring pattern
+  in this project's workflow, not a one-off.
 - **`./gradlew build` never runs the actual TeaVM JS/Wasm compile** on this repo — `web:build`
   finishes with `compileTeavmJava NO-SOURCE` and no `dist/js` output. The real check is a specific
   task, `./gradlew :web:gdx_teavm_web_js_build` (list them with `./gradlew :web:tasks --all | grep -i
@@ -681,5 +679,156 @@ Merged all three into a scratch worktree (`git worktree add ../ls-review-final -
     worth naming as a second instance of the same phase's blind spot: a check specified from the one
     case its author tested (issue number matches fragment number) rather than the full shape of
     "illegitimate" (issue number matches, but wrong phase directory).
+
+## Phase 11c round 1 (PRs #168 `feat/movement-state`, #169 `content/movement-shapes`) — two agents in parallel over disjoint files, and a clean pair
+
+The first phase to run `core-domain` and `level-designer` in parallel over `core/` and
+`docs/`+`assets/data/` at once, with a real mid-round correction crossing between them (#169's
+catalogue landed while #168 was open; #168's author had already added `Trajectory.originX/originY`
+on a defensible guess, the coordinator asked for them to come out once the catalogue settled the
+question the other way, and they did, same branch, same PR — confirmed via `git log` on the branch
+showing the follow-up commits `fix(core): drop Trajectory origin now the shape catalogue refuses
+it` immediately after the design landed). Both branches touched only their own module (`git diff
+<phase>...<branch> --stat` for #168: `core/` + its own status fragment only; for #169: `docs/`
+only, no `assets/data/` written — deliberately, since #163 owns the parser). Both green on real
+CI runs (`gh run view <id> --log`, `BUILD SUCCESSFUL` on both `build` jobs). Verdict: accept both,
+nothing blocking on either.
+
+48. **A PR's top-level description can describe a design the branch's own later commits reversed,
+    while every other record (PR comment, status fragment, code) agrees on the current state.**
+    #168's `gh pr view --json body` still says `Trajectory` "carries origin (`originX`/`originY`)
+    alongside elapsed time" under a "Decision made where the plan was silent" heading — that was
+    true of the branch's first 5 commits, false after the next 3 (`fix(core): drop Trajectory
+    origin now the shape catalogue refuses it` and its sibling test/doc commits). The correction is
+    recorded faithfully in a PR *comment* ("Update: per the coordinator's instruction, dropped
+    `Trajectory.originX`/`originY`...") and in the status fragment, which additionally narrates
+    *why* the guess was made and *why* it was reversed rather than hiding the churn — the actual
+    `Trajectory.java` on the branch has one field, `elapsed`. This is exactly the shape named as a
+    recurring pattern by PR #120's round 2 (see the note above), now confirmed to recur a second
+    time in a different phase: the top description is written once and nobody is in the habit of
+    revisiting it after a follow-up commit, even when a comment two clicks below it does. Calibrated
+    as a note, not a blocker, both times — the description is stale, nothing downstream (code,
+    status.md, the latest comment) is.
+49. **A status fragment's component-store ordinal claim can be off by a small, harmless amount and
+    still be a checkable numeric error worth naming.** #168's `status/161-...md` calls `Trajectory`
+    "a fifteenth `ComponentStore<Trajectory>` field" — `grep -c "private final ComponentStore<"
+    World.java` on the branch returns 19 (18 pre-existing + this PR's one). Costs nothing
+    functionally (the test that actually guards store count, `WorldTest`'s `stores.size() >= 15`
+    floor, does not depend on the ordinal claimed in prose), but it is exactly the kind of
+    quantitative claim this project's own citation-checking habit exists to catch — count the
+    `private final ComponentStore<` lines whenever a status fragment numbers a store by ordinal, it
+    is one grep.
+50. **A design-fidelity document's derived-quantity arithmetic (turn time, apex depth, screen-exit
+    time) is worth reconstructing by hand even when it spans several entries, because the discipline
+    generalises and the author's habit of citing exact source lines (radius from `enemies.json`,
+    `SAFETY_MARGIN` from `LifetimeSystem.java`) makes it cheap.** Recomputed all of #169's
+    `shape-catalogue.md` claims independently: `strike-run`'s turn time (`110/27 = 4.074s`, matches
+    "4.07 s") and apex depth (`110²/(2·27) = 224.07`, matches "224 below spawn"); `veer-left`'s
+    (`95/20 = 4.75s`, `95²/40 = 225.6 ≈ 226`, both match) and its crossing-x arithmetic at `atX 0.9`
+    (`187 - 32·4.75 = 35`, matches "apex x ≈ 35" exactly); the safety-box bounds cited (`x ∈
+    [-128, 336]`, `y ∈ [-128, 398]`) against `LifetimeSystem.SAFETY_MARGIN = 128f` and
+    `PLAYFIELD_WIDTH`/`PLAYFIELD_HEIGHT` (208/270) — exact match. One inexactness found and judged
+    not worth blocking: the stated screen-exit times for `strike-run`/`veer-left` (9.15s/9.85s)
+    solve `y = 398`/`x = -128` rather than `y - radius = 398`/`x - radius = -128`, which is what
+    `LifetimeSystem.isPastSafetyBox` actually checks — the true exit is a few hundredths of a second
+    later (recomputed: `y=402` gives `t≈9.18s`, not `9.15s`). Immaterial to the rule the document is
+    proving ("every shape leaves in finite time"), and this project's own calibration (pattern 31,
+    the phase 03 sprite-production branch) already established that a design document can check out
+    in full — do not manufacture the rounding gap into a defect it doesn't support.
+51. **A "phase 12's levels give us no beat list to point a shape at" finding can be reported by both
+    halves of a parallel round without either one copying the other, and both halves agreeing is
+    itself evidence, not just a coincidence to note.** The coordinator's brief for this round flagged
+    this exact gap as "already known, don't spend the audit rediscovering it" — and #169's own
+    `shape-catalogue.md` and its status fragment both state it independently and identically ("Phase
+    12's levels 2 and 3 justify nothing here, and could not... only half of the issue's... could be
+    answered honestly, so all seven entries rest on level 1"), which is the correct, honest response
+    to an unanswerable half of an issue's acceptance criterion — the alternative (silently building a
+    shape "for phase 12" anyway) is exactly what invariant 6 exists to refuse, and this branch didn't
+    take it.
+
+## PR #170 (`feat/movement-shape-content`, phase 11c round 2, issue #163) — a sealed interface actually proven safe under TeaVM, and a clean three-agent branch
+
+The round the parent most wanted a second opinion on: `TrajectoryDefinition` became a `sealed
+interface` with a `permits` clause, `core` is what TeaVM compiles, and CI's `build` job runs
+`compileTeavmJava` as `NO-SOURCE` (see the closing-group entry above and [[audit-techniques]]'s
+"For auditing a TeaVM web dist directory") — so nothing in the PR's own green checks proves the web
+target still builds. Settled by actually running the real compile, not by reasoning about the
+language feature: `git worktree add` off `origin/feat/movement-shape-content`, then `./gradlew.bat
+:web:gdx_teavm_web_js_build` (the task name from the earlier note above), `BUILD SUCCESSFUL`, and
+`grep -c ArcTrajectoryDefinition web/build/dist/js/webapp/app.js` returned 20 — the sealed type and
+its new permitted record are both really in the compiled JS, not just theoretically compatible.
+`WaveEndCondition` (`core/src/main/java/.../core/port/WaveEndCondition.java:17`) really is already
+`sealed`, confirming the PR's "mirrors an existing pattern" claim, and this PR is the first time
+anyone has actually proven a sealed `core.port` type survives the TeaVM compile rather than assuming
+it from `WaveEndCondition` shipping unexamined. **Worth remembering directly: sealed interfaces with
+`permits` compile through this project's TeaVM plugin (`com.github.xpenatan.gdx-teavm:1.6.1`) — this
+no longer needs re-litigating on a future PR, only re-confirming if the plugin version changes.**
+
+52. **Nothing wrong found, and every checkable claim reproduced.** The eight refused shapes from
+    round 1's catalogue (`diagonal`, `logarithmic`, `sine`, `enterAndHold`, `ax`, waypoints,
+    formation-relative, player-reading) shipped nothing — no field, no parser branch, no
+    `horizontalVelocityAt` (grepped for it directly, zero hits) — and the "nothing points at the new
+    entries" claim held (`grep -rln "strike-run\|veer-left\|veer-right" assets/data/*.json` returns
+    only `trajectories.json`). `requireOnlyKeys` strictness is pre-existing (already used for waves'
+    end conditions), not new machinery invented for this PR, and the four pre-existing trajectory
+    entries parse unchanged through it. Full clean `./gradlew build`: 328 core tests, 0
+    failures/skipped/errors. `pre-pr-check --base phase/11c-movement-shapes` reproduced the PR body's
+    pasted "PASS — 5 commit(s), 8 file(s) changed" exactly (had to `git checkout -b` inside the
+    detached worktree first — the branch-name check fails on a bare detached HEAD, a tooling quirk
+    worth remembering, not a defect). The `-110 → -56 → -0.002` sequence in both the PR body and the
+    status fragment reproduces by hand (`-110+27·2=-56`, `-110+27·4.074≈-0.002`). Recorded as
+    calibration alongside PR #22/#26/#31/#08's clean verdicts: an "accept, nothing new" report is
+    only worth as much as the TeaVM compile actually run to support it.
+
+## PR #171 (`feat/spawn-shape-id`, phase 11c task 4/issue #164) — the phase's own task, clean
+
+Two agents on one branch, `core-domain` for the binding and evaluation, `game-presentation` for the
+loader key, same split as #163. Verdict: accept, nothing found. Recorded as the calibration case for
+"velocity becomes a function of elapsed time for the first time" not actually breaking determinism.
+
+53. **A uniform-attach claim ("every entity that gets a Motion now also gets a Trajectory") is
+    verified by grepping the one call site of the shared factory method, not by reading its own
+    javadoc.** `ComponentFactoryRegistry.attachMotion`/`attachTrajectory` is registered exactly once,
+    under `"motion"` in `ComponentFactoryRegistry.withDefaults()`, and only `SpawnSystem` and
+    `SpawnerSystem` ever call `attachComponents` at all — the player (`Simulation`), the boss
+    (`BossSystem`) and both weapon systems all call `world.motions().set(...)` directly, bypassing the
+    registry entirely, so none of them ever gains a `Trajectory` and MotionSystem's per-tick
+    re-evaluation loop (which walks `world.trajectories()`, not `world.motions()`) never touches their
+    hand-set `Motion`. Confirmed by grepping `attachMotion|attachTrajectory` and `new Motion(` across
+    `core/src/main` separately. The "is it really a no-op for constants" half of the same claim is
+    provable by mutation-free reasoning once `TrajectoryDefinition`'s two implementations are read: a
+    `constant` shape's `verticalVelocityAt` ignores its argument by construction, so re-evaluating it
+    every tick is definitionally the same write every time — no probe needed, unlike the boundary
+    mutations pattern 44 required.
+54. **An "unknown id fails loudly, one level later, by design" claim for a *new* content field is
+    fully checkable end to end with two greps, no probe.** `SpawnEvent.trajectoryId` skips validation
+    in its own compact constructor (confirmed by reading it — same four checks as before this PR,
+    nothing added for the new field) and `JsonContentSource.parseSpawnEvent` never resolves it either
+    — the actual throw is `JsonContentSource.require`'s `IllegalArgumentException("unknown " + kind +
+    " id '" + id + "'")`, reached through `world.content().trajectory(id)` inside
+    `MotionSystem.advanceTrajectories`/`ComponentFactoryRegistry.attachTrajectory`, and
+    `Simulation.tick` has no try/catch anywhere in the file — so the exception is genuinely uncaught,
+    not merely "loud" in the sense of a logged line. This is the same treatment `enemyId`/`formationId`
+    already get (grepped `require(` calls in `JsonContentSource` to confirm the pattern is pre-existing,
+    not invented for this field), so the precedent claim holds too.
+55. **A phase's own worked numbers (turn time, exact velocity at a stated tick) are the strongest test
+    oracle available, and a test that asserts against them is proof against silent accumulation
+    drift.** `MotionSystemTest.arcShapeIsFollowedAndCurves` asserts `Motion.vy` at t=5s equals
+    `-110 + 27*5 = 25` exactly (0.01f tolerance) — this is `TrajectoryDefinition#verticalVelocityAt`'s
+    closed form, and it would NOT match if the implementation instead accumulated `ay * step` every
+    tick with float error, or evaluated against a stale `elapsed` (before vs. after the tick's own
+    increment). Whenever a "closed form, not accumulation" claim appears, check that the test's
+    asserted value is the closed-form result and not just "some value the code currently produces."
+
+Full clean-branch confirmation: `./gradlew :core:test --rerun-tasks` from a fresh worktree, 331 tests
+0 failures/skipped/errors (aggregated from `core/build/test-results/test/*.xml`); `DeterminismRulesTest`
+and every `*ReplayTest` present and green; `SystemOrder.java` untouched (`git diff` empty for that
+file); `./gradlew :web:gdx_teavm_web_js_build` green from the same worktree (this PR touches `game/`,
+so worth re-running even though the PR itself only claims "not checked" for the web target — the
+claim was appropriately conservative, not wrong); `tools/pre-pr-check --base phase/11c-movement-shapes`
+reproduced the PR's pasted "PASS — 4 commit(s), 11 file(s) changed" exactly, after `git checkout -b`
+inside the detached worktree (pattern from PR #170's memory entry, still needed). No wave/level/enemy
+content references any new shape id (`grep -rln "strike-run\|veer-left\|veer-right" assets/data/*.json`
+returns only `trajectories.json`), confirming the "no wave points at a shape yet" claim.
 
 Related: [[audit-techniques]].

@@ -191,6 +191,21 @@ Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
   never had a chance to catch the fix's absence." PR #116: `entities=12→11` alone across the PR, but
   `score=1350→1600→1350` across three commits, only the middle one uncommitted-and-reverted.
 
+## For proving a TeaVM-compatibility question rather than arguing it
+
+- **Run the real compile task, then grep the output `app.js` for the class name.** `./gradlew.bat
+  :web:gdx_teavm_web_js_build` in a worktree checked out to the branch under review, then `grep -c
+  <NewSealedType|NewRecordName> web/build/dist/js/webapp/app.js` returning a nonzero count is direct
+  proof the construct survived TeaVM's compile and stayed reachable (not dead-code-eliminated) —
+  strictly stronger than "the plugin version is X and X is documented to support Java 17 syntax."
+  Confirmed for PR #170: a `sealed interface ... permits ...` with a new permitted record compiles
+  clean and both names appear in the emitted JS.
+- **`tools/pre-pr-check`'s branch-name check fails on a bare detached `HEAD` inside a worktree**, even
+  though nothing else about the tree is wrong — `git checkout -b <anything>` inside the worktree
+  first, then rerun. Cheap, and lets the script's own "PASS — N commit(s), M file(s) changed" line be
+  reproduced verbatim against what the PR body claims, rather than trusted from the pasted output
+  alone.
+
 ## For auditing two sibling PRs that must be judged as one design
 
 - **Actually build the merge instead of reasoning about whether two branches "should" combine

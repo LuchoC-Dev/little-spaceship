@@ -60,12 +60,28 @@ The fight ends when the core dies, and `core-keel` carries the core's own health
 the practical health of the "kill target" is `2 * coreHealth`, while the health bar shows the sum
 across all six parts. Killing pods and arms shortens the bar without shortening the fight.
 
+## Where the player actually is, when aiming anything at them
+
+`balance.json` puts the player at `playerStartX 104`, `playerStartY 30`, at `playerSpeed 140` in a
+270-tall playfield. In practice the band that matters is roughly `y 20-70`: high enough that anything
+whose lowest point sits above ~80 never really threatens, low enough that a shape bottoming out at
+~50 lands on top of the player without overrunning them. Worth checking a number against this before
+proposing it — it is the same check `combatY` needs for the boss, from the other end of the screen.
+
 ## `dropSlot` and the boss block are written but not yet parsed
 
 As of this pass, `JsonContentSource.loadLevel` reads five fields and uses `SpawnEvent`'s
 five-argument constructor, so `dropSlot` silently defaults to 0, and no code reads a `"boss"` object
 at all. Unknown JSON keys are ignored, not rejected — content can therefore look correct, load clean
 and do something else. Re-check both before trusting a drop placement or a boss's numbers.
+
+**This is a recurring shape of failure here, not one incident.** Every loader in `JsonContentSource`
+reads a fixed list of keys and ignores the rest, so *any* new field added to content ahead of the
+parser that understands it is invisible rather than rejected. Checked again on 29/08/2026 for phase
+11c: `loadTrajectories` (`JsonContentSource.java:157-166`) reads exactly `id`, `vx`, `vy`, so a
+trajectory entry carrying a new `"type"`/`"ay"` would have loaded and flown as a plain constant
+vector with no error anywhere. Rule of thumb: never land content for a field in an earlier pull
+request than the parser — grep the matching `load*` method first, it is always a dozen lines.
 
 ## `EnemyWeapon`'s `firstShotDelay` vs. an archetype's screen time (25/08/2026)
 
