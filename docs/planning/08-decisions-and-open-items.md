@@ -120,7 +120,8 @@ documents. The evidence is in `docs/plan/10c-architecture-review/assessment.md`,
 - **Movement as a described thing is the one real gap.** `Motion` is a bare velocity and a trajectory
   is a constant vector resolved once at spawn, so the same archetype cannot enter differently at two
   points of a level without being duplicated. Mechanism only; the shapes and the format are the 11
-  group's design.
+  group's design. **Built on 29/08/2026 by phase 11c**, which is why this paragraph is left as the
+  dated record of what the review found rather than rewritten — see the 11c entry below.
 - **Not decided here, on purpose:** what a wave is, and what form the per-level document takes. The
   architecture permits every arrangement of the second except two hand-maintained artefacts, so the
   choice is a design and process decision rather than an architectural one.
@@ -220,9 +221,17 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   `LifetimeSystem` removes an enemy only once it is off screen. The reasoning, the parameters and the
   eight refusals are in
   [`docs/plan/11c-movement-shapes/shape-catalogue.md`](../plan/11c-movement-shapes/shape-catalogue.md).
-  **Not built:** only `constant` exists in code today, as `core/port/TrajectoryDefinition.java`; `arc`
-  is [#163](https://github.com/LuchoC-Dev/little-spaceship/issues/163) and
-  [#164](https://github.com/LuchoC-Dev/little-spaceship/issues/164).
+  **Built on 29/08/2026**, and this paragraph replaces a "Not built" that was true when it was
+  written. `core/port/TrajectoryDefinition.java` is a sealed interface permitting
+  `SimpleTrajectoryDefinition` (`constant`) and `ArcTrajectoryDefinition` (`arc`), whose
+  `verticalVelocityAt(float)` returns `vy + ay·t` in closed form;
+  `game/adapter/content/JsonContentSource.java` reads the `"type"` key and refuses an unknown one;
+  the three `arc` entries are in `assets/data/trajectories.json`; `SpawnEvent` carries an optional
+  `trajectoryId` and `MotionSystem` re-evaluates it every tick from `Trajectory`'s `elapsed`.
+  [#163](https://github.com/LuchoC-Dev/little-spaceship/issues/163) and
+  [#164](https://github.com/LuchoC-Dev/little-spaceship/issues/164) are closed.
+  **No wave points at a shape yet** — pointing one would redesign level 1, which is
+  [11e](../plan/11e-level-one-redesigned/plan.md).
 - **The per-level document is generated from the JSON, and CI fails when they disagree.** Of the three
   arrangements area G of `docs/plan/10c-architecture-review/assessment.md` says the architecture
   permits, this is the one taken. It follows the two generators that already work here,
