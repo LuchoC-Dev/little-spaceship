@@ -122,7 +122,7 @@ class WorldTest {
         world.enemyWeapons().set(entity, new EnemyWeapon("straight-single", 1f, 90f));
         world.lifetimes().set(entity, new Lifetime(1f));
         world.waveOrigins().set(entity, new WaveOrigin("wave-1"));
-        world.trajectories().set(entity, new Trajectory(1f, 2f));
+        world.trajectories().set(entity, new Trajectory());
     }
 
     /**

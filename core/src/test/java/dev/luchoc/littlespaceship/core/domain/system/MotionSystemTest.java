@@ -199,7 +199,7 @@ class MotionSystemTest {
         int enemy = world.createEntity();
         world.transforms().set(enemy, new Transform(50f, 200f));
         world.motions().set(enemy, new Motion(0f, -30f));
-        Trajectory trajectory = new Trajectory(50f, 200f);
+        Trajectory trajectory = new Trajectory();
         world.trajectories().set(enemy, trajectory);
 
         system.update(world, STEP, InputFrame.IDLE);
@@ -207,25 +207,6 @@ class MotionSystemTest {
 
         system.update(world, STEP, InputFrame.IDLE);
         assertEquals(STEP * 2f, trajectory.elapsed, 0.0001f);
-    }
-
-    @Test
-    @DisplayName("a trajectory's origin never changes once set, unlike the entity's own Transform")
-    void trajectoryOriginIsFixed() {
-        int enemy = world.createEntity();
-        world.transforms().set(enemy, new Transform(50f, 200f));
-        world.motions().set(enemy, new Motion(10f, -30f));
-        Trajectory trajectory = new Trajectory(50f, 200f);
-        world.trajectories().set(enemy, trajectory);
-
-        system.update(world, STEP, InputFrame.IDLE);
-        system.update(world, STEP, InputFrame.IDLE);
-
-        Transform transform = world.transforms().get(enemy);
-        assertTrue(transform.x != trajectory.originX || transform.y != trajectory.originY,
-            "the entity moved, so its Transform must have diverged from the fixed origin");
-        assertEquals(50f, trajectory.originX);
-        assertEquals(200f, trajectory.originY);
     }
 
     @Test
