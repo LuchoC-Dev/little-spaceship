@@ -746,4 +746,38 @@ nothing blocking on either.
     shape "for phase 12" anyway) is exactly what invariant 6 exists to refuse, and this branch didn't
     take it.
 
+## PR #170 (`feat/movement-shape-content`, phase 11c round 2, issue #163) — a sealed interface actually proven safe under TeaVM, and a clean three-agent branch
+
+The round the parent most wanted a second opinion on: `TrajectoryDefinition` became a `sealed
+interface` with a `permits` clause, `core` is what TeaVM compiles, and CI's `build` job runs
+`compileTeavmJava` as `NO-SOURCE` (see the closing-group entry above and [[audit-techniques]]'s
+"For auditing a TeaVM web dist directory") — so nothing in the PR's own green checks proves the web
+target still builds. Settled by actually running the real compile, not by reasoning about the
+language feature: `git worktree add` off `origin/feat/movement-shape-content`, then `./gradlew.bat
+:web:gdx_teavm_web_js_build` (the task name from the earlier note above), `BUILD SUCCESSFUL`, and
+`grep -c ArcTrajectoryDefinition web/build/dist/js/webapp/app.js` returned 20 — the sealed type and
+its new permitted record are both really in the compiled JS, not just theoretically compatible.
+`WaveEndCondition` (`core/src/main/java/.../core/port/WaveEndCondition.java:17`) really is already
+`sealed`, confirming the PR's "mirrors an existing pattern" claim, and this PR is the first time
+anyone has actually proven a sealed `core.port` type survives the TeaVM compile rather than assuming
+it from `WaveEndCondition` shipping unexamined. **Worth remembering directly: sealed interfaces with
+`permits` compile through this project's TeaVM plugin (`com.github.xpenatan.gdx-teavm:1.6.1`) — this
+no longer needs re-litigating on a future PR, only re-confirming if the plugin version changes.**
+
+52. **Nothing wrong found, and every checkable claim reproduced.** The eight refused shapes from
+    round 1's catalogue (`diagonal`, `logarithmic`, `sine`, `enterAndHold`, `ax`, waypoints,
+    formation-relative, player-reading) shipped nothing — no field, no parser branch, no
+    `horizontalVelocityAt` (grepped for it directly, zero hits) — and the "nothing points at the new
+    entries" claim held (`grep -rln "strike-run\|veer-left\|veer-right" assets/data/*.json` returns
+    only `trajectories.json`). `requireOnlyKeys` strictness is pre-existing (already used for waves'
+    end conditions), not new machinery invented for this PR, and the four pre-existing trajectory
+    entries parse unchanged through it. Full clean `./gradlew build`: 328 core tests, 0
+    failures/skipped/errors. `pre-pr-check --base phase/11c-movement-shapes` reproduced the PR body's
+    pasted "PASS — 5 commit(s), 8 file(s) changed" exactly (had to `git checkout -b` inside the
+    detached worktree first — the branch-name check fails on a bare detached HEAD, a tooling quirk
+    worth remembering, not a defect). The `-110 → -56 → -0.002` sequence in both the PR body and the
+    status fragment reproduces by hand (`-110+27·2=-56`, `-110+27·4.074≈-0.002`). Recorded as
+    calibration alongside PR #22/#26/#31/#08's clean verdicts: an "accept, nothing new" report is
+    only worth as much as the TeaVM compile actually run to support it.
+
 Related: [[audit-techniques]].
