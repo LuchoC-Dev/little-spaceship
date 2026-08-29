@@ -59,23 +59,44 @@ now answered. **Which shapes exist is still open and is this phase's design work
 
 ## Tasks
 
-1. **Per-entity movement state.** An entity's path becomes a function of its own elapsed time, which
+1. **Per-entity movement state** — [#161](https://github.com/LuchoC-Dev/little-spaceship/issues/161). An entity's path becomes a function of its own elapsed time, which
    means a plain-data component holding that state and a system that advances it. Elapsed time
    accumulated from the fixed step is not reading the clock — invariant 2 is untouched — and anything
    wanting randomness has `World.rng()` (`core/domain/World.java:400`) waiting for it.
-2. **Decide which shapes exist, and stop there.** The roadmap names three by example: a U-shaped
+2. **Decide which shapes exist, and stop there** — [#162](https://github.com/LuchoC-Dev/little-spaceship/issues/162). The roadmap names three by example: a U-shaped
    attack run, a straight 30° diagonal, and a curve. Build the shapes level 1's fourteen beats and
    phase 12's two levels can point at, and refuse the rest. **Invariant 6 applies here more than
    anywhere in this group**, because a shape catalogue is exactly the kind of thing that grows on
    expectation. The four existing constant vectors stay valid: a constant velocity is a shape.
-3. **A movement shape is named content.** New contract in `core.port`, new `ContentSource` lookup,
+3. **A movement shape is named content** — [#163](https://github.com/LuchoC-Dev/little-spaceship/issues/163). New contract in `core.port`, new `ContentSource` lookup,
    loaded from `assets/data/`, in the same shape as the eight lookups that already exist. Read it with
    `JsonReader`/`JsonValue`, never the reflective `Json` class.
-4. **`SpawnEvent` carries an optional shape id**, and the archetype's own binding is the default when
+4. **`SpawnEvent` carries an optional shape id** — [#164](https://github.com/LuchoC-Dev/little-spaceship/issues/164) — and the archetype's own binding is the default when
    it does not. This is the N6 mechanism.
-5. **Close #86**, and update `TrajectoryDefinition`'s and `Motion`'s javadocs, both of which currently
+5. **Close [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86)**, and update `TrajectoryDefinition`'s and `Motion`'s javadocs, both of which currently
    state, correctly and about to be falsely, that curves are not here yet. A stale javadoc left behind
    by this phase is exactly the failure 10a spent a phase correcting.
+
+## The running order
+
+Decided by the project owner on 29/08/2026, when the phase opened. It is here rather than in
+`status.md` because it is a decision about how the phase is run, not a record of how far it has got —
+and because a coordinator who loses the session needs it before anything else.
+
+**This is the first phase to run two agents in parallel over `core/` and `assets/data/` at once**,
+which is the scenario phase 10d built its tools for. The coordinator creates every branch and
+worktree and hands each worker an absolute path that already exists; an agent never runs
+`git worktree add`. Agent memory is written in the main checkout — `tools/agent-memory-path <agent>`
+prints the one correct directory.
+
+| Round | Issues | Who | Why here |
+|---|---|---|---|
+| 1 | [#161](https://github.com/LuchoC-Dev/little-spaceship/issues/161) and [#162](https://github.com/LuchoC-Dev/little-spaceship/issues/162), in parallel | `core-domain` on `core/`; `level-designer` on `docs/` and `assets/data/` | They share no file. #162 is the design work the other two wait on, so it starts first rather than last |
+| 2 | [#163](https://github.com/LuchoC-Dev/little-spaceship/issues/163) | `core-domain` for the contract and the lookup, `level-designer` for the file | The shape list decided in #162 is what fixes the JSON's schema. Building the loader first would mean guessing it |
+| 3 | [#164](https://github.com/LuchoC-Dev/little-spaceship/issues/164), then [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) | `core-domain` | #164 is where the phase's own acceptance criterion lives — one archetype, two shapes, demonstrated in a test. #86 closes the handover and corrects the javadocs this phase falsifies, which is last because it cannot be written until the code is |
+
+**If the session is lost, read this table and `status.md` in that order.** The table says what is meant
+to happen; `status.md` and the fragments under `status/` say what has.
 
 ## Acceptance criteria
 
