@@ -780,4 +780,55 @@ no longer needs re-litigating on a future PR, only re-confirming if the plugin v
     calibration alongside PR #22/#26/#31/#08's clean verdicts: an "accept, nothing new" report is
     only worth as much as the TeaVM compile actually run to support it.
 
+## PR #171 (`feat/spawn-shape-id`, phase 11c task 4/issue #164) — the phase's own task, clean
+
+Two agents on one branch, `core-domain` for the binding and evaluation, `game-presentation` for the
+loader key, same split as #163. Verdict: accept, nothing found. Recorded as the calibration case for
+"velocity becomes a function of elapsed time for the first time" not actually breaking determinism.
+
+53. **A uniform-attach claim ("every entity that gets a Motion now also gets a Trajectory") is
+    verified by grepping the one call site of the shared factory method, not by reading its own
+    javadoc.** `ComponentFactoryRegistry.attachMotion`/`attachTrajectory` is registered exactly once,
+    under `"motion"` in `ComponentFactoryRegistry.withDefaults()`, and only `SpawnSystem` and
+    `SpawnerSystem` ever call `attachComponents` at all — the player (`Simulation`), the boss
+    (`BossSystem`) and both weapon systems all call `world.motions().set(...)` directly, bypassing the
+    registry entirely, so none of them ever gains a `Trajectory` and MotionSystem's per-tick
+    re-evaluation loop (which walks `world.trajectories()`, not `world.motions()`) never touches their
+    hand-set `Motion`. Confirmed by grepping `attachMotion|attachTrajectory` and `new Motion(` across
+    `core/src/main` separately. The "is it really a no-op for constants" half of the same claim is
+    provable by mutation-free reasoning once `TrajectoryDefinition`'s two implementations are read: a
+    `constant` shape's `verticalVelocityAt` ignores its argument by construction, so re-evaluating it
+    every tick is definitionally the same write every time — no probe needed, unlike the boundary
+    mutations pattern 44 required.
+54. **An "unknown id fails loudly, one level later, by design" claim for a *new* content field is
+    fully checkable end to end with two greps, no probe.** `SpawnEvent.trajectoryId` skips validation
+    in its own compact constructor (confirmed by reading it — same four checks as before this PR,
+    nothing added for the new field) and `JsonContentSource.parseSpawnEvent` never resolves it either
+    — the actual throw is `JsonContentSource.require`'s `IllegalArgumentException("unknown " + kind +
+    " id '" + id + "'")`, reached through `world.content().trajectory(id)` inside
+    `MotionSystem.advanceTrajectories`/`ComponentFactoryRegistry.attachTrajectory`, and
+    `Simulation.tick` has no try/catch anywhere in the file — so the exception is genuinely uncaught,
+    not merely "loud" in the sense of a logged line. This is the same treatment `enemyId`/`formationId`
+    already get (grepped `require(` calls in `JsonContentSource` to confirm the pattern is pre-existing,
+    not invented for this field), so the precedent claim holds too.
+55. **A phase's own worked numbers (turn time, exact velocity at a stated tick) are the strongest test
+    oracle available, and a test that asserts against them is proof against silent accumulation
+    drift.** `MotionSystemTest.arcShapeIsFollowedAndCurves` asserts `Motion.vy` at t=5s equals
+    `-110 + 27*5 = 25` exactly (0.01f tolerance) — this is `TrajectoryDefinition#verticalVelocityAt`'s
+    closed form, and it would NOT match if the implementation instead accumulated `ay * step` every
+    tick with float error, or evaluated against a stale `elapsed` (before vs. after the tick's own
+    increment). Whenever a "closed form, not accumulation" claim appears, check that the test's
+    asserted value is the closed-form result and not just "some value the code currently produces."
+
+Full clean-branch confirmation: `./gradlew :core:test --rerun-tasks` from a fresh worktree, 331 tests
+0 failures/skipped/errors (aggregated from `core/build/test-results/test/*.xml`); `DeterminismRulesTest`
+and every `*ReplayTest` present and green; `SystemOrder.java` untouched (`git diff` empty for that
+file); `./gradlew :web:gdx_teavm_web_js_build` green from the same worktree (this PR touches `game/`,
+so worth re-running even though the PR itself only claims "not checked" for the web target — the
+claim was appropriately conservative, not wrong); `tools/pre-pr-check --base phase/11c-movement-shapes`
+reproduced the PR's pasted "PASS — 4 commit(s), 11 file(s) changed" exactly, after `git checkout -b`
+inside the detached worktree (pattern from PR #170's memory entry, still needed). No wave/level/enemy
+content references any new shape id (`grep -rln "strike-run\|veer-left\|veer-right" assets/data/*.json`
+returns only `trajectories.json`), confirming the "no wave points at a shape yet" claim.
+
 Related: [[audit-techniques]].
