@@ -122,3 +122,68 @@ excludes `game/` too — the same boundary question would recur there).
 
 Run against `phase/11c-movement-shapes`, output pasted in the pull request once `level-designer` has
 appended its half and the branch is ready.
+
+---
+
+## `game-presentation`'s half — the loader itself
+
+Followed `core-domain`'s recommended diff, with one addition: `requireOnlyKeys` on each entry, matching
+the strictness the rest of this class already applies to a wave's end condition and a level's top-level
+blocks. Without it a `constant` entry carrying a stray `ay` would parse clean and silently drop the
+value — the same "unrecognised key loads clean and does nothing" gap #163's own class javadoc says
+this file exists to close.
+
+`JsonContentSource.parseTrajectory` (`JsonContentSource.java:157-186`) now reads `"type"`, defaulting
+to `"constant"` when absent — via `entry.getString("type", "constant")`, so the four entries shipped
+before `"type"` existed need no edit — and switches on it: `"constant"` builds a
+`SimpleTrajectoryDefinition` after checking the entry carries only `id`, `type`, `vx`, `vy`; `"arc"`
+builds an `ArcTrajectoryDefinition` after checking `id`, `type`, `vx`, `vy`, `ay`. Any other value
+throws `IllegalArgumentException`, naming both the trajectory id and the bad type — the loader used to
+accept anything and silently discard unknown keys, which is the exact defect the task exists to close.
+
+**Verified without a test source set** (`game/build.gradle.kts` declares no `testImplementation`; see
+this agent's own memory on the classpath trick). Compiled `:game:compileJava` clean, then ran a
+throwaway program against the real compiled classes and the real `gdx-1.14.2.jar`, invoking the
+private `parseTrajectory(JsonValue)` through reflection so no `ContentSource` had to be fully
+constructed (that needs `balance.json`, `enemies.json`, `formations.json`, `attachments.json` and a
+level file, none of which this task touches):
+
+- The four existing entries (`slow-descent`, `swoop`, `dive`, `crawl`, taken verbatim from
+  `assets/data/trajectories.json`) load as `SimpleTrajectoryDefinition` with unchanged `vx`/`vy`.
+- `{ "id": "strike-run", "type": "arc", "vx": 0, "vy": -110, "ay": 27 }` — the catalogue's own example
+  — loads as `ArcTrajectoryDefinition` and `verticalVelocityAt(2f)` returns `-56.0`, matching the
+  closed form `vy + ay·t = -110 + 27·2`.
+- `{ "id": "bogus", "type": "spiral", ... }` throws `IllegalArgumentException: trajectory 'bogus' has
+  an unknown type 'spiral'` — names the id and the bad type, per the task's own acceptance line.
+- An `arc` entry missing `ay` throws (`getFloat` on a missing key), and a `constant` entry carrying a
+  stray `ay` throws `"trajectory 'typo' has an unrecognised key 'ay'"` from the new `requireOnlyKeys`
+  call.
+
+Full transcript and the exact classpath-discovery steps are in this agent's memory, not repeated here.
+
+**Not touched:** `core/`, `assets/data/` — no content entries added, per this task's scope. `game/`'s
+other loaders (`loadFormations`, `loadEnemies`, etc.) are untouched; only `loadTrajectories` and its
+new `parseTrajectory` helper changed.
+
+**What was and was not checked about the web target:** `./gradlew build` was not run (issue #123 means
+`compileTeavmJava` reports `NO-SOURCE` locally regardless of this change) — not checked. `JsonReader`/
+`JsonValue` are the only JSON API touched, no reflection-based `Json` class, no new dependency added —
+the two web-target rules this task calls out by name are both satisfied by inspection of the diff.
+
+## Acceptance criteria — this half
+
+- A `type` the loader does not know fails loudly, naming the trajectory id and the bad type: done,
+  verified above.
+- The four existing `constant` entries load exactly as before: done, verified above with the literal
+  entries from `assets/data/trajectories.json`.
+- An `arc` entry loads as `ArcTrajectoryDefinition`: done, verified above with the catalogue's own
+  `strike-run` numbers.
+- No `core/` or `assets/data/` file touched: confirmed, `git status --porcelain` shows only
+  `JsonContentSource.java` changed for this half.
+
+## `pre-pr-check` — `game-presentation`'s run
+
+Not yet run for the pull request — the branch is not ready until `level-designer` adds the content in
+the same branch, per the task dispatch. `pre-pr-check --base phase/11c-movement-shapes` was run once
+during this task to confirm nothing outside `docs/` and `game/` was touched; see the coordinator's
+final pull request for the run that accompanies it.
