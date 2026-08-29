@@ -29,9 +29,9 @@ import dev.luchoc.littlespaceship.core.port.InputFrame;
  *
  * <p>This is also where an entity's {@link Trajectory} advances: {@link Trajectory#elapsed} is
  * incremented by the fixed step, once per tick, before velocities are integrated — never read from
- * the system clock, so a replay reproduces it exactly. Evaluating that elapsed time and the entity's
- * origin into a shape is not built yet; only the state and its advance are. See {@link Trajectory}'s
- * own javadoc.
+ * the system clock, so a replay reproduces it exactly. Evaluating that elapsed time into a shape's
+ * velocity is not built yet; only the state and its advance are. See {@link Trajectory}'s own javadoc
+ * and {@code docs/plan/11c-movement-shapes/shape-catalogue.md}.
  */
 public final class MotionSystem implements GameSystem {
 
