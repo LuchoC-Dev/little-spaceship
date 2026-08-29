@@ -211,8 +211,18 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   uniformly and left the question open).
 - **A movement shape is chosen in the spawn event, with the archetype supplying the default.** This is
   the half of [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) that 10c named and left
-  open. **Still open:** which shapes exist, decided by the phase that builds them against the beats
-  that ask for them.
+  open. The other half — **which shapes exist** — was decided on 29/08/2026 by
+  [#162](https://github.com/LuchoC-Dev/little-spaceship/issues/162), against the beats that ask for
+  them: **two kinds, `constant` `{vx, vy}` and `arc` `{vx, vy, ay}`**, and seven named entries — the
+  four existing constant vectors plus `strike-run`, `veer-left` and `veer-right`. A shape is a
+  function of the entity's own elapsed time and its spawn state, carries no randomness, and must leave
+  the playfield unattended in finite time; otherwise a `cleared` wave can deadlock behind it, because
+  `LifetimeSystem` removes an enemy only once it is off screen. The reasoning, the parameters and the
+  eight refusals are in
+  [`docs/plan/11c-movement-shapes/shape-catalogue.md`](../plan/11c-movement-shapes/shape-catalogue.md).
+  **Not built:** only `constant` exists in code today, as `core/port/TrajectoryDefinition.java`; `arc`
+  is [#163](https://github.com/LuchoC-Dev/little-spaceship/issues/163) and
+  [#164](https://github.com/LuchoC-Dev/little-spaceship/issues/164).
 - **The per-level document is generated from the JSON, and CI fails when they disagree.** Of the three
   arrangements area G of `docs/plan/10c-architecture-review/assessment.md` says the architecture
   permits, this is the one taken. It follows the two generators that already work here,
