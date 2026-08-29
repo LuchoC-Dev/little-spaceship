@@ -8,9 +8,9 @@ package dev.luchoc.littlespaceship.core.domain.component;
  *
  * <p>A curved or shaped trajectory does not live here: this still holds only the velocity {@code
  * MotionSystem} integrates each tick, exactly as before. What decides that velocity for an entity
- * following a shape — a U-shaped attack run, a diagonal, a curve — is {@link Trajectory}'s {@code
- * elapsed} time and origin, resolved elsewhere; the resolved result still lands here, the same way a
- * constant trajectory always has.
+ * following a shape is {@link Trajectory}'s {@code elapsed} time, evaluated through the shape's
+ * {@code verticalVelocityAt}; the resolved result still lands here, the same way a constant
+ * trajectory always has.
  */
 public final class Motion {
 
