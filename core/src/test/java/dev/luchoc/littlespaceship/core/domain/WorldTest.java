@@ -23,6 +23,7 @@ import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
 import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
 import dev.luchoc.littlespaceship.core.domain.component.WaveOrigin;
@@ -121,6 +122,7 @@ class WorldTest {
         world.enemyWeapons().set(entity, new EnemyWeapon("straight-single", 1f, 90f));
         world.lifetimes().set(entity, new Lifetime(1f));
         world.waveOrigins().set(entity, new WaveOrigin("wave-1"));
+        world.trajectories().set(entity, new Trajectory());
     }
 
     /**

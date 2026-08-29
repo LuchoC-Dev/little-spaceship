@@ -8,6 +8,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
@@ -190,6 +191,34 @@ class MotionSystemTest {
         system.update(world, STEP, new InputFrame(1f, 1f, false, false, false));
 
         assertEquals(50f, world.transforms().get(player).x);
+    }
+
+    @Test
+    @DisplayName("a trajectory's elapsed time accumulates from the fixed step, one tick at a time")
+    void trajectoryElapsedAccumulatesFromTheFixedStep() {
+        int enemy = world.createEntity();
+        world.transforms().set(enemy, new Transform(50f, 200f));
+        world.motions().set(enemy, new Motion(0f, -30f));
+        Trajectory trajectory = new Trajectory();
+        world.trajectories().set(enemy, trajectory);
+
+        system.update(world, STEP, InputFrame.IDLE);
+        assertEquals(STEP, trajectory.elapsed, 0.0001f);
+
+        system.update(world, STEP, InputFrame.IDLE);
+        assertEquals(STEP * 2f, trajectory.elapsed, 0.0001f);
+    }
+
+    @Test
+    @DisplayName("an entity with no Trajectory is unaffected by the advance")
+    void entityWithoutTrajectoryIsHarmless() {
+        int enemy = world.createEntity();
+        world.transforms().set(enemy, new Transform(10f, 10f));
+        world.motions().set(enemy, new Motion(5f, 0f));
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertEquals(10f + 5f * STEP, world.transforms().get(enemy).x, 0.001f);
     }
 
     private float speedOf(int entity) {
