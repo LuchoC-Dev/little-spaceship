@@ -1,7 +1,8 @@
 package dev.luchoc.littlespaceship.core.port;
 
 /**
- * The straightforward {@link TrajectoryDefinition}.
+ * The {@code constant} shape from the catalogue: a fixed velocity for the entity's whole life.
+ * {@code velocity(t) = (vx, vy)} — {@link #verticalVelocityAt(float)} ignores its argument entirely.
  *
  * @param id the content id
  * @param vx horizontal velocity, in logical units per second
@@ -16,5 +17,10 @@ public record SimpleTrajectoryDefinition(String id, float vx, float vy) implemen
         if (id == null || id.isEmpty()) {
             throw new IllegalArgumentException("a trajectory needs an id");
         }
+    }
+
+    @Override
+    public float verticalVelocityAt(float elapsedSeconds) {
+        return vy;
     }
 }

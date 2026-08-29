@@ -5,10 +5,12 @@ import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
+import dev.luchoc.littlespaceship.core.domain.component.Lifetime;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.port.ComponentSpec;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
 import dev.luchoc.littlespaceship.core.port.TrajectoryDefinition;
@@ -72,7 +74,10 @@ public final class ComponentFactoryRegistry {
      * "weapon"} — a per-archetype firing pattern for enemies — was the same kind of gap, closed once
      * {@code enemy-shooter} needed to actually shoot: no enemy fired at all before this, per {@code
      * 08-decisions-and-open-items.md}. The boss does not go through this registry — see {@code
-     * BossSystem} — since its fire is a fixed state machine, not an archetype component.
+     * BossSystem} — since its fire is a fixed state machine, not an archetype component. {@code
+     * "lifetime"} was added for issue #84: an archetype's maximum time to live, expressed as data
+     * rather than as a constant, and optional per archetype — an entity with no {@code "lifetime"}
+     * spec relies on the safety box alone, exactly like every archetype does today.
      *
      * @return a registry ready to attach the MVP's archetypes
      */
@@ -84,18 +89,38 @@ public final class ComponentFactoryRegistry {
             .register("scoreValue", ComponentFactoryRegistry::attachScoreValue)
             .register("health", ComponentFactoryRegistry::attachHealth)
             .register("spawner", ComponentFactoryRegistry::attachSpawner)
-            .register("weapon", ComponentFactoryRegistry::attachEnemyWeapon);
+            .register("weapon", ComponentFactoryRegistry::attachEnemyWeapon)
+            .register("lifetime", ComponentFactoryRegistry::attachLifetime);
     }
 
     /**
-     * Resolves the {@code "trajectory"} field against {@link World#content()} and attaches its
-     * velocity as-is. Trajectories carry the whole vector on purpose — see
-     * {@link TrajectoryDefinition} — so there is no per-archetype speed override to apply here.
+     * Resolves the {@code "trajectory"} field against {@link World#content()}, attaches its velocity
+     * at elapsed time zero, and attaches a {@link Trajectory} component naming the same id — this
+     * archetype's default shape, before {@code SpawnSystem} applies a per-spawn-event override, per
+     * issue #164. Trajectories carry the whole vector on purpose — see {@link TrajectoryDefinition} —
+     * so there is no per-archetype speed override to apply here.
+     *
+     * <p>The {@link Trajectory} is attached for every kind, {@code constant} included: {@code
+     * MotionSystem} re-evaluates it every tick regardless of kind, and a {@code constant} shape's
+     * {@code verticalVelocityAt} returns the same value it always has, so the result is identical to
+     * the one-time snapshot this factory produced before {@link Trajectory} existed.
      */
     private static void attachMotion(World world, int entity, ComponentSpec spec) {
         String trajectoryId = spec.text("trajectory");
+        attachTrajectory(world, entity, trajectoryId);
+    }
+
+    /**
+     * Resolves {@code trajectoryId} against {@link World#content()}, attaches its velocity at
+     * elapsed time zero into {@link Motion}, and attaches a {@link Trajectory} naming it so {@code
+     * MotionSystem} can keep re-evaluating it. Shared between {@link #attachMotion} (the archetype's
+     * default) and {@code SpawnSystem} (a spawn event's override, issue #164) so both go through the
+     * exact same resolution.
+     */
+    public static void attachTrajectory(World world, int entity, String trajectoryId) {
         TrajectoryDefinition trajectory = world.content().trajectory(trajectoryId);
         world.motions().set(entity, new Motion(trajectory.vx(), trajectory.vy()));
+        world.trajectories().set(entity, new Trajectory(trajectoryId));
     }
 
     /**
@@ -167,5 +192,15 @@ public final class ComponentFactoryRegistry {
         float speed = spec.number("speed");
         float firstShotDelay = spec.numberOr("firstShotDelay", cooldown);
         world.enemyWeapons().set(entity, new EnemyWeapon(pattern, cooldown, speed, firstShotDelay));
+    }
+
+    /**
+     * Reads the one field {@link Lifetime}'s constructor needs. Required, not defaulted, like every
+     * other numeric field this registry reads for a component an archetype opts into: the field
+     * exists at all only for archetypes that declare a {@code "lifetime"} spec.
+     */
+    private static void attachLifetime(World world, int entity, ComponentSpec spec) {
+        float seconds = spec.number("seconds");
+        world.lifetimes().set(entity, new Lifetime(seconds));
     }
 }

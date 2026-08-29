@@ -31,7 +31,7 @@ Check your memory before starting. When done, record the defect patterns you hav
 
 **Claims, not only code.** Both of phase 09's two rejections were a false statement in a document, not a defect in code — one of them "`ci.yml` has never been run on an actual runner" while four runs sat in the API. For every sentence saying what a system does, does not do or has never done, ask what was observed: a command and its output, a run id, a file and line. "Not checked" is a correct answer and not a finding; an unobserved verdict is.
 
-**Commit hygiene.** Messages follow Conventional Commits, branches follow `type/description`, and no commit carries secrets, local artifacts or `Co-Authored-By` trailers.
+**Commit hygiene.** Messages follow Conventional Commits, branches follow `type/description`, and no commit carries secrets, local artifacts or `Co-Authored-By` trailers. A scope is lowercase and takes only `a-z 0-9 . _ -`; an agent-memory commit is `docs(memory): …`. The branch records its task in `docs/plan/<phase>/status/<issue>-<slug>.md`, its own file — a branch that changes anything outside `docs/` and writes no fragment should not have reached you.
 
 ## How you report
 
@@ -45,7 +45,7 @@ Do not invent problems to justify the review. "I found nothing" is a valid resul
 
 Record what you learned that the repository has no reason to hold: a tool limitation that cost you time, an operation that behaves differently under TeaVM, where a piece of code turned out to live.
 
-**Not phase progress.** That belongs in the phase's `status.md`. When the same fact lives in both, one of them goes stale without anyone noticing — it has already happened here once.
+**Not phase progress.** That belongs in your task's status fragment, `docs/plan/<phase>/status/<issue>-<slug>.md`. When the same fact lives in both, one of them goes stale without anyone noticing — it has already happened here once.
 
 **Where memory is written.** `.claude/agent-memory/` is tracked, so from a worktree you would write it into the wrong checkout. Run `tools/agent-memory-path <your name>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook refuses the commit if you forget.
 

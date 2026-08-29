@@ -10,6 +10,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
+import dev.luchoc.littlespaceship.core.domain.component.Lifetime;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
@@ -17,8 +18,10 @@ import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
 import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
+import dev.luchoc.littlespaceship.core.domain.component.WaveOrigin;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityRegistry;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
@@ -70,6 +73,9 @@ public final class World {
     private final ComponentStore<BombState> bombStates = new ComponentStore<>();
     private final ComponentStore<Spawner> spawners = new ComponentStore<>();
     private final ComponentStore<EnemyWeapon> enemyWeapons = new ComponentStore<>();
+    private final ComponentStore<Lifetime> lifetimes = new ComponentStore<>();
+    private final ComponentStore<WaveOrigin> waveOrigins = new ComponentStore<>();
+    private final ComponentStore<Trajectory> trajectories = new ComponentStore<>();
 
     /**
      * Overlaps detected by {@code CollisionSystem} this tick, consumed by {@code DamageSystem} right
@@ -174,6 +180,9 @@ public final class World {
         bombStates.remove(entity);
         spawners.remove(entity);
         enemyWeapons.remove(entity);
+        lifetimes.remove(entity);
+        waveOrigins.remove(entity);
+        trajectories.remove(entity);
         return entities.destroy(entity);
     }
 
@@ -304,6 +313,28 @@ public final class World {
      */
     public ComponentStore<EnemyWeapon> enemyWeapons() {
         return enemyWeapons;
+    }
+
+    /**
+     * @return the maximum-lifetime countdown for the entities that carry one
+     */
+    public ComponentStore<Lifetime> lifetimes() {
+        return lifetimes;
+    }
+
+    /**
+     * @return which wave spawned each entity that carries one, directly or through a carrier
+     */
+    public ComponentStore<WaveOrigin> waveOrigins() {
+        return waveOrigins;
+    }
+
+    /**
+     * @return the elapsed-time state a movement shape resolves against, for the entities that carry
+     *     one
+     */
+    public ComponentStore<Trajectory> trajectories() {
+        return trajectories;
     }
 
     /**

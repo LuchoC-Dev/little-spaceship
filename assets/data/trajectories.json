@@ -3,6 +3,9 @@
     { "id": "slow-descent", "vx": 0, "vy": -18 },
     { "id": "swoop", "vx": -10, "vy": -40 },
     { "id": "dive", "vx": 0, "vy": -80 },
-    { "id": "crawl", "vx": 0, "vy": -9 }
+    { "id": "crawl", "vx": 0, "vy": -9 },
+    { "id": "strike-run", "type": "arc", "vx": 0, "vy": -110, "ay": 27 },
+    { "id": "veer-left", "type": "arc", "vx": -32, "vy": -95, "ay": 20 },
+    { "id": "veer-right", "type": "arc", "vx": 32, "vy": -95, "ay": 20 }
   ]
 }

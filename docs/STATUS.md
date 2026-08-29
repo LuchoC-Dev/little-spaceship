@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 26/08/2026.
+Last updated: 29/08/2026.
 
 Read this first if you are picking the project up. It says where things stand and what comes next; `CLAUDE.md` says how to work here.
 
@@ -9,7 +9,7 @@ Read this first if you are picking the project up. It says where things stand an
 **`main` is now the whole picture, and the game is finished except for shipping it.** The three branches
 that held the MVP were reviewed and merged on 25/08/2026 — sprites (#30), audio (#31), boss (#29) — and
 everything they left unwired was closed the same day, along with a balance pass driven by playing, two
-defects and a UI pass. `./gradlew build` is green and `core` carries 289 tests.
+defects and a UI pass. `./gradlew build` is green and `core` carries **322 tests** on `dev`.
 
 **The MVP is shipped.** The game is live at <https://luchoc-dev.github.io/little-spaceship/>, it runs
 in a browser with no install, and phase 09 closed on 25/08/2026. What follows is polish, and the
@@ -29,12 +29,12 @@ What exists in the repository:
 
 - `docs/planning/` — fourteen documents covering vision, MVP spec, game systems, campaign, progression, balance values, architecture and the agent workflow.
 - `docs/sources/` — the verbatim ChatGPT transcript the planning came from. Spanish on purpose; it is evidence.
-- `spikes/web-viability/` — a throwaway prototype that validated the platform. Not the base of the game. **Not deletable yet**, and this is the one exception: `rngcheck/` is the only measurement that `Rng` produces a bit-identical stream under TeaVM, which is invariant 2 checked on the runtime that would break it silently. It moves onto the real class as a Gradle task in [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52); the spike goes when that lands. Everything else in the directory is finished with. Resolves [#5](https://github.com/LuchoC-Dev/little-spaceship/issues/5); see `docs/plan/10a-honest-documentation/decisions.md`, D1.
+- ~~`spikes/web-viability/`~~ — **deleted on 27/08/2026 by phase 11a**, on the project owner's decision. It was a throwaway prototype that validated the platform, and the one thing that kept it — `rngcheck/` being the only measurement that `Rng` produces a bit-identical stream under TeaVM — ended when [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) moved that check onto the real `core` class in the `:rngparity` subproject (`./gradlew :rngparity:rngParityCheck`), with no copy of `Rng.java` anywhere. **The evidence is not gone, it moved into history:** the last commit containing the directory is `68d002e0560ce40842dc8f72e876fa5fe78bb3ed`, and `git show 68d002e0560c:spikes/web-viability/<path>` still reads any of its files. Every citation of it elsewhere in `docs/` — the benchmark behind `11-technical-prototype-results.md`, the build commands phase 09's plan points at, the working references in phases 01 and 03 — is a dated record of a past phase and stays as written; that commit is what makes them chaseable. Resolved [#5](https://github.com/LuchoC-Dev/little-spaceship/issues/5); see `docs/plan/10a-honest-documentation/decisions.md`, D1.
 - `docs/design/` — the visual direction: the closed `ls32` palette, sprite sizes in pixels per archetype, bitmap typography, HUD layout, legibility rules, and pixel-exact mocks. Synchronisation point 1, settled.
 - `.claude/agents/` — six agent definitions with project-scoped persistent memory.
-- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring, the boss and its six colliders. **289 tests**, no libGDX on its classpath.
+- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring, the boss and its six colliders, and phase 11b's wave scheduling, entity lifetime and safety box. **322 tests**, no libGDX on its classpath.
 - `game/` and `desktop/` — the LWJGL3 launcher, the input adapter that sums keyboard and relative mouse, an allocation-free renderer reading through `WorldView`, integer-scaled viewport, placeholder art at the sizes the visual direction fixed, the real sprite atlas and bitmap fonts, the Skin, the seven screens, audio, and the JSON content loader. Still no tests ([#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19)). `web/` carries `WebLauncher` and the TeaVM build that ships the live site.
-- `assets/data/` — the content as JSON: six archetypes, four trajectories, **eight** formations, one attachment, and one timeline carrying the boss.
+- `assets/data/` — the content as JSON: six archetypes, four trajectories, **eight** formations, one attachment, and — since phase 11b — **thirteen waves in `waves.json`**, placed by `level-01.json` as fifteen ordered `WavePlacement`s. The level carries no absolute timestamp any more; it still carries the boss.
 - `.github/workflows/ci.yml` — CI on every push and pull request: compiles, runs the tests, builds the
   desktop and TeaVM web targets. It cannot prove the web build *runs*; a human does that.
 - `README.md` and `LICENSE` (MIT) — written for the repository going public. The licence covers the
@@ -253,12 +253,35 @@ The short version lives in `CLAUDE.md`: invariants, web-target pitfalls, convent
 reordering first so everything after it is built on a base that holds:
 [`docs/plan/post-mvp-roadmap.md`](plan/post-mvp-roadmap.md).
 
-**The 10 group is planned; 10a and 10b are done.** Phase 10a audited every document here against the
+**The 10 group is done.** Phase 10a audited every document here against the
 code and corrected what was false — [the audit](plan/10a-honest-documentation/audit.md) is the record,
 and it is worth reading before trusting any document in this repository, because it says which ones
 were checked and what each one got wrong. Phase 10b then measured what a phase costs, audited the six
-agent definitions and nine phases of agent memory, and changed how work reaches `main`. **10c**
-(architecture review) is next.
+agent definitions and nine phases of agent memory, and changed how work reaches `main`. Phase 10c
+reviewed the architecture against what the 11 group needs and found that it **holds, with four named
+additive extensions and no change to its shape** — [the decision](plan/10c-architecture-review/decision.md)
+records what was rejected as well as what was chosen. **The 11 group is next**, and its first task is
+[#44](https://github.com/LuchoC-Dev/little-spaceship/issues/44): rule-asserting tests, because
+everything 10c named is a behaviour change under a suite that mostly proves a run reproduces itself.
+
+**The 11 group was planned on 27/08/2026** into six phases — [11a](plan/11a-rule-asserting-tests/plan.md)
+through [11f](plan/11f-web-defects/plan.md) — in a conversation with the project owner that closed
+every question the roadmap left open: what ends a wave, how it is placed, whether it takes parameters,
+where waves live, where a movement shape is chosen, what form the per-level document takes, and how
+long level 1 runs. Those answers are in
+[the decision record](planning/08-decisions-and-open-items.md), "The 11 group, 27/08/2026". The same
+conversation resolved [#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91): **invariant 6
+in `CLAUDE.md` now reads "no abstraction without a real case you can point at"**, which is 10c's
+proposed wording accepted unchanged.
+
+**Phase 10d ran between 11b and 11c**, out of numerical order and on purpose: 11b's three broken rules were going to repeat in 11c, which is the first phase to run agents in parallel over `core/` and `assets/data/` at once. It belongs to the 10 group by subject — it is 10b's successor — and to the 11 group only by date.
+
+**11a and 11b are done and on `dev`.** 11a measured the test baseline and added rule-asserting tests;
+11b built the wave system and is the first phase of the group to change production code. **11c is
+next** — movement shapes, [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) — and it
+inherits a concrete warning from 11b: `LifetimeSystem`'s safety box sits 128 units past every
+playfield edge, sized against today's formations, and a movement shape that leaves the playfield and
+re-enters is exactly what that box must not eat ([#117](https://github.com/LuchoC-Dev/little-spaceship/issues/117)).
 
 **How work reaches `main` changed on 26/08/2026**, by the project owner's decision: `main` ← `dev` ←
 one phase branch ← one sub-branch per agent. Nothing is committed on `main` or `dev`, a phase opens a
@@ -304,8 +327,12 @@ Everything the three merged branches left unwired is closed.
 | 08 | Audio and polish | **merged** — #31, with both dead cues wired on 25/08. Nobody has heard it yet; phase 09's browser pass is the first listen |
 | 09 | Web, CI and release | **done** — launcher (#33), CI (#35), README (#37) and Pages deploy (#39). The game is live |
 | 10a | Honest documentation | **done** — every document in `docs/` audited against the code, 33 false statements corrected, #5 resolved, #3 and #4 decided, and a mechanism chosen. See [the audit](plan/10a-honest-documentation/audit.md) |
-| 10b | Agents and sessions | **done** — phase 09 measured (813 calls, $110.76 equivalent, 83 % of it the coordinator's model choice), the six agent definitions and 46 memory files audited, the agent-memory worktree trap closed with a hook, an evidence rule for claims about a system, and the `dev`/phase/sub-branch regime with `tools/pre-pr-check`. See [the measurement](plan/10b-agents-and-sessions/measurement.md) |
-| 10c | Architecture review | not started |
+| 10b | Agents and sessions | **done** — phase 09 measured (813 calls, $110.76 equivalent, 83 % of it the coordinator's model choice), the six agent definitions and 46 memory files audited, the agent-memory worktree trap closed with a hook, an evidence rule for claims about a system, and the `dev`/phase/sub-branch regime with `tools/pre-pr-check`. See [the measurement](plan/10b-agents-and-sessions/measurement.md). Merged into `dev` in #76 and into `main` in #79 |
+| 10c | Architecture review | **done** — the architecture holds for the 11 group with four named additive extensions (#84, #85, #86, #87) and no change to its shape; all fifteen open issues triaged, #23 closed as already fixed and #11 decided; invariant 6's expired wording put to the project owner as #91. No production code changed. See [the decision](plan/10c-architecture-review/decision.md) and [the assessment](plan/10c-architecture-review/assessment.md). Merged into `dev` in #93 |
+| 10d | Rules the tools enforce | **done** — merged into `dev` in [#152](https://github.com/LuchoC-Dev/little-spaceship/pull/152). Written after 11b broke three written rules across five agents, each where the rule existed only as a sentence someone had to recall. One status file per task instead of one shared file, so parallel tasks cannot conflict; `pre-pr-check` fails a branch that does work and records nothing, and parses workflow files; a `commit-msg` hook refuses a malformed subject as it is written; the coordinator creates every branch and worktree; `agent-prompts.md` no longer sends agents to `main`; and a `pr-check` workflow verifies the pull request as an object and runs `pre-pr-check` rather than trusting pasted text. **Four of its own rules broke on contact with reality** (#136, #137/#132, #148, #150) — three were specifications written from one point of view, the fourth was a tool nothing checked. No production code. The `reviewer` pass its own plan argued for ran afterwards and merged in [#159](https://github.com/LuchoC-Dev/little-spaceship/pull/159): it answered **no** to the plan's own brief — *would an agent who has read only these documents do the right thing?* — and found two more, both shapes nobody had lived through. `git revert`'s wording was welcomed by `commit-msg` and rejected by `pre-pr-check` (#154), and neither check looked at which phase's directory a fragment sat in (#155). Fixing them exposed two further instances of one rule written twice, so the phase ships three shared scripts — `tools/commit-subject-ok`, `tools/status-fragments` and its `--misplaced` mode — instead of matching logic kept in agreement by care. **Eight faults, six of them one rule stated from a single point of view, two of them one rule stated twice** |
+| 11a | Tests that assert rules | **done** — merged into `dev` in [#109](https://github.com/LuchoC-Dev/little-spaceship/pull/109). The baseline measured by reading all 289 tests (167 assert a rule, 9 reproducibility, 4 both, 117 infrastructure), which **falsifies the roadmap's suite-wide claim** and confirms it only for the five replay files; five rule-asserting tests added where nothing went red before, including the boss-module test #44 was raised for; #3/#53, #4/#54 and #52 closed, the `Rng` parity check moved onto the real class in `:rngparity`, and #104 and #108 opened. `reviewer` accepted, and `spikes/web-viability/` was deleted in the same merge |
+| 11b | The wave system | **done** — merged into `dev` in [#131](https://github.com/LuchoC-Dev/little-spaceship/pull/131). A wave is named, reusable content in `assets/data/waves.json`; a level is an ordered list of `WavePlacement`s and carries no absolute timestamp. `level-01.json` migrated one-to-one, its 92 original spawn times re-derived independently by `reviewer`. #84, #85, #87, #111-#114, #122 and #126 closed. **Three defects, none found by reading code:** a negative offset silently did nothing, so waves could never overlap (found by `level-designer` trying to use it); the level's first wave was a tick late (found by running the *old* tests against the new system); and two rule-named tests passed while their rule was violated (found by falsifying them). 303 tests to 322. Debts opened: #117, #123, #128, #129, #132 |
+| 11c | Movement as a described thing | **done** — merged into `dev` in [#174](https://github.com/LuchoC-Dev/little-spaceship/pull/174). The same archetype now enters differently at second 30 and at second 200 without being two archetypes, which closes the handover 10c's area E left (#86) — the one place that review found a *missing* mechanism rather than a strained one. A shape is a function from an entity's own elapsed time to its velocity: two kinds, `constant {vx, vy}` and `arc {vx, vy, ay}`, decided in `docs/plan/11c-movement-shapes/shape-catalogue.md` against the beats that ask for them, with **eight shapes refused by name**. `core/port/TrajectoryDefinition.java` is sealed over two records, `game/adapter/content/JsonContentSource.java` reads them and refuses an unknown kind, and `SpawnEvent` carries an optional `trajectoryId` with the archetype supplying the default. Proven in tests, not prose: one `enemy-rush` on `dive` and on `strike-run`, and 300 ticks of a curve that turns. #161-#164 and #86 closed. `SystemOrder` unchanged; 322 tests to 331. **Two things settled by measuring rather than arguing** — TeaVM compiles sealed interfaces (the real transpile was run and `app.js` grepped, against #123's blindness), and the uniform `Trajectory` attach reaches nothing hand-set. **The plan named one agent too few, twice**, because the content JSON is read in `game/` and not in `core/`; corrected in place, and 11d reads the same way. **No level uses a shape yet** — that is 11e |
 
 ## Open items that do not block
 
@@ -322,8 +349,9 @@ All of these are in `CLAUDE.md`, but they are worth repeating because they are s
 - Headless Chrome cannot validate the web runtime. It fails under SwiftShader even when a real browser works.
 - `ExecutorService`, `CompletableFuture` and `ReentrantLock` do not exist in TeaVM: they break the build. The core is single-threaded by decision, and it was measured that concurrency would buy nothing.
 - Breaking determinism does not fail loudly. It silently invalidates every replay.
-- `spikes/web-viability/README.md` says `gdx_teavm_web_js_run` serves on **8181**. It does not — the
-  pinned 1.6.1 plugin serves on **8080**, and the plan sends you to that README for the commands.
+- **`gdx_teavm_web_js_run` serves on 8080, not 8181.** The pinned 1.6.1 plugin's real port. The
+  claim of 8181 came from `spikes/web-viability/README.md`, which phase 09's plan sent people to for
+  the commands; that directory was deleted on 27/08/2026 and the README is readable at `68d002e0560c`.
 - `gdx_teavm_web_js_build -Prelease` **reuses the previous non-release output**: `generateJavaScript`
   reports `UP-TO-DATE` even though release mode changes obfuscation, optimisation and source maps,
   and leaves a stale `app.js.map` behind. Run `clean` before measuring a release build.

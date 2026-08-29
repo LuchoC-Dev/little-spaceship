@@ -91,6 +91,172 @@ them, and phase 05's guaranteed drops have nowhere to anchor.
   with its calm, escalation, rest and climax rather than a compressed version of it. The cost is
   content to produce and balance, and that is accepted.
 
+### Architecture review, 27/08/2026
+
+Decided by phase 10c, the architecture review, against the code rather than against the design
+documents. The evidence is in `docs/plan/10c-architecture-review/assessment.md`, the backlog triage in
+`issue-triage.md` and the reasoning including what was rejected in `decision.md`.
+
+- **The architecture holds for the 11 group, with four named additive extensions and no change to its
+  shape.** Nothing in the module boundary, the hexagonal layering, the content contracts, the fixed
+  system order or the determinism rules changes. The four extensions are issues
+  [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84),
+  [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85),
+  [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) and
+  [#87](https://github.com/LuchoC-Dev/little-spaceship/issues/87), ordered behind
+  [#44](https://github.com/LuchoC-Dev/little-spaceship/issues/44).
+- **A wave may end on world state rather than on a clock without breaking determinism.** This is not
+  an inference from the invariants: `World.View.outcome()` already decides `COMPLETED` by reading the
+  world, through `noEnemyLeft()`. Two mechanisms are missing before "cleared" means anything — nothing
+  removes an enemy that leaves the playfield (`LifetimeSystem` expires only the two projectile layers),
+  and no entity records which wave spawned it.
+- **`SPAWN` stays fifth in `SystemOrder`.** A world-state trigger there resolves one tick after the
+  last kill, deterministically. Moving the stage after `CLEANUP` to make it immediate was rejected:
+  it would spawn waves after the tick's collision pass, which is a different and worse rule.
+- **`CollisionLayer.PLAYER` stays**, resolving [#11](https://github.com/LuchoC-Dev/little-spaceship/issues/11).
+  It is written by `Simulation` and never matched on, and that asymmetry is the design: the player is
+  resolved through `World.playerEntity()` because there is exactly one of it. Deleting the constant
+  would force a "none" layer or an unrelated one onto the player's collider, which is worse.
+- **Movement as a described thing is the one real gap.** `Motion` is a bare velocity and a trajectory
+  is a constant vector resolved once at spawn, so the same archetype cannot enter differently at two
+  points of a level without being duplicated. Mechanism only; the shapes and the format are the 11
+  group's design. **Built on 29/08/2026 by phase 11c**, which is why this paragraph is left as the
+  dated record of what the review found rather than rewritten — see the 11c entry below.
+- **Not decided here, on purpose:** what a wave is, and what form the per-level document takes. The
+  architecture permits every arrangement of the second except two hand-maintained artefacts, so the
+  choice is a design and process decision rather than an architectural one.
+- **Open, and put to the project owner:** invariant 6 in `CLAUDE.md` reads "no abstraction without a
+  real case in the MVP", and the MVP has shipped. `CLAUDE.md` was not edited;
+  [#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91) carries the proposed wording.
+  **Resolved on 27/08/2026** — see "The 11 group, 27/08/2026" below.
+
+### The 11 group, 27/08/2026
+
+Decided by the project owner in the planning conversation that produced the six phase plans under
+`docs/plan/11a-rule-asserting-tests/` through `11f-web-defects/`. Every one of these was left open on
+purpose by `docs/plan/post-mvp-roadmap.md`, and phase 10c refused to close them because they are
+design decisions rather than architectural ones — see the "What was considered and rejected" section
+of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below is implemented yet.
+
+- **What ends a wave: either, chosen per wave — a fixed duration or being cleared — and fixed duration
+  is the default.** Unless a level says otherwise, a wave behaves as `SpawnSystem` does today.
+  "Cleared" means every entity the wave spawned has been destroyed **or has left the playfield**, so
+  it depends on both [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84) and
+  [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85).
+
+  **The children a carrier spawns inherit their parent's wave — decided by the project owner on
+  28/08/2026, closing [#85](https://github.com/LuchoC-Dev/little-spaceship/issues/85).** A child
+  carries the same wave id as the carrier that created it, and a `cleared` wave is not cleared until
+  those children have also been destroyed or have left the playfield. The reason is what the player
+  reads on screen: a wave ends when the screen is clear of what that wave brought, not when the thing
+  that carried them happens to die. A carrier that escapes leaving live children no longer stalls the
+  wave for ever, because #84's lifetime and safety box remove anything that leaves the playfield.
+
+  **Built:** `core/domain/component/WaveOrigin.java` records the id of the wave instance that spawned
+  an entity, attached by `SpawnSystem.spawnWave` to every entity a wave creates. `SpawnerSystem`
+  copies the holder's `WaveOrigin` onto every child it spawns from a carrier, so a carrier with no
+  `WaveOrigin` of its own — one built outside a wave, such as by a test — produces children with none
+  either. Nothing else that creates an entity as a side effect of a wave-spawned entity — a dropped
+  pickup (`CleanupSystem`), an enemy's own projectile (`EnemyWeaponSystem`), a boss part or its
+  projectiles (`BossSystem`) — inherits a `WaveOrigin`: the decided rule names carriers and their
+  `Spawner`-spawned children specifically, not every downstream entity a wave's enemy happens to
+  produce, and nothing consumes the wave id yet — the `cleared` end condition itself is a later task
+  ([#112](https://github.com/LuchoC-Dev/little-spaceship/issues/112)).
+- **A wave is placed relative to the end of the one before it**, with an offset; a negative offset
+  overlaps them. A level carries no absolute timestamps. This removes the guarantee
+  `SimpleWaveTimeline`'s constructor gives today by sorting on a timestamp.
+- **A wave takes no parameters, in the 11 group.** Level 1 is rebuilt from the fourteen beats of
+  `04-campaign-and-levels.md` and reuse only appears once level 2 exists. Invariant 6. Revisited in
+  phase 12, which is the phase that will name the concrete case. The risk is accepted: if 12 asks for
+  parameters, it is a format change with one level built on top.
+- **Waves live in their own file as named content** — `assets/data/waves.json`, beside
+  `formations.json` and `trajectories.json` — and a level references them by id. Formations stay the
+  grouping below; the two do not blur.
+- **An enemy leaves the simulation by two mechanisms, and neither may remove it on screen.** A
+  **lifetime** per archetype, expressed as data rather than as a constant in code, which removes the
+  enemy only once it is off screen — an enemy still visible when its lifetime expires waits. And a
+  **safety box** well outside the playfield that removes anything touching it at once, as the backstop
+  for whatever a lifetime does not catch. **The box's coordinates must be written down and must clear
+  every legitimate spawn and trajectory**, because enemies are spawned outside the playfield today:
+  `SpawnSystem.positionSpawned` places a formation's lowest slot at `PLAYFIELD_HEIGHT + radius`, and
+  the largest vertical spread in `assets/data/formations.json` is `column-3` at 44 units, against the
+  16-unit margin `LifetimeSystem` uses for projectiles. This **activates a deferral phase 10c had
+  closed**: `assessment.md`'s Part 3 evaluated a `Lifetime` timer component and concluded "No.
+  Nothing in the 11 group needs a timer-expiring entity." The project owner named the case on
+  27/08/2026, which is the standard invariant 6 now sets.
+
+  **Built, closing [#84](https://github.com/LuchoC-Dev/little-spaceship/issues/84):
+  `core/domain/component/Lifetime.java`, `core/domain/system/LifetimeSystem.java`.** The safety box
+  is 128 logical units past every playfield edge (`x` in `[-128, 336]`, `y` in `[-128, 398]`) —
+  `LifetimeSystem.SAFETY_MARGIN`. It clears the worst legitimate spawn measured against
+  `assets/data/formations.json` and `assets/data/enemies.json` on this date (`column-3`'s 44-unit
+  spread carrying `enemy-carrier`'s 15-unit radius, born at `y = 329`, `314` from its own edge) by 84
+  units, deliberately more than that 44-unit floor for the movement shapes phase 11c adds. `Lifetime`
+  is an optional per-archetype component (a `"lifetime": {"seconds": N}` spec, read the same way
+  `"health"` is), so no existing archetype needs a content change for the safety box alone to fix the
+  defect.
+
+  **An enemy that leaves the simulation without being defeated gives the player nothing: no score, no
+  drop, no `EnemyDestroyed` — decided by the project owner on 28/08/2026.** Score rewards killing, not
+  letting something through, and the un-emitted `EnemyDestroyed` matters beyond the score: `game`'s
+  `AudioDirector` is the simulation's `GameEventSink`, so emitting it for an escape would have played
+  an explosion sound for an enemy the player never hit, off screen. `LifetimeSystem` is the only place
+  that knows an entity is escaping rather than being defeated, so it strips that entity's `ScoreValue`,
+  `Drop` and `Collider` before calling `World.markForDestruction` — `ScoreSystem`, `CleanupSystem`'s
+  drop resolution and its `EnemyDestroyed` emission are each already conditional on the component they
+  read being present, so all three naturally do nothing once it is gone. `CleanupSystem` needed no
+  change and its "converges every destruction path uniformly, regardless of what killed its holder"
+  stays exactly true: no second, source-aware branch was added to it, an escaping entity simply no
+  longer carries anything a uniform sweep would find interesting. This supersedes the non-decision
+  originally recorded here (before this date, the intermediate build awarded the score and drop
+  uniformly and left the question open).
+- **A movement shape is chosen in the spawn event, with the archetype supplying the default.** This is
+  the half of [#86](https://github.com/LuchoC-Dev/little-spaceship/issues/86) that 10c named and left
+  open. The other half — **which shapes exist** — was decided on 29/08/2026 by
+  [#162](https://github.com/LuchoC-Dev/little-spaceship/issues/162), against the beats that ask for
+  them: **two kinds, `constant` `{vx, vy}` and `arc` `{vx, vy, ay}`**, and seven named entries — the
+  four existing constant vectors plus `strike-run`, `veer-left` and `veer-right`. A shape is a
+  function of the entity's own elapsed time and its spawn state, carries no randomness, and must leave
+  the playfield unattended in finite time; otherwise a `cleared` wave can deadlock behind it, because
+  `LifetimeSystem` removes an enemy only once it is off screen. The reasoning, the parameters and the
+  eight refusals are in
+  [`docs/plan/11c-movement-shapes/shape-catalogue.md`](../plan/11c-movement-shapes/shape-catalogue.md).
+  **Built on 29/08/2026**, and this paragraph replaces a "Not built" that was true when it was
+  written. `core/port/TrajectoryDefinition.java` is a sealed interface permitting
+  `SimpleTrajectoryDefinition` (`constant`) and `ArcTrajectoryDefinition` (`arc`), whose
+  `verticalVelocityAt(float)` returns `vy + ay·t` in closed form;
+  `game/adapter/content/JsonContentSource.java` reads the `"type"` key and refuses an unknown one;
+  the three `arc` entries are in `assets/data/trajectories.json`; `SpawnEvent` carries an optional
+  `trajectoryId` and `MotionSystem` re-evaluates it every tick from `Trajectory`'s `elapsed`.
+  [#163](https://github.com/LuchoC-Dev/little-spaceship/issues/163) and
+  [#164](https://github.com/LuchoC-Dev/little-spaceship/issues/164) are closed.
+  **No wave points at a shape yet** — pointing one would redesign level 1, which is
+  [11e](../plan/11e-level-one-redesigned/plan.md).
+- **The per-level document is generated from the JSON, and CI fails when they disagree.** Of the three
+  arrangements area G of `docs/plan/10c-architecture-review/assessment.md` says the architecture
+  permits, this is the one taken. It follows the two generators that already work here,
+  `docs/design/atlas/build-atlas.js` and `docs/design/fonts/build-fnt.js`. The fourth arrangement, two
+  hand-maintained artefacts, is refused.
+- **Level 1 targets around three minutes including the boss, and the number is fixed by playing.**
+  **This reopens "Level 1 climax and length" above**, decided on 21/08/2026 as "four minutes or more",
+  after the project owner played the shipped build and found five minutes too long. The other two
+  decisions in that subsection — the boss's single phase with two alternating patterns and a clear
+  tell, and the strong encounter being two heavy carriers — are untouched.
+- **The boss's redesign travels with the balance pass**, in the same phase, because tuning a fight
+  against a pacing that no longer exists is doing the work twice.
+- **`level-designer`'s boundary is widened to all level content under `assets/data/`** — levels,
+  waves, formations and movement shapes — from `assets/data/level-*.json` and nothing else. The old
+  line left the wave and movement-shape content that phases 11b and 11c create belonging to no agent,
+  and put the migration of `level-01.json` into a phase owned by `core-domain`, which would have been
+  an agent writing outside its module. **The line did not move in the direction that matters:**
+  content is `level-designer`'s, and the systems that read it stay `core-domain`'s. Applied to
+  `.claude/agents/level-designer.md` and to the agent table in `CLAUDE.md`.
+- **Invariant 6 is reworded, resolving
+  [#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91).** The wording 10c proposed is
+  accepted and applied to `CLAUDE.md`: *"No abstraction without a real case you can point at. A case
+  is a written design or a shipped need, not an expectation."* The standard did not change when the
+  MVP shipped; only the sentence's subject did.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.

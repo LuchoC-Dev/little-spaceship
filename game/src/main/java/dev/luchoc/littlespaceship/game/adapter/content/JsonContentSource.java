@@ -3,6 +3,7 @@ package dev.luchoc.littlespaceship.game.adapter.content;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
+import dev.luchoc.littlespaceship.core.port.ArcTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.AttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.BossDefinition;
@@ -15,9 +16,13 @@ import dev.luchoc.littlespaceship.core.port.SimpleBossDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
+import dev.luchoc.littlespaceship.core.port.SimpleWaveDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleWaveTimeline;
 import dev.luchoc.littlespaceship.core.port.SpawnEvent;
 import dev.luchoc.littlespaceship.core.port.TrajectoryDefinition;
+import dev.luchoc.littlespaceship.core.port.WaveDefinition;
+import dev.luchoc.littlespaceship.core.port.WaveEndCondition;
+import dev.luchoc.littlespaceship.core.port.WavePlacement;
 import dev.luchoc.littlespaceship.core.port.WaveTimeline;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,13 +47,6 @@ import java.util.Set;
  */
 public final class JsonContentSource implements ContentSource {
 
-    /**
-     * The one level this phase ships. A second level would need this hardcoded id turned into a
-     * parameter — not done now, per the plan's own warning against over-generalising the schema
-     * ahead of a second concrete case.
-     */
-    public static final String LEVEL_ID = "level-01";
-
     private final BalanceValues balance;
     private final Map<String, EnemyDefinition> enemies = new HashMap<>();
     private final Map<String, TrajectoryDefinition> trajectories = new HashMap<>();
@@ -56,19 +54,34 @@ public final class JsonContentSource implements ContentSource {
     private final Map<String, WaveTimeline> timelines = new HashMap<>();
     private final Map<String, AttachmentDefinition> attachments = new HashMap<>();
     private final Map<String, BossDefinition> bosses = new HashMap<>();
+    private final Map<String, WaveDefinition> waves = new HashMap<>();
+    private final Map<String, List<WavePlacement>> placements = new HashMap<>();
 
     /**
-     * Loads every content file under {@code dataDir}.
+     * Loads every content file under {@code dataDir}, plus the level named by {@code levelId} from
+     * {@code <levelId>.json} in that same directory.
+     *
+     * <p>The id is a constructor parameter rather than a hardcoded constant, per this class's own
+     * former javadoc naming exactly this as the thing a second level would need — {@code
+     * game-presentation}'s handover of issue #87. Loading stays single-level and eager: nothing
+     * here lists the directory to discover every {@code level-*.json} on disk, because {@link
+     * FileHandle#list()} has no answer for the web target's asset packaging, and there is still only
+     * one concrete level to load. Whoever calls this decides which one.
      *
      * @param dataDir the directory holding {@code balance.json}, {@code trajectories.json},
-     *     {@code formations.json}, {@code enemies.json}, {@code attachments.json} and
-     *     {@code level-01.json}
+     *     {@code formations.json}, {@code enemies.json}, {@code attachments.json}, the optional
+     *     {@code waves.json} and {@code <levelId>.json}
+     * @param levelId the content id of the level to load; also the level file's name without the
+     *     {@code .json} extension
      * @throws IllegalArgumentException if any file is missing or malformed, naming the file and
      *     whatever it could not resolve
      */
-    public JsonContentSource(FileHandle dataDir) {
+    public JsonContentSource(FileHandle dataDir, String levelId) {
         if (dataDir == null) {
             throw new IllegalArgumentException("the content source needs a data directory");
+        }
+        if (levelId == null || levelId.isEmpty()) {
+            throw new IllegalArgumentException("the content source needs a level id");
         }
         JsonReader reader = new JsonReader();
         this.balance = loadBalance(reader, dataDir.child("balance.json"));
@@ -76,7 +89,8 @@ public final class JsonContentSource implements ContentSource {
         loadFormations(reader, dataDir.child("formations.json"));
         loadEnemies(reader, dataDir.child("enemies.json"));
         loadAttachments(reader, dataDir.child("attachments.json"));
-        loadLevel(reader, dataDir.child("level-01.json"), LEVEL_ID);
+        loadWaves(reader, dataDir.child("waves.json"));
+        loadLevel(reader, dataDir.child(levelId + ".json"), levelId);
     }
 
     @Override
@@ -110,6 +124,16 @@ public final class JsonContentSource implements ContentSource {
     }
 
     @Override
+    public WaveDefinition wave(String id) {
+        return require(waves, id, "wave");
+    }
+
+    @Override
+    public List<WavePlacement> placements(String levelId) {
+        return require(placements, levelId, "level placements");
+    }
+
+    @Override
     public boolean hasBoss(String levelId) {
         return bosses.containsKey(levelId);
     }
@@ -134,12 +158,39 @@ public final class JsonContentSource implements ContentSource {
     private void loadTrajectories(JsonReader reader, FileHandle file) {
         inFile(file, () -> {
             for (JsonValue entry : reader.parse(file).get("trajectories")) {
-                TrajectoryDefinition trajectory = new SimpleTrajectoryDefinition(
-                    entry.getString("id"), entry.getFloat("vx"), entry.getFloat("vy"));
+                TrajectoryDefinition trajectory = parseTrajectory(entry);
                 trajectories.put(trajectory.id(), trajectory);
             }
             return null;
         });
+    }
+
+    /**
+     * Parses one {@code trajectories.json} entry into the {@link TrajectoryDefinition} kind its
+     * {@code "type"} names — {@code "constant"} (the default, so the four entries that shipped
+     * before {@code "type"} existed still load unchanged) or {@code "arc"}, the two kinds
+     * {@code docs/plan/11c-movement-shapes/shape-catalogue.md} decides and {@link
+     * TrajectoryDefinition} is sealed to. Any other value fails loudly naming both the trajectory id
+     * and the bad type — deliberately not defaulted to {@code "constant"}, the same reasoning {@link
+     * #parseEndCondition} already applies to a wave's end condition: a typo in {@code "type"} silently
+     * loading as a different shape is a wrong game, not a crash, and this loader used to be exactly
+     * that permissive by reading only {@code id}, {@code vx} and {@code vy} and ignoring everything
+     * else.
+     */
+    private static TrajectoryDefinition parseTrajectory(JsonValue entry) {
+        String id = entry.getString("id");
+        String type = entry.getString("type", "constant");
+        if ("constant".equals(type)) {
+            requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "type", "vx", "vy");
+            return new SimpleTrajectoryDefinition(id, entry.getFloat("vx"), entry.getFloat("vy"));
+        }
+        if ("arc".equals(type)) {
+            requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "type", "vx", "vy", "ay");
+            return new ArcTrajectoryDefinition(
+                id, entry.getFloat("vx"), entry.getFloat("vy"), entry.getFloat("ay"));
+        }
+        throw new IllegalArgumentException(
+            "trajectory '" + id + "' has an unknown type '" + type + "'");
     }
 
     private void loadFormations(JsonReader reader, FileHandle file) {
@@ -185,36 +236,163 @@ public final class JsonContentSource implements ContentSource {
     }
 
     /**
-     * Reads {@code level-01.json}'s two top-level blocks: the optional {@code "boss"} object and the
-     * required {@code "events"} array. {@code hasBoss}/{@code boss} answer false/throw for a level
-     * whose file carries no {@code "boss"} key at all — a legitimate case per {@link ContentSource}'s
-     * own contract — but any key on either object this schema does not name fails loudly through
-     * {@link #requireOnlyKeys}, closing the gap {@code level-designer} found: an unrecognised key used
-     * to load clean and silently leave the level with no boss, which is worse than a parse error.
+     * Reads {@code waves.json}, the named-content file a level's {@code "waves"} block references by
+     * id — beside {@code formations.json} and {@code trajectories.json}, per {@code
+     * docs/planning/08-decisions-and-open-items.md}, "The 11 group, 27/08/2026". Optional: no level
+     * shipped by this phase is required to use the wave format yet ({@code level-01.json} keeps its
+     * flat {@code "events"} list until issue #114 migrates it), so a data directory without this file
+     * loads with an empty wave registry rather than failing — the same reasoning {@link #loadLevel}
+     * already applies to a level's optional {@code "boss"} block.
+     */
+    private void loadWaves(JsonReader reader, FileHandle file) {
+        if (!file.exists()) {
+            return;
+        }
+        inFile(file, () -> {
+            JsonValue root = reader.parse(file);
+            requireOnlyKeys(root, "wave file", "waves");
+            JsonValue wavesValue = root.get("waves");
+            if (wavesValue == null) {
+                throw new IllegalArgumentException("wave file has no 'waves' array");
+            }
+            for (JsonValue entry : wavesValue) {
+                requireOnlyKeys(entry, "wave", "id", "end", "spawns");
+                String id = entry.getString("id");
+                JsonValue spawnsValue = entry.get("spawns");
+                if (spawnsValue == null) {
+                    throw new IllegalArgumentException("wave '" + id + "' has no spawns");
+                }
+                List<SpawnEvent> spawns = new ArrayList<>();
+                for (JsonValue spawnEntry : spawnsValue) {
+                    spawns.add(parseSpawnEvent(spawnEntry, "wave '" + id + "' spawn"));
+                }
+                JsonValue endValue = entry.get("end");
+                if (endValue == null) {
+                    throw new IllegalArgumentException("wave '" + id + "' needs an end condition");
+                }
+                WaveEndCondition end = parseEndCondition(endValue, id);
+                waves.put(id, new SimpleWaveDefinition(id, spawns, end));
+            }
+            return null;
+        });
+    }
+
+    /**
+     * Parses the {@code "end"} object of one {@code waves.json} entry into a {@link
+     * WaveEndCondition}. {@code "type"} discriminates between the two sealed cases — {@code
+     * "fixedDuration"}, which also needs {@code "seconds"}, and {@code "cleared"}, which needs
+     * nothing else — and any other value is rejected rather than defaulted to {@link
+     * WaveEndCondition.FixedDuration}: a wave that quietly became a fixed duration because of a typo
+     * in {@code "type"} is exactly the silent pacing bug {@code docs/plan/11b-wave-system/plan.md}'s
+     * "Watch out for" section warns against.
+     */
+    private static WaveEndCondition parseEndCondition(JsonValue endValue, String waveId) {
+        String type = endValue.getString("type");
+        if ("fixedDuration".equals(type)) {
+            requireOnlyKeys(endValue, "wave '" + waveId + "' end condition", "type", "seconds");
+            return new WaveEndCondition.FixedDuration(endValue.getFloat("seconds"));
+        }
+        if ("cleared".equals(type)) {
+            requireOnlyKeys(endValue, "wave '" + waveId + "' end condition", "type");
+            return new WaveEndCondition.Cleared();
+        }
+        throw new IllegalArgumentException(
+            "wave '" + waveId + "' has an unknown end condition type '" + type + "'");
+    }
+
+    /**
+     * @param entry one spawn's JSON object, shared by a level's legacy {@code "events"} list and a
+     *     {@code waves.json} wave's {@code "spawns"} list — the two places {@link SpawnEvent} is
+     *     read from, per its own javadoc on having no reference frame of its own
+     * @param context named in any error this entry raises, so it reads "wave 'x' spawn" or
+     *     "spawn event" depending on which list called it. {@code "trajectory"} is optional and, when
+     *     absent, becomes {@code null} — {@link SpawnEvent#hasTrajectoryOverride()} reads that as "use
+     *     the archetype's own default", exactly as before this key existed. An id that names no entry
+     *     in {@code trajectories.json} is not checked here — this loader has no {@code ContentSource}
+     *     to check it against yet, the same reason {@code enemyId}/{@code formationId} are not either
+     *     — it fails loudly once {@code SpawnSystem} resolves it at spawn time, per {@code
+     *     SpawnEvent}'s own javadoc on {@code trajectoryId}.
+     */
+    private static SpawnEvent parseSpawnEvent(JsonValue entry, String context) {
+        requireOnlyKeys(entry, context,
+            "at", "spawn", "formation", "atX", "drop", "dropSlot", "trajectory");
+        return new SpawnEvent(
+            entry.getFloat("at"),
+            entry.getString("spawn"),
+            entry.getString("formation"),
+            entry.getFloat("atX"),
+            entry.getString("drop", null),
+            entry.getInt("dropSlot", 0),
+            entry.getString("trajectory", null));
+    }
+
+    /**
+     * Reads the level file's top-level blocks: the optional {@code "boss"} object and exactly one of
+     * {@code "events"} (the legacy flat list, still {@code level-01.json}'s own shape until issue
+     * #114 migrates it) or {@code "waves"} (an ordered list of {@link WavePlacement}s). Unlike the
+     * flattening this class did before issue #112 merged, a {@code "waves"} block is stored as-is —
+     * each placement's wave id resolved against {@link #waves} to fail loudly on a typo, but its
+     * offset and its wave's own end condition left untouched — because {@code SpawnSystem} now reads
+     * {@link ContentSource#wave(String)} and {@link ContentSource#placements(String)} directly and
+     * does its own scheduling, including resolving a {@link WaveEndCondition.Cleared} wave at
+     * runtime. Flattening here would have quietly reimplemented that scheduling a second time and
+     * silently dropped {@code Cleared} support, which is exactly the mistake this rewrite undoes.
+     * {@code hasBoss}/{@code boss} answer false/throw for a level whose file carries no {@code "boss"}
+     * key at all — a legitimate case per {@link ContentSource}'s own contract — but any key on either
+     * object this schema does not name fails loudly through {@link #requireOnlyKeys}, closing the gap
+     * {@code level-designer} found: an unrecognised key used to load clean and silently leave the
+     * level with no boss, which is worse than a parse error.
      */
     private void loadLevel(JsonReader reader, FileHandle file, String levelId) {
         inFile(file, () -> {
             JsonValue root = reader.parse(file);
-            requireOnlyKeys(root, "level file", "boss", "events");
+            requireOnlyKeys(root, "level file", "boss", "events", "waves");
             JsonValue bossValue = root.get("boss");
             if (bossValue != null) {
                 bosses.put(levelId, parseBoss(bossValue));
             }
-            List<SpawnEvent> events = new ArrayList<>();
-            for (JsonValue entry : root.get("events")) {
-                requireOnlyKeys(entry, "spawn event", "at", "spawn", "formation", "atX", "drop", "dropSlot");
-                events.add(new SpawnEvent(
-                    entry.getFloat("at"),
-                    entry.getString("spawn"),
-                    entry.getString("formation"),
-                    entry.getFloat("atX"),
-                    entry.getString("drop", null),
-                    entry.getInt("dropSlot", 0)));
+            JsonValue eventsValue = root.get("events");
+            JsonValue placementsValue = root.get("waves");
+            if (eventsValue != null && placementsValue != null) {
+                throw new IllegalArgumentException(
+                    "level file has both 'events' and 'waves' — use exactly one");
             }
-            timelines.put(levelId, new SimpleWaveTimeline(events));
+            if (eventsValue != null) {
+                List<SpawnEvent> events = new ArrayList<>();
+                for (JsonValue entry : eventsValue) {
+                    events.add(parseSpawnEvent(entry, "spawn event"));
+                }
+                timelines.put(levelId, new SimpleWaveTimeline(events));
+            } else if (placementsValue != null) {
+                placements.put(levelId, parsePlacements(placementsValue));
+            } else {
+                throw new IllegalArgumentException("level file needs either 'events' or 'waves'");
+            }
             return null;
         });
     }
+
+    /**
+     * Parses a level's {@code "waves"} block into the ordered {@link WavePlacement} list {@code
+     * SpawnSystem} now reads through {@link ContentSource#placements(String)}. Each placement's
+     * {@code "wave"} id is resolved against {@link #waves} here, at load time, so a typo fails
+     * loudly naming the level and the id — the same "malformed content fails at startup" guarantee
+     * every other lookup in this class already gives — rather than surfacing later as {@code
+     * SpawnSystem} reaching {@link ContentSource#wave(String)}'s own failure with no file name
+     * attached. Offsets and end conditions are left exactly as declared: this class no longer
+     * schedules anything, it only hands {@code SpawnSystem} the declarations to schedule itself.
+     */
+    private List<WavePlacement> parsePlacements(JsonValue placementsValue) {
+        List<WavePlacement> resolved = new ArrayList<>();
+        for (JsonValue entry : placementsValue) {
+            requireOnlyKeys(entry, "wave placement", "wave", "offset");
+            WavePlacement placement = new WavePlacement(entry.getString("wave"), entry.getFloat("offset"));
+            require(waves, placement.waveId(), "wave");
+            resolved.add(placement);
+        }
+        return resolved;
+    }
+
 
     /**
      * Parses the {@code "boss"} block, keys named exactly after {@link BossDefinition}'s accessors —

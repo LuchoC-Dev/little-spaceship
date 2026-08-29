@@ -15,6 +15,7 @@ import dev.luchoc.littlespaceship.core.domain.component.Drop;
 import dev.luchoc.littlespaceship.core.domain.component.EnemyWeapon;
 import dev.luchoc.littlespaceship.core.domain.component.Health;
 import dev.luchoc.littlespaceship.core.domain.component.Invulnerable;
+import dev.luchoc.littlespaceship.core.domain.component.Lifetime;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Player;
@@ -22,8 +23,10 @@ import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Shield;
 import dev.luchoc.littlespaceship.core.domain.component.Spawner;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.Weapon;
+import dev.luchoc.littlespaceship.core.domain.component.WaveOrigin;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
@@ -117,6 +120,9 @@ class WorldTest {
         world.bombStates().set(entity, new BombState());
         world.spawners().set(entity, new Spawner("enemy-basic", 1f, 0f, 0f));
         world.enemyWeapons().set(entity, new EnemyWeapon("straight-single", 1f, 90f));
+        world.lifetimes().set(entity, new Lifetime(1f));
+        world.waveOrigins().set(entity, new WaveOrigin("wave-1"));
+        world.trajectories().set(entity, new Trajectory("slow-descent"));
     }
 
     /**
@@ -231,6 +237,32 @@ class WorldTest {
     @DisplayName("a fresh world with no player and no exhausted timeline is still in progress")
     void outcomeStartsInProgress() {
         assertEquals(dev.luchoc.littlespaceship.core.port.LevelOutcome.IN_PROGRESS, world.view().outcome());
+    }
+
+    @Test
+    @DisplayName("a bossless level does not complete while the wave timeline is not exhausted, "
+        + "even with no enemy left and the player alive")
+    void outcomeStaysInProgressWhileTheWaveTimelineIsNotExhausted() {
+        int player = world.createEntity();
+        world.players().set(player, new Player(1, 0, 1));
+        // No enemy collider exists and the player is alive, so noEnemyLeft() and "alive" both hold;
+        // waveTimelineExhausted alone is left false, which is exactly the conjunct this asserts.
+
+        assertEquals(dev.luchoc.littlespaceship.core.port.LevelOutcome.IN_PROGRESS, world.view().outcome());
+    }
+
+    @Test
+    @DisplayName("a bossless level reports defeat, not completion, when the last life is lost "
+        + "on the same tick the timeline empties with no enemy left")
+    void outcomeReportsDefeatOverCompletionWhenTheLastLifeIsLostTheSameTick() {
+        int player = world.createEntity();
+        world.players().set(player, new Player(0, 0, 1));
+        world.markWaveTimelineExhausted();
+        // No enemy collider exists, so noEnemyLeft() also holds: every other clause of the bossless
+        // COMPLETED rule is satisfied here on purpose, isolating that losing the last life still wins
+        // — "defeat on losing all lives" (02-mvp-functional-spec.md) is not overridden by completion.
+
+        assertEquals(dev.luchoc.littlespaceship.core.port.LevelOutcome.DEFEATED, world.view().outcome());
     }
 
     @Test

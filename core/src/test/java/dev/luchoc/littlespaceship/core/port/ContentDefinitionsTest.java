@@ -31,6 +31,52 @@ class ContentDefinitionsTest {
     }
 
     @Test
+    @DisplayName("a constant shape's vertical velocity never changes with elapsed time")
+    void constantShapeIgnoresElapsedTime() {
+        TrajectoryDefinition slowDescent = new SimpleTrajectoryDefinition("slow-descent", 0f, -18f);
+
+        assertEquals(-18f, slowDescent.verticalVelocityAt(0f));
+        assertEquals(-18f, slowDescent.verticalVelocityAt(4.07f));
+        assertEquals(-18f, slowDescent.vy());
+    }
+
+    @Test
+    @DisplayName("an arc trajectory needs an id and every parameter finite")
+    void arcTrajectoryValidates() {
+        assertThrows(IllegalArgumentException.class,
+            () -> new ArcTrajectoryDefinition("", 0f, -110f, 27f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new ArcTrajectoryDefinition("strike-run", Float.NaN, -110f, 27f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new ArcTrajectoryDefinition("strike-run", 0f, Float.POSITIVE_INFINITY, 27f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new ArcTrajectoryDefinition("strike-run", 0f, -110f, Float.NEGATIVE_INFINITY));
+    }
+
+    @Test
+    @DisplayName("an arc's vertical velocity is vy plus ay times elapsed time, and it turns when that reaches zero")
+    void arcShapeEvaluatesTheClosedForm() {
+        // strike-run from the shape catalogue: vx 0, vy -110, ay 27 — turns at t = -vy / ay = 4.07s.
+        TrajectoryDefinition strikeRun = new ArcTrajectoryDefinition("strike-run", 0f, -110f, 27f);
+
+        assertEquals(-110f, strikeRun.verticalVelocityAt(0f));
+        assertEquals(-110f, strikeRun.vy());
+        assertEquals(-110f + 27f * 2f, strikeRun.verticalVelocityAt(2f));
+        assertEquals(0f, strikeRun.verticalVelocityAt(-strikeRun.vy() / 27f), 1e-4f,
+            "should be at rest, vertically, at its own turning point");
+        assertTrue(strikeRun.verticalVelocityAt(8f) > 0f, "should be climbing well past the turn");
+    }
+
+    @Test
+    @DisplayName("ay = 0 makes an arc behave like a constant, without being one")
+    void zeroAccelerationArcDegeneratesToConstant() {
+        TrajectoryDefinition flatArc = new ArcTrajectoryDefinition("flat", -10f, -40f, 0f);
+
+        assertEquals(-40f, flatArc.verticalVelocityAt(0f));
+        assertEquals(-40f, flatArc.verticalVelocityAt(100f));
+    }
+
+    @Test
     @DisplayName("a formation needs an id and at least one slot")
     void formationValidates() {
         assertThrows(IllegalArgumentException.class,
@@ -95,6 +141,67 @@ class ContentDefinitionsTest {
         WaveTimeline timeline = new SimpleWaveTimeline(sorted);
 
         assertEquals(2, timeline.events().size());
+    }
+
+    @Test
+    @DisplayName("a fixed wave duration rejects zero, negative, NaN and infinite durations")
+    void fixedDurationValidates() {
+        assertThrows(IllegalArgumentException.class, () -> new WaveEndCondition.FixedDuration(0f));
+        assertThrows(IllegalArgumentException.class, () -> new WaveEndCondition.FixedDuration(-1f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new WaveEndCondition.FixedDuration(Float.NaN));
+        assertThrows(IllegalArgumentException.class,
+            () -> new WaveEndCondition.FixedDuration(Float.POSITIVE_INFINITY));
+    }
+
+    @Test
+    @DisplayName("a wave definition needs an id, at least one spawn, spawns in order and an end condition")
+    void waveDefinitionValidates() {
+        List<SpawnEvent> oneSpawn = List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null));
+        WaveEndCondition fixed = new WaveEndCondition.FixedDuration(3f);
+
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("", oneSpawn, fixed));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", List.of(), fixed));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", oneSpawn, null));
+
+        List<SpawnEvent> outOfOrder = List.of(
+            new SpawnEvent(2f, "enemy-basic", "single", 0.5f, null),
+            new SpawnEvent(1f, "enemy-light", "single", 0.5f, null));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", outOfOrder, fixed));
+    }
+
+    @Test
+    @DisplayName("a wave placement needs a wave id and a finite offset, negative allowed to overlap")
+    void wavePlacementValidates() {
+        assertThrows(IllegalArgumentException.class, () -> new WavePlacement("", 0f));
+        assertThrows(IllegalArgumentException.class, () -> new WavePlacement("wave-1", Float.NaN));
+        assertThrows(IllegalArgumentException.class,
+            () -> new WavePlacement("wave-1", Float.POSITIVE_INFINITY));
+
+        WavePlacement overlapping = new WavePlacement("wave-1", -2f);
+
+        assertEquals("wave-1", overlapping.waveId());
+        assertEquals(-2f, overlapping.offsetSeconds());
+    }
+
+    @Test
+    @DisplayName("the same wave id can back two different placements, unaffected by either")
+    void waveDefinitionCarriesNoPlacementOfItsOwn() {
+        List<SpawnEvent> oneSpawn = List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null));
+        WaveDefinition wave =
+            new SimpleWaveDefinition("wave-1", oneSpawn, new WaveEndCondition.Cleared());
+
+        WavePlacement first = new WavePlacement(wave.id(), 0f);
+        WavePlacement second = new WavePlacement(wave.id(), -3f);
+
+        assertEquals(wave.id(), first.waveId());
+        assertEquals(wave.id(), second.waveId());
+        assertEquals(0f, first.offsetSeconds());
+        assertEquals(-3f, second.offsetSeconds());
     }
 
     private static void assertEqualsFalse(boolean value) {

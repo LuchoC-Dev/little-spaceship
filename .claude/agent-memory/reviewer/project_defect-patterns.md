@@ -1,6 +1,6 @@
 ---
 name: defect-patterns
-description: The recurring shapes of defect found when auditing this repo — where to look first in a phase review, including second-round, data-driven, seam and design-fidelity passes
+description: The recurring shapes of defect found when auditing this repo — where to look first in a phase review, including second-round, data-driven, seam, design-fidelity, workflow-enforcement and cross-agent-handoff passes
 metadata:
   type: project
 ---
@@ -281,8 +281,6 @@ catalogue.
     dimension odd with a true centre pixel). Zero mismatches. This is the counter-example to keep
     calibration honest: "read every number, trust none of them until reconstructed" does not always
     find something, and this branch is the proof it does not have to.
-is state an omission once in prose while the summary sentence beside it reads as complete. That is
-the residual shape in this author's status documents, and it is a note, never a rejection.
 
 ## Phase 08 (`feat/audio`, PR #31): clean, and worth recording *why* nothing fired
 
@@ -320,8 +318,6 @@ present here in their *safe* form, which is the useful contrast to keep.
   real-browser pass is still the first time anyone actually listens to this." Same for task 5
   (animations): marked "in progress" with the exact missing pieces named, not folded into "done".
   This is what an honest partial-completion entry looks like next to patterns 21/22's dishonest one.
-is state an omission once in prose while the summary sentence beside it reads as complete. That is
-the residual shape in this author's status documents, and it is a note, never a rejection.
 
 ## PR #29 (`feat/boss`), phase 07 — a coordinator-committed last commit that held up, and a citation gap in what a replay actually covers
 
@@ -450,3 +446,389 @@ One correction was fully propagated, the sibling one was not; the difference was
 Edge fix and the License fix are the same size, so treat "the coordinator already fixed X" as a
 claim to verify per-document, not a fact that generalises across the branch's two docs once
 confirmed in one.
+
+## Phase 11a (`phase/11a-rule-asserting-tests`, PRs #100–#107) — a clean branch, and the shape a legitimate "argue with a routing decision" prompt takes
+
+38. **A phase can hold up on every axis at once, and the honest report is "accept."** Checked: the
+    `git diff dev..phase -- '*/src/main/*'` claim (exactly `Rng.java` comment lines + the new
+    `rngparity` module, confirmed by running the diff myself); the boss-replay geometry in
+    `BossReplayTest.podKillSimulation` (recomputed the pod/arm/x-distance arithmetic by hand —
+    `[[project_boss-replay-geometry]]` in `test-engineer`'s own memory independently derives the
+    same numbers, which is a second, unprompted confirmation rather than trusting one narrative);
+    the `alive`-conjunct-is-dead-code finding (read `World.View.outcome()` directly — the early
+    `state.lives <= 0` guard really does make the later `&& alive` unreachable-false in both
+    branches); every rule-to-test table row in `status.md` for tasks 2–4 against the actual test
+    bodies; both architecture-test narrowings (`ALLOWED_JAVA_UTIL_TYPES` against a grep of every
+    `java.util.*` import in `core/port`+`core/application`, `DOMAIN_CONTRACT` whitelist against the
+    one real `GameEventSink` import) for both under- and over-narrowing. Nothing failed. Do not
+    manufacture a finding to justify review effort — this phase's report was "accept, one thing
+    worth arguing with" and that was the true state.
+39. **A "route this open item to a later phase" decision (D5) can be correct about the concrete
+    assertions and still bundle in a separable, format-independent sub-question.** #19 asks two
+    things at once: what to assert about `JsonContentSource`'s error messages (genuinely blocked on
+    11b's rewrite of that class) and how to unit-test anything depending on `FileHandle` without
+    dragging LWJGL into the suite (a test-harness design question, independent of which JSON shape
+    11b lands on). D5 routed the whole issue to the 12 group on the first ground without addressing
+    that the second question could be resolved earlier. Worth naming as "worth arguing with" rather
+    than a defect: nobody had written the harness question down as separable before this reading.
+
+## Calibration from phase 11b task 1 (`feat/entity-lifetime`, PR #116), a clean branch
+
+Recorded so "accept, nothing new" stays calibrated against a real example, not just the rejections.
+
+Every checkable claim in the branch held: the `SAFETY_MARGIN` derivation (`column-3` 44-unit spread x
+`enemy-carrier` 15-unit radius -> y=329, 314 from its own edge) reproduced exactly by hand from
+`assets/data/formations.json`/`enemies.json` and `SpawnSystem.positionSpawned`'s formula; the escape
+rule (no score, no drop, no `EnemyDestroyed`) verified by reading `ScoreSystem`, `CleanupSystem` and
+`ComponentStore.remove` and confirmed by a full-pipeline unit test in the same PR
+(`anEscapedEnemyGivesNothing`); the two-pass structure in `expireEnemies` genuinely needed (`Component
+Store.remove` is a swap-remove that reorders the dense array mid-iteration — confirmed by reading the
+class) and the two-pass version has no version of the same bug (pass 2 iterates a separate `ArrayList`,
+never the store pass 1 walked); `CleanupSystem`'s "converges uniformly" claim stayed true with zero
+change to that class, because the strip happens upstream and both consumers were already conditional
+on component presence. Full clean build (`./gradlew clean build --rerun-tasks`) green across all five
+modules including `web`; 310 core tests, 0 failures/skipped/errors.
+
+The one thing worth naming as a *pattern to watch for, not a defect here*: a worst-case measurement
+combining the extreme value of two independent data files (largest formation spread, largest enemy
+radius) is only a real bound if the spawn system actually allows that combination to occur — checked
+by reading `SpawnSystem.spawnWave`, which assigns one `enemyId` to every slot of a formation, so any
+(formation, enemy) pairing the schema allows is reachable by a future wave even if no current level
+uses it. Worth re-deriving on every phase that touches `formations.json`, `enemies.json`, or the
+spawn-positioning formula, since the bound silently goes stale if either file's extremes move.
+
+Also worth naming: the `new ArrayList<>()` allocated once per tick in `LifetimeSystem.expireEnemies`
+(populated in the near-totality of ticks with nothing) is the same shape as the phase 05 boxed-`Integer`
+finding calibrated as noise — thousands of tiny, short-lived allocations across a multi-minute level
+against ~10ms/frame of drawing cost. Named, not blocking.
+
+## PR #121 (`feat/wave-spawning`, phase 11b task 4), a hand-off between two agents on the same branch
+
+`SpawnSystem` migrated off a flat timeline cursor onto `ContentSource.placements(String)` +
+`wave(String)`, with a genuine mid-task hand-off (first author killed by a spend limit, second
+author inherited the uncommitted diff). Verdict: accept. Full clean build
+(`./gradlew clean build --console=plain`, `little-spaceship-wave-spawn` worktree) green across all
+five modules; `core/build/test-results/test` aggregated to 322 tests, 0 failures/skipped/errors.
+`pre-pr-check --base phase/11b-wave-system` reproduced the PR's own pasted output verbatim.
+
+40. **A test can be named after a rule, assert something, and never touch the system that rule
+    governs.** `SpawnSystemTest.movingAPlacementEarlierChangesNoOtherOffset` builds two
+    `List<WavePlacement>` by hand, reusing the *same* `WavePlacement` object instance in both lists,
+    and asserts `assertEquals(untouched, originalOrder.get(1))` — trivially true by object identity,
+    regardless of anything `SpawnSystem` does. Confirmed vacuous by scaling `scheduleNext`'s offset
+    arithmetic by 1000x in a scratch worktree: the test stayed green. The other three rule-asserting
+    tests in the same PR (`fixedDurationEndsExactlyAtItsOwnDuration`, `clearedWaveWaitsForEvery
+    EntityToBeGone`, `negativeOffsetOverlapsTwoWaves`) all genuinely exercise `SpawnSystem.update`
+    and all went red under a matching one-line break (`>=`→`>` on the duration check, dropping the
+    `noEntityCarries` guard, and replacing the do-while re-check loop with a single pass,
+    respectively) — so this is not a blanket problem with the phase's tests, just this one. The
+    "rule" it half-demonstrates (offset is relative-only, no absolute-position field) is actually a
+    true structural property of `WavePlacement` being an immutable record with no such field, and
+    needs no runtime test at all — the test should either construct genuinely distinct objects and
+    assert on `SpawnSystem`'s emitted spawn order, or be deleted as redundant with the record's own
+    javadoc guarantee.
+41. **A `default`-with-throw contract method copies the justification of a sibling method
+    word-for-word without checking it still applies.** `ContentSource.timeline(String)` was demoted
+    from abstract to `default` in this PR, with javadoc citing the same reasoning as `wave(String)`
+    ("kept only because `game`'s `JsonContentSource` still overrides it") — but `JsonContentSource`
+    *does* override `timeline()` on this branch (confirmed by reading the file), so nothing forces
+    the demotion; the module-boundary need that justifies `wave(String)` and the new
+    `placements(String)` (grep `implements ContentSource`: `JsonContentSource` has no override of
+    either, so an abstract method would break `game`'s compile, a module `core-domain` may not edit)
+    genuinely does not apply to `timeline()`. Net effect: this single PR takes `ContentSource` from
+    one defaulted method to three, not two as its own PR description counts ("the second defaulted
+    contract method") — `placements(String)` is real and justified, `timeline(String)`'s demotion is
+    an unforced, minor widening dressed in the justification of its neighbours. Worth flagging every
+    time a `default`-throw method's javadoc cites "the same reason as X" — reread whether the actual
+    production implementer(s) already provide an override; if they do, the default adds a silent-
+    failure mode for a case that cannot currently occur.
+
+Also confirmed correct, worth recording as the positive case: the claimed inherited bug (`update()`
+scheduling the level's first placement *after* `levelTime += step`, so `scheduleNext`'s clamp-forward
+logic delayed every one of the level's first-wave spawns by one tick) is real in the sense that the
+described mechanism would produce exactly that symptom, and the shipped fix — scheduling the first
+placement before the tick's own step is added — resolves it without touching the separate `Cleared`
+clamp path (`scheduleNext(world, levelTime)` from `resolveEnded`, called only after detection, is
+untouched code, confirmed by diff). Reconstructed by hand rather than trusting the commit body: with
+the fix, `scheduleNext(world, 0f)` runs while `levelTime` is still its initial `0f`, giving
+`start = max(0 + offset, 0)`; only then does `levelTime += step` run, so the first tick's `spawnDue`
+computes `localTime = step - 0 = step`, matching the old flat-cursor system's own first-tick check
+(`events.at() <= levelTime` after the same increment). Reversing the two statements (increment first,
+schedule second) reproduces the claimed bug exactly: `start` would clamp to `step`, not `0`.
+
+## For a second-round PR whose top-level GitHub description predates the fix commit
+
+- **The PR body (`gh pr view --json body`) is not updated automatically when new commits land** —
+  it is prose the author wrote once and can leave stale. PR #120 (task 7, phase 11b) round 2 deleted
+  the load-time flattening and the `Cleared`-placement rejection its round-1 self had; the fix commit,
+  a fresh PR *comment*, and `status.md` all say so correctly, but the PR's top **description**
+  (`## What changed` / the JSON example / the verification log) still describes the deleted
+  round-1 behaviour verbatim — it was never edited after the round-2 commits. Read `gh pr view --json
+  body` *and* `gh pr view --json comments` separately and diff what each claims against the code;
+  the top description is what a reader sees first and is not guaranteed to be the current claim.
+  Not a code defect here (status.md and the latest comment are accurate, code matches them), but
+  exactly the shape of "false statement in a document" the project's own precedent (phase 09's two
+  rejections) warns about — flag it for correction even when a later comment already fixes the record,
+  because the top description is the part most likely to be read alone. **Recurred in PR #168, phase
+  11c** (see below): same shape, same verdict (note, not blocker), so it is a real recurring pattern
+  in this project's workflow, not a one-off.
+- **`./gradlew build` never runs the actual TeaVM JS/Wasm compile** on this repo — `web:build`
+  finishes with `compileTeavmJava NO-SOURCE` and no `dist/js` output. The real check is a specific
+  task, `./gradlew :web:gdx_teavm_web_js_build` (list them with `./gradlew :web:tasks --all | grep -i
+  teavm`), which does the asset copy (confirms `startup-logo.png` ships) and the actual compile. A
+  claim of "the web target still builds" backed only by `:web:build` or the top-level `build` is
+  weaker than it sounds; run the JS build task directly when the PR touches anything under `web/` or
+  makes a TeaVM-compatibility claim.
+
+## Phase 11b closing group: PRs #124, #125, #127 — the migration's real math checked out, two claims did not
+
+Merged all three into a scratch worktree (`git worktree add ../ls-review-final --detach origin/phase/11b-wave-system`, three plain `git merge --no-edit`s, no conflicts). `./gradlew build` green, 322 core tests / 0 failures, `./gradlew :web:gdx_teavm_web_js_build` green (`waves.json` and `startup-logo.png` both copied into `dist/js/webapp/assets`). Verdict: #124 accept (clean, matches #122 exactly, both implementers confirmed to override both methods, no third implementer). #125 accept on the migration itself, with one real false claim to correct. #127 accept, the falsification claims reproduced exactly.
+
+42. **A "checked every pair, nothing else repeats" claim is disprovable by one `Counter` over the same
+    92 events the author had in front of them.** #125/`status.md` claims `enemy-tank`/`single`/`atX
+    0.5` (no drop) is "the *only* exact spawn-composition duplicate anywhere in the 92 events." It
+    is not: `enemy-rush`/`column-3`/`atX 0.5` (no drop) repeats **six** times (118.5, 195.5, 215.0,
+    224.0, 276.5, 293.0), `enemy-basic`/`line-5`/`atX 0.5` five times, plus four more pairs/triples.
+    None of this touches the acceptance criterion (still genuinely reused 3x, still an honest,
+    correct reuse) or the reconstructed timing (my own independent Python re-simulation, using only
+    the placement list's offsets and the waves' durations — no access to the author's script —
+    reproduced all 92 original absolute times exactly, `diff` clean). The lesson: "checked every
+    block pairwise" is a claim about a search that was run, not about the result being correct;
+    counting duplicates by `(spawn, formation, atX, drop, dropSlot)` tuple across the whole file is
+    three lines of Python and should be run every time a content migration claims uniqueness, even
+    when the *consequence* of the false claim is zero (a stronger reuse example existed and was not
+    used).
+43. **The acceptance criterion "the determinism replay of level 1 still passes" has no committed
+    test that loads real content.** `LevelScoreReplayTest` and `LevelContentIntegrationTest` both
+    build content through `TestContent` (grepped, confirmed); `game/src/test` does not exist at all
+    (`find game -path "*/test/*"` empty). What actually verified the migration was the author's own
+    uncommitted scratch program (`FileHandle` over real `assets/data`, ticking a real `Simulation`
+    for 310s) and my own independent reconstruction — neither is a regression net that runs again on
+    the next content edit. Worth naming every time a phase's central acceptance criterion is a
+    behavioural claim about real JSON content: ask what test the CI actually runs that would fail if
+    a future edit to that JSON broke it, separately from asking whether the migration was correct
+    *this time*.
+44. **A predictive-scheduling rewrite can make an existing boundary check untestable through the
+    path that used to expose it.** #127 rewrote `FixedDuration`→`FixedDuration` follower scheduling
+    from reactive (`hasEnded` must return true before the next wave is scheduled) to predictive
+    (`start + duration.seconds()` computed once, at chain-build time). Mutating `hasEnded`'s
+    `FixedDuration` boundary (`>=` → `>`) leaves **all 24** `SpawnSystemTest` cases green —
+    `--rerun-tasks` confirmed, not a stale-cache false negative. The reason: once a `FixedDuration`
+    chain is scheduled predictively, `hasEnded` for that condition only gates removal from
+    `activeWaves` (harmless — the wave's own spawn cursor is already exhausted) and the exact tick
+    `world.markWaveTimelineExhausted()` fires; nothing in the suite pins that exact tick for a
+    `FixedDuration`-only chain (the one exact-boundary completion test, `completesOnceThe
+    TimelineIsExhaustedAndNothingIsAlive`, gives the boundary 0.5s of slack, not zero). Meanwhile the
+    two DisplayNames that read as if they test that boundary
+    (`fixedDurationEndsExactlyAtItsOwnDuration`, `movingAPlacementEarlierChangesNoOtherOffset`) *do*
+    genuinely fail under a **different** mutation — breaking the chain arithmetic itself
+    (`start + duration.seconds()` → `start + duration.seconds() - 1f`) fails both. So the tests are
+    not vacuous, they just protect a different thing than their exact-boundary framing suggests.
+    Whenever a system moves from reactive to predictive scheduling, mutate the *old* boundary check
+    on its own, separately from the arithmetic that replaced its job — they can diverge.
+45. **A phase's own unmet acceptance-criterion bullet, honestly flagged inside the very PR that
+    doesn't close it, still has to be caught at phase-boundary time.** `.claude/agents/
+    level-designer.md`'s "a level is a timeline of timestamped spawn events" paragraph is still
+    "Not built yet" as of all three PRs (`git diff ... --stat -- .claude/agents/level-designer.md`
+    empty on all three) — `status.md`'s own #114 entry says so ("Not this task's to fix, flagged for
+    whoever owns it"), correctly. Not a false claim anywhere, but it is a real, plan-listed
+    acceptance-criterion bullet with no owning PR in the closing group. When a coordinator says "I
+    close the phase after these," re-check the full acceptance list against the merge, not just
+    against each PR's own stated scope — an honestly-deferred item from three PRs ago is still open.
+- **`status.md` on the phase branch does not gain an entry for #124 or #127.** Neither branch
+  touches `docs/plan/11b-wave-system/status.md` (confirmed by `git diff <phase>...<branch> --stat`);
+  the only trace of the negative-offset bug and its fix on the phase branch itself is two agent-memory
+  commit *messages* ("record the negative-offset overlap fix" / "note wave lookup defaults retired"),
+  not a status.md line. Since `status.md` is supposed to be "the only place phase progress is
+  recorded" and the plan's own decision text already asserts negative offsets work ("A negative
+  offset overlaps them"), a reader of `status.md` alone would not learn that this was broken until
+  28/08/2026 and had to be fixed by #126/#127. Not a false statement (status.md says nothing wrong,
+  it says nothing at all), but the closing PR set should add the entry rather than leave it to two
+  memory-commit subject lines to carry the fact.
+
+## Phase 10d — auditing rules written from inside one lived case (workflow-enforcement phase)
+
+46. **Two sibling scripts that enforce "the same rule" almost never enforce the identical set of
+    exceptions, and only running both against the same commit proves it.** `tools/hooks/commit-msg`
+    exempts `Merge `, `Revert "`, `fixup!`, `squash!` and an empty/comment-only subject (case
+    statement, `tools/hooks/commit-msg:32-34`). `tools/pre-pr-check`'s own commit-hygiene loop
+    (step 2, around line 80) only skips `"Merge "*`. A plain `git revert --no-edit` — which the hook
+    explicitly documents as legitimate — produces a subject the hook accepts at commit time and
+    `pre-pr-check` then rejects before the pull request, with a generic "not a conventional subject"
+    error that gives no hint the two checks disagree. Confirmed by actually running
+    `git revert --no-edit <sha>` on a scratch branch and then `tools/pre-pr-check`: `FAIL 1 commit
+    subject(s) break the convention`. Worse: `docs/plan/10d-enforced-workflow/status/
+    137-issue-contract.md:13` states outright that `commit-msg` checks "the same rule
+    `tools/pre-pr-check` applies… Merges, reverts, `fixup!`, `squash!` and an empty or comment-only
+    message are skipped" — a claim about parity between the two scripts that is false for four of
+    its five listed exemptions, written the same way phase 09's "never run on a runner" claim was:
+    plausible, unverified, and contradicted by one command. This is the shape to check first
+    whenever two enforcement scripts are said to share a rule: read each one's actual exemption list
+    side by side, don't trust the sentence that says they agree.
+47. **A status-fragment naming check that verifies "the basename matches the issue number" is not
+    the same as verifying "the fragment lives under the phase actually being worked."** Neither
+    `tools/pre-pr-check` (which only checks presence — by its own comment, deliberately) nor
+    `.github/workflows/pr-check.yml` (which matches `docs/plan/[^/]+/status/[^/]+\.md` against any
+    phase directory and only checks the basename against the cited issue number) confirms that the
+    `[^/]+` phase segment matches the phase branch the pull request targets. Confirmed by
+    constructing a branch against `phase/10d-enforced-workflow` that adds
+    `docs/plan/11c-movement-shapes/status/999-misplaced.md` and citing "Closes #999" in the body: both
+    the real `tools/pre-pr-check` and a line-for-line extraction of `pr-check.yml`'s logic pass it.
+    Weaker than #46 (the gap is explicitly narrowed-by-comment in `pre-pr-check`, "checking the name
+    against the issue… is pr-check's job" — but `pr-check` doesn't close that gap either), still
+    worth naming as a second instance of the same phase's blind spot: a check specified from the one
+    case its author tested (issue number matches fragment number) rather than the full shape of
+    "illegitimate" (issue number matches, but wrong phase directory).
+
+## Phase 11c round 1 (PRs #168 `feat/movement-state`, #169 `content/movement-shapes`) — two agents in parallel over disjoint files, and a clean pair
+
+The first phase to run `core-domain` and `level-designer` in parallel over `core/` and
+`docs/`+`assets/data/` at once, with a real mid-round correction crossing between them (#169's
+catalogue landed while #168 was open; #168's author had already added `Trajectory.originX/originY`
+on a defensible guess, the coordinator asked for them to come out once the catalogue settled the
+question the other way, and they did, same branch, same PR — confirmed via `git log` on the branch
+showing the follow-up commits `fix(core): drop Trajectory origin now the shape catalogue refuses
+it` immediately after the design landed). Both branches touched only their own module (`git diff
+<phase>...<branch> --stat` for #168: `core/` + its own status fragment only; for #169: `docs/`
+only, no `assets/data/` written — deliberately, since #163 owns the parser). Both green on real
+CI runs (`gh run view <id> --log`, `BUILD SUCCESSFUL` on both `build` jobs). Verdict: accept both,
+nothing blocking on either.
+
+48. **A PR's top-level description can describe a design the branch's own later commits reversed,
+    while every other record (PR comment, status fragment, code) agrees on the current state.**
+    #168's `gh pr view --json body` still says `Trajectory` "carries origin (`originX`/`originY`)
+    alongside elapsed time" under a "Decision made where the plan was silent" heading — that was
+    true of the branch's first 5 commits, false after the next 3 (`fix(core): drop Trajectory
+    origin now the shape catalogue refuses it` and its sibling test/doc commits). The correction is
+    recorded faithfully in a PR *comment* ("Update: per the coordinator's instruction, dropped
+    `Trajectory.originX`/`originY`...") and in the status fragment, which additionally narrates
+    *why* the guess was made and *why* it was reversed rather than hiding the churn — the actual
+    `Trajectory.java` on the branch has one field, `elapsed`. This is exactly the shape named as a
+    recurring pattern by PR #120's round 2 (see the note above), now confirmed to recur a second
+    time in a different phase: the top description is written once and nobody is in the habit of
+    revisiting it after a follow-up commit, even when a comment two clicks below it does. Calibrated
+    as a note, not a blocker, both times — the description is stale, nothing downstream (code,
+    status.md, the latest comment) is.
+49. **A status fragment's component-store ordinal claim can be off by a small, harmless amount and
+    still be a checkable numeric error worth naming.** #168's `status/161-...md` calls `Trajectory`
+    "a fifteenth `ComponentStore<Trajectory>` field" — `grep -c "private final ComponentStore<"
+    World.java` on the branch returns 19 (18 pre-existing + this PR's one). Costs nothing
+    functionally (the test that actually guards store count, `WorldTest`'s `stores.size() >= 15`
+    floor, does not depend on the ordinal claimed in prose), but it is exactly the kind of
+    quantitative claim this project's own citation-checking habit exists to catch — count the
+    `private final ComponentStore<` lines whenever a status fragment numbers a store by ordinal, it
+    is one grep.
+50. **A design-fidelity document's derived-quantity arithmetic (turn time, apex depth, screen-exit
+    time) is worth reconstructing by hand even when it spans several entries, because the discipline
+    generalises and the author's habit of citing exact source lines (radius from `enemies.json`,
+    `SAFETY_MARGIN` from `LifetimeSystem.java`) makes it cheap.** Recomputed all of #169's
+    `shape-catalogue.md` claims independently: `strike-run`'s turn time (`110/27 = 4.074s`, matches
+    "4.07 s") and apex depth (`110²/(2·27) = 224.07`, matches "224 below spawn"); `veer-left`'s
+    (`95/20 = 4.75s`, `95²/40 = 225.6 ≈ 226`, both match) and its crossing-x arithmetic at `atX 0.9`
+    (`187 - 32·4.75 = 35`, matches "apex x ≈ 35" exactly); the safety-box bounds cited (`x ∈
+    [-128, 336]`, `y ∈ [-128, 398]`) against `LifetimeSystem.SAFETY_MARGIN = 128f` and
+    `PLAYFIELD_WIDTH`/`PLAYFIELD_HEIGHT` (208/270) — exact match. One inexactness found and judged
+    not worth blocking: the stated screen-exit times for `strike-run`/`veer-left` (9.15s/9.85s)
+    solve `y = 398`/`x = -128` rather than `y - radius = 398`/`x - radius = -128`, which is what
+    `LifetimeSystem.isPastSafetyBox` actually checks — the true exit is a few hundredths of a second
+    later (recomputed: `y=402` gives `t≈9.18s`, not `9.15s`). Immaterial to the rule the document is
+    proving ("every shape leaves in finite time"), and this project's own calibration (pattern 31,
+    the phase 03 sprite-production branch) already established that a design document can check out
+    in full — do not manufacture the rounding gap into a defect it doesn't support.
+51. **A "phase 12's levels give us no beat list to point a shape at" finding can be reported by both
+    halves of a parallel round without either one copying the other, and both halves agreeing is
+    itself evidence, not just a coincidence to note.** The coordinator's brief for this round flagged
+    this exact gap as "already known, don't spend the audit rediscovering it" — and #169's own
+    `shape-catalogue.md` and its status fragment both state it independently and identically ("Phase
+    12's levels 2 and 3 justify nothing here, and could not... only half of the issue's... could be
+    answered honestly, so all seven entries rest on level 1"), which is the correct, honest response
+    to an unanswerable half of an issue's acceptance criterion — the alternative (silently building a
+    shape "for phase 12" anyway) is exactly what invariant 6 exists to refuse, and this branch didn't
+    take it.
+
+## PR #170 (`feat/movement-shape-content`, phase 11c round 2, issue #163) — a sealed interface actually proven safe under TeaVM, and a clean three-agent branch
+
+The round the parent most wanted a second opinion on: `TrajectoryDefinition` became a `sealed
+interface` with a `permits` clause, `core` is what TeaVM compiles, and CI's `build` job runs
+`compileTeavmJava` as `NO-SOURCE` (see the closing-group entry above and [[audit-techniques]]'s
+"For auditing a TeaVM web dist directory") — so nothing in the PR's own green checks proves the web
+target still builds. Settled by actually running the real compile, not by reasoning about the
+language feature: `git worktree add` off `origin/feat/movement-shape-content`, then `./gradlew.bat
+:web:gdx_teavm_web_js_build` (the task name from the earlier note above), `BUILD SUCCESSFUL`, and
+`grep -c ArcTrajectoryDefinition web/build/dist/js/webapp/app.js` returned 20 — the sealed type and
+its new permitted record are both really in the compiled JS, not just theoretically compatible.
+`WaveEndCondition` (`core/src/main/java/.../core/port/WaveEndCondition.java:17`) really is already
+`sealed`, confirming the PR's "mirrors an existing pattern" claim, and this PR is the first time
+anyone has actually proven a sealed `core.port` type survives the TeaVM compile rather than assuming
+it from `WaveEndCondition` shipping unexamined. **Worth remembering directly: sealed interfaces with
+`permits` compile through this project's TeaVM plugin (`com.github.xpenatan.gdx-teavm:1.6.1`) — this
+no longer needs re-litigating on a future PR, only re-confirming if the plugin version changes.**
+
+52. **Nothing wrong found, and every checkable claim reproduced.** The eight refused shapes from
+    round 1's catalogue (`diagonal`, `logarithmic`, `sine`, `enterAndHold`, `ax`, waypoints,
+    formation-relative, player-reading) shipped nothing — no field, no parser branch, no
+    `horizontalVelocityAt` (grepped for it directly, zero hits) — and the "nothing points at the new
+    entries" claim held (`grep -rln "strike-run\|veer-left\|veer-right" assets/data/*.json` returns
+    only `trajectories.json`). `requireOnlyKeys` strictness is pre-existing (already used for waves'
+    end conditions), not new machinery invented for this PR, and the four pre-existing trajectory
+    entries parse unchanged through it. Full clean `./gradlew build`: 328 core tests, 0
+    failures/skipped/errors. `pre-pr-check --base phase/11c-movement-shapes` reproduced the PR body's
+    pasted "PASS — 5 commit(s), 8 file(s) changed" exactly (had to `git checkout -b` inside the
+    detached worktree first — the branch-name check fails on a bare detached HEAD, a tooling quirk
+    worth remembering, not a defect). The `-110 → -56 → -0.002` sequence in both the PR body and the
+    status fragment reproduces by hand (`-110+27·2=-56`, `-110+27·4.074≈-0.002`). Recorded as
+    calibration alongside PR #22/#26/#31/#08's clean verdicts: an "accept, nothing new" report is
+    only worth as much as the TeaVM compile actually run to support it.
+
+## PR #171 (`feat/spawn-shape-id`, phase 11c task 4/issue #164) — the phase's own task, clean
+
+Two agents on one branch, `core-domain` for the binding and evaluation, `game-presentation` for the
+loader key, same split as #163. Verdict: accept, nothing found. Recorded as the calibration case for
+"velocity becomes a function of elapsed time for the first time" not actually breaking determinism.
+
+53. **A uniform-attach claim ("every entity that gets a Motion now also gets a Trajectory") is
+    verified by grepping the one call site of the shared factory method, not by reading its own
+    javadoc.** `ComponentFactoryRegistry.attachMotion`/`attachTrajectory` is registered exactly once,
+    under `"motion"` in `ComponentFactoryRegistry.withDefaults()`, and only `SpawnSystem` and
+    `SpawnerSystem` ever call `attachComponents` at all — the player (`Simulation`), the boss
+    (`BossSystem`) and both weapon systems all call `world.motions().set(...)` directly, bypassing the
+    registry entirely, so none of them ever gains a `Trajectory` and MotionSystem's per-tick
+    re-evaluation loop (which walks `world.trajectories()`, not `world.motions()`) never touches their
+    hand-set `Motion`. Confirmed by grepping `attachMotion|attachTrajectory` and `new Motion(` across
+    `core/src/main` separately. The "is it really a no-op for constants" half of the same claim is
+    provable by mutation-free reasoning once `TrajectoryDefinition`'s two implementations are read: a
+    `constant` shape's `verticalVelocityAt` ignores its argument by construction, so re-evaluating it
+    every tick is definitionally the same write every time — no probe needed, unlike the boundary
+    mutations pattern 44 required.
+54. **An "unknown id fails loudly, one level later, by design" claim for a *new* content field is
+    fully checkable end to end with two greps, no probe.** `SpawnEvent.trajectoryId` skips validation
+    in its own compact constructor (confirmed by reading it — same four checks as before this PR,
+    nothing added for the new field) and `JsonContentSource.parseSpawnEvent` never resolves it either
+    — the actual throw is `JsonContentSource.require`'s `IllegalArgumentException("unknown " + kind +
+    " id '" + id + "'")`, reached through `world.content().trajectory(id)` inside
+    `MotionSystem.advanceTrajectories`/`ComponentFactoryRegistry.attachTrajectory`, and
+    `Simulation.tick` has no try/catch anywhere in the file — so the exception is genuinely uncaught,
+    not merely "loud" in the sense of a logged line. This is the same treatment `enemyId`/`formationId`
+    already get (grepped `require(` calls in `JsonContentSource` to confirm the pattern is pre-existing,
+    not invented for this field), so the precedent claim holds too.
+55. **A phase's own worked numbers (turn time, exact velocity at a stated tick) are the strongest test
+    oracle available, and a test that asserts against them is proof against silent accumulation
+    drift.** `MotionSystemTest.arcShapeIsFollowedAndCurves` asserts `Motion.vy` at t=5s equals
+    `-110 + 27*5 = 25` exactly (0.01f tolerance) — this is `TrajectoryDefinition#verticalVelocityAt`'s
+    closed form, and it would NOT match if the implementation instead accumulated `ay * step` every
+    tick with float error, or evaluated against a stale `elapsed` (before vs. after the tick's own
+    increment). Whenever a "closed form, not accumulation" claim appears, check that the test's
+    asserted value is the closed-form result and not just "some value the code currently produces."
+
+Full clean-branch confirmation: `./gradlew :core:test --rerun-tasks` from a fresh worktree, 331 tests
+0 failures/skipped/errors (aggregated from `core/build/test-results/test/*.xml`); `DeterminismRulesTest`
+and every `*ReplayTest` present and green; `SystemOrder.java` untouched (`git diff` empty for that
+file); `./gradlew :web:gdx_teavm_web_js_build` green from the same worktree (this PR touches `game/`,
+so worth re-running even though the PR itself only claims "not checked" for the web target — the
+claim was appropriately conservative, not wrong); `tools/pre-pr-check --base phase/11c-movement-shapes`
+reproduced the PR's pasted "PASS — 4 commit(s), 11 file(s) changed" exactly, after `git checkout -b`
+inside the detached worktree (pattern from PR #170's memory entry, still needed). No wave/level/enemy
+content references any new shape id (`grep -rln "strike-run\|veer-left\|veer-right" assets/data/*.json`
+returns only `trajectories.json`), confirming the "no wave points at a shape yet" claim.
+
+Related: [[audit-techniques]].

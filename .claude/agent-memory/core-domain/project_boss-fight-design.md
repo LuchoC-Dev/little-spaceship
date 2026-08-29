@@ -59,4 +59,15 @@ code), but "no consumer" was the wrong test — the consumer was the design deci
 up from the code. Building it was cheap once flagged. Worth re-checking, before deferring anything as
 "no real consumer", whether an already-made design decision is quietly depending on it.
 
+**"One field plus one write site" from a plan is a guess, not a count — `git grep` the actual creation
+sites before believing it.** Phase 11b's task 2 (issue #85, a `WaveOrigin` component recording which
+wave spawned an entity) had exactly this shape: the plan named `SpawnSystem.spawnWave` as the only
+site and called the task "probably wrong by one" in the same breath, pointing at `SpawnerSystem`'s
+carrier-child spawn as the second. `git grep -n "createEntity" core/domain/system/` turned up seven
+sites in total; checking each against the actually-decided rule ("children a carrier spawns inherit
+their parent's wave") ruled out five of them (`CleanupSystem`'s dropped pickup, `BossSystem`'s parts
+and its own projectiles, `EnemyWeaponSystem`'s and `WeaponSystem`'s projectiles) rather than assuming
+every entity created downstream of a wave-spawned entity should inherit the tag. The grep is cheap;
+skipping it and trusting the plan's own count is the mistake this note exists to prevent.
+
 Related: [[core-deferred-surface]], [[content-pipeline-design]], [[rng-teavm-constraints]].

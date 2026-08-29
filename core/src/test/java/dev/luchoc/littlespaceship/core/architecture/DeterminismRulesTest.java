@@ -45,8 +45,9 @@ class DeterminismRulesTest {
     void noForbiddenApi() {
         List<String> violations = new ArrayList<>();
         for (SourceFile file : CoreSources.all()) {
+            String code = JavaSource.strip(file.content());
             for (Rule rule : RULES) {
-                if (JavaSource.containsToken(file.content(), rule.token())) {
+                if (JavaSource.containsToken(code, rule.token())) {
                     violations.add(file.path() + " uses " + rule.token()
                         + " -- " + rule.reason());
                 }
@@ -65,8 +66,9 @@ class DeterminismRulesTest {
 
     /**
      * The search is a plain text one, on purpose: it has to find exactly what a grep would find, so
-     * that the check and the reviewer never disagree. The price is that not even a comment may
-     * spell out a forbidden name.
+     * that the check and the reviewer never disagree. {@link JavaSource#strip(String)} removes
+     * comments and string/char literals first, so a name only spelled out in one of those does not
+     * turn the check red.
      */
     @Test
     @DisplayName("the search finds a real use and ignores a longer word that contains it")
@@ -75,6 +77,48 @@ class DeterminismRulesTest {
         assertTrue(JavaSource.containsToken("new Thread(task);", "Thread"));
         assertFalse(JavaSource.containsToken("int threadCount = 1;", "Thread"));
         assertFalse(JavaSource.containsToken("class Threading {}", "Thread"));
+    }
+
+    /**
+     * The risk this change exists to guard against: stripping too much and letting a real call
+     * through silently. Each case below runs the exact pipeline {@code noForbiddenApi} runs — strip,
+     * then whole-word search — on a fixture, not on the real sources, so the assertion stays true
+     * regardless of what core happens to contain.
+     */
+    @Test
+    @DisplayName("a real forbidden call is still caught after stripping comments and literals")
+    void stillCatchesARealForbiddenCallAfterStripping() {
+        String fixture = "class Fixture { double x() { return Math.random(); } }";
+        assertTrue(JavaSource.containsToken(JavaSource.strip(fixture), "Math.random"),
+            "a real call must survive stripping");
+    }
+
+    @Test
+    @DisplayName("a forbidden name inside a line comment is not a call")
+    void ignoresAForbiddenNameInsideALineComment() {
+        String fixture = "class Fixture { // do not use Math.random here\n int x = 1; }";
+        assertFalse(JavaSource.containsToken(JavaSource.strip(fixture), "Math.random"));
+    }
+
+    @Test
+    @DisplayName("a forbidden name inside a block comment is not a call")
+    void ignoresAForbiddenNameInsideABlockComment() {
+        String fixture = "class Fixture { /* never call Math.random */ int x = 1; }";
+        assertFalse(JavaSource.containsToken(JavaSource.strip(fixture), "Math.random"));
+    }
+
+    @Test
+    @DisplayName("a forbidden name inside a string literal is not a call")
+    void ignoresAForbiddenNameInsideAStringLiteral() {
+        String fixture = "class Fixture { String s = \"Math.random\"; }";
+        assertFalse(JavaSource.containsToken(JavaSource.strip(fixture), "Math.random"));
+    }
+
+    @Test
+    @DisplayName("a real call is still caught on the same line as a comment that mentions it")
+    void catchesARealCallSharingALineWithAMentioningComment() {
+        String fixture = "double x = Math.random(); // not Math.random, an unrelated reminder";
+        assertTrue(JavaSource.containsToken(JavaSource.strip(fixture), "Math.random"));
     }
 
     private record Rule(String token, String reason) {

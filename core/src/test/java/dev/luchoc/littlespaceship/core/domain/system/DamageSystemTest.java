@@ -84,6 +84,23 @@ class DamageSystemTest {
     }
 
     @Test
+    @DisplayName("damage absorbed by the attachment also grants the shorter invulnerability, same as the shield")
+    void attachmentDamageGrantsTheShorterInvulnerability() {
+        int player = spawnPlayer(3, 2, 1);
+        world.attachments().set(player, new Attachment("attachment", 1));
+        int enemy = spawnFragileEnemy();
+        hitPlayerByEnemy(player, enemy);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        Invulnerable invulnerable = world.invulnerabilities().get(player);
+        assertEquals(balance.damageInvulnerability, invulnerable.remaining, 0.0001f,
+            "'02-mvp-functional-spec.md' names losing the attachment explicitly, "
+                + "alongside the shield, as a case that grants grace frames");
+        assertEquals(InvulnerabilitySource.DAMAGE, invulnerable.source);
+    }
+
+    @Test
     @DisplayName("an attachment with durability left survives one hit")
     void attachmentSurvivesWhileDurabilityRemains() {
         int player = spawnPlayer(3, 2, 1);

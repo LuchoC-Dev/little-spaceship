@@ -1,6 +1,6 @@
 ---
 name: libgdx-jsonvalue-key-iteration
-description: How to walk a com.badlogic.gdx.utils.JsonValue object's own keys to reject unrecognised ones, and how to get a runnable classpath for a throwaway verification program without a test source set
+description: How to walk a com.badlogic.gdx.utils.JsonValue object's own keys to reject unrecognised ones, how to get a runnable classpath for a throwaway verification program without a test source set, and how to reach a private static parsing method via reflection to verify it without building a full ContentSource
 metadata:
   type: project
 ---
@@ -25,3 +25,14 @@ just with a working classpath this time instead of guessing jar locations under 
 See `[[headless-libgdx-verification]]` for the underlying fact this technique exercises, and
 `[[windows-desktop-screenshot-verification]]` for the complementary real-window technique used to
 confirm the tell/health bar actually render, not just that the loader parses.
+
+**The same classpath trick reaches a `private static` parsing method directly, via reflection,
+without instantiating the whole `JsonContentSource`.** Verifying phase 11c's arc-trajectory parsing
+(`JsonContentSource.parseTrajectory`, issue #163) needed only a `JsonValue` entry, not a fully loaded
+content source — building one needs `balance.json`, `enemies.json`, `formations.json`,
+`attachments.json` and a level file, none of which the change touched. `Class.forName(...)`,
+`getDeclaredMethod("parseTrajectory", JsonValue.class).setAccessible(true)`, then `invoke(null, entry)`
+runs the real method against hand-built `JsonValue`s (`reader.parse("{...}")` accepts a literal string,
+no file needed for a single-object case) and lets a thrown `IllegalArgumentException` surface through
+`InvocationTargetException.getCause()`. Cheaper than writing a full fixture file when only one method
+in one class needs exercising.

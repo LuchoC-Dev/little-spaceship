@@ -15,7 +15,7 @@ Decided and measured. These are not preferences — breaking one invalidates ear
 3. **Single-threaded.** The web target offers no real parallelism, and `ExecutorService`, `CompletableFuture` and `ReentrantLock` do not exist in TeaVM — they break the build. It is also unnecessary: logic costs fractions of a millisecond against ~10 ms of drawing.
 4. **Contracts at the boundaries.** No module exposes concrete classes to another. Whatever crosses is immutable or read-only. `game` never manipulates the ECS; it reads through `WorldView`.
 5. **Fixed system order.** Execution order is part of the game rules, not an implementation detail.
-6. **No abstraction without a real case in the MVP.**
+6. **No abstraction without a real case you can point at.** A case is a written design or a shipped need, not an expectation. It read "in the MVP" until 27/08/2026, when the project owner accepted phase 10c's rewording ([#91](https://github.com/LuchoC-Dev/little-spaceship/issues/91)): the MVP shipped, the sentence lost its subject, and the standard it set did not change.
 
 ## Web target pitfalls
 
@@ -43,18 +43,22 @@ Each of these cost hours during the spike.
 
 Every commit goes through the `/git-commit` skill — never a bare `git commit`. This applies to one-file and docs-only commits, and it applies to agents as well as to the main session.
 
-Conventional Commits: `type(scope): description`, present tense, imperative mood, under 72 characters. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+Conventional Commits: `type(scope): description`, present tense, imperative mood, under 72 characters. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. **The scope is lowercase and takes only `a-z 0-9 . _ -`** — the same characters a branch name takes, and **no spaces**. An agent-memory commit is `docs(memory): <what was learned>`; three agents in phase 11b each invented a different scope with a space in it, and correcting three subjects afterwards cost a history rewrite. The `commit-msg` hook in `tools/hooks/` now refuses a malformed subject as it is written.
+
+**Every pull request against a phase branch closes exactly one issue** — a task from the plan, or a defect found while the phase runs. The coordinator's documentation pull requests are the one exception: they close no issue and carry no status fragment.
+
+**A branch that does work records it** in `docs/plan/<phase>/status/<issue>-<slug>.md`, its own file, written before review. Never in the phase's shared `status.md` — that one is the coordinator's. `tools/pre-pr-check` fails a branch that changes anything outside `docs/` and writes no fragment.
 
 Nothing is ever committed on `main` or on `dev`. Four levels of branch, each receiving a pull request from the one below:
 
 | Branch | Who commits on it | How work leaves it |
 |---|---|---|
-| `main` | nobody | a pull request from `dev`, **merged by the project owner** |
+| `main` | nobody | a pull request from `dev`, **merged by the project owner and by nobody else — an authorisation does not transfer this** |
 | `dev` | nobody | a pull request from a phase branch, merged by a coordinator **only with the project owner's direct approval** |
 | `phase/<phase>-<description>` | the coordinator, by merging sub-branches | a pull request against `dev` |
 | `type/description` | the agent doing one task | a pull request against the phase branch |
 
-A phase branch is merged into `dev` by the coordinator **only after the project owner approves it directly**, per pull request — an approval given once is not a standing one. Branch from `dev` only to open a phase. Every agent branches from the **phase branch**, never from `dev`, and names its branch `type/description`, lowercase, only `a-z 0-9 . _ -`. **An agent opens a pull request and stops there — it merges nothing**, not its own branch and not anyone else's. The coordinator merges sub-branches into the phase branch. The full regime is in `docs/plan/how-to-run-a-phase.md`.
+A phase branch is merged into `dev` by the coordinator **only after the project owner approves it directly**, per pull request — an approval given once is not a standing one. **`dev` into `main` is the project owner's own merge, always.** If the owner says to do it anyway, stop and confirm rather than acting: it happened once, on 26/08/2026, and the coordinator merged instead of asking. GitHub now requires an approving review on `main`, which turns that mistake from an accident into a deliberate override. Branch from `dev` only to open a phase. Every agent branches from the **phase branch**, never from `dev`, and names its branch `type/description`, lowercase, only `a-z 0-9 . _ -`. **An agent opens a pull request and stops there — it merges nothing**, not its own branch and not anyone else's. The coordinator merges sub-branches into the phase branch. The full regime is in `docs/plan/how-to-run-a-phase.md`.
 
 **Run `tools/pre-pr-check --base <the phase branch>` before opening a pull request**, and paste its output into it. It is a script and costs no tokens. A red check means no pull request.
 
@@ -73,13 +77,15 @@ Two stores, and the boundary between them matters more than either.
 | `docs/STATUS.md`, each phase's `status.md`, GitHub issues and PRs | what happened and where the work stands |
 | `.claude/agent-memory/<agent>/` | what that agent learned while working |
 
-**The repository is the state.** Every phase moves through an issue, a branch, a `status.md` updated before review, and a merged PR, so the state is always versioned and readable by anyone.
+**The repository is the state.** Every phase moves through an issue, a branch, a status fragment written before review, and a merged PR, so the state is always versioned and readable by anyone.
 
 **Agent memory is not a second copy of it.** It holds what a repository has no reason to record: a tool limitation that cost an hour, an operation that behaves differently under TeaVM, where a piece of code turned out to live. Never phase progress — that already exists in `status.md`, and when both hold it, one of them silently rots. That has already happened once here.
 
 If something matters to the project rather than only to the agent, it belongs in `status.md`, not in a memory file.
 
 **Agent memory lives in the main checkout, never in a worktree.** `.claude/agent-memory/` is tracked, so an agent standing in a worktree writes its memory into that checkout, on that branch, where the next agent will not find it. Run `tools/agent-memory-path <agent>` — it prints the one correct directory from anywhere — and write there. The `pre-commit` hook in `tools/hooks/` refuses the commit if you forget; install it once per clone with `tools/install-hooks`.
+
+Those commits land on the phase branch, so they appear in **no sub-branch's diff** and no sub-branch's `pre-pr-check` can see them. That is why the `commit-msg` hook exists: for an agent-memory commit it is the only check that ever runs before the phase closes.
 
 ## Agents
 
@@ -90,7 +96,7 @@ Defined in `.claude/agents/`. Boundaries come from the module architecture, so t
 | `core-domain` | `core/` — ECS, systems, game rules |
 | `game-presentation` | `game/`, `desktop/`, `web/` — rendering, HUD, audio, input |
 | `visual-designer` | visual direction; produces documents, not code |
-| `level-designer` | `assets/data/level-*.json` — the wave timeline, pacing and the intensity curve |
+| `level-designer` | all level content under `assets/data/` — levels, waves, formations, movement shapes, pacing and the intensity curve. Widened from `level-*.json` on 27/08/2026 |
 | `test-engineer` | unit tests and deterministic replays |
 | `reviewer` | reads and reports only |
 

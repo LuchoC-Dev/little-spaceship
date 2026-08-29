@@ -2,6 +2,8 @@
 
 Run on 18/08/2026 on the `spikes/web-viability` spike, following the approval criteria set in `06-platform-and-technical-validation.md`.
 
+**Where the spike is now.** The directory was deleted on 27/08/2026, once phase 11a moved its one still-live check onto the real class. The last commit containing it is `68d002e0560ce40842dc8f72e876fa5fe78bb3ed`; `git show 68d002e0560c:spikes/web-viability/collisionbench/src/main/java/colbench/Main.java` reads the benchmark behind the collision figure below, and the same form reads any other file of it. The numbers on this page were measured on that code and are not re-runnable from a checkout of `dev` without restoring it first.
+
 ## Verdict
 
 **🟢 Web approved.** The candidate becomes the platform decision:

@@ -36,7 +36,8 @@ public final class ShipSelectScreen extends BaseUiScreen {
         // the values simply were not read from anywhere. BalanceValues is what content.balance()
         // already exposes about the one MVP ship; a second content source instance costs nothing at
         // load time and keeps this screen free of a Simulation it has no other reason to start.
-        BalanceValues balance = new JsonContentSource(Gdx.files.internal("data")).balance();
+        BalanceValues balance =
+            new JsonContentSource(Gdx.files.internal("data"), game.levelId()).balance();
         Table stats = new Table();
         addStatBar(stats, "SPEED", speedSegments(balance.playerSpeed()));
         addStatBar(stats, "FIRE", fireRateSegments(balance.weaponFireCooldown()));

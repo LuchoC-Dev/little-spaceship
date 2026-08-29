@@ -38,7 +38,22 @@ public enum SystemOrder {
      */
     BOMB,
 
-    /** Advances the level timeline and spawns waves. */
+    /**
+     * Advances the level's ordered wave placements and spawns what is due.
+     *
+     * <p><b>{@code SPAWN} stays fifth in this enum</b> — rejected as a candidate to move, with
+     * reasons, in {@code docs/plan/10c-architecture-review/decision.md}. One consequence of keeping
+     * it here, decided alongside that rejection: a {@link
+     * dev.luchoc.littlespaceship.core.port.WaveEndCondition.Cleared} wave resolves one tick late,
+     * deterministically. {@code CLEANUP} — the stage that actually removes a destroyed or escaped
+     * entity — runs after this stage in the very same tick, so an entity that stops existing this
+     * tick is still present, as far as {@code SpawnSystem} can see, when this stage runs. A wave
+     * whose last entity is destroyed this tick is only detected as cleared on the <em>next</em> tick,
+     * once {@code CLEANUP} has actually removed it. This is not a bug to fix by moving either stage —
+     * both are exactly where the rest of the pipeline needs them — it is the one-tick lag every
+     * fixed-step system already has for anything it can only observe rather than react to instantly,
+     * and it is exactly as reproducible as every other tick-quantised decision in this pipeline.
+     */
     SPAWN,
 
     /**

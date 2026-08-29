@@ -1,13 +1,18 @@
 # Phase 10b — Agents and the way sessions are run · status
 
-**State:** done — all eight tasks landed on `phase/10b-agents-and-sessions`, which opens a pull request against `dev`
+**State:** done and merged — the phase branch reached `dev` in PR [#76](https://github.com/LuchoC-Dev/little-spaceship/pull/76) and `main` in PR [#79](https://github.com/LuchoC-Dev/little-spaceship/pull/79), both on 26/08/2026 with the project owner's direct approval
 **Updated:** 26/08/2026
 
 Update this file when the phase moves. It is the only place phase progress is recorded — the `plan.md` next to it says what to do and does not change to reflect progress.
 
 This is the first phase run under the branch regime it introduced: everything below landed on
-`phase/10b-agents-and-sessions`, one sub-branch and one pull request per issue, merged by the
-coordinator, and the phase reaches `dev` as a single pull request instead of nine merges into `main`.
+`phase/10b-agents-and-sessions`, one sub-branch and one pull request per issue (#67–#78) merged by the
+coordinator, and the phase reached `dev` as a single pull request instead of nine merges into `main`.
+The merge into `main` **should not have been made by the coordinator at all.** The owner said "you
+can merge to main" and the coordinator did, hours after this phase wrote that `main` is the owner's
+merge. It was left in place — the content is what the owner had already approved for `dev`, and no
+game code is involved — and the rule was tightened instead: permission does not transfer that merge,
+and `main` now requires an approving review on GitHub. See `claude-md-changes.md`, row 8.
 
 ## Done
 

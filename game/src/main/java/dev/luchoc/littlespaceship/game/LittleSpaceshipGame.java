@@ -11,7 +11,7 @@ import dev.luchoc.littlespaceship.game.ui.GameSkin;
 /**
  * The composition root: the one place that assembles {@code core} with the libGDX adapters, and now
  * also the one place that owns what every screen shares — the {@link Skin} built once in {@link
- * #create()}, {@link GameSettings}, and the run seed.
+ * #create()}, {@link GameSettings}, the run seed, and the level id every run plays.
  *
  * <p>Desktop and web share this class unchanged; only the launcher that constructs the backend
  * differs, per {@code docs/planning/12-architecture.md}.
@@ -31,6 +31,15 @@ public final class LittleSpaceshipGame extends Game {
     public static final int LOGICAL_HEIGHT = 270;
 
     private final int seed;
+
+    /**
+     * The level this run plays. There is no level-selection flow yet, so every run plays the same
+     * one — a constant on the game object, not a mechanism, per invariant 6. Both {@code PlayScreen}
+     * and {@code ShipSelectScreen} already read session-wide state off this class ({@link #seed()},
+     * {@link #skin()}, {@link #audio()}); a level id is the same shape of value, and the day a
+     * level-select flow exists, this field is the one place that changes.
+     */
+    private static final String LEVEL_ID = "level-01";
 
     private Skin skin;
     private final GameSettings settings = new GameSettings();
@@ -101,6 +110,11 @@ public final class LittleSpaceshipGame extends Game {
     /** @return the seed this run was created with */
     public int seed() {
         return seed;
+    }
+
+    /** @return the content id of the level this run plays */
+    public String levelId() {
+        return LEVEL_ID;
     }
 
     @Override

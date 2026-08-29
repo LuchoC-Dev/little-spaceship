@@ -13,8 +13,9 @@ import dev.luchoc.littlespaceship.core.port.SimpleAttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
-import dev.luchoc.littlespaceship.core.port.SimpleWaveTimeline;
+import dev.luchoc.littlespaceship.core.port.SimpleWaveDefinition;
 import dev.luchoc.littlespaceship.core.port.SpawnEvent;
+import dev.luchoc.littlespaceship.core.port.WaveEndCondition;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import java.util.List;
 import java.util.Map;
@@ -44,13 +45,18 @@ class LevelScoreReplayTest {
     private static final int TICKS = 900;
 
     /**
-     * Recomputed after the tank and carrier gained {@code health} and the bomb gained its on-screen
-     * bound. If this ever needs recomputing again, print {@link #fingerprintOf(Simulation)} from a
-     * passing {@link #levelScoreIsDeterministic()} run and paste the result here, deliberately,
-     * after reading why it changed.
+     * Recomputed after issue #84: {@code enemy-rush}'s "dive" trajectory carries it off the bottom of
+     * the playfield, where it used to linger forever, uncounted and unscored — the defect #84 fixes.
+     * It is now swept by {@code LifetimeSystem}'s safety box once fully off screen, so the entity
+     * count drops (12 to 11), but the project owner decided on 28/08/2026 that escaping earns nothing:
+     * {@code LifetimeSystem} strips the escaping enemy's {@code ScoreValue} before marking it for
+     * destruction, so the score stays exactly what it was before this issue (1350) — only the
+     * lingering entity is gone, nothing was credited for it. If this ever needs recomputing again,
+     * print {@link #fingerprintOf(Simulation)} from a passing {@link #levelScoreIsDeterministic()} run
+     * and paste the result here, deliberately, after reading why it changed.
      */
     private static final String GOLDEN_FINGERPRINT =
-        "score=1350 lives=3 bombs=1 shotLevel=1 entities=12";
+        "score=1350 lives=3 bombs=1 shotLevel=1 entities=11";
 
     @Test
     @DisplayName("a scripted run of the level 1 roster reproduces the same final score twice")
@@ -122,14 +128,16 @@ class LevelScoreReplayTest {
             .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
             .withFormation(new SimpleFormationDefinition("line-3", List.of(
                 new FormationSlot(-20f, 0f), new FormationSlot(0f, 0f), new FormationSlot(20f, 0f))))
-            .withTimeline(LEVEL, new SimpleWaveTimeline(List.of(
+            .withWave(new SimpleWaveDefinition(LEVEL + "-wave", List.of(
                 new SpawnEvent(1.0f, "enemy-basic", "line-3", 0.5f, null),
                 new SpawnEvent(3.0f, "enemy-light", "single", 0.2f, null),
                 new SpawnEvent(5.0f, "enemy-shooter", "single", 0.8f, null),
                 new SpawnEvent(7.0f, "enemy-rush", "single", 0.3f, null),
                 new SpawnEvent(9.0f, "enemy-tank", "single", 0.5f, "shield"),
                 new SpawnEvent(9.5f, "enemy-carrier", "single", 0.6f, "attachment"),
-                new SpawnEvent(12.0f, "enemy-basic", "line-3", 0.5f, null))));
+                new SpawnEvent(12.0f, "enemy-basic", "line-3", 0.5f, null)),
+                new WaveEndCondition.FixedDuration(20f)))
+            .withSingleWavePlacement(LEVEL, LEVEL + "-wave");
     }
 
     private static ComponentSpec motion(String trajectory) {

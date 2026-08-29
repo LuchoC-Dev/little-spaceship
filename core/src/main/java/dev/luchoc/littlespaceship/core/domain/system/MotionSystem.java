@@ -4,10 +4,13 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Motion;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
+import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.TrajectoryDefinition;
 
 /**
  * Applies velocities to every entity, and turns the player's raw input vector into one.
@@ -25,6 +28,20 @@ import dev.luchoc.littlespaceship.core.port.InputFrame;
  *
  * <p>Slow movement is the same clamp with a smaller cap — a multiplier, not a separate mode, per the
  * confirmed rule in {@code 02-mvp-functional-spec.md}.
+ *
+ * <p>This is also where an entity's {@link Trajectory} advances: {@link Trajectory#elapsed} is
+ * incremented by the fixed step, once per tick, before velocities are integrated — never read from
+ * the system clock, so a replay reproduces it exactly. The same pass then re-evaluates {@link
+ * Trajectory#trajectoryId}'s vertical velocity at that updated elapsed time and writes it into the
+ * entity's own {@link Motion#vy}, so a shape whose velocity is a function of time — {@code arc}, per
+ * {@code docs/plan/11c-movement-shapes/shape-catalogue.md} — is actually followed tick after tick,
+ * not only snapshotted once at spawn. The evaluation is the closed form {@link
+ * TrajectoryDefinition#verticalVelocityAt(float)} computes from {@code elapsed} directly, never an
+ * accumulation of per-tick deltas, which is what keeps it exact rather than drifting from the
+ * catalogue's own worked numbers. A {@code constant} shape's {@code verticalVelocityAt} ignores
+ * elapsed time and returns the same value every tick, so this re-evaluation is a no-op for it and
+ * changes nothing about the four shapes that shipped before this system read {@link Trajectory} at
+ * all.
  */
 public final class MotionSystem implements GameSystem {
 
@@ -47,8 +64,34 @@ public final class MotionSystem implements GameSystem {
     @Override
     public void update(World world, float step, InputFrame input) {
         applyPlayerInput(world, input);
+        advanceTrajectories(world, step);
         integrate(world, step);
         clampPlayerToPlayfield(world);
+    }
+
+    /**
+     * Accumulates the fixed step into every entity's {@link Trajectory#elapsed}, then re-evaluates
+     * {@link Trajectory#trajectoryId}'s vertical velocity at that updated elapsed time and writes it
+     * into the entity's own {@link Motion#vy} — before {@link #integrate} runs, so this tick's
+     * integration already uses this tick's velocity. An entity with a {@link Trajectory} but no
+     * {@link Motion} is left alone: nothing to write the evaluated velocity into, and nothing in the
+     * catalogue attaches one without the other.
+     */
+    private static void advanceTrajectories(World world, float step) {
+        ComponentStore<Trajectory> trajectories = world.trajectories();
+        ComponentStore<Motion> motions = world.motions();
+        ContentSource content = world.content();
+        for (int i = 0; i < trajectories.size(); i++) {
+            int entity = trajectories.entityAt(i);
+            Trajectory trajectory = trajectories.valueAt(i);
+            trajectory.elapsed += step;
+            Motion motion = motions.get(entity);
+            if (motion == null) {
+                continue;
+            }
+            TrajectoryDefinition definition = content.trajectory(trajectory.trajectoryId);
+            motion.vy = definition.verticalVelocityAt(trajectory.elapsed);
+        }
     }
 
     private static void applyPlayerInput(World world, InputFrame input) {
