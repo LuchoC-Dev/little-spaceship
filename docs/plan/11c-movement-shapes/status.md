@@ -27,6 +27,8 @@ Nothing yet.
 
 Nothing yet. The phase branch exists and the issues are open.
 
+**The order they run in is [`plan.md`](plan.md), "The running order"** — three rounds, the first two issues in parallel. It is written there rather than here because it is a decision about how the phase is run, not a record of progress.
+
 ## Blocked
 
 Nothing. 11a merged in [#109](https://github.com/LuchoC-Dev/little-spaceship/pull/109) and 11b in [#131](https://github.com/LuchoC-Dev/little-spaceship/pull/131), so the wave a shape gets placed in exists.
