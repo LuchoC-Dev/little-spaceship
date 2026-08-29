@@ -1,6 +1,6 @@
 # Phase 11c — Movement as a described thing · status
 
-**State:** done — every task merged into `phase/11c-movement-shapes`
+**State:** done — merged into `dev` in [#174](https://github.com/LuchoC-Dev/little-spaceship/pull/174)
 **Updated:** 29/08/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
