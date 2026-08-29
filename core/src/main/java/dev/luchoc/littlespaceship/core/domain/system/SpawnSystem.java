@@ -60,7 +60,15 @@ import java.util.List;
  * ComponentSpec} of the {@link EnemyDefinition} is handed to the {@link ComponentFactoryRegistry},
  * and only then is its {@code Transform} set from the wave's anchor plus the {@link FormationSlot}'s
  * offset — position is spawn-event data, never archetype data, so it is not something a component
- * factory could know. Every entity of a wave enters fully off-screen, regardless of its own size and
+ * factory could know. When {@link SpawnEvent#hasTrajectoryOverride()} is true, the movement shape the
+ * archetype's own {@code "motion"} spec just attached is immediately replaced by
+ * {@link ComponentFactoryRegistry#attachTrajectory}, resolved against the event's own {@link
+ * SpawnEvent#trajectoryId()} — the binding {@code docs/plan/11c-movement-shapes/plan.md} decided:
+ * "the shape is chosen in the spawn event, with the archetype supplying the default." Every
+ * archetype in {@code assets/data/enemies.json} carries a {@code "motion"} spec today, so this never
+ * attaches a {@link dev.luchoc.littlespaceship.core.domain.component.Trajectory} to an entity whose
+ * archetype opted out of movement altogether; nothing currently does. Every entity of a wave enters
+ * fully off-screen, regardless of its own size and
  * of the formation's shape: the anchor is pushed up by the formation's lowest {@code offsetY}
  * ({@link #lowestOffsetY}), so the slot closest to being visible is the one measured against the
  * playfield edge, and every other slot ends up further above it. A single-slot formation is the
@@ -272,6 +280,9 @@ public final class SpawnSystem implements GameSystem {
             FormationSlot slot = slots.get(i);
             int entity = world.createEntity();
             attachComponents(world, enemy, entity);
+            if (event.hasTrajectoryOverride()) {
+                ComponentFactoryRegistry.attachTrajectory(world, entity, event.trajectoryId());
+            }
             positionSpawned(world, entity, anchorX, lowestOffsetY, slot);
             world.waveOrigins().set(entity, new WaveOrigin(waveId));
             if (event.hasDrop() && i == event.dropSlot()) {

@@ -12,7 +12,9 @@ import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
+import dev.luchoc.littlespaceship.core.port.ArcTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.testsupport.TestBalance;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +25,10 @@ class MotionSystemTest {
     private static final float STEP = 1f / 60f;
 
     private final TestBalance balance = new TestBalance();
-    private final World world = new World(new TestContent(balance), new Rng(1), new GameEventQueue());
+    private final TestContent content = new TestContent(balance)
+        .withTrajectory(new SimpleTrajectoryDefinition("steady-descent", 0f, -30f))
+        .withTrajectory(new ArcTrajectoryDefinition("strike-run", 0f, -110f, 27f));
+    private final World world = new World(content, new Rng(1), new GameEventQueue());
     private final MotionSystem system = new MotionSystem();
 
     @Test
@@ -199,7 +204,7 @@ class MotionSystemTest {
         int enemy = world.createEntity();
         world.transforms().set(enemy, new Transform(50f, 200f));
         world.motions().set(enemy, new Motion(0f, -30f));
-        Trajectory trajectory = new Trajectory();
+        Trajectory trajectory = new Trajectory("steady-descent");
         world.trajectories().set(enemy, trajectory);
 
         system.update(world, STEP, InputFrame.IDLE);
@@ -207,6 +212,56 @@ class MotionSystemTest {
 
         system.update(world, STEP, InputFrame.IDLE);
         assertEquals(STEP * 2f, trajectory.elapsed, 0.0001f);
+    }
+
+    @Test
+    @DisplayName("a constant shape's re-evaluation each tick leaves its velocity unchanged")
+    void constantShapeStaysConstantAcrossTicks() {
+        int enemy = world.createEntity();
+        world.transforms().set(enemy, new Transform(50f, 200f));
+        world.motions().set(enemy, new Motion(0f, -30f));
+        world.trajectories().set(enemy, new Trajectory("steady-descent"));
+
+        for (int i = 0; i < 5; i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+        }
+
+        assertEquals(-30f, world.motions().get(enemy).vy, 0.0001f);
+    }
+
+    @Test
+    @DisplayName("an arc shape is actually followed: velocity changes tick by tick and the path curves")
+    void arcShapeIsFollowedAndCurves() {
+        // strike-run: vx 0, vy -110, ay 27 — catalogue's own numbers, turns at t = 110/27 ~= 4.074s.
+        int enemy = world.createEntity();
+        world.transforms().set(enemy, new Transform(50f, 274f));
+        world.motions().set(enemy, new Motion(0f, -110f));
+        Trajectory trajectory = new Trajectory("strike-run");
+        world.trajectories().set(enemy, trajectory);
+
+        float previousY = world.transforms().get(enemy).y;
+        float previousDelta = Float.NEGATIVE_INFINITY;
+        boolean sawSignChange = false;
+        int ticks = Math.round(5f / STEP);
+        for (int i = 0; i < ticks; i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+            float y = world.transforms().get(enemy).y;
+            float delta = y - previousY;
+            // A straight line would keep this delta constant; an arc's delta itself changes every
+            // tick, which is the closed form actually being evaluated rather than a stale snapshot.
+            if (previousDelta != Float.NEGATIVE_INFINITY) {
+                assertTrue(delta > previousDelta, "each tick's step should be less negative than the one before it, since ay > 0 keeps decelerating the descent");
+            }
+            if (delta > 0f) {
+                sawSignChange = true;
+            }
+            previousDelta = delta;
+            previousY = y;
+        }
+
+        // Closed form, not accumulation: at t = 5s, past the turn, verticalVelocityAt(5) = -110 + 27*5 = 25.
+        assertEquals(-110f + 27f * 5f, world.motions().get(enemy).vy, 0.01f);
+        assertTrue(sawSignChange, "the entity should climb back up after bottoming out, proving the path curves");
     }
 
     @Test

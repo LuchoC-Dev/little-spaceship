@@ -305,17 +305,25 @@ public final class JsonContentSource implements ContentSource {
      *     {@code waves.json} wave's {@code "spawns"} list — the two places {@link SpawnEvent} is
      *     read from, per its own javadoc on having no reference frame of its own
      * @param context named in any error this entry raises, so it reads "wave 'x' spawn" or
-     *     "spawn event" depending on which list called it
+     *     "spawn event" depending on which list called it. {@code "trajectory"} is optional and, when
+     *     absent, becomes {@code null} — {@link SpawnEvent#hasTrajectoryOverride()} reads that as "use
+     *     the archetype's own default", exactly as before this key existed. An id that names no entry
+     *     in {@code trajectories.json} is not checked here — this loader has no {@code ContentSource}
+     *     to check it against yet, the same reason {@code enemyId}/{@code formationId} are not either
+     *     — it fails loudly once {@code SpawnSystem} resolves it at spawn time, per {@code
+     *     SpawnEvent}'s own javadoc on {@code trajectoryId}.
      */
     private static SpawnEvent parseSpawnEvent(JsonValue entry, String context) {
-        requireOnlyKeys(entry, context, "at", "spawn", "formation", "atX", "drop", "dropSlot");
+        requireOnlyKeys(entry, context,
+            "at", "spawn", "formation", "atX", "drop", "dropSlot", "trajectory");
         return new SpawnEvent(
             entry.getFloat("at"),
             entry.getString("spawn"),
             entry.getString("formation"),
             entry.getFloat("atX"),
             entry.getString("drop", null),
-            entry.getInt("dropSlot", 0));
+            entry.getInt("dropSlot", 0),
+            entry.getString("trajectory", null));
     }
 
     /**
