@@ -85,3 +85,14 @@ handles today's content would need rewriting a phase later.
 - **Not checked by experiment:** whether an agent can actually design level 2 from the document. No
   generator exists, so "What the document alone is enough for" is reasoning over the section list, and
   it says so. Task 4 is where that gets measured.
+
+---
+
+## Coordinator's correction, 31/08/2026
+
+One number in the refusals table conflated two quantities, and both turn out to be real:
+
+- **92** spawn events in `level-01.json` before phase 11b — `git show d10d644:assets/data/level-01.json | grep -c '"at"'` prints `92`, and the two commits either side of the migration print `92` and `0`.
+- **261** entities those events place, summing each spawn's formation `slots` — the figure the row was reaching for, but not the number of rows it described.
+
+The row said "261 spawn events" and "261 rows" while section 3 of the same document said 92. Corrected in place to name both. The refusal itself is unchanged and stands.
