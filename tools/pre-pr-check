@@ -58,8 +58,25 @@ echo
 
 # 1. main and dev are not worked on directly. main only ever receives a pull
 #    request from dev, and that merge belongs to the project owner.
+#
+#    The one exception is that merge itself: a release IS dev, as a head, against
+#    main. Added on 31/08/2026 for issue #177, which found this check's other half
+#    failing every release — and this half was worse, because it had never been
+#    observed failing at all: pr-check.yml exits at its first step, so the step
+#    that runs this script never ran on #176. Reproduced by hand on the branch
+#    that fixed it, standing on dev: `tools/pre-pr-check --base origin/main
+#    --branch dev --no-build` printed "the work is on 'dev' itself".
+#
+#    Narrow on purpose. An agent that committed on dev and ran this check the
+#    normal way — with no --base, so the base is dev — still fails, and so does
+#    dev against anything that is not main.
 case "$BRANCH" in
-  main|dev) fail "the work is on '$BRANCH' itself. Branch first; main and dev are never worked on directly." ;;
+  dev)
+    case "$BASE" in
+      main|origin/main) pass "branch name: dev against main — the release, and the one time dev is a head" ;;
+      *) fail "the work is on 'dev' itself. Branch first; main and dev are never worked on directly." ;;
+    esac ;;
+  main) fail "the work is on '$BRANCH' itself. Branch first; main and dev are never worked on directly." ;;
   phase/*) pass "branch name: phase branch, so it opens its pull request against dev" ;;
   */*) pass "branch name: $BRANCH" ;;
   *) fail "branch '$BRANCH' is not 'type/description'" ;;

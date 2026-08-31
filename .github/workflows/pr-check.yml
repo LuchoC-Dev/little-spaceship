@@ -72,10 +72,13 @@ jobs:
             *) fail "base '$BASE' is not a phase branch, dev or main" ;;
           esac
 
-          # 2. Exactly one issue, or the branch is documentation only. The
-          #    coordinator's bookkeeping — opening a phase, closing it, correcting a
-          #    document — closes no issue and carries no fragment. Everything else
-          #    does, including a defect found while the phase runs.
+          # 2. Exactly one issue, or the branch is one of the three categories
+          #    that aggregate rather than close. The coordinator's bookkeeping —
+          #    opening a phase, closing it, correcting a document — closes no issue
+          #    and carries no fragment. A phase branch closes its tasks' issues as
+          #    each sub-branch merges. A release does the same one level up.
+          #    Everything else closes exactly one, including a defect found while
+          #    the phase runs.
           git fetch --quiet origin "$BASE"
           CHANGED="$(git diff --name-only "origin/$BASE...HEAD")"
           NON_DOCS="$(printf '%s\n' "$CHANGED" | grep -vE '^docs/' | grep -c . || true)"
@@ -85,7 +88,26 @@ jobs:
           IS_PHASE=0
           case "$HEAD_REF" in phase/*) IS_PHASE=1 ;; esac
 
-          if [ "$IS_PHASE" -eq 1 ]; then
+          # A release is dev into main, and it aggregates exactly the way a phase
+          # branch does, one level up: it carries the phases already merged into
+          # dev, whose issues were closed as each of them merged, so it closes none
+          # of its own. Rule 1 has already established that this base/head pair is
+          # legal and unambiguous, which is the whole of what identifies it — no
+          # prose is read, per the limit set on 28/08/2026.
+          #
+          # Added on 31/08/2026 for issue #177, after the first dev -> main release
+          # since this workflow existed (#176) went red on a false negative: the
+          # aggregation exemption below had been written with only the lower branch
+          # levels in view. Phase 10d found four instances of one rule stated from a
+          # single point of view and its reviewer pass found two more; this was the
+          # seventh.
+          IS_RELEASE=0
+          if [ "$BASE" = "main" ] && [ "$HEAD_REF" = "dev" ]; then IS_RELEASE=1; fi
+
+          if [ "$IS_RELEASE" -eq 1 ]; then
+            pass "release: dev into main, so it closes no issue of its own"
+            detail "the issues it carries were closed as each phase merged into dev"
+          elif [ "$IS_PHASE" -eq 1 ]; then
             # A phase branch aggregates a whole phase: its tasks' issues are closed
             # as each sub-branch merges, so the phase pull request closes none of
             # its own and carries one fragment per task. A named category, not an
@@ -106,7 +128,8 @@ jobs:
             else
               fail "this pull request changes $NON_DOCS file(s) outside docs/ and closes no issue"
               detail "every pull request against a phase branch closes exactly one issue;"
-              detail "only the coordinator's documentation pull requests are exempt"
+              detail "the three exemptions are a phase branch, a release (dev into main),"
+              detail "and the coordinator's documentation-only pull requests"
             fi
           else
             fail "$ISSUE_COUNT issues closed; a pull request closes exactly one"
@@ -120,7 +143,14 @@ jobs:
           FRAGMENTS="$(./tools/status-fragments "origin/$BASE")"
           MISPLACED="$(./tools/status-fragments --misplaced "origin/$BASE")"
           FRAGMENT_COUNT="$(printf '%s\n' "$FRAGMENTS" | grep -c . || true)"
-          if [ "$ISSUE_COUNT" -eq 1 ] && [ "$IS_PHASE" -eq 0 ]; then
+          if [ "$IS_RELEASE" -eq 1 ]; then
+            # Checked rather than assumed, per issue #177's own request. A release
+            # closes no issue, so the block below was already skipped; saying so is
+            # the difference between a rule that holds and one that happens to.
+            # Every fragment in its diff belongs to a phase already merged and
+            # already reviewed on its own pull request.
+            pass "release: $FRAGMENT_COUNT fragment(s), all from phases already merged"
+          elif [ "$ISSUE_COUNT" -eq 1 ] && [ "$IS_PHASE" -eq 0 ]; then
             if [ "$FRAGMENT_COUNT" -eq 1 ]; then
               case "$(basename "$FRAGMENTS")" in
                 "$ISSUES"-*.md) pass "status fragment: $FRAGMENTS" ;;
