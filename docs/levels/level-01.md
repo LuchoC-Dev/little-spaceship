@@ -32,7 +32,7 @@ behind the gap is section 14 of `docs/plan/11d-per-level-document/document-contr
 | spawn events | 92 |
 | entities spawned directly | 261 |
 | the waves end at | 298.0 s |
-| the boss enters at | 302.0 s (5.0 min) |
+| the boss enters at | 180.0 s (3.0 min) |
 | gap between them | 4.0 s |
 
 **Every wave ends on `fixedDuration`, so every time below is exact arithmetic.** The moment one
