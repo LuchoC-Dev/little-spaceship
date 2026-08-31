@@ -4,6 +4,11 @@
 [phase 11d](plan.md), [#180](https://github.com/LuchoC-Dev/little-spaceship/issues/180).
 **Owner:** `level-designer`. **Written:** 31/08/2026.
 
+**Corrected on 31/08/2026 by the task-4 read-back**, once the generator existed and
+`docs/levels/level-01.md` could be used rather than predicted. Seven corrections, at the end of
+this file: they amend sections 5, 11, 13 and 14 and add a section 0. Read them with the section
+they correct.
+
 **Nothing in this document is built.** The generator is task 2 and it does not exist yet — no file in
 `tools/` reads `assets/data/`, checked with `ls tools/` (`agent-memory-path`, `commit-subject-ok`,
 `hooks`, `install-hooks`, `pre-pr-check`, `status-fragments`). Everything below is a decision the
@@ -527,3 +532,166 @@ document is what it is measured against, and the specific things to check are:
    `line-5`, a spawn at 30 s in a 20 s wave? Break level 1 in a scratch copy and regenerate.
 3. Is section 14's absence felt? If reading the document leaves you unable to say what a placement is
    *for*, that is the finding, and it goes back into this contract rather than into a gaps list.
+
+---
+
+## Corrections from the task-4 read-back — 31/08/2026
+
+**Written by:** `level-designer`, [#186](https://github.com/LuchoC-Dev/little-spaceship/issues/186),
+after generating `docs/levels/level-01.md` and using it. Everything above this line is the contract as
+it was written before the generator existed; everything below is what changed once it did. Six of the
+seven corrections are **generator changes and none of them is made here** — `tools/` belongs to the
+coordinator, and the issue's own instruction is to name the change and stop.
+
+**How the read-back was done.** `level-02.json` and nine level-2 waves were written in a scratch
+directory from `docs/levels/level-01.md`, `docs/planning/04-campaign-and-levels.md` and
+[`../11c-movement-shapes/shape-catalogue.md`](../11c-movement-shapes/shape-catalogue.md) alone, with
+`assets/data/` unopened until the file was finished; then level 1 was broken in the worktree,
+regenerated, and restored (`git status --short` empty, `node tools/build-level-docs.js --check` →
+`unchanged  docs/levels/level-01.md`, exit 0).
+
+**What the document already carries, and it is most of it.** The footprint arithmetic chose every
+`atX` in level 2 without a calculation; `shots to kill`, `screen time` and `shots per pass` chose the
+archetypes; the curve made the rest at 245 s and the climb into the finale legible at a glance; and
+`l1-tank-solo` was **reused in level 2 from the document alone**, because its end condition, its whole
+spawn list and all three of its placement times are printed. That last one is the thing 11b's split
+exists for and it survived contact.
+
+### C1 — The document names no JSON key. Add a section 0, "The format".
+
+**The largest finding, and it defeats the test at the top of this contract.** Sections 1–14 print
+values and never keys. `grep -n dropSlot docs/levels/level-01.md` returns nothing; so do `"waves"`,
+`"spawn"`, `"offset"`, `"at"` and `"end"`. The only JSON keys anywhere in the output are the boss
+block's field names and the string `{"type": "cleared"}`.
+
+**Demonstrated, not reasoned.** The scratch `level-02.json` opens `{"id": "level-02", "waves": [...]`
+— and `JsonContentSource.requireOnlyKeys(root, "level file", "boss", "events", "waves")`
+(`game/adapter/content/JsonContentSource.java:349`) rejects an unknown top-level key, so that file
+fails to load on the first run. That is exactly the class of mistake this contract's bar exists to
+remove.
+
+**The confound, stated because it is the evidence.** Every *other* key in the scratch files — `wave`,
+`offset`, `at`, `spawn`, `formation`, `atX`, `trajectory`, `drop`, `dropSlot`, `end.type`,
+`end.seconds` — came out right, and not one of them came from the document. They came from having
+written task 1 of this phase with `assets/data/` open. A fresh agent has no such memory, and the one
+key that memory did not cover is the one that broke.
+
+**The correction:** a **section 0, before "At a glance"**, printing a minimal annotated JSON skeleton —
+one level file, one wave, one spawn — with every key, its type, its units, whether it is optional, and
+what it defaults to. It is the same for every level and it costs the generator a constant string
+checked against `JsonContentSource`'s own `requireOnlyKeys` lists. It must state, in that section:
+
+- that `offset` is measured **from the end of the previous placement**, not from level start. Today
+  this is only recoverable by doing arithmetic across the `offset`, `start` and `end` columns;
+- that **a negative `offset` overlaps the two placements**, which is the one lever in the format that
+  produces pressure nothing else can. The word "overlap" does not appear in `docs/levels/level-01.md`
+  at all (`grep -n -i overlap` returns nothing), because level 1 happens to use none — so the format's
+  most powerful tool is invisible in the only document that teaches the format;
+- that `atX` is a fraction of the playfield width applied to the formation's centre;
+- that the same wave id may be placed any number of times, in one level or in several.
+
+**Generator change. Not made here.**
+
+### C2 — The Checks section teaches nothing when it is clean.
+
+On today's content it prints `**No issues found.**` and nothing else. A designer cannot tell which
+mistakes the document will catch and which it will not, and therefore cannot calibrate what still has
+to be verified by hand — which is the whole reason section 13 was argued to be the section that earns
+the document its cost.
+
+**The correction:** always print the list of checks performed, one line each, and then the findings or
+"no issues found" under it. The list is a constant; it is the part a designer reads *before* making
+the mistake. **Generator change. Not made here.**
+
+### C3 — `x extent` is a t = 0 snapshot, and section 5's promise is wider than that.
+
+Section 5 above says the document "prints `min x` and `max x` including the collider radius and flags
+anything outside `0..208`". What it prints is the extent **at the spawn instant**. Every shape with a
+non-zero `vx` drifts out from under it, and two of the seven trajectories in
+`assets/data/trajectories.json` are veers built to do precisely that.
+
+**Demonstrated.** Two spawns were appended to `l1-rest-basic` in the worktree — `enemy-light` /
+`vee-5` / `atX 0.20` / `swoop`, and `enemy-light` / `single` / `atX 0.85` / `veer-right` — and
+`node tools/build-level-docs.js` printed them as `5.1 .. 78.1` and `172.3 .. 181.3`, both nominally in
+range, with **`**No issues found.**`** under Checks. In play: `swoop` carries `vx -10` across 6.9 s of
+screen time, so that formation drifts 69 units left and spends most of its life past the left edge;
+`veer-right` at `atX 0.85` crosses the right edge at t ≈ 0.83 s and reaches its apex at 4.75 s about
+120 units past the right edge, so **the entire shape happens where the player cannot see it**. The second is the
+exact constraint `shape-catalogue.md` states — *"it must be spawned on the side it veers away from"* —
+and that `docs/levels/level-01.md` repeats in prose two sections earlier while its own check ignores it.
+
+This is not hypothetical content: `l1-finale-a` at 2.0 s is a real `enemy-light` / `vee-5` /
+`atX 0.20` / `swoop`, printed today as `5.1 .. 78.1`.
+
+**The correction:** the extent becomes the **swept** extent over the entity's screen time — for
+`constant`, `x ± |vx| · screenTime`; for `arc`, the same over the flight to the safety box — printed
+beside the spawn-instant extent, and a check that fires when a spawn spends a stated fraction of its
+life outside `0 .. 208`, naming the veer-side rule when that is the cause. **Generator change. Not
+made here.** Section 5 and section 13 of this contract are corrected to say "swept" rather than
+"footprint".
+
+### C4 — With one `cleared` wave, the boss check switches off and the gap row disappears.
+
+Section 11 above calls the boss-versus-wave-chain interaction *"the most dangerous interaction in the
+whole format"*. In the only situation where it is dangerous, the document goes quiet.
+
+**Demonstrated.** `l1-carrier-intro`'s end was set to `{"type": "cleared"}` and the document
+regenerated. The pacing table degrades exactly as this contract asked — `when cleared`, then `>=` on
+every row after it, and "the waves end at | unknowable" — that half works and should be recorded as
+working. But **"At a glance" drops the `gap between them` row entirely**, and Checks still printed
+`**No issues found.**`, because the check is guarded by `exact`
+(`tools/build-level-docs.js`, `if (level.boss && exact && level.boss.entersAt < wavesEnd)`).
+
+**The correction:** when the chain is not exact, "At a glance" keeps the row and prints *"unknowable —
+the boss may enter over a running wave"*, and the check compares `entersAt` against the **lower bound**
+and fires whenever it falls below it, since a boss earlier than the lower bound is overlapping
+unconditionally. **Generator change. Not made here.**
+
+### C5 — Nothing tells a designer which wave ids exist, and reuse across levels is undiscoverable.
+
+`assets/data/waves.json` is one shared file with globally unique ids, and reuse across levels is the
+stated reason 11b split waves from placements. Each generated document lists only the waves its own
+level places. A designer of level 2 therefore cannot avoid an id collision, and cannot find a reusable
+wave except by reading every other level's document — which is exactly the lookup outside the document
+that the bar was written to remove.
+
+**The correction:** one sentence in the header saying `waves.json` is shared and its ids are global,
+plus a generated **`docs/levels/waves.md`** — every wave id once, with its end condition, its entity
+count and the levels and times that place it. It is one line per wave and it is not the refused
+cross-level comparison table: that refusal was about putting other levels inside a level's own
+document, and this is its own file, so a level's document does not change when another level does.
+**A new artefact, so it is a decision for whoever picks it up, not a correction I can make alone.**
+
+### C6 — A level file on its own is not playable, and the document does not say so.
+
+`game/LittleSpaceshipGame.java:42` holds `private static final String LEVEL_ID = "level-01";`. An
+agent that writes a correct `level-02.json` cannot run it, and nothing in the document explains why.
+**The correction:** one line in the header — how a level file is selected, and that adding a second
+one is a code change in `game/`, not content. **Generator change. Not made here.**
+
+### C7 — Section 14: the gap is felt, and not where this contract predicted.
+
+Answering the third question honestly, now with the document in hand.
+
+**Less than predicted, for the curve.** The rest at 245 s and the climb into the finale read straight
+off the bar; the drop table makes beat 11 recognisable, because the attachment lands at 208 s and the
+campaign document says the difficult encounter delivers it. Pacing intent is largely recoverable.
+
+**More than predicted, for the idioms.** `l1-tank-solo` is a wave of one tank with a `fixedDuration` of
+1.0 s, placed three times. Read cold it looks like a mistake — a one-second wave — and it is in fact
+the format's punctuation device: a single-spawn injector between two longer waves, whose 1.0 s is a
+gap length and not a lifetime, since the tank it spawns lives about 31 s. The same is true of
+`l1-tank-intro-b`'s `offset 5.0`, which is a breath and reads as an arbitrary number. **The idiom is
+the thing an agent copies, and copying an idiom without knowing it is one is how a format gets
+misused.**
+
+**And the pointer does not close it.** The document sends the reader to `shape-catalogue.md` →
+"What points at what", which is right and stays. But that table is keyed by **wave**, and
+`l1-tank-solo` is one wave serving three different beats at three different times, so the mapping
+cannot be expressed there at all. This is a second, independent reason the `"note"` string recommended
+above to phase 12 must sit on the **placement**, not on the wave — the wave is the reusable unit and
+the beat is the use of it. Section 14's recommendation is amended accordingly.
+
+**The decision itself stands.** Inferring intent from a wave id would have been wrong about
+`l1-tank-solo` three times over, which is the case section 14 already reasoned from and which the
+generated document now confirms with the wave in front of it.
