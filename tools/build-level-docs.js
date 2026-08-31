@@ -45,6 +45,7 @@ const OUT_DIR = path.join(ROOT, 'docs', 'levels');
 const CODE = {
   playfieldWidth: { value: 208, from: '`core/domain/system/MotionSystem.java:57`' },
   playfieldHeight: { value: 270, from: '`core/domain/system/SpawnSystem.java:92`' },
+  safetyMargin: { value: 128, from: '`core/domain/system/LifetimeSystem.java:77`' },
   enemyProjectileRadius: { value: 2.0, from: '`core/domain/system/EnemyWeaponSystem.java:35`' },
   patterns: { value: ['straight-single'], from: '`core/domain/system/EnemyWeaponSystem.java:37,86`' },
   boss: {
@@ -182,6 +183,60 @@ function footprint(spawn, enemy, formations) {
   return { min, max, offScreen: min < 0 || max > CODE.playfieldWidth.value };
 }
 
+/**
+ * The extent an entity actually sweeps, not the one it starts at. Every shape with a non-zero `vx`
+ * drifts out from under the spawn-instant figure, and two of the seven trajectories are veers built
+ * to do exactly that — a `veer-right` at `atX 0.85` prints in range and spends its whole arc off
+ * screen. Found by task 4's read-back (#186, correction C3) by writing the spawn and looking, which
+ * the spawn-instant check could not have found by reading.
+ *
+ * A `constant` sweeps `|vx| * screenTime`. An `arc` has the same `vx`, so it sweeps for as long as it
+ * is anywhere near the playfield — bounded here by the flight down to the safety box, since
+ * `LifetimeSystem` is what finally removes it.
+ */
+function sweptExtent(spawn, enemy, formations, trajectories) {
+  const at = footprint(spawn, enemy, formations);
+  const traj = resolve(trajectories, trajectoryOf(spawn, enemy).id, 'trajectory', `spawn '${spawn.spawn}'`);
+  const radius = enemy.components.collider ? enemy.components.collider.radius : 0;
+  const seconds = traj.type === 'arc'
+    ? arcPlayfieldTime(traj, radius)
+    : screenTime(traj, radius);
+  if (seconds === null || traj.vx === 0) return { ...at, min: at.min, max: at.max, seconds, drift: 0 };
+  const drift = traj.vx * seconds;
+  const min = Math.min(at.min, at.min + drift);
+  const max = Math.max(at.max, at.max + drift);
+  const width = CODE.playfieldWidth.value;
+  // How much of the sweep is spent outside the playfield, as a fraction of the whole sweep.
+  const span = max - min;
+  const outside = Math.max(0, -min) + Math.max(0, max - width);
+  return { min, max, seconds, drift, offScreen: min < 0 || max > width,
+    outsideFraction: span === 0 ? 0 : Math.min(1, outside / span) };
+}
+
+/**
+ * How long an `arc` spends inside the playfield. It spawns its own radius above the top edge and
+ * descends; `ay` is positive, so it turns at `-vy / ay` and climbs back. Two ways out, and the first
+ * one that happens is the answer:
+ *
+ * - **down**, past the bottom edge — the positive root of `ay/2 t^2 + vy t + (270 + 2r) = 0`, which
+ *   has none when the apex is shallower than the playfield, i.e. when the shape turns before reaching
+ *   the bottom;
+ * - **up**, back out of the top it came from, at `-2 vy / ay` by symmetry.
+ *
+ * This is the window in which being off screen horizontally is what matters, which is why it is the
+ * playfield rather than the safety box `LifetimeSystem` finally removes the entity at.
+ */
+function arcPlayfieldTime(traj, radius) {
+  const up = (-2 * traj.vy) / traj.ay;
+  const a = traj.ay / 2;
+  const disc = traj.vy * traj.vy - 4 * a * (CODE.playfieldHeight.value + 2 * radius);
+  if (disc >= 0) {
+    const down = (-traj.vy - Math.sqrt(disc)) / (2 * a);
+    if (down > 0) return Math.min(down, up);
+  }
+  return up;
+}
+
 /** Screen time on a constant shape: the whole playfield plus the radius it spawns above the edge. */
 function screenTime(trajectory, radius) {
   if (trajectory.type === 'arc') return null;
@@ -217,11 +272,102 @@ function buildLevel(levelFile, content) {
   w('It carries no generation date, git hash or tool version on purpose: any of those would make the');
   w('check above fail on every run, which is how a mechanism becomes noise somebody switches off.');
   w();
+  w('**A level file on its own is not playable.** `game/LittleSpaceshipGame.java:42` holds');
+  w('`private static final String LEVEL_ID = "level-01";`, so which level runs is a code change in');
+  w('`game/`, not a content change. A correct second level file loads and cannot be reached until that');
+  w('line moves.');
+  w();
   w('**What it does not carry is why any of this is the way it is.** JSON admits no comments, so');
   w('design intent has nowhere to live in the source and cannot be generated from it. The intent for');
   w('level 1 is in `docs/planning/04-campaign-and-levels.md`, and which wave serves which beat is in');
   w('`docs/plan/11c-movement-shapes/shape-catalogue.md` under "What points at what". The reasoning');
   w('behind the gap is section 14 of `docs/plan/11d-per-level-document/document-contract.md`.');
+  w();
+
+  // 0. The format ------------------------------------------------------------------------------
+  // Added by #190, after task 4's read-back wrote a level-02.json from this document and it failed to
+  // load: sections 1-14 print values and never keys. The key lists below are copied from
+  // JsonContentSource's own requireOnlyKeys calls, and each names the line it came from — that is the
+  // one thing regenerating cannot keep honest, the same weakness the CODE table at the top has.
+  w('## The format');
+  w();
+  w('Every key, because the rest of this document prints values and would otherwise leave you guessing');
+  w('them. The lists come from `game/adapter/content/JsonContentSource.java`, which **rejects any key');
+  w('its schema does not name** — `requireOnlyKeys`, `:431` — so a key that is not below is a level');
+  w('that fails to load rather than a key that is quietly ignored.');
+  w();
+  w('```jsonc');
+  w('// assets/data/level-NN.json — requireOnlyKeys(root, "level file", ...) at :349');
+  w('{');
+  w('  "boss": { ... },        // optional; the block is below');
+  w('  "waves": [              // ordered list of placements. An empty list is a level with no waves');
+  w('    { "wave":   "l1-basic-intro",  // required, an id in waves.json');
+  w('      "offset": 8.0 }              // required, seconds AFTER THE PREVIOUS PLACEMENT ENDS,');
+  w('                                   // not from level start. NEGATIVE OVERLAPS the two:');
+  w('                                   // -6.0 starts this one 6 s before the last one ends,');
+  w('                                   // and overlap is the one lever in this format that');
+  w('                                   // produces pressure nothing else can');
+  w('  ]');
+  w('  // "events" is also accepted at the top level: the pre-11b flat spawn list. Do not write one');
+  w('}');
+  w('```');
+  w();
+  w('```jsonc');
+  w('// assets/data/waves.json — requireOnlyKeys(root, "wave file", "waves") at :253');
+  w('{ "waves": [');
+  w('  { "id":     "l1-basic-intro",   // required, and GLOBAL: waves.json is one shared file across');
+  w(`                                  // every level, so an id collides with every other level's`);
+  w('    "end":    { "type": "fixedDuration", "seconds": 27.5 },');
+  w('                                  // required. Two kinds, and nothing else:');
+  w('                                  //   {"type":"fixedDuration","seconds":N}  ends at N');
+  w('                                  //   {"type":"cleared"}                    ends when every');
+  w('                                  //     entity it spawned is gone. From the first cleared wave');
+  w('                                  //     onwards every later time in this document is a lower');
+  w('                                  //     bound rather than a value');
+  w('    "spawns": [                   // required, and each entry is:');
+  w(`      { "at":        0.0,         // required, seconds FROM THIS WAVE'S OWN START.`);
+  w(`                                  //   A spawn past the wave's duration never fires`);
+  w('        "spawn":     "enemy-basic",  // required, an id in enemies.json');
+  w('        "formation": "single",       // required, an id in formations.json');
+  w('        "atX":       0.5,            // required, 0..1 of the 208-wide playfield, applied to');
+  w(`                                     //   the formation's CENTRE. Nothing clamps the result`);
+  w(`        "trajectory": "dive",        // optional; omit to use the archetype's own default`);
+  w('        "drop":       "weapon-upgrade",  // optional, one of the six kinds below');
+  w(`        "dropSlot":   1 }            // optional, defaults to 0. Index into the formation's`);
+  w('                                     //   slots; past the slot count is fatal at spawn time');
+  w('    ] }');
+  w('] }');
+  w('```');
+  w();
+  w('The same wave id may be placed **any number of times**, in one level or in several. That is the');
+  w('point of the split, and it means an edit to a wave lands on every placement of it — the "Placed');
+  w('N times" line under each wave below is where to check.');
+  w();
+  w('```jsonc');
+  w('// assets/data/trajectories.json — requireOnlyKeys at :184 and :188');
+  w('{ "trajectories": [');
+  w('  { "id": "slow-descent", "vx": 0, "vy": -18 },');
+  w('                                  // no "type": a constant velocity, units per second, y up');
+  w('  { "id": "strike-run", "type": "arc", "vx": 0, "vy": -110, "ay": 27 }');
+  w('                                  // "type":"arc" adds "ay", and only then. It turns after');
+  w('                                  //   -vy/ay seconds and bottoms out vy^2/(2*ay) below spawn');
+  w('] }');
+  w('```');
+  w();
+  w('```jsonc');
+  w('// the "boss" block of a level file — requireOnlyKeys(value, "boss block", ...) at :402.');
+  w('// Every key is required; the names are BossDefinition\'s accessors. Values for this level are');
+  w('// in "The boss" below, with what each one does to the fight.');
+  w('{ "id": "boss-l1", "entersAt": 302.0,');
+  w('  "coreHealth": 1800, "podHealth": 500, "armHealth": 500,');
+  w('  "corePoints": 1500, "podPoints": 500, "armPoints": 500,');
+  w('  "entranceSpeed": 25.0, "combatY": 175.0, "patternCooldown": 0.7,');
+  w('  "spreadProjectileSpeed": 95.0, "sweepProjectileSpeed": 140.0 }');
+  w('```');
+  w();
+  w('`enemies.json` and `formations.json` have **no strict key check** — an unknown component key in an');
+  w('archetype is rejected by `ComponentFactoryRegistry` instead, at spawn time. Their fields are in');
+  w('the Roster and Formations sections below, printed per entry rather than as a schema.');
   w();
 
   // 2. At a glance -------------------------------------------------------------------------------
@@ -243,7 +389,11 @@ function buildLevel(levelFile, content) {
   ];
   if (level.boss) {
     glance.push(['the boss enters at', `${s1(level.boss.entersAt)} s (${s1(level.boss.entersAt / 60)} min)`]);
-    if (exact) glance.push(['gap between them', `${s1(level.boss.entersAt - wavesEnd)} s`]);
+    // The row stays when the chain is inexact rather than vanishing. Vanishing is what #190 found:
+    // the one situation where this interaction is dangerous was the one the document went quiet in.
+    glance.push(['gap between them', exact
+      ? `${s1(level.boss.entersAt - wavesEnd)} s`
+      : 'unknowable — the boss may enter over a running wave']);
   }
   w(table(['', ''], glance));
   w();
@@ -342,6 +492,7 @@ function buildLevel(levelFile, content) {
       const traj = trajectoryOf(sp, enemy);
       resolve(trajectories, traj.id, 'trajectory', `archetype '${enemy.id}' or a spawn in '${waveId}'`);
       const fp = footprint(sp, enemy, formations);
+      const swept = sweptExtent(sp, enemy, formations, trajectories);
       const formation = resolve(formations, sp.formation, 'formation', `wave '${waveId}'`);
       spawnRows.push([
         s1(sp.at),
@@ -350,15 +501,24 @@ function buildLevel(levelFile, content) {
         s2(sp.atX),
         `\`${traj.id}\`${traj.override ? ' *(override)*' : ''}`,
         `${s1(fp.min)} .. ${s1(fp.max)}${fp.offScreen ? ' **off screen**' : ''}`,
+        Math.abs(swept.drift) < 0.05
+          ? 'same'
+          : `${s1(swept.min)} .. ${s1(swept.max)}${swept.offScreen ? ' **leaves**' : ''}`,
         sp.drop ? `\`${sp.drop}\` slot ${sp.dropSlot === undefined ? 0 : sp.dropSlot}` : '—',
       ]);
     }
-    w(table(['at', 'archetype', 'formation', 'atX', 'shape', 'x extent', 'drop'], spawnRows));
+    w(table(['at', 'archetype', 'formation', 'atX', 'shape', 'x at spawn', 'x swept', 'drop'],
+      spawnRows));
     w();
   }
-  w("**`x extent`** is `atX * 208 + slot.offsetX`, plus and minus the archetype's collider radius");
+  w("**`x at spawn`** is `atX * 208 + slot.offsetX`, plus and minus the archetype's collider radius");
   w('(`SpawnSystem.spawnWave`, `SpawnSystem.positionSpawned`). **Nothing clamps it** — a formation');
   w('whose extent leaves `0 .. 208` spawns partly off screen and nobody is told at runtime.');
+  w();
+  w('**`x swept` is where it goes**, and for any shape with a `vx` it is the column that matters. A');
+  w('spawn-instant extent is a snapshot: `swoop` carries `vx -10` for 6.9 s, so a formation on it ends');
+  w('69 units left of where it started, and a `veer-right` placed on the right edge spends its whole');
+  w('arc past it. `same` means the shape has no horizontal velocity and the two are identical.');
   w();
   w("**`shape` is resolved, not copied.** A spawn's own `trajectory` key overrides the archetype's");
   w('`motion.trajectory` and is marked *(override)*; every other row is the archetype default.');
@@ -669,6 +829,25 @@ function buildLevel(levelFile, content) {
   w('happens, and each one costs a run of `./gradlew :desktop:run` to find by hand. That is the part of');
   w('this document a generator can do and a human reliably will not.');
   w();
+  // The list is printed whether or not anything fired. Without it a clean document says only "no
+  // issues found", and a designer cannot tell which mistakes are caught from which still have to be
+  // verified by hand — #190, correction C2, found by reading a clean one.
+  w('**What was checked**, so you can tell what is still yours to verify:');
+  w();
+  for (const line of [
+    'a spawn whose `at` is past its wave’s duration, which never fires',
+    'a formation whose extent at the spawn instant leaves `0 .. 208`',
+    '**a spawn whose swept extent is mostly outside `0 .. 208`**, which the spawn-instant extent cannot see, and the veer-side rule when a veer is the cause',
+    'a `dropSlot` past its formation’s slot count',
+    'a drop kind outside the six',
+    'a `cleared` wave holding a shape that never leaves the playfield, so it can never end',
+    'a negative `offset`, and what it overlaps',
+    'a boss entering over a running wave, against a lower bound when the wave chain is inexact',
+  ]) w(`- ${line}`);
+  w();
+  w('**Not checked, and still yours:** whether the level is any good. Density is not difficulty and');
+  w('this project tunes balance by playing.');
+  w();
   const findings = [];
   for (const row of rows) {
     const wave = row.wave;
@@ -680,6 +859,20 @@ function buildLevel(levelFile, content) {
       const fp = footprint(sp, enemy, formations);
       if (fp.offScreen) {
         findings.push(`\`${wave.id}\`: \`${sp.spawn}\` in \`${sp.formation}\` at \`atX ${s2(sp.atX)}\` occupies ${s1(fp.min)} .. ${s1(fp.max)}, outside 0 .. ${CODE.playfieldWidth.value}. Nothing clamps it.`);
+      }
+      // Drift, not the snapshot above. A veer placed on the side it veers towards prints in range
+      // and spends its whole arc off screen; `l1-finale-a`'s swoop at 2.0 s is a real, milder case.
+      const swept = sweptExtent(sp, enemy, formations, trajectories);
+      if (swept.offScreen && swept.outsideFraction >= 0.5) {
+        const t = resolve(trajectories, trajectoryOf(sp, enemy).id, 'trajectory', 'the checks section');
+        // The veer-side rule is the catalogue's and it is about the veers, which are the arcs that
+        // carry a vx — not about any shape that happens to drift. `swoop` drifts by design.
+        const veer = t.type === 'arc' && t.vx > 0 && sp.atX > 0.25
+          ? ' A veer must spawn on the side it veers away from: `veer-right` at `atX <= 0.25`.'
+          : t.type === 'arc' && t.vx < 0 && sp.atX < 0.75
+            ? ' A veer must spawn on the side it veers away from: `veer-left` at `atX >= 0.75`.'
+            : '';
+        findings.push(`\`${wave.id}\`: \`${sp.spawn}\` in \`${sp.formation}\` at \`atX ${s2(sp.atX)}\` on \`${t.id}\` sweeps ${s1(swept.min)} .. ${s1(swept.max)} over ${s1(swept.seconds)} s in the playfield — about ${Math.round(swept.outsideFraction * 100)}% of that width is outside 0 .. ${CODE.playfieldWidth.value}. It reads in range at the spawn instant and is not.${veer}`);
       }
       const slots = resolve(formations, sp.formation, 'formation', 'the checks section').slots.length;
       if (sp.dropSlot !== undefined && sp.dropSlot >= slots) {
@@ -700,8 +893,18 @@ function buildLevel(levelFile, content) {
       findings.push(`placement #${row.i + 1} \`${row.placement.wave}\` has \`offset ${s1(row.placement.offset)}\`, overlapping \`${previous ? previous.placement.wave : '(nothing)'}\` by ${s1(-row.placement.offset)} s. Overlap is the one thing in this format that produces pressure nothing else can, and it is the thing a reader misreads first.`);
     }
   }
-  if (level.boss && exact && level.boss.entersAt < wavesEnd) {
-    findings.push(`\`boss.entersAt ${s1(level.boss.entersAt)}\` is earlier than the last placement's end at ${s1(wavesEnd)} s, so the boss enters over a running wave. Legal, occasionally intended, never accidental.`);
+  // Not guarded by `exact` any more. The chain being inexact is precisely when this matters, and
+  // guarding on it switched the check off there — #190, correction C4. When the chain is inexact
+  // `last.start` is a lower bound, so a boss below it overlaps unconditionally rather than possibly.
+  if (level.boss) {
+    const bound = exact ? wavesEnd : last.start;
+    if (level.boss.entersAt < bound) {
+      findings.push(exact
+        ? `\`boss.entersAt ${s1(level.boss.entersAt)}\` is earlier than the last placement's end at ${s1(wavesEnd)} s, so the boss enters over a running wave. Legal, occasionally intended, never accidental.`
+        : `\`boss.entersAt ${s1(level.boss.entersAt)}\` is earlier than the last placement can possibly start (${s1(bound)} s), and the chain is inexact because a wave ends on \`cleared\`, so the boss enters over a running wave **unconditionally** — not merely if the player is slow.`);
+    } else if (!exact) {
+      findings.push(`the wave chain is inexact — a wave ends on \`cleared\` — so \`boss.entersAt ${s1(level.boss.entersAt)}\` cannot be compared against the end of the waves. It is later than the earliest the last placement can start (${s1(bound)} s) and that is all this document can say. Whether the boss enters over a running wave depends on how fast the level is played.`);
+    }
   }
   if (findings.length === 0) w('**No issues found.**');
   else for (const f of findings) w(`- ${f}`);
@@ -726,6 +929,70 @@ function buildLevel(levelFile, content) {
 
 // ------------------------------------------------------------------------------------------------
 
+/**
+ * One index across every level: which wave ids exist, and who places them.
+ *
+ * `assets/data/waves.json` is a single shared file with globally unique ids, and reuse across levels
+ * is the reason phase 11b split waves from placements at all — but each level's document lists only
+ * the waves that level places, so a designer could neither avoid an id collision nor find a reusable
+ * wave without reading every other level's document. That is exactly the lookup outside the document
+ * the contract's bar exists to remove. Found by task 4's read-back, #190, correction C5.
+ *
+ * Its own file, deliberately. The contract refuses a cross-level comparison *inside* a level's
+ * document, because then every level's document changes when any level does; a separate file has no
+ * such coupling.
+ */
+function buildWaveIndex(levels, content) {
+  const { waves, enemies, formations } = content;
+  const out = [];
+  const w = (line = '') => out.push(line);
+
+  w('# Every wave, and who places it');
+  w();
+  w('**This file is generated. Do not edit it by hand.** `tools/build-level-docs.js` writes it from');
+  w('`assets/data/waves.json` and every `assets/data/level-NN.json`, and `.github/workflows/ci.yml`');
+  w('fails if it drifts.');
+  w();
+  w('`waves.json` is **one shared file across every level** and its ids are global. A new wave needs an');
+  w('id nothing here already uses, and a wave already here can be placed again instead of copied — an');
+  w('edit to it then lands on every placement below.');
+  w();
+  const rows = [];
+  // Ordered by the file, not by a map, so the output is stable.
+  for (const wave of [...waves.values()]) {
+    const entities = wave.spawns.reduce((n, sp) => n + entitiesOf(sp, formations), 0);
+    const archetypes = [];
+    for (const sp of wave.spawns) if (!archetypes.includes(sp.spawn)) archetypes.push(sp.spawn);
+    const places = [];
+    for (const { file, level } of levels) {
+      const { rows: timeline_ } = timeline(level, waves);
+      for (const r of timeline_) {
+        if (r.placement.wave === wave.id) {
+          places.push(`\`${path.basename(file, '.json')}\` #${r.i + 1} at ${r.exact ? '' : '>= '}${s1(r.start)} s`);
+        }
+      }
+    }
+    rows.push([
+      `\`${wave.id}\``,
+      wave.end.type === 'fixedDuration' ? `${s1(wave.end.seconds)} s` : '`cleared`',
+      String(wave.spawns.length),
+      String(entities),
+      archetypes.map((a) => `\`${a}\``).join(' '),
+      places.length ? places.join(', ') : '**unplaced**',
+    ]);
+  }
+  w(table(['wave', 'lasts', 'spawns', 'entities', 'archetypes', 'placed by'], rows));
+  w();
+  w('**`unplaced`** is a wave no level uses. Not an error — `waves.json` is a library — but it is dead');
+  w('content until something places it, and nothing else in the repository would tell you.');
+  w();
+  w('Archetypes come from `assets/data/enemies.json`'
+    + ` (${enemies.size} of them) and formations from \`assets/data/formations.json\`.`);
+  w('Each level\'s own document has the rest: the pacing, the roster, the checks.');
+  w();
+  return { path: path.join(OUT_DIR, 'waves.md'), text: out.join('\n').replace(/\n+$/, '\n') };
+}
+
 function main() {
   const check = process.argv.includes('--check');
   const content = {
@@ -741,9 +1008,12 @@ function main() {
   if (levelFiles.length === 0) die('no level-NN.json in assets/data/');
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  const documents = levelFiles.map((file) =>
+    buildLevel(file, Object.assign({}, content, { level: readJson(file) })));
+  documents.push(buildWaveIndex(levelFiles.map((f) => ({ file: f, level: readJson(f) })), content));
+
   let stale = 0;
-  for (const file of levelFiles) {
-    const built = buildLevel(file, Object.assign({}, content, { level: readJson(file) }));
+  for (const built of documents) {
     const relative = path.relative(ROOT, built.path).split(path.sep).join('/');
     const existing = fs.existsSync(built.path) ? fs.readFileSync(built.path, 'utf8') : null;
     if (existing === built.text) {

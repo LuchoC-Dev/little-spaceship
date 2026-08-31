@@ -17,11 +17,96 @@ Generated from:
 It carries no generation date, git hash or tool version on purpose: any of those would make the
 check above fail on every run, which is how a mechanism becomes noise somebody switches off.
 
+**A level file on its own is not playable.** `game/LittleSpaceshipGame.java:42` holds
+`private static final String LEVEL_ID = "level-01";`, so which level runs is a code change in
+`game/`, not a content change. A correct second level file loads and cannot be reached until that
+line moves.
+
 **What it does not carry is why any of this is the way it is.** JSON admits no comments, so
 design intent has nowhere to live in the source and cannot be generated from it. The intent for
 level 1 is in `docs/planning/04-campaign-and-levels.md`, and which wave serves which beat is in
 `docs/plan/11c-movement-shapes/shape-catalogue.md` under "What points at what". The reasoning
 behind the gap is section 14 of `docs/plan/11d-per-level-document/document-contract.md`.
+
+## The format
+
+Every key, because the rest of this document prints values and would otherwise leave you guessing
+them. The lists come from `game/adapter/content/JsonContentSource.java`, which **rejects any key
+its schema does not name** — `requireOnlyKeys`, `:431` — so a key that is not below is a level
+that fails to load rather than a key that is quietly ignored.
+
+```jsonc
+// assets/data/level-NN.json — requireOnlyKeys(root, "level file", ...) at :349
+{
+  "boss": { ... },        // optional; the block is below
+  "waves": [              // ordered list of placements. An empty list is a level with no waves
+    { "wave":   "l1-basic-intro",  // required, an id in waves.json
+      "offset": 8.0 }              // required, seconds AFTER THE PREVIOUS PLACEMENT ENDS,
+                                   // not from level start. NEGATIVE OVERLAPS the two:
+                                   // -6.0 starts this one 6 s before the last one ends,
+                                   // and overlap is the one lever in this format that
+                                   // produces pressure nothing else can
+  ]
+  // "events" is also accepted at the top level: the pre-11b flat spawn list. Do not write one
+}
+```
+
+```jsonc
+// assets/data/waves.json — requireOnlyKeys(root, "wave file", "waves") at :253
+{ "waves": [
+  { "id":     "l1-basic-intro",   // required, and GLOBAL: waves.json is one shared file across
+                                  // every level, so an id collides with every other level's
+    "end":    { "type": "fixedDuration", "seconds": 27.5 },
+                                  // required. Two kinds, and nothing else:
+                                  //   {"type":"fixedDuration","seconds":N}  ends at N
+                                  //   {"type":"cleared"}                    ends when every
+                                  //     entity it spawned is gone. From the first cleared wave
+                                  //     onwards every later time in this document is a lower
+                                  //     bound rather than a value
+    "spawns": [                   // required, and each entry is:
+      { "at":        0.0,         // required, seconds FROM THIS WAVE'S OWN START.
+                                  //   A spawn past the wave's duration never fires
+        "spawn":     "enemy-basic",  // required, an id in enemies.json
+        "formation": "single",       // required, an id in formations.json
+        "atX":       0.5,            // required, 0..1 of the 208-wide playfield, applied to
+                                     //   the formation's CENTRE. Nothing clamps the result
+        "trajectory": "dive",        // optional; omit to use the archetype's own default
+        "drop":       "weapon-upgrade",  // optional, one of the six kinds below
+        "dropSlot":   1 }            // optional, defaults to 0. Index into the formation's
+                                     //   slots; past the slot count is fatal at spawn time
+    ] }
+] }
+```
+
+The same wave id may be placed **any number of times**, in one level or in several. That is the
+point of the split, and it means an edit to a wave lands on every placement of it — the "Placed
+N times" line under each wave below is where to check.
+
+```jsonc
+// assets/data/trajectories.json — requireOnlyKeys at :184 and :188
+{ "trajectories": [
+  { "id": "slow-descent", "vx": 0, "vy": -18 },
+                                  // no "type": a constant velocity, units per second, y up
+  { "id": "strike-run", "type": "arc", "vx": 0, "vy": -110, "ay": 27 }
+                                  // "type":"arc" adds "ay", and only then. It turns after
+                                  //   -vy/ay seconds and bottoms out vy^2/(2*ay) below spawn
+] }
+```
+
+```jsonc
+// the "boss" block of a level file — requireOnlyKeys(value, "boss block", ...) at :402.
+// Every key is required; the names are BossDefinition's accessors. Values for this level are
+// in "The boss" below, with what each one does to the fight.
+{ "id": "boss-l1", "entersAt": 302.0,
+  "coreHealth": 1800, "podHealth": 500, "armHealth": 500,
+  "corePoints": 1500, "podPoints": 500, "armPoints": 500,
+  "entranceSpeed": 25.0, "combatY": 175.0, "patternCooldown": 0.7,
+  "spreadProjectileSpeed": 95.0, "sweepProjectileSpeed": 140.0 }
+```
+
+`enemies.json` and `formations.json` have **no strict key check** — an unknown component key in an
+archetype is rejected by `ComponentFactoryRegistry` instead, at spawn time. Their fields are in
+the Roster and Formations sections below, printed per entry rather than as a schema.
 
 ## At a glance
 
@@ -100,15 +185,15 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #1 at 8.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | — |
-| 4.5 | `enemy-basic` | `single` (1) | 0.28 | `slow-descent` | 52.7 .. 63.7 | — |
-| 8.5 | `enemy-basic` | `single` (1) | 0.72 | `slow-descent` | 144.3 .. 155.3 | — |
-| 13.0 | `enemy-basic` | `line-3` (3) | 0.50 | `slow-descent` | 78.5 .. 129.5 | `weapon-upgrade` slot 1 |
-| 17.5 | `enemy-basic` | `line-3` (3) | 0.25 | `slow-descent` | 26.5 .. 77.5 | — |
-| 21.0 | `enemy-basic` | `line-3` (3) | 0.75 | `slow-descent` | 130.5 .. 181.5 | — |
-| 24.0 | `enemy-basic` | `column-3` (3) | 0.50 | `slow-descent` | 98.5 .. 109.5 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | — |
+| 4.5 | `enemy-basic` | `single` (1) | 0.28 | `slow-descent` | 52.7 .. 63.7 | same | — |
+| 8.5 | `enemy-basic` | `single` (1) | 0.72 | `slow-descent` | 144.3 .. 155.3 | same | — |
+| 13.0 | `enemy-basic` | `line-3` (3) | 0.50 | `slow-descent` | 78.5 .. 129.5 | same | `weapon-upgrade` slot 1 |
+| 17.5 | `enemy-basic` | `line-3` (3) | 0.25 | `slow-descent` | 26.5 .. 77.5 | same | — |
+| 21.0 | `enemy-basic` | `line-3` (3) | 0.75 | `slow-descent` | 130.5 .. 181.5 | same | — |
+| 24.0 | `enemy-basic` | `column-3` (3) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | — |
 
 ### `l1-light-intro`
 
@@ -116,15 +201,15 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #2 at 35.5 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-light` | `single` (1) | 0.70 | `swoop` | 141.1 .. 150.1 | — |
-| 3.5 | `enemy-light` | `single` (1) | 0.85 | `swoop` | 172.3 .. 181.3 | — |
-| 7.0 | `enemy-light` | `diagonal` (3) | 0.75 | `swoop` | 136.5 .. 175.5 | — |
-| 10.5 | `enemy-light` | `diagonal` (3) | 0.40 | `swoop` | 63.7 .. 102.7 | — |
-| 14.0 | `enemy-light` | `diagonal-mirror` (3) | 0.35 | `swoop` | 53.3 .. 92.3 | — |
-| 17.5 | `enemy-light` | `vee-5` (5) | 0.60 | `swoop` | 88.3 .. 161.3 | — |
-| 20.5 | `enemy-light` | `vee-5` (5) | 0.30 | `swoop` | 25.9 .. 98.9 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-light` | `single` (1) | 0.70 | `swoop` | 141.1 .. 150.1 | 72.5 .. 150.1 | — |
+| 3.5 | `enemy-light` | `single` (1) | 0.85 | `swoop` | 172.3 .. 181.3 | 103.7 .. 181.3 | — |
+| 7.0 | `enemy-light` | `diagonal` (3) | 0.75 | `swoop` | 136.5 .. 175.5 | 67.9 .. 175.5 | — |
+| 10.5 | `enemy-light` | `diagonal` (3) | 0.40 | `swoop` | 63.7 .. 102.7 | -4.9 .. 102.7 **leaves** | — |
+| 14.0 | `enemy-light` | `diagonal-mirror` (3) | 0.35 | `swoop` | 53.3 .. 92.3 | -15.3 .. 92.3 **leaves** | — |
+| 17.5 | `enemy-light` | `vee-5` (5) | 0.60 | `swoop` | 88.3 .. 161.3 | 19.7 .. 161.3 | — |
+| 20.5 | `enemy-light` | `vee-5` (5) | 0.30 | `swoop` | 25.9 .. 98.9 | -42.7 .. 98.9 **leaves** | — |
 
 ### `l1-basic-light-mix`
 
@@ -132,19 +217,19 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #3 at 59.5 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | — |
-| 1.5 | `enemy-light` | `diagonal` (3) | 0.85 | `swoop` | 157.3 .. 196.3 | — |
-| 5.0 | `enemy-basic` | `line-3` (3) | 0.30 | `slow-descent` | 36.9 .. 87.9 | — |
-| 6.5 | `enemy-light` | `diagonal-mirror` (3) | 0.20 | `swoop` | 22.1 .. 61.1 | — |
-| 9.5 | `enemy-light` | `vee-5` (5) | 0.50 | `swoop` | 67.5 .. 140.5 | — |
-| 11.5 | `enemy-basic` | `column-3` (3) | 0.15 | `slow-descent` | 25.7 .. 36.7 | — |
-| 12.0 | `enemy-basic` | `column-3` (3) | 0.85 | `slow-descent` | 171.3 .. 182.3 | — |
-| 16.0 | `enemy-basic` | `line-5` (5) | 0.40 | `slow-descent` | 37.7 .. 128.7 | — |
-| 17.5 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | — |
-| 20.5 | `enemy-light` | `vee-5` (5) | 0.45 | `swoop` | 57.1 .. 130.1 | — |
-| 21.5 | `enemy-basic` | `line-3` (3) | 0.50 | `slow-descent` | 78.5 .. 129.5 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
+| 1.5 | `enemy-light` | `diagonal` (3) | 0.85 | `swoop` | 157.3 .. 196.3 | 88.7 .. 196.3 | — |
+| 5.0 | `enemy-basic` | `line-3` (3) | 0.30 | `slow-descent` | 36.9 .. 87.9 | same | — |
+| 6.5 | `enemy-light` | `diagonal-mirror` (3) | 0.20 | `swoop` | 22.1 .. 61.1 | -46.5 .. 61.1 **leaves** | — |
+| 9.5 | `enemy-light` | `vee-5` (5) | 0.50 | `swoop` | 67.5 .. 140.5 | -1.1 .. 140.5 **leaves** | — |
+| 11.5 | `enemy-basic` | `column-3` (3) | 0.15 | `slow-descent` | 25.7 .. 36.7 | same | — |
+| 12.0 | `enemy-basic` | `column-3` (3) | 0.85 | `slow-descent` | 171.3 .. 182.3 | same | — |
+| 16.0 | `enemy-basic` | `line-5` (5) | 0.40 | `slow-descent` | 37.7 .. 128.7 | same | — |
+| 17.5 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | 99.1 .. 206.7 | — |
+| 20.5 | `enemy-light` | `vee-5` (5) | 0.45 | `swoop` | 57.1 .. 130.1 | -11.5 .. 130.1 **leaves** | — |
+| 21.5 | `enemy-basic` | `line-3` (3) | 0.50 | `slow-descent` | 78.5 .. 129.5 | same | — |
 
 ### `l1-tank-solo`
 
@@ -152,9 +237,9 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 3 times:** #4 at 86.0 s, #7 at 126.5 s, #15 at 297.0 s — **reused: an edit here lands on all of them.**
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-tank` | `single` (1) | 0.50 | `crawl` | 93.5 .. 114.5 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-tank` | `single` (1) | 0.50 | `crawl` | 93.5 .. 114.5 | same | — |
 
 ### `l1-tank-intro-b`
 
@@ -162,14 +247,14 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #5 at 92.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-basic` | `line-3` (3) | 0.20 | `slow-descent` | 16.1 .. 67.1 | — |
-| 3.0 | `enemy-basic` | `line-3` (3) | 0.80 | `slow-descent` | 140.9 .. 191.9 | — |
-| 7.0 | `enemy-tank` | `single` (1) | 0.30 | `crawl` | 51.9 .. 72.9 | — |
-| 8.0 | `enemy-tank` | `single` (1) | 0.70 | `crawl` | 135.1 .. 156.1 | — |
-| 12.0 | `enemy-light` | `vee-5` (5) | 0.50 | `swoop` | 67.5 .. 140.5 | — |
-| 15.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-basic` | `line-3` (3) | 0.20 | `slow-descent` | 16.1 .. 67.1 | same | — |
+| 3.0 | `enemy-basic` | `line-3` (3) | 0.80 | `slow-descent` | 140.9 .. 191.9 | same | — |
+| 7.0 | `enemy-tank` | `single` (1) | 0.30 | `crawl` | 51.9 .. 72.9 | same | — |
+| 8.0 | `enemy-tank` | `single` (1) | 0.70 | `crawl` | 135.1 .. 156.1 | same | — |
+| 12.0 | `enemy-light` | `vee-5` (5) | 0.50 | `swoop` | 67.5 .. 140.5 | -1.1 .. 140.5 **leaves** | — |
+| 15.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
 
 ### `l1-rush-intro-a`
 
@@ -177,13 +262,13 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #6 at 112.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-rush` | `single` (1) | 0.25 | `dive` | 48.0 .. 56.0 | — |
-| 3.0 | `enemy-rush` | `single` (1) | 0.75 | `dive` | 152.0 .. 160.0 | — |
-| 6.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | — |
-| 10.0 | `enemy-rush` | `column-3` (3) | 0.20 | `dive` | 37.6 .. 45.6 | — |
-| 11.0 | `enemy-rush` | `column-3` (3) | 0.80 | `dive` | 162.4 .. 170.4 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-rush` | `single` (1) | 0.25 | `dive` | 48.0 .. 56.0 | same | — |
+| 3.0 | `enemy-rush` | `single` (1) | 0.75 | `dive` | 152.0 .. 160.0 | same | — |
+| 6.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 10.0 | `enemy-rush` | `column-3` (3) | 0.20 | `dive` | 37.6 .. 45.6 | same | — |
+| 11.0 | `enemy-rush` | `column-3` (3) | 0.80 | `dive` | 162.4 .. 170.4 | same | — |
 
 ### `l1-rush-intro-b`
 
@@ -191,11 +276,11 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #8 at 129.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-rush` | `single` (1) | 0.35 | `dive` | 68.8 .. 76.8 | — |
-| 1.5 | `enemy-rush` | `single` (1) | 0.65 | `dive` | 131.2 .. 139.2 | — |
-| 4.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | `weapon-upgrade` slot 0 |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-rush` | `single` (1) | 0.35 | `dive` | 68.8 .. 76.8 | same | — |
+| 1.5 | `enemy-rush` | `single` (1) | 0.65 | `dive` | 131.2 .. 139.2 | same | — |
+| 4.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | `weapon-upgrade` slot 0 |
 
 ### `l1-carrier-intro`
 
@@ -203,12 +288,12 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #9 at 138.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-carrier` | `single` (1) | 0.50 | `crawl` | 89.0 .. 119.0 | — |
-| 13.0 | `enemy-basic` | `line-3` (3) | 0.15 | `slow-descent` | 5.7 .. 56.7 | — |
-| 19.0 | `enemy-basic` | `line-3` (3) | 0.85 | `slow-descent` | 151.3 .. 202.3 | — |
-| 22.0 | `enemy-light` | `diagonal` (3) | 0.70 | `swoop` | 126.1 .. 165.1 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-carrier` | `single` (1) | 0.50 | `crawl` | 89.0 .. 119.0 | same | — |
+| 13.0 | `enemy-basic` | `line-3` (3) | 0.15 | `slow-descent` | 5.7 .. 56.7 | same | — |
+| 19.0 | `enemy-basic` | `line-3` (3) | 0.85 | `slow-descent` | 151.3 .. 202.3 | same | — |
+| 22.0 | `enemy-light` | `diagonal` (3) | 0.70 | `swoop` | 126.1 .. 165.1 | 57.5 .. 165.1 | — |
 
 ### `l1-shooter-intro`
 
@@ -216,13 +301,13 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #10 at 166.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-shooter` | `single` (1) | 0.40 | `slow-descent` | 76.7 .. 89.7 | — |
-| 3.0 | `enemy-shooter` | `single` (1) | 0.60 | `slow-descent` | 118.3 .. 131.3 | — |
-| 6.5 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | — |
-| 10.0 | `enemy-shooter` | `line-3` (3) | 0.25 | `slow-descent` | 25.5 .. 78.5 | — |
-| 11.0 | `enemy-light` | `diagonal-mirror` (3) | 0.80 | `swoop` | 146.9 .. 185.9 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-shooter` | `single` (1) | 0.40 | `slow-descent` | 76.7 .. 89.7 | same | — |
+| 3.0 | `enemy-shooter` | `single` (1) | 0.60 | `slow-descent` | 118.3 .. 131.3 | same | — |
+| 6.5 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | — |
+| 10.0 | `enemy-shooter` | `line-3` (3) | 0.25 | `slow-descent` | 25.5 .. 78.5 | same | — |
+| 11.0 | `enemy-light` | `diagonal-mirror` (3) | 0.80 | `swoop` | 146.9 .. 185.9 | 78.3 .. 185.9 | — |
 
 ### `l1-veteran-mix`
 
@@ -230,20 +315,20 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #11 at 183.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | `extra-life` slot 1 |
-| 1.5 | `enemy-rush` | `column-3` (3) | 0.15 | `dive` | 27.2 .. 35.2 | — |
-| 2.5 | `enemy-rush` | `column-3` (3) | 0.85 | `dive` | 172.8 .. 180.8 | — |
-| 5.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | — |
-| 7.0 | `enemy-light` | `vee-5` (5) | 0.30 | `swoop` | 25.9 .. 98.9 | — |
-| 9.0 | `enemy-tank` | `single` (1) | 0.35 | `crawl` | 62.3 .. 83.3 | — |
-| 9.5 | `enemy-tank` | `single` (1) | 0.65 | `crawl` | 124.7 .. 145.7 | — |
-| 12.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | — |
-| 14.0 | `enemy-basic` | `line-3` (3) | 0.20 | `slow-descent` | 16.1 .. 67.1 | — |
-| 14.5 | `enemy-basic` | `line-3` (3) | 0.80 | `slow-descent` | 140.9 .. 191.9 | — |
-| 17.0 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | — |
-| 18.5 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | `shield` slot 0 |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | `extra-life` slot 1 |
+| 1.5 | `enemy-rush` | `column-3` (3) | 0.15 | `dive` | 27.2 .. 35.2 | same | — |
+| 2.5 | `enemy-rush` | `column-3` (3) | 0.85 | `dive` | 172.8 .. 180.8 | same | — |
+| 5.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
+| 7.0 | `enemy-light` | `vee-5` (5) | 0.30 | `swoop` | 25.9 .. 98.9 | -42.7 .. 98.9 **leaves** | — |
+| 9.0 | `enemy-tank` | `single` (1) | 0.35 | `crawl` | 62.3 .. 83.3 | same | — |
+| 9.5 | `enemy-tank` | `single` (1) | 0.65 | `crawl` | 124.7 .. 145.7 | same | — |
+| 12.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 14.0 | `enemy-basic` | `line-3` (3) | 0.20 | `slow-descent` | 16.1 .. 67.1 | same | — |
+| 14.5 | `enemy-basic` | `line-3` (3) | 0.80 | `slow-descent` | 140.9 .. 191.9 | same | — |
+| 17.0 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | 99.1 .. 206.7 | — |
+| 18.5 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | `shield` slot 0 |
 
 ### `l1-carrier-pair`
 
@@ -251,13 +336,13 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #12 at 208.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-carrier` | `pair` (2) | 0.50 | `crawl` | 45.0 .. 163.0 | `attachment` slot 0 |
-| 7.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | — |
-| 16.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | — |
-| 23.0 | `enemy-light` | `diagonal` (3) | 0.85 | `swoop` | 157.3 .. 196.3 | — |
-| 25.0 | `enemy-light` | `diagonal-mirror` (3) | 0.15 | `swoop` | 11.7 .. 50.7 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-carrier` | `pair` (2) | 0.50 | `crawl` | 45.0 .. 163.0 | same | `attachment` slot 0 |
+| 7.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 16.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 23.0 | `enemy-light` | `diagonal` (3) | 0.85 | `swoop` | 157.3 .. 196.3 | 88.7 .. 196.3 | — |
+| 25.0 | `enemy-light` | `diagonal-mirror` (3) | 0.15 | `swoop` | 11.7 .. 50.7 | -56.9 .. 50.7 **leaves** | — |
 
 ### `l1-rest-basic`
 
@@ -265,9 +350,9 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #13 at 245.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | `bomb-recharge` slot 0 |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | `bomb-recharge` slot 0 |
 
 ### `l1-finale-a`
 
@@ -275,35 +360,40 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Placed 1 time:** #14 at 256.0 s
 
-| at | archetype | formation | atX | shape | x extent | drop |
-|---|---|---|---|---|---|---|
-| 0.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | — |
-| 2.0 | `enemy-light` | `vee-5` (5) | 0.20 | `swoop` | 5.1 .. 78.1 | — |
-| 3.5 | `enemy-light` | `vee-5` (5) | 0.80 | `swoop` | 129.9 .. 202.9 | — |
-| 5.0 | `enemy-rush` | `column-3` (3) | 0.35 | `dive` | 68.8 .. 76.8 | — |
-| 5.5 | `enemy-rush` | `column-3` (3) | 0.65 | `dive` | 131.2 .. 139.2 | — |
-| 8.0 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | `weapon-upgrade` slot 1 |
-| 11.0 | `enemy-basic` | `column-3` (3) | 0.10 | `slow-descent` | 15.3 .. 26.3 | — |
-| 11.5 | `enemy-basic` | `column-3` (3) | 0.90 | `slow-descent` | 181.7 .. 192.7 | — |
-| 14.0 | `enemy-tank` | `single` (1) | 0.25 | `crawl` | 41.5 .. 62.5 | — |
-| 14.5 | `enemy-tank` | `single` (1) | 0.75 | `crawl` | 145.5 .. 166.5 | — |
-| 17.0 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | — |
-| 18.0 | `enemy-light` | `diagonal-mirror` (3) | 0.10 | `swoop` | 1.3 .. 40.3 | — |
-| 20.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | — |
-| 23.0 | `enemy-shooter` | `line-3` (3) | 0.30 | `slow-descent` | 35.9 .. 88.9 | — |
-| 24.0 | `enemy-shooter` | `line-3` (3) | 0.70 | `slow-descent` | 119.1 .. 172.1 | — |
-| 26.5 | `enemy-basic` | `line-5` (5) | 0.45 | `slow-descent` | 48.1 .. 139.1 | — |
-| 28.0 | `enemy-rush` | `column-3` (3) | 0.20 | `dive` | 37.6 .. 45.6 | — |
-| 28.5 | `enemy-rush` | `column-3` (3) | 0.80 | `dive` | 162.4 .. 170.4 | — |
-| 31.0 | `enemy-carrier` | `single` (1) | 0.50 | `crawl` | 89.0 .. 119.0 | — |
-| 33.0 | `enemy-light` | `vee-5` (5) | 0.35 | `swoop` | 36.3 .. 109.3 | — |
-| 34.5 | `enemy-light` | `vee-5` (5) | 0.65 | `swoop` | 98.7 .. 171.7 | — |
-| 37.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | — |
-| 39.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | — |
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 0.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
+| 2.0 | `enemy-light` | `vee-5` (5) | 0.20 | `swoop` | 5.1 .. 78.1 | -63.5 .. 78.1 **leaves** | — |
+| 3.5 | `enemy-light` | `vee-5` (5) | 0.80 | `swoop` | 129.9 .. 202.9 | 61.3 .. 202.9 | — |
+| 5.0 | `enemy-rush` | `column-3` (3) | 0.35 | `dive` | 68.8 .. 76.8 | same | — |
+| 5.5 | `enemy-rush` | `column-3` (3) | 0.65 | `dive` | 131.2 .. 139.2 | same | — |
+| 8.0 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | `weapon-upgrade` slot 1 |
+| 11.0 | `enemy-basic` | `column-3` (3) | 0.10 | `slow-descent` | 15.3 .. 26.3 | same | — |
+| 11.5 | `enemy-basic` | `column-3` (3) | 0.90 | `slow-descent` | 181.7 .. 192.7 | same | — |
+| 14.0 | `enemy-tank` | `single` (1) | 0.25 | `crawl` | 41.5 .. 62.5 | same | — |
+| 14.5 | `enemy-tank` | `single` (1) | 0.75 | `crawl` | 145.5 .. 166.5 | same | — |
+| 17.0 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | 99.1 .. 206.7 | — |
+| 18.0 | `enemy-light` | `diagonal-mirror` (3) | 0.10 | `swoop` | 1.3 .. 40.3 | -67.3 .. 40.3 **leaves** | — |
+| 20.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 23.0 | `enemy-shooter` | `line-3` (3) | 0.30 | `slow-descent` | 35.9 .. 88.9 | same | — |
+| 24.0 | `enemy-shooter` | `line-3` (3) | 0.70 | `slow-descent` | 119.1 .. 172.1 | same | — |
+| 26.5 | `enemy-basic` | `line-5` (5) | 0.45 | `slow-descent` | 48.1 .. 139.1 | same | — |
+| 28.0 | `enemy-rush` | `column-3` (3) | 0.20 | `dive` | 37.6 .. 45.6 | same | — |
+| 28.5 | `enemy-rush` | `column-3` (3) | 0.80 | `dive` | 162.4 .. 170.4 | same | — |
+| 31.0 | `enemy-carrier` | `single` (1) | 0.50 | `crawl` | 89.0 .. 119.0 | same | — |
+| 33.0 | `enemy-light` | `vee-5` (5) | 0.35 | `swoop` | 36.3 .. 109.3 | -32.3 .. 109.3 **leaves** | — |
+| 34.5 | `enemy-light` | `vee-5` (5) | 0.65 | `swoop` | 98.7 .. 171.7 | 30.1 .. 171.7 | — |
+| 37.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 39.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
 
-**`x extent`** is `atX * 208 + slot.offsetX`, plus and minus the archetype's collider radius
+**`x at spawn`** is `atX * 208 + slot.offsetX`, plus and minus the archetype's collider radius
 (`SpawnSystem.spawnWave`, `SpawnSystem.positionSpawned`). **Nothing clamps it** — a formation
 whose extent leaves `0 .. 208` spawns partly off screen and nobody is told at runtime.
+
+**`x swept` is where it goes**, and for any shape with a `vx` it is the column that matters. A
+spawn-instant extent is a snapshot: `swoop` carries `vx -10` for 6.9 s, so a formation on it ends
+69 units left of where it started, and a `veer-right` placed on the right edge spends its whole
+arc past it. `same` means the shape has no horizontal velocity and the two are identical.
 
 **`shape` is resolved, not copied.** A spawn's own `trajectory` key overrides the archetype's
 `motion.trajectory` and is marked *(override)*; every other row is the archetype default.
@@ -521,7 +611,22 @@ Every check below is a failure that is either silent at runtime or fatal only on
 happens, and each one costs a run of `./gradlew :desktop:run` to find by hand. That is the part of
 this document a generator can do and a human reliably will not.
 
-**No issues found.**
+**What was checked**, so you can tell what is still yours to verify:
+
+- a spawn whose `at` is past its wave’s duration, which never fires
+- a formation whose extent at the spawn instant leaves `0 .. 208`
+- **a spawn whose swept extent is mostly outside `0 .. 208`**, which the spawn-instant extent cannot see, and the veer-side rule when a veer is the cause
+- a `dropSlot` past its formation’s slot count
+- a drop kind outside the six
+- a `cleared` wave holding a shape that never leaves the playfield, so it can never end
+- a negative `offset`, and what it overlaps
+- a boss entering over a running wave, against a lower bound when the wave chain is inexact
+
+**Not checked, and still yours:** whether the level is any good. Density is not difficulty and
+this project tunes balance by playing.
+
+- `l1-carrier-pair`: `enemy-light` in `diagonal-mirror` at `atX 0.15` on `swoop` sweeps -56.9 .. 50.7 over 6.9 s in the playfield — about 53% of that width is outside 0 .. 208. It reads in range at the spawn instant and is not.
+- `l1-finale-a`: `enemy-light` in `diagonal-mirror` at `atX 0.10` on `swoop` sweeps -67.3 .. 40.3 over 6.9 s in the playfield — about 63% of that width is outside 0 .. 208. It reads in range at the spawn instant and is not.
 
 ## The beat map
 
