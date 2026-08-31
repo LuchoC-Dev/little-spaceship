@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 29/08/2026.
+Last updated: 31/08/2026.
 
 Read this first if you are picking the project up. It says where things stand and what comes next; `CLAUDE.md` says how to work here.
 
@@ -9,7 +9,7 @@ Read this first if you are picking the project up. It says where things stand an
 **`main` is now the whole picture, and the game is finished except for shipping it.** The three branches
 that held the MVP were reviewed and merged on 25/08/2026 — sprites (#30), audio (#31), boss (#29) — and
 everything they left unwired was closed the same day, along with a balance pass driven by playing, two
-defects and a UI pass. `./gradlew build` is green and `core` carries **322 tests** on `dev`.
+defects and a UI pass. `./gradlew build` is green and `core` carries **331 tests** on `dev`.
 
 **The MVP is shipped.** The game is live at <https://luchoc-dev.github.io/little-spaceship/>, it runs
 in a browser with no install, and phase 09 closed on 25/08/2026. What follows is polish, and the
@@ -32,9 +32,9 @@ What exists in the repository:
 - ~~`spikes/web-viability/`~~ — **deleted on 27/08/2026 by phase 11a**, on the project owner's decision. It was a throwaway prototype that validated the platform, and the one thing that kept it — `rngcheck/` being the only measurement that `Rng` produces a bit-identical stream under TeaVM — ended when [#52](https://github.com/LuchoC-Dev/little-spaceship/issues/52) moved that check onto the real `core` class in the `:rngparity` subproject (`./gradlew :rngparity:rngParityCheck`), with no copy of `Rng.java` anywhere. **The evidence is not gone, it moved into history:** the last commit containing the directory is `68d002e0560ce40842dc8f72e876fa5fe78bb3ed`, and `git show 68d002e0560c:spikes/web-viability/<path>` still reads any of its files. Every citation of it elsewhere in `docs/` — the benchmark behind `11-technical-prototype-results.md`, the build commands phase 09's plan points at, the working references in phases 01 and 03 — is a dated record of a past phase and stays as written; that commit is what makes them chaseable. Resolved [#5](https://github.com/LuchoC-Dev/little-spaceship/issues/5); see `docs/plan/10a-honest-documentation/decisions.md`, D1.
 - `docs/design/` — the visual direction: the closed `ls32` palette, sprite sizes in pixels per archetype, bitmap typography, HUD layout, legibility rules, and pixel-exact mocks. Synchronisation point 1, settled.
 - `.claude/agents/` — six agent definitions with project-scoped persistent memory.
-- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring, the boss and its six colliders, and phase 11b's wave scheduling, entity lifetime and safety box. **322 tests**, no libGDX on its classpath.
+- `core/` — the ECS, the fixed-step loop, `Rng`, `InputFrame` and the ports, plus motion, collision, the defensive chain, cleanup, the content contracts, the spawner, and phase 05's systems: weapons and their upgrades, power-ups, the attachment, the bomb, `Health` and scoring, the boss and its six colliders, and phase 11b's wave scheduling, entity lifetime and safety box. **331 tests**, no libGDX on its classpath.
 - `game/` and `desktop/` — the LWJGL3 launcher, the input adapter that sums keyboard and relative mouse, an allocation-free renderer reading through `WorldView`, integer-scaled viewport, placeholder art at the sizes the visual direction fixed, the real sprite atlas and bitmap fonts, the Skin, the seven screens, audio, and the JSON content loader. Still no tests ([#19](https://github.com/LuchoC-Dev/little-spaceship/issues/19)). `web/` carries `WebLauncher` and the TeaVM build that ships the live site.
-- `assets/data/` — the content as JSON: six archetypes, four trajectories, **eight** formations, one attachment, and — since phase 11b — **thirteen waves in `waves.json`**, placed by `level-01.json` as fifteen ordered `WavePlacement`s. The level carries no absolute timestamp any more; it still carries the boss.
+- `assets/data/` — the content as JSON: six archetypes, **seven** trajectories, **eight** formations, one attachment, and — since phase 11b — **thirteen waves in `waves.json`**, placed by `level-01.json` as fifteen ordered `WavePlacement`s. The level carries no absolute timestamp any more; it still carries the boss.
 - `.github/workflows/ci.yml` — CI on every push and pull request: compiles, runs the tests, builds the
   desktop and TeaVM web targets. It cannot prove the web build *runs*; a human does that.
 - `README.md` and `LICENSE` (MIT) — written for the repository going public. The licence covers the
