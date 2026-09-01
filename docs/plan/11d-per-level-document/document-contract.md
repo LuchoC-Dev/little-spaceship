@@ -321,9 +321,18 @@ leave the playfield.
 `spreadProjectileSpeed`, `sweepProjectileSpeed`.
 
 **Why the derived half.** `combatY` alone decides whether the boss can hit anything: the spread and
-sweep angles are fixed ratios in `core/domain/system/BossSystem.java:140-143`, all shallower than 45°,
-so every projectile leaves through a side edge and how low it leaves is a pure function of `combatY`.
-Set it wrong and the fight is unlosable with no error anywhere. Likewise the kill target's practical
+sweep angles are fixed ratios in `core/domain/system/BossSystem.java:140-143`, so where a ray is by the
+time it reaches the player's height is a pure function of `combatY`. Set it wrong and the fight is
+unlosable with no error anywhere.
+
+> **Corrected 31/08/2026 by the coordinator's audit, [#192](https://github.com/LuchoC-Dev/little-spaceship/issues/192).**
+> This paragraph read "all shallower than 45°, so every projectile leaves through a side edge", and it
+> was false: the spread's `vy` ratio is `-0.90` against `vx` ratios of `0.25` and `0.45`, so those two
+> rays are steeper than 45° and reach the floor first — at 2.0 s, against 4.4 s and 2.4 s to a side.
+> The generator printed `y at the side edge` for them, giving `-199.4` and `-33.0`: a y below the
+> playfield floor, for a place those projectiles never reach. **The derived figure that answers the
+> question this paragraph asks is where a ray is when it crosses `playerStartY`**, and the section now
+> prints that plus which edge each ray takes, both derived rather than assumed. Likewise the kill target's practical
 health is `2 × coreHealth`, because `core-keel` carries the core's health independently, while the bar
 shows the sum across six parts — so killing pods shortens the bar without shortening the fight.
 

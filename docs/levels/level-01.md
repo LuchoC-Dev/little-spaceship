@@ -553,22 +553,27 @@ Attachment durability, the one content-driven part: `attachment` 1 (`assets/data
 | health of the kill target | 3600 | `2 x coreHealth` — `core-keel` carries the core's health independently |
 | health the bar shows | 5600 | the sum across all 6 parts, so killing pods shortens the bar without shortening the fight |
 
-**How low a shot leaves the playfield**, from `combatY` and the fixed velocity ratios. Every
-ratio is shallower than 45 degrees, so every projectile exits through a side edge and how far
-down it gets is a pure function of `combatY`:
+**Where each ray goes**, from `combatY` and the fixed velocity ratios. `combatY` alone decides
+whether this boss can hit anything, so the two columns that matter are which edge a ray leaves
+through and how far it is from the boss when it crosses the height the player flies at.
 
-| pattern | vx ratio | vx | vy | y at the side edge |
-|---|---|---|---|---|
-| spread | 0.25 | 23.8 | -85.5 | -199.4 |
-| spread | 0.45 | 42.8 | -85.5 | -33.0 |
-| spread | 0.70 | 66.5 | -85.5 | 41.3 |
-| sweep | 0.55 | 77.0 | -91.0 | 52.1 |
-| sweep | 0.75 | 105.0 | -91.0 | 84.9 |
-| sweep | 0.95 | 133.0 | -91.0 | 103.8 |
+| pattern | vx ratio | vx | vy | leaves through | x from the boss at y 30.0 |
+|---|---|---|---|---|---|
+| spread | 0.25 | 23.8 | -85.5 | the floor, 2.0 s | 40.3 |
+| spread | 0.45 | 42.8 | -85.5 | the floor, 2.0 s | 72.5 |
+| spread | 0.70 | 66.5 | -85.5 | a side, 1.6 s | **off the playfield already** |
+| sweep | 0.55 | 77.0 | -91.0 | a side, 1.4 s | **off the playfield already** |
+| sweep | 0.75 | 105.0 | -91.0 | a side, 1.0 s | **off the playfield already** |
+| sweep | 0.95 | 133.0 | -91.0 | a side, 0.8 s | **off the playfield already** |
 
-The ratios and `CORE_SPAWN_Y` are in `core/domain/system/BossSystem.java:74-89,140-151`, not in content. **A `y at the side
-edge` above the player's band around `playerStartY 30.0` means that ray never reaches them**,
-which is how a boss becomes unlosable with no error anywhere.
+The ratios and `CORE_SPAWN_Y` are in `core/domain/system/BossSystem.java:74-89,140-151`, not in content.
+
+**The last column is the one to read.** It is how far to either side of the boss a ray has
+travelled by the time it reaches `playerStartY 30.0`, the height the player starts at, measured
+from the boss's own centre — so a ray whose figure is larger than the half-width, 104, has left
+the playfield before it ever gets down there and threatens nobody. **A boss every one of whose
+rays reads that way is unlosable, with no error anywhere.** Where the player actually stands is
+theirs to choose; this document says only where the rays are.
 
 **`entersAt` is absolute level time**, compared against `BossSystem`'s own clock, which is
 independent of the wave chain. The waves end at 298.0 s and the boss enters at 302.0 s: a 4.0 s gap.
