@@ -25,6 +25,9 @@
   child arrives one whole interval late, so a carrier's health has a floor of `interval x ideal dps`.
 - [Apply the owner's numbers exactly](feedback_apply-owner-numbers-exactly.md) — ship a play-session
   number verbatim and record the disagreement in the fragment; make the JSON say what is true.
+- [Reward cadence in level 1](project_reward-cadence-in-level-one.md) — the generated document charts
+  density and never charts rewards, a second shield stacks with nothing, and why every drop rides a
+  slow archetype.
 - [Wave migration mechanics](project_wave-migration-mechanics.md) — a wave's `FixedDuration` is shared
   across every placement that reuses it, negative offsets overlap two `FixedDuration` waves since 11b, no
   test touches the real `assets/data/level-01.json`, and how to live-run it without a full app context.
