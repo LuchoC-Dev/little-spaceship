@@ -6,11 +6,13 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.BossStatus;
 import dev.luchoc.littlespaceship.core.port.InvulnerabilitySource;
 import dev.luchoc.littlespaceship.core.port.PlayerStatus;
+import dev.luchoc.littlespaceship.core.port.SpriteId;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
 import dev.luchoc.littlespaceship.game.ui.Palette;
 
@@ -46,6 +48,16 @@ import dev.luchoc.littlespaceship.game.ui.Palette;
  * ambiguous without a signal from {@code core} naming the cause. Flashing on every {@code score}
  * increase would fire on every kill too, which is not what the document asks for, so this renderer
  * leaves that one case out rather than guess it.
+ *
+ * <p><b>The life, bomb, shield, invulnerability and module icons</b> are the five {@code icon-*}
+ * regions {@code 04-hud-layout.md}'s "What each slot looks like" names as "specified, not drawn" —
+ * recorded there on 26/08/2026, closed by phase 11f's issue #43. This class resolves them once at
+ * construction through the same {@link SpriteAtlas} {@code WorldRenderer} already uses, and falls
+ * back to the flat rectangle it used to draw whenever a region is missing (an atlas built by {@link
+ * PlaceholderAtlas}, which does not cover HUD glyphs) — the same missing-region tolerance {@code
+ * WorldRenderer} already applies to world sprites, so a checkout with no packed atlas still shows a
+ * legible HUD instead of a null pointer. The power segment has no matching icon in the atlas and
+ * keeps drawing as the flat bars {@code 04-hud-layout.md}'s table already fixes.
  */
 public final class HudRenderer {
 
@@ -80,6 +92,16 @@ public final class HudRenderer {
     private final BitmapFont fontTitle;
     private final Texture pixel;
     private final GlyphLayout layout = new GlyphLayout();
+
+    /**
+     * Resolved once at construction, not per frame — {@code null} whenever the atlas handed in does
+     * not cover that id, in which case the matching draw call falls back to the old flat rectangle.
+     */
+    private final TextureRegion iconLife;
+    private final TextureRegion iconBomb;
+    private final TextureRegion iconShield;
+    private final TextureRegion iconInvuln;
+    private final TextureRegion iconModule;
 
     private final int maxLives;
     private final int maxBombs;
@@ -122,7 +144,7 @@ public final class HudRenderer {
     private int bossRowLossHeight;
     private int bossRowLossTicks;
 
-    public HudRenderer(Skin skin, BalanceValues balance) {
+    public HudRenderer(Skin skin, BalanceValues balance, SpriteAtlas atlas) {
         this.fontMini = skin.getFont("font-mini");
         this.fontTitle = skin.getFont("font-title");
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
@@ -130,6 +152,12 @@ public final class HudRenderer {
         pm.fill();
         this.pixel = new Texture(pm);
         pm.dispose();
+
+        this.iconLife = atlas.region(new SpriteId("icon-life"));
+        this.iconBomb = atlas.region(new SpriteId("icon-bomb"));
+        this.iconShield = atlas.region(new SpriteId("icon-shield"));
+        this.iconInvuln = atlas.region(new SpriteId("icon-invuln"));
+        this.iconModule = atlas.region(new SpriteId("icon-module"));
 
         this.maxLives = balance.maxLives();
         this.maxBombs = balance.maxBombs();
@@ -269,20 +297,28 @@ public final class HudRenderer {
         for (int i = 0; i < maxLives; i++) {
             boolean flashingLost = i == lifeLostIndex && lifeLostTicks > 0;
             boolean filled = i < status.lives() || flashingLost;
-            Color fill = flashingLost ? Palette.N7 : (filled ? Palette.N6 : Palette.N2);
-            Color edge = flashingLost ? Palette.N7 : (filled ? Palette.N0 : Palette.N3);
-            rect(batch, x + i * 12, 24, 9, 9, fill);
-            outline(batch, x + i * 12, 24, 9, 9, edge);
+            if (filled && iconLife != null) {
+                icon(batch, iconLife, x + i * 12, 24, 9, 9, flashingLost ? Palette.N7 : Color.WHITE);
+            } else {
+                Color fill = flashingLost ? Palette.N7 : (filled ? Palette.N6 : Palette.N2);
+                Color edge = flashingLost ? Palette.N7 : (filled ? Palette.N0 : Palette.N3);
+                rect(batch, x + i * 12, 24, 9, 9, fill);
+                outline(batch, x + i * 12, 24, 9, 9, edge);
+            }
         }
 
         label(batch, "BOMBS", x, 44);
         for (int i = 0; i < maxBombs; i++) {
             boolean flashingUsed = i == bombUsedIndex && bombUsedTicks > 0;
             boolean filled = i < status.bombs() || flashingUsed;
-            Color fill = flashingUsed ? Palette.N7 : (filled ? Palette.N6 : Palette.N2);
-            Color edge = flashingUsed ? Palette.N7 : (filled ? Palette.W4 : Palette.N3);
-            rect(batch, x + i * 12, 54, 9, 9, fill);
-            outline(batch, x + i * 12, 54, 9, 9, edge);
+            if (filled && iconBomb != null) {
+                icon(batch, iconBomb, x + i * 12, 54, 9, 9, flashingUsed ? Palette.N7 : Color.WHITE);
+            } else {
+                Color fill = flashingUsed ? Palette.N7 : (filled ? Palette.N6 : Palette.N2);
+                Color edge = flashingUsed ? Palette.N7 : (filled ? Palette.W4 : Palette.N3);
+                rect(batch, x + i * 12, 54, 9, 9, fill);
+                outline(batch, x + i * 12, 54, 9, 9, edge);
+            }
         }
 
         label(batch, "POWER", x, 74);
@@ -299,19 +335,31 @@ public final class HudRenderer {
 
         label(batch, "STATE", x, 104);
         if (status.shieldActive()) {
-            rect(batch, x, 114, 13, 13, Palette.C1);
-            outline(batch, x, 114, 13, 13, Palette.N6);
+            if (iconShield != null) {
+                icon(batch, iconShield, x, 114, 13, 13, Color.WHITE);
+            } else {
+                rect(batch, x, 114, 13, 13, Palette.C1);
+                outline(batch, x, 114, 13, 13, Palette.N6);
+            }
         } else if (shieldLostTicks > 0) {
-            rect(batch, x, 114, 13, 13, Palette.N7);
-            outline(batch, x, 114, 13, 13, Palette.N7);
+            if (iconShield != null) {
+                icon(batch, iconShield, x, 114, 13, 13, Palette.N7);
+            } else {
+                rect(batch, x, 114, 13, 13, Palette.N7);
+                outline(batch, x, 114, 13, 13, Palette.N7);
+            }
         }
 
         // The plate icon is reserved for the power-up per "Invulnerability is shown on the ship, not
         // in the plate": respawn and damage grace periods read on the ship itself, drawn by
         // WorldRenderer, and never touch this widget.
         if (status.invulnerabilitySource() == InvulnerabilitySource.POWERUP) {
-            rect(batch, x + 16, 114, 13, 13, Palette.W4);
-            outline(batch, x + 16, 114, 13, 13, Palette.F1);
+            if (iconInvuln != null) {
+                icon(batch, iconInvuln, x + 16, 114, 13, 13, Color.WHITE);
+            } else {
+                rect(batch, x + 16, 114, 13, 13, Palette.W4);
+                outline(batch, x + 16, 114, 13, 13, Palette.F1);
+            }
             float fraction = powerupDuration > 0f
                 ? status.invulnerabilityRemaining() / powerupDuration : 0f;
             float remainingWidth = 13f * Math.max(0f, Math.min(1f, fraction));
@@ -322,13 +370,21 @@ public final class HudRenderer {
         boolean attachmentLostFlash = attachmentLostTicks > 0 && status.attachmentId().isEmpty();
         if (!status.attachmentId().isEmpty()) {
             label(batch, "MODULE", x, 146);
-            rect(batch, x, 156, 17, 17, Palette.G2);
-            outline(batch, x, 156, 17, 17, Palette.G3);
+            if (iconModule != null) {
+                icon(batch, iconModule, x, 156, 17, 17, Color.WHITE);
+            } else {
+                rect(batch, x, 156, 17, 17, Palette.G2);
+                outline(batch, x, 156, 17, 17, Palette.G3);
+            }
             value(batch, attachmentLabel(status.attachmentId()), x + 22, 161, Palette.N7);
         } else if (attachmentLostFlash) {
             label(batch, "MODULE", x, 146);
-            rect(batch, x, 156, 17, 17, Palette.N7);
-            outline(batch, x, 156, 17, 17, Palette.N7);
+            if (iconModule != null) {
+                icon(batch, iconModule, x, 156, 17, 17, Palette.N7);
+            } else {
+                rect(batch, x, 156, 17, 17, Palette.N7);
+                outline(batch, x, 156, 17, 17, Palette.N7);
+            }
             value(batch, attachmentLabel(attachmentLostId), x + 22, 161, Palette.N7);
         }
     }
@@ -405,6 +461,18 @@ public final class HudRenderer {
         }
         batch.setColor(color);
         batch.draw(pixel, xDown, yGdx(yDown, h), w, h);
+        batch.setColor(Color.WHITE);
+    }
+
+    /**
+     * Draws a HUD glyph at a y-down position, tinted by {@code tint} the same way {@code
+     * WorldRenderer} tints world sprites — a batch colour multiply, not a second texture, so the
+     * N7 flash reuses the exact art the untinted state draws.
+     */
+    private void icon(SpriteBatch batch, TextureRegion region, float xDown, float yDown,
+            float w, float h, Color tint) {
+        batch.setColor(tint);
+        batch.draw(region, xDown, yGdx(yDown, h), w, h);
         batch.setColor(Color.WHITE);
     }
 
