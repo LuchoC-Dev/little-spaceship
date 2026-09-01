@@ -951,3 +951,31 @@ all six atlas ids the two PRs newly reference exist in `assets/atlas/sprites.atl
 `module-satellite:153`, `icon-life:209`, `icon-bomb:216`, `icon-shield:223`, `icon-invuln:230`,
 `icon-module:237`; the null-region HUD fallback is whole-widget (icon or full old rect+outline, never
 a mix); `WorldRenderer.drawAttachment` adds no new mutable field, reusing the same call's `x`/`y`.
+
+48. **A `pauseGameplay()` guarded by `if (!paused)` makes a second entry point (browser pointer-lock
+    loss) safe to call repeatedly without extra guards.** #227 (phase 11f, in-game options) added a
+    second panel state (`buildPauseOptionsPanel()`) swapped in place on the same pause `Stage`, and its
+    own fragment flagged "does the pointer-lock-loss path re-entering pause while options is open
+    double-attach listeners or strand the panel" as unchecked. Traced it: `PlayScreen.render()` only
+    calls `input.sample()`/checks `pointerCaptureLostUnexpectedly()` inside `if (!paused)`, and
+    `pauseGameplay()` itself no-ops when `paused` is already `true` — so once paused (menu or options
+    state), the unexpected-loss branch is never even evaluated again. No double-build, no doubled
+    `MenuNavigator`, no dead end. Worth checking this shape on any future PR that adds a second trigger
+    for an existing state-guarded method: read the guard first, then trace whether the second trigger's
+    call site is itself gated on the same flag.
+49. **An excluded feature's justification checked out because of a *pre-existing* gap the author didn't
+    even cite.** #227 excluded a live mouse-control toggle from the in-game options panel, arguing it
+    "interacts with live pointer-lock state" without pointing at code. Reading `InputAdapter
+    .managePointerCapture` found the actual mechanism: pointer-capture release is gated solely on
+    Escape (`escapeJustPressed && pointerCaptureRequested`), never on `mouseEnabled` going false — so a
+    live toggle-off mid-run would leave the cursor captured/hidden with no release path but pause. The
+    exclusion was sound, but the fragment's own reasoning was vaguer than the code justifies; citing the
+    actual gate would have made "not decided lightly" into "here is the line that would break."
+50. **Octopus-merging two same-phase sibling branches with disjoint file sets in a throwaway detached
+    worktree is a fast, real conflict/build check** — `git worktree add --detach <tmp> <phase-branch>`,
+    then `git merge --no-edit <branchA> <branchB>`, then `./gradlew build -q`, then
+    `git worktree remove --force <tmp>`. Confirms both "do these PRs conflict" and "does the combination
+    still build" in one pass without touching either sub-branch's own worktree. `git worktree remove`
+    can transiently fail with a Windows file-lock ("Permission denied") right after Gradle touched the
+    tree; retrying (or just re-running `git worktree list`) after a couple seconds resolves it — it is
+    not a sign the worktree needs manual cleanup.
