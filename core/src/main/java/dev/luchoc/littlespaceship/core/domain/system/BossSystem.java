@@ -9,6 +9,7 @@ import dev.luchoc.littlespaceship.core.domain.component.ScoreValue;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.entity.EntityId;
+import dev.luchoc.littlespaceship.core.port.BalanceValues;
 import dev.luchoc.littlespaceship.core.port.BossDefinition;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import dev.luchoc.littlespaceship.core.port.SpriteId;
@@ -46,11 +47,13 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * charging parts' {@link Sprite#frame} steps 1, 2, 3 and drops back to 0 the instant the shot leaves,
  * exactly the class javadoc there describes; that is the whole channel presentation needs to draw the
  * charge, so no separate "which part, how far" contract exists on {@link
- * dev.luchoc.littlespaceship.core.port.BossStatus}. Spread charges both pods and each fires a fan of
- * {@link #FAN_COUNT} projectiles outward from it; sweep charges both arms and each fires the same-sized
- * fan converging toward the centre — pods for spread, arms for sweep, per that same design document, so
- * the part that lights still carries the dodge direction: every ray of a fan travels away from its own
- * pod, or toward the centre from its own arm, none of them crossing to the other side.
+ * dev.luchoc.littlespaceship.core.port.BossStatus}. Spread charges both pods, sweep charges both arms —
+ * pods for spread, arms for sweep, per that same design document — and at the instant a tell begins,
+ * {@link #lockAim} freezes the player's current position as the volley's aim point. Each charging part
+ * then fires a fan of {@link #FAN_COUNT} projectiles aimed at that frozen point, not at a fixed outward
+ * or inward angle: {@link #fireAimedFan} and {@link #FAN_SPREAD_RATIOS} carry the geometry and the
+ * reasoning. This is the redesign task 4 of {@code docs/plan/11e-level-one-redesigned/plan.md} asked
+ * for, replacing the fixed-angle fan that always missed a player parked at screen centre.
  *
  * <p><b>Defeat.</b> The core is the only part whose death ends the fight: once it is destroyed,
  * whatever keel, pods or arms remain are destroyed with it — a boss does not linger as a headless
@@ -112,35 +115,45 @@ public final class BossSystem implements GameSystem {
     private static final float TELL_DURATION = BEATS * BEAT_DURATION;
 
     /**
-     * How many projectiles each charging part fires in one volley, fanned across the ratios below.
+     * How many projectiles each charging part fires in one volley, fanned around the aim direction.
      * A design constant rather than a {@link BossDefinition} field: the shape of a volley is footprint,
-     * the same reasoning that keeps the part radii and offsets above out of content. Two per volley (one
-     * pod, one arm side, no fan) proved undodgeable-because-trivial in play at level 1's tuned
-     * {@code patternCooldown} — content's own lever was already spent lowering that cooldown, so the
-     * fix has to change the shape a volley takes instead of how often it comes. Three was chosen over a
-     * wider fan by playing it: it triples volley density (six projectiles instead of two) while the
-     * fanned rays stay far enough apart, at the speeds {@code 10-mvp-initial-values.md} tunes, for a
-     * player who reads the tell correctly to still find a gap — a wider fan starts to close every gap at
-     * once, which is a coin flip rather than a dodge.
+     * the same reasoning that keeps the part radii and offsets above out of content.
+     *
+     * <p><b>Redesigned per {@code docs/STATUS.md}'s 25/08 diagnosis</b> — the previous, fixed-angle fan
+     * always pointed outward (spread) or inward (sweep), so a player parked at screen centre was never
+     * threatened by either pattern: a positioning problem solved once, not a dodge. This fan is now
+     * built around a direction aimed at the player, locked once per volley (see {@link #lockAim}), and
+     * widened from three rays to five — the suggestion recorded in {@code
+     * docs/plan/11e-level-one-redesigned/plan.md}'s task 4 — rather than raising density again, which
+     * {@code docs/STATUS.md} already tried (three rays per part) and found barely moved the difficulty.
      */
-    private static final int FAN_COUNT = 3;
+    private static final int FAN_COUNT = 5;
 
     /**
-     * How far a spread shot fans out sideways versus how fast it falls, and the same pair for a sweep
-     * shot converging inward. Each array holds {@link #FAN_COUNT} ratios, narrowest to widest, fired
-     * from the same origin in the same tick — a fan, not a spray, built from fixed constants like
-     * {@code WeaponSystem.SHOT_SPACING}; {@link BossDefinition} supplies the speed each ratio scales,
-     * not the shape itself. Fixed ratios rather than a runtime {@code Math.sin}/{@code cos} on purpose:
-     * a transcendental function is not guaranteed to produce the identical float on the JVM and under
-     * TeaVM, which a replay cannot afford. The vertical ratio is not fanned — varying the horizontal
-     * ratio alone already produces distinct rays from a shared origin, and keeping the vertical speed
-     * uniform is what keeps every ray of a volley reaching the player's height at a predictable, readable
-     * cadence instead of arriving in a jumble.
+     * How far each ray of a volley strays from the straight line to the locked aim point, as a
+     * fraction of that line's own length, applied along the perpendicular to it — narrowest (the
+     * centre ray, dead on the aim point) to widest. Five values, matching {@link #FAN_COUNT}, kept
+     * symmetric so the fan reads as centred on the player rather than biased to one side.
+     *
+     * <p>Built from vector arithmetic alone — addition, multiplication, {@link Math#sqrt} to
+     * renormalise — never {@code Math.sin}/{@code cos}, for the same reason the previous fixed-ratio
+     * fan avoided them: a transcendental function is not guaranteed to produce the identical float on
+     * the JVM and under TeaVM, which a replay cannot afford. {@code Math.sqrt} is IEEE-754 exact and
+     * already used this way elsewhere in {@code core} ({@code MotionSystem}'s velocity cap), so it
+     * carries no such risk.
      */
-    private static final float[] SPREAD_VX_RATIOS = {0.25f, 0.45f, 0.70f};
-    private static final float SPREAD_VY_RATIO = -0.90f;
-    private static final float[] SWEEP_VX_RATIOS = {0.55f, 0.75f, 0.95f};
-    private static final float SWEEP_VY_RATIO = -0.65f;
+    private static final float[] FAN_SPREAD_RATIOS = {-0.6f, -0.3f, 0f, 0.3f, 0.6f};
+
+    /**
+     * The aim point locked at the instant a pattern's tell begins — see {@link #lockAim} — read by
+     * every ray of the volley that tell resolves into. Locking once, at the start of the 0.75 s tell
+     * rather than at the fire instant, is what keeps the tell honest under an aimed attack: the player
+     * dodges a point fixed before the tell started reacting to them, with the same 0.75 s reaction
+     * window the un-aimed fan already gave, rather than a shot that keeps re-aiming at wherever they
+     * are the instant it fires.
+     */
+    private float aimX;
+    private float aimY;
 
     /**
      * The core's spawn height: comfortably above the playfield edge as seen through the lowest part
@@ -313,18 +326,42 @@ public final class BossSystem implements GameSystem {
 
     private void updateFight(World world, BossDefinition def, float step) {
         switch (fightStage) {
-            case COOLDOWN -> updateCooldown(def, step);
+            case COOLDOWN -> updateCooldown(world, def, step);
             case TELLING -> updateTelling(world, def, step);
         }
         reportStatus(world, def);
     }
 
-    private void updateCooldown(BossDefinition def, float step) {
+    private void updateCooldown(World world, BossDefinition def, float step) {
         stageTimer -= step;
         if (stageTimer <= 0f) {
             fightStage = FightStage.TELLING;
             stageTimer = 0f;
             currentPattern = nextPattern;
+            lockAim(world);
+        }
+    }
+
+    /**
+     * Reads the player's current position, through the same fixed step every other system reads the
+     * world under, and holds it in {@link #aimX}/{@link #aimY} for the whole tell and the volley it
+     * resolves into. Called exactly once per pattern cycle, at the instant the tell begins — see the
+     * class javadoc on {@link #FAN_SPREAD_RATIOS} for why locking here rather than at fire time is
+     * what keeps the tell honest.
+     *
+     * <p>No player entity — the boss level's own test fixtures routinely omit one — falls back to the
+     * playfield's horizontal centre at {@code playerStartY}, {@link BalanceValues}' own content value
+     * rather than a hardcoded one, so the fan still points somewhere plausible instead of at (0, 0).
+     */
+    private void lockAim(World world) {
+        int player = world.playerEntity();
+        Transform transform = player == EntityId.NONE ? null : world.transforms().get(player);
+        if (transform != null) {
+            aimX = transform.x;
+            aimY = transform.y;
+        } else {
+            aimX = MotionSystem.PLAYFIELD_WIDTH / 2f;
+            aimY = world.content().balance().playerStartY();
         }
     }
 
@@ -365,29 +402,27 @@ public final class BossSystem implements GameSystem {
 
     private void fire(World world, BossDefinition def, BossPattern pattern) {
         if (pattern == BossPattern.SPREAD) {
-            fireFan(world, podLeft, SPREAD_VX_RATIOS, -1f, SPREAD_VY_RATIO, def.spreadProjectileSpeed());
-            fireFan(world, podRight, SPREAD_VX_RATIOS, 1f, SPREAD_VY_RATIO, def.spreadProjectileSpeed());
+            fireAimedFan(world, podLeft, def.spreadProjectileSpeed());
+            fireAimedFan(world, podRight, def.spreadProjectileSpeed());
         } else {
-            fireFan(world, armLeft, SWEEP_VX_RATIOS, 1f, SWEEP_VY_RATIO, def.sweepProjectileSpeed());
-            fireFan(world, armRight, SWEEP_VX_RATIOS, -1f, SWEEP_VY_RATIO, def.sweepProjectileSpeed());
+            fireAimedFan(world, armLeft, def.sweepProjectileSpeed());
+            fireAimedFan(world, armRight, def.sweepProjectileSpeed());
         }
     }
 
     /**
-     * Fires {@link #FAN_COUNT} projectiles from the same part in the same tick, one per ratio in
-     * {@code vxRatios}, all sharing {@code vyRatio}. {@code side} carries the pattern's fixed left/right
-     * sign — {@code -1} or {@code 1} — so the same ratio table serves both pods or both arms while
-     * keeping a left pod's fan pointed left and a right pod's pointed right, exactly as the un-fanned
-     * volley did.
+     * Fires {@link #FAN_COUNT} projectiles from {@code part} in the same tick, fanned around the
+     * straight line from {@code part}'s own current position to the aim point {@link #lockAim} froze
+     * for this volley — not around a fixed outward or inward angle, which is exactly the change this
+     * method exists for. Both a spread pod and a sweep arm call this the same way; the two patterns
+     * differ only in which parts fire and at what speed, not in how a volley is shaped.
+     *
+     * <p>Each ray takes the unit aim direction, adds a multiple of its perpendicular — {@link
+     * #FAN_SPREAD_RATIOS}, narrowest to widest — and renormalises, so every ray still travels at
+     * exactly {@code speed} regardless of how far it strays from dead-on. The centre ratio, {@code 0f},
+     * reproduces the un-fanned aim direction exactly.
      */
-    private static void fireFan(
-        World world, int part, float[] vxRatios, float side, float vyRatio, float speed) {
-        for (float vxRatio : vxRatios) {
-            fireFrom(world, part, side * vxRatio * speed, vyRatio * speed);
-        }
-    }
-
-    private static void fireFrom(World world, int part, float vx, float vy) {
+    private void fireAimedFan(World world, int part, float speed) {
         if (part == EntityId.NONE || !world.isAlive(part)) {
             // The charging part died mid-tell: that side of the attack simply does not fire. The
             // cycle still completes and alternates normally.
@@ -397,6 +432,31 @@ public final class BossSystem implements GameSystem {
         if (origin == null) {
             return;
         }
+        float dx = aimX - origin.x;
+        float dy = aimY - origin.y;
+        float lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared < 1e-6f) {
+            // The locked aim point sits (almost) on top of the firing part — degenerate only, never
+            // observed in play at this boss's footprint, but a direction must still be well defined.
+            // Straight down, toward where the player always is relative to the boss.
+            dx = 0f;
+            dy = -1f;
+            lengthSquared = 1f;
+        }
+        float length = (float) Math.sqrt(lengthSquared);
+        float ux = dx / length;
+        float uy = dy / length;
+        float perpX = -uy;
+        float perpY = ux;
+        for (float ratio : FAN_SPREAD_RATIOS) {
+            float rx = ux + ratio * perpX;
+            float ry = uy + ratio * perpY;
+            float rayLength = (float) Math.sqrt(rx * rx + ry * ry);
+            fireFrom(world, origin, speed * rx / rayLength, speed * ry / rayLength);
+        }
+    }
+
+    private static void fireFrom(World world, Transform origin, float vx, float vy) {
         int projectile = world.createEntity();
         world.transforms().set(projectile, new Transform(origin.x, origin.y));
         world.motions().set(projectile, new Motion(vx, vy));
