@@ -18,3 +18,5 @@
 - [waves.json loader: a load-time flattening bridge that existed briefly, then was deleted](project_wave-loader-flattening-bridge.md) — what happens when a core contract lands before its consumer.
 - [SpawnEvent's "trajectory" key is read but deliberately not validated at load time](project_spawn-event-trajectory-override.md) — matches how enemyId/formationId already resolve lazily, in SpawnSystem.
 - [Pointer lock loss detection](project_pointer-lock-loss-detection.md) — poll `isCursorCatched()` against the self-set flag; pause reuses the existing overlay instead of new UI; real-browser check still open.
+- [HUD icon wiring and a satellite with no core entity](project_hud-icon-wiring-and-satellite-with-no-core-entity.md) — #43 was pure wiring against packed atlas art; Attachment has no Transform, so the satellite piggybacks on the player's own draw call; shield has no on-ship sprite by design.
+- [An agent must not play the game to verify a fix](feedback_agent-must-not-play-the-game-to-verify.md) — project owner correction: launch to confirm the menu renders, then stop; playing to a wave/pickup/state is the owner's job, not this agent's.
