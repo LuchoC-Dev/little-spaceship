@@ -93,7 +93,7 @@ public final class PlayScreen implements Screen {
         input = new InputAdapter(viewport);
 
         content = new JsonContentSource(Gdx.files.internal("data"), game.levelId());
-        hudRenderer = new HudRenderer(game.skin(), content.balance());
+        hudRenderer = new HudRenderer(game.skin(), content.balance(), atlas);
         // AudioDirector doubles as the simulation's GameEventSink — see its javadoc — so it must
         // exist before Simulation does.
         audioDirector = new AudioDirector(game.audio());
