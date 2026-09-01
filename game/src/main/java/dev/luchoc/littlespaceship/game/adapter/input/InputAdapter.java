@@ -37,6 +37,7 @@ public final class InputAdapter {
     private final Viewport viewport;
 
     private boolean pointerCaptureRequested;
+    private boolean pointerCaptureLostUnexpectedly;
 
     public InputAdapter(Viewport viewport) {
         if (viewport == null) {
@@ -126,20 +127,47 @@ public final class InputAdapter {
     }
 
     /**
+     * True for exactly the frame the browser revoked pointer lock on its own — a notification,
+     * alt-tab, or a click outside the canvas can all do this without the game asking. Distinguished
+     * from the player's own Escape release in {@link #managePointerCapture(boolean)}: only this path
+     * should pause the game, because the deltas {@link #mouseX(float)}/{@link #mouseY(float)} would
+     * otherwise keep reading now come from a free cursor rather than a locked one, which is exactly
+     * the bug in issue #41.
+     */
+    public boolean pointerCaptureLostUnexpectedly() {
+        return pointerCaptureLostUnexpectedly;
+    }
+
+    /**
      * Captures the pointer on the first click, which is both what a relative mouse needs to keep
      * producing deltas past the window edge and what the browser's Pointer Lock API requires before
-     * it will engage. Escape releases it, so the player is never stuck without a visible cursor.
+     * it will engage. Escape releases it deliberately, so the player is never stuck without a
+     * visible cursor.
+     *
+     * <p>The browser can also revoke the lock on its own, without the game asking — that is the case
+     * {@code isCursorCatched()} exists to observe rather than trust {@link #pointerCaptureRequested},
+     * a flag this class set itself and has no way to know the browser overrode. This method is the
+     * one place that distinguishes the two: Escape sets {@link #pointerCaptureLostUnexpectedly} to
+     * false, an unasked-for revocation sets it to true, for
+     * {@link dev.luchoc.littlespaceship.game.screen.PlayScreen} to react to.
      */
     private void managePointerCapture(boolean mouseEnabled) {
+        pointerCaptureLostUnexpectedly = false;
+        boolean escapeJustPressed = Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
+
         if (mouseEnabled && !pointerCaptureRequested
             && (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)
                 || Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT))) {
             Gdx.input.setCursorCatched(true);
             pointerCaptureRequested = true;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && pointerCaptureRequested) {
+
+        if (escapeJustPressed && pointerCaptureRequested) {
             Gdx.input.setCursorCatched(false);
             pointerCaptureRequested = false;
+        } else if (pointerCaptureRequested && !Gdx.input.isCursorCatched()) {
+            pointerCaptureRequested = false;
+            pointerCaptureLostUnexpectedly = true;
         }
     }
 }
