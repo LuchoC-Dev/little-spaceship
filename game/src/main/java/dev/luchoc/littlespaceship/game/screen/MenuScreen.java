@@ -1,5 +1,6 @@
 package dev.luchoc.littlespaceship.game.screen;
 
+import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -27,7 +28,13 @@ public final class MenuScreen extends BaseUiScreen {
         MenuEntries.add(content, game, skin, "PLAY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
         MenuEntries.add(content, game, skin, "OPTIONS",
             () -> game.setScreen(new OptionsScreen(game, () -> new MenuScreen(game))), focusables);
-        MenuEntries.add(content, game, skin, "QUIT", Gdx.app::exit, focusables);
+        // On the web target, Gdx.app.exit() does nothing: a script may not close a tab it did not
+        // itself open. QUIT keeps its slot but leads to a farewell screen there instead of exiting;
+        // see FarewellScreen's class javadoc and issue #40.
+        Runnable quit = Gdx.app.getType() == ApplicationType.WebGL
+            ? () -> game.setScreen(new FarewellScreen(game))
+            : Gdx.app::exit;
+        MenuEntries.add(content, game, skin, "QUIT", quit, focusables);
         new MenuNavigator(stage, focusables);
 
         Table footerRow = new Table();
