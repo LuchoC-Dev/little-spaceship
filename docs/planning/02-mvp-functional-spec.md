@@ -22,7 +22,10 @@ The MVP is not the full campaign. It is a vertical slice: every system needed to
 
 - Play.
 - Options.
-- Quit.
+- Quit. **Its meaning now depends on the target** — see "Menu and screens, 01/09/2026" in
+  `08-decisions-and-open-items.md`. On desktop it exits (`Gdx.app::exit`). On the web target a browser
+  tab cannot close itself, so it opens `game/screen/FarewellScreen.java` with a way back to the menu.
+  The entry itself, its label and its position are the same on both.
 
 Locked future modes and “coming soon” buttons will not be shown.
 
@@ -45,7 +48,10 @@ Locked future modes and “coming soon” buttons will not be shown.
 
 - Simple symbol or button.
 - Freezes gameplay, enemies, projectiles, relevant animations and timers.
-- No full pause menu.
+- ~~No full pause menu.~~ **Superseded on 01/09/2026** — see "In-game options, 01/09/2026" in
+  `08-decisions-and-open-items.md`. The panel offers RESUME, OPTIONS and QUIT TO MENU, and OPTIONS
+  swaps the panel's contents in place for the three volume sliders rather than opening a screen.
+  `game/screen/PlayScreen.java`. It is still not a full menu: only volume is reachable mid-run.
 
 ### Defeat
 
