@@ -906,3 +906,48 @@ disclosed judgement call.
   fragment's "every wave is `fixedDuration` on purpose" reasoning. `tools/pre-pr-check --base
   phase/11e-level-one-redesigned` reproduced the PR body's pasted output verbatim, including the real
   `./gradlew build` pass.
+
+## PRs #221 (`fix/pointer-lock-recovery`, #41) and #224 (`feat/shield-attachment-visible`, #43), phase 11f — both accept, one real second-guess finding
+
+Both branches touch `PlayScreen.java` in disjoint regions (#221 the `render()` body, #224 one line in
+`show()`); merged both into a scratch worktree (`git worktree add ... --detach phase/11f-web-defects`,
+two plain `git merge --no-edit`s) with zero conflicts, and `./gradlew clean build -q` on the merge
+result was green across all five modules. Worth recording as the technique: don't reason about whether
+two diffs "should" combine, actually merge them.
+
+46. **A same-call read-after-write of a platform-reported flag, right after requesting the change that
+    flag reports.** `InputAdapter.managePointerCapture` requests pointer capture
+    (`Gdx.input.setCursorCatched(true)`) and, in the same method invocation, falls through to `else if
+    (pointerCaptureRequested && !Gdx.input.isCursorCatched())` — which, if the platform's capture grant
+    is not synchronous (Pointer Lock in a real browser is asynchronous; a JS `requestPointerLock()`
+    call resolves via a later `pointerlockchange` event, not before the calling frame returns), would
+    read the not-yet-confirmed state on the very same frame and immediately fire "unexpectedly lost",
+    pausing the game the instant the player clicks to engage the mouse. Confirmed the code shape by
+    reading the method top to bottom (`if (mouseEnabled && !pointerCaptureRequested && click) { ... }`
+    falls through with no `return`/`else`, straight into the `if (escapeJustPressed...) else if
+    (pointerCaptureRequested && !isCursorCatched())` pair). Could not confirm or refute the TeaVM/GWT
+    backend's actual synchrony for `setCursorCatched`/`isCursorCatched` from this environment (would
+    need the gdx-teavm backend source, not present in this repo; searching the Gradle cache for the jar
+    timed out) — this is the "unverifiable is not the same as wrong" shape from
+    [[audit-techniques]], reported as a suspicion worth a one-line guard (skip the unexpected-loss
+    check on the same call that just requested capture) rather than a confirmed defect.
+47. **A design document read narrowly by a PR turned out to be read correctly, confirmed by checking
+    both the doc and the atlas.** #224 argues `04-hud-layout.md`'s "Invulnerability is shown on the
+    ship, not in the plate" is scoped to the three `InvulnerabilitySource` grace periods (respawn,
+    damage-absorbed, power-up) and not to `shieldActive`'s own persistent HUD icon, and that no
+    shield-ring sprite exists to draw on the ship instead. Both checked out: the document's own "on the
+    ship" table lists exactly those three named sources and nothing else, and `assets/atlas/
+    sprites.atlas` has `pickup-shield` (the drop capsule) and `icon-shield` (the HUD glyph, now wired)
+    but no third, on-ship shield-ring id. A deliberate omission argued from a document is worth
+    re-reading against the document before accepting *or* rejecting it — this one held.
+
+Calibration in both directions: keyboard-only play cannot trigger the pointer-loss pause at all
+(`pointerCaptureRequested` only ever becomes `true` inside the `mouseEnabled` branch), Escape's
+deliberate release and the unexpected-loss branch are mutually exclusive on the same call (`if`/`else
+if`, no case where both fire), and skipping `loop.advance` for the lost-lock frame is exactly the
+existing pause semantics (`audioDirector.update`/outcome-check already sit inside the same `if
+(!paused)` block) — not a new hole in accumulated fixed-step time or the outcome check. Also confirmed:
+all six atlas ids the two PRs newly reference exist in `assets/atlas/sprites.atlas` at the lines
+`module-satellite:153`, `icon-life:209`, `icon-bomb:216`, `icon-shield:223`, `icon-invuln:230`,
+`icon-module:237`; the null-region HUD fallback is whole-widget (icon or full old rect+outline, never
+a mix); `WorldRenderer.drawAttachment` adds no new mutable field, reusing the same call's `x`/`y`.
