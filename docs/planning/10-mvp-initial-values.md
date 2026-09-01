@@ -39,7 +39,7 @@ Nothing here fixes where the ship starts a run, only that it is inside the 208x2
 
 `12-architecture.md` names `Health` as a component ("health points, enemies and boss") and shows `{"points": 40}` as a tank's value in its JSON schema example, but that `40` is illustrative there, not a decided balance number — no enemy hit-point value appears anywhere else in this document. Phase 05 needed `Health` to exist for a weapon upgrade to mean anything beyond more projectiles and for the bomb to be able to damage a tank or a heavy carrier instead of leaving them untouched, so it built the component and added `BalanceValues.weaponProjectileDamage()` and `.bombDamage()`, with placeholder values of 10 and 50. They are in `balance.json`. **Open, not decided:**
 
-- per-archetype `Health` points for the level 1 roster (basic, light, shooter, rush, tank, carrier) and the boss. **A candidate set was proposed on 01/09/2026 in phase 11e and is in `assets/data/enemies.json`: basic 30, light 20, shooter 40, tank 300, carrier 1000, rush none.** It replaces the earlier placeholders (tank 40, carrier 80, and no `"health"` at all on the four fragile archetypes). It is a candidate, not a decision — the reasoning behind each number, and what a play session has to confirm, is in "Enemy health against the level's own pacing" below;
+- per-archetype `Health` points for the level 1 roster (basic, light, shooter, rush, tank, carrier) and the boss. **Decided on 01/09/2026 by the project owner after a play session, and in `assets/data/enemies.json`: basic 20, shooter 30, tank 200, carrier 700, and no `"health"` component at all on light or rush.** It replaces the candidate set proposed the same day (basic 30, light 20, shooter 40, tank 300, carrier 1000) and, before that, the original placeholders (tank 40, carrier 80, nothing on the fragile archetypes). The reasoning, and what the next play session has to check, is in "Enemy health against the level's own pacing" below;
 - `weaponProjectileDamage` and `bombDamage`.
 
 Per `01-vision-and-scope.md`'s "difficulty through pressure" principle, these are **not** meant to become difficulty dials — difficulty "must not depend only on raising health and damage." They are fixed per-shot/per-detonation constants, tuned once against real gameplay, not values that scale with a difficulty setting that does not exist yet in the MVP anyway.
@@ -56,10 +56,10 @@ there is a playable build to tune them against, and record the result here.
 ### Boss numbers — missing
 
 `BossDefinition` needs thirteen values and this document had no boss row when phase 07 wrote them.
-`level-01.json` carries a starting set so the fight exists at all: `entersAt 302`, `coreHealth 1800`,
+`level-01.json` carries a starting set so the fight exists at all: `entersAt 134.5`, `coreHealth 1800`,
 `podHealth 500`, `armHealth 500`, `corePoints 1500`, `podPoints 500`, `armPoints 500`,
-`entranceSpeed 25`, `combatY 175`, `patternCooldown 0.7`, `spreadProjectileSpeed 95`,
-`sweepProjectileSpeed 140`. **Open, not decided**, with four things worth knowing before they are
+`entranceSpeed 25`, `combatY 175`, `patternCooldown 0.7`, `spreadProjectileSpeed 85`,
+`sweepProjectileSpeed 125`. **Open, not decided**, with five things worth knowing before they are
 retuned:
 
 - `patternCooldown` was **1.3 and is now 0.7**, changed on 25/08/2026 after a play session, which
@@ -67,6 +67,12 @@ retuned:
   value on this page that has been through the "tuned by playing" loop, and it was not written back
   here — which is what the sentence at the top of this document exists to prevent. Recorded
   26/08/2026 by phase 10a.
+
+- `spreadProjectileSpeed` was **95 and is now 85**, and `sweepProjectileSpeed` was **140 and is now
+  125**, lowered on 01/09/2026 after the phase 11e play session (issue #210). The owner called the
+  boss's difficulty ideal and asked only for a minimum step down in shot speed; nothing else about the
+  fight moved. `entersAt` moved from 139.5 to 134.5 in the same change, purely because two waves were
+  removed from the level and the chain shifted 5.0 s forward — it is not a difficulty decision.
 
 - The fight ends when the core dies, and `core-keel` carries the core's own health, so its length is
   governed by `2 * coreHealth` divided by whatever damage the player lands on the central column —
@@ -80,62 +86,94 @@ retuned:
 - The points sum to exactly 5000, this document's figure for the boss, counting `corePoints` twice —
   once for the core, once for `core-keel`.
 
-### Heavy carrier's spawner — missing
+### Heavy carrier's spawner — `interval` decided 01/09/2026
 
 `Spawner` needs four values per holder and this document had none. `enemies.json` gives
-`enemy-carrier`: `enemyId enemy-basic`, `interval 4.0`, `offsetX 0`, `offsetY -24`. **Open, not
-decided.** The reasoning behind each is recorded in `docs/plan/07-boss/status.md`; the one that is a
+`enemy-carrier`: `enemyId enemy-basic`, **`interval 3.0`**, `offsetX 0`, `offsetY -24`. The interval
+was 4.0 and had never been played against; the project owner lowered it on 01/09/2026, after the
+carrier's health came down to 700 and the arithmetic below showed the carrier dying before its first
+child under ideal fire. **The fix was applied to the mechanism rather than to the health**, so the
+difficulty the owner approved in the same session stays where they put it. The other three remain
+**open, not decided.** The reasoning behind each is recorded in `docs/plan/07-boss/status.md`; the one that is a
 design choice rather than a tuning knob is `offsetX 0`, which puts a carrier's children in the same
 column the player must occupy to damage it.
 
-### Enemy health against the level's own pacing — a candidate set, proposed 01/09/2026
+### Enemy health against the level's own pacing — decided 01/09/2026
 
 Recorded here by the content lane, because it is a balance number that a pacing decision depends on.
 
-**The problem, as it stood.** At `weaponProjectileDamage` 10 and `weaponFireCooldown` 0.15, one
-stream of player fire does about 67 damage per second. Against the old placeholders that made a heavy
-carrier (80 hp) die in about 1.2 s and a tank (40 hp) in under one, while `level-01.json` reserves
-28 s and 37 s for the carrier stretches and 20 s for the tank's. The carrier's `spawner` fires every
-4.0 s, so **at 80 hp the carrier died before producing a single child — its entire designed mechanism
-never happened.** The four fragile archetypes carried no `Health` at all, so `enemy-basic`'s "low
-health and a slow shot" could not be told from `enemy-shooter`'s fast one: neither lived long enough
-to fire twice under fire.
+**Decided, not a candidate.** The project owner played the phase 11e candidate on 01/09/2026 and
+reported that the basic took three shots and that the level was hard until the first `weapon-upgrade`,
+while everything after that upgrade was hard *but acceptable for the genre*. Asked how far to take the
+correction, they chose all of it: every health value below came down, and `enemy-light` lost its
+component outright. The session is in `docs/plan/11e-level-one-redesigned/status/201-play-session.md`;
+the change is issue #210. This supersedes the candidate set proposed on the same day, which had basic
+30, light 20, shooter 40, tank 300 and carrier 1000.
+
+**The problem the candidate was solving, for context.** At `weaponProjectileDamage` 10 and
+`weaponFireCooldown` 0.15, one stream of player fire does about 67 damage per second. Against the
+original placeholders that made a heavy carrier (80 hp) die in about 1.2 s and a tank (40 hp) in under
+one. The carrier's `spawner` fires every 4.0 s and its timer starts at `interval`
+(`core/domain/component/Spawner.java:52`), so **at 80 hp the carrier died before producing a single
+child — its entire designed mechanism never happened.** The four fragile archetypes carried no
+`Health` at all, so `enemy-basic`'s "low health and a slow shot" could not be told from
+`enemy-shooter`'s fast one.
 
 **"Projectiles to kill" is not "trigger pulls to kill", and the column in `docs/levels/level-01.md`
 counts projectiles.** `core/domain/system/WeaponSystem.java:96` fires 1, 2, 3 and 5 parallel
 projectiles at shot levels 1 to 4, spaced 3 units apart, so one pull lands **all** of them on any
 target wider than about 12 units — which is every archetype in the roster. A pull is therefore worth
-10, 20, 30 or 50 damage, and the table below is written against a single projectile. Concretely, at
-shot level 4 a basic, a light and a shooter all die to one pull whatever their `Health` says. Level 1
-hands out `weapon-upgrade` at 21.0 s, 133.5 s and 256.0 s, so the fragile numbers below read as
-written for the first ~130 s — the stretch where those archetypes are introduced — and collapse to
-one pull afterwards. That is the weapon upgrade doing its job, not the numbers failing, but it is the
-reason `enemy-basic`'s rate-of-fire contrast can only be judged early in the level.
+10, 20, 30 or 50 damage, for an ideal sustained 67 / 133 / 200 / 333 damage per second, and the table
+below is written against a single projectile. Level 1 now hands out `weapon-upgrade` at 11.0 s,
+48.0 s and 86.0 s, so a player who takes all three holds shot level 2 from 11.0 s, level 3 from 48.0 s
+and level 4 from 86.0 s. The fragile numbers below therefore read as written only in the opening
+stretch and collapse to one pull afterwards — the weapon upgrade doing its job, not the numbers
+failing.
 
-**The candidate, in `assets/data/enemies.json`.** Derived columns for all of it are in the Roster
+**The decided set, in `assets/data/enemies.json`.** Derived columns for all of it are in the Roster
 section of `docs/levels/level-01.md`, which is generated by `tools/build-level-docs.js`.
 
-| archetype | health | projectiles to kill | reasoning |
+| archetype | health | projectiles to kill | note |
 |---|---|---|---|
-| `enemy-rush` | none | 1 | Unchanged. Its threat is the ram and a 3.4 s screen time on `dive`, not resistance, and one of the play session's four watch-items is about its single shot per pass — moving its health mid-flight would change what that question measures. |
-| `enemy-light` | 20 | 2 | The least durable thing that is not a one-hit kill. Its pressure is a 130 u/s projectile and a 6.9 s pass, so it must stay flimsy — but 2 makes a `vee-5` cost ten projectiles rather than five, which is the whole point of flying it in fives. |
-| `enemy-basic` | 30 | 3 | The spec's "low health": three projectiles is 0.30 s of held fire at shot level 1, so killing one is an act rather than a reflex, and a `line-3` costs nine. Above 10, so it is not the no-op the plan's "2–3" would have produced read as points. |
-| `enemy-shooter` | 40 | 4 | Not named by the task, changed for coherence. Leaving it at one hit while the basic took three would have **inverted** the contrast the spec asks for: the bigger, faster-firing archetype would have died first and the basic would have outlived it. |
-| `enemy-tank` | 300 | 30 | "A few hundred", the order of magnitude this section already recorded. 4.5 s of held fire at shot level 1 against a 20 s stretch and a 31 s pass: enough to force the priority shift the beat is built on, not enough to be a wall. |
-| `enemy-carrier` | 1000 | 100 | The ~1000 this section already derived for "roughly 15 s of sustained fire" at 67 dps. At the shot level the player realistically holds when carriers first appear it is around 5 s of ideal fire out of a 28 s stretch, so **the carrier now produces children while being shot at**, which is the pressure the beat was designed around. |
+| `enemy-rush` | none | 1 | Unchanged, and never had a component. Its threat is the ram and a 3.4 s screen time on `dive`, not resistance. |
+| `enemy-light` | none | 1 | **The component was removed rather than lowered.** `core/domain/system/DamageSystem.java` makes any value at or below `weaponProjectileDamage` behave exactly like no component, so a `health` of 10 would have been a no-op that read in the JSON as a decision. The JSON now says what is true. |
+| `enemy-basic` | 20 | 2 | Was 30. The owner's report was specifically that three shots for the basic was too many; two keeps killing one an act rather than a reflex, and a `line-3` costs six projectiles instead of nine. |
+| `enemy-shooter` | 30 | 3 | Was 40. Still strictly above the basic, which is the contrast `02-mvp-functional-spec.md` asks for: the bigger, faster-firing archetype must not die first. |
+| `enemy-tank` | 200 | 20 | Was 300. 3.0 s of held fire at shot level 1, 1.0 s at level 3, against a 12 s beat and a 31 s pass. |
+| `enemy-carrier` | 700 | 70 | Was 1000. See the warning below — this is the number to watch in the next session. |
 
-**This is a candidate and not a decision.** Balance here is settled by playing — decided twice, on
-22/08 and 25/08 — so these numbers stand until the session that phase 11e's plan asks for either
-confirms them or moves them.
+**The carrier at 700 is the one number this change puts at risk, and the arithmetic says it fails
+under ideal fire.** The mechanism the beat is built on needs the carrier to live one
+`Spawner` interval before its first child. **That interval was lowered from 4.0 s to 3.0 s on
+01/09/2026 by the project owner, for this reason** — the fix named at the end of this section, applied
+to the mechanism instead of to the health. At 700 hp and a 3.0 s interval the player must land less
+than 233 damage per second. From the Roster's derived columns and the Drops table:
+
+| beat | carrier appears | shot level a player who took every upgrade holds | ideal sustained dps | time to kill | first child at 3.0 s? |
+|---|---|---|---|---|---|
+| `l1-heavy-carrier` | 67.0 s | 3 | 200 | 3.5 s | **yes, by 0.5 s** |
+| `l1-twin-carriers-attachment` | 97.5 s | 4 | 333 | 2.1 s | **no — still under** |
+
+That is ideal fire: perfectly aligned, never dodging, from the instant the carrier crosses the top
+edge, and the carrier arrives alongside other enemies in both beats. A real player will not achieve
+it, so 700 does not reproduce the 80 hp failure — but it removes the margin that 1000 had, where even
+shot level 4 needed 3.0 s.
+
+**The 3.0 s interval closes beat 8 and does not close beat 11**, and that is written here rather than
+rounded away: at shot level 4 an ideally-firing player still kills a carrier in 2.1 s, before any
+interval above 2.0 s could deliver a child. Beat 11 is the difficult encounter that hands over the
+attachment, so it is the one where the mechanism matters most. Lowering the interval further was not
+taken — a carrier producing a child every 2 s is a different encounter, not the same one fixed.
+
+**Open, and the first thing the next play session should report: does the carrier still spawn
+children, in beat 8 and in beat 11 separately?**
 
 **Still open, and touched by this change:**
 
-- **`bombDamage` 50 against a carrier at 1000.** A bomb now removes 5% of a carrier, where it used to
-  remove 62%. `02-mvp-functional-spec.md` asks the bomb for "heavy damage to resistant enemies" and 5%
-  is not that. The fragile archetypes are unaffected — `core/domain/system/BombSystem.java:115`
-  destroys a `fragile` enemy outright whatever `Health` says, so basic, light, shooter and rush still
-  vanish in one detonation regardless of the numbers above. `bombDamage` was left alone here because
-  it also lands on the boss's parts, and the boss is another task's. **Open, not decided.**
+- **`bombDamage` 50 against a carrier at 700.** A bomb removes 7% of a carrier. `02-mvp-functional-spec.md`
+  asks the bomb for "heavy damage to resistant enemies" and 7% is not that. The fragile archetypes are
+  unaffected — `core/domain/system/BombSystem.java:115` destroys a `fragile` enemy outright whatever
+  `Health` says. **Open, not decided.**
 - **`weaponProjectileDamage` 10 itself**, still a placeholder. Every number in the table above is
   expressed against it and scales with it.
 

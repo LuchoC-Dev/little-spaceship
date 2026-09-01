@@ -1,15 +1,6 @@
 {
   "waves": [
     {
-      "id": "l1-intro-flyover",
-      "spawns": [
-        { "at": 0.0, "spawn": "enemy-light", "formation": "single", "atX": 0.10, "trajectory": "dive" },
-        { "at": 0.8, "spawn": "enemy-light", "formation": "single", "atX": 0.90, "trajectory": "dive" },
-        { "at": 2.2, "spawn": "enemy-light", "formation": "diagonal", "atX": 0.85, "trajectory": "dive" }
-      ],
-      "end": { "type": "fixedDuration", "seconds": 5.0 }
-    },
-    {
       "id": "l1-opening-calm",
       "spawns": [
         { "at": 5.0, "spawn": "enemy-basic", "formation": "single", "atX": 0.20 }
@@ -141,15 +132,6 @@
         { "at": 13.5, "spawn": "enemy-basic", "formation": "line-5", "atX": 0.50 }
       ],
       "end": { "type": "fixedDuration", "seconds": 15.0 }
-    },
-    {
-      "id": "l1-boss-approach",
-      "spawns": [
-        { "at": 0.0, "spawn": "enemy-shooter", "formation": "line-3", "atX": 0.50 },
-        { "at": 2.0, "spawn": "enemy-light", "formation": "diagonal", "atX": 0.80 },
-        { "at": 4.0, "spawn": "enemy-rush", "formation": "column-3", "atX": 0.50 }
-      ],
-      "end": { "type": "fixedDuration", "seconds": 7.0 }
     }
   ]
 }
