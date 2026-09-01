@@ -112,13 +112,13 @@ the Roster and Formations sections below, printed per entry rather than as a sch
 
 |  |  |
 |---|---|
-| placements | 15 |
-| distinct waves | 13 |
-| spawn events | 92 |
-| entities spawned directly | 261 |
-| the waves end at | 298.0 s |
-| the boss enters at | 302.0 s (5.0 min) |
-| gap between them | 4.0 s |
+| placements | 12 |
+| distinct waves | 12 |
+| spawn events | 61 |
+| entities spawned directly | 152 |
+| the waves end at | 134.5 s |
+| the boss enters at | 134.5 s (2.2 min) |
+| gap between them | 0.0 s |
 
 **Every wave ends on `fixedDuration`, so every time below is exact arithmetic.** The moment one
 wave uses `{"type": "cleared"}` (`core/port/WaveEndCondition.java`), every absolute time after
@@ -134,21 +134,18 @@ keeps producing children reads low here and plays hard.
 
 | # | wave | offset | start | end | lasts | entities | density | archetypes | drops |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `l1-basic-intro` | 8.0 | 8.0 | 35.5 | 27.5 s | 15 | 0.55/s | `enemy-basic` | `weapon-upgrade` |
-| 2 | `l1-light-intro` | 0.0 | 35.5 | 59.5 | 24.0 s | 21 | 0.88/s | `enemy-light` | — |
-| 3 | `l1-basic-light-mix` | 0.0 | 59.5 | 86.0 | 26.5 s | 41 | 1.55/s | `enemy-basic` `enemy-light` | — |
-| 4 | `l1-tank-solo` | 0.0 | 86.0 | 87.0 | 1.0 s | 1 | 1.00/s | `enemy-tank` | — |
-| 5 | `l1-tank-intro-b` | 5.0 | 92.0 | 112.0 | 20.0 s | 18 | 0.90/s | `enemy-basic` `enemy-tank` `enemy-light` | — |
-| 6 | `l1-rush-intro-a` | 0.0 | 112.0 | 126.5 | 14.5 s | 11 | 0.76/s | `enemy-rush` | — |
-| 7 | `l1-tank-solo` | 0.0 | 126.5 | 127.5 | 1.0 s | 1 | 1.00/s | `enemy-tank` | — |
-| 8 | `l1-rush-intro-b` | 1.5 | 129.0 | 138.0 | 9.0 s | 5 | 0.56/s | `enemy-rush` | `weapon-upgrade` |
-| 9 | `l1-carrier-intro` | 0.0 | 138.0 | 166.0 | 28.0 s | 10 | 0.36/s | `enemy-carrier` `enemy-basic` `enemy-light` | — |
-| 10 | `l1-shooter-intro` | 0.0 | 166.0 | 183.0 | 17.0 s | 11 | 0.65/s | `enemy-shooter` `enemy-light` | — |
-| 11 | `l1-veteran-mix` | 0.0 | 183.0 | 208.0 | 25.0 s | 34 | 1.36/s | `enemy-shooter` `enemy-rush` `enemy-basic` `enemy-light` `enemy-tank` | `extra-life` `shield` |
-| 12 | `l1-carrier-pair` | 0.0 | 208.0 | 245.0 | 37.0 s | 14 | 0.38/s | `enemy-carrier` `enemy-rush` `enemy-light` | `attachment` |
-| 13 | `l1-rest-basic` | 0.0 | 245.0 | 256.0 | 11.0 s | 1 | 0.09/s | `enemy-basic` | `bomb-recharge` |
-| 14 | `l1-finale-a` | 0.0 | 256.0 | 297.0 | 41.0 s | 77 | 1.88/s | `enemy-basic` `enemy-light` `enemy-rush` `enemy-shooter` `enemy-tank` `enemy-carrier` | `weapon-upgrade` |
-| 15 | `l1-tank-solo` | 0.0 | 297.0 | 298.0 | 1.0 s | 1 | 1.00/s | `enemy-tank` | — |
+| 1 | `l1-opening-calm` | 0.0 | 0.0 | 8.0 | 8.0 s | 1 | 0.13/s | `enemy-basic` | — |
+| 2 | `l1-first-basics` | 0.0 | 8.0 | 22.0 | 14.0 s | 13 | 0.93/s | `enemy-basic` | `weapon-upgrade` |
+| 3 | `l1-light-and-fast` | 0.0 | 22.0 | 33.0 | 11.0 s | 13 | 1.18/s | `enemy-light` | — |
+| 4 | `l1-combined-formations` | 0.0 | 33.0 | 46.0 | 13.0 s | 23 | 1.77/s | `enemy-basic` `enemy-light` | — |
+| 5 | `l1-tanks-and-priority` | 0.0 | 46.0 | 58.0 | 12.0 s | 13 | 1.08/s | `enemy-tank` `enemy-basic` `enemy-light` | `weapon-upgrade` |
+| 6 | `l1-super-fast` | 0.0 | 58.0 | 67.0 | 9.0 s | 7 | 0.78/s | `enemy-rush` | — |
+| 7 | `l1-heavy-carrier` | 0.0 | 67.0 | 80.0 | 13.0 s | 7 | 0.54/s | `enemy-carrier` `enemy-basic` `enemy-light` | — |
+| 8 | `l1-evolved-shooters` | 0.0 | 80.0 | 90.0 | 10.0 s | 13 | 1.30/s | `enemy-shooter` `enemy-basic` | `weapon-upgrade` |
+| 9 | `l1-high-pressure` | -2.0 | 88.0 | 99.0 | 11.0 s | 21 | 1.91/s | `enemy-basic` `enemy-light` `enemy-shooter` `enemy-rush` | `extra-life` |
+| 10 | `l1-twin-carriers-attachment` | -1.5 | 97.5 | 113.5 | 16.0 s | 8 | 0.50/s | `enemy-carrier` `enemy-rush` | `attachment` |
+| 11 | `l1-brief-rest` | 0.0 | 113.5 | 119.5 | 6.0 s | 1 | 0.17/s | `enemy-basic` | `bomb-recharge` |
+| 12 | `l1-final-escalation` | 0.0 | 119.5 | 134.5 | 15.0 s | 32 | 2.13/s | `enemy-basic` `enemy-light` `enemy-rush` `enemy-shooter` `enemy-tank` | — |
 
 ## The curve
 
@@ -156,21 +153,18 @@ The same numbers as a shape, because a column of numbers is not one. The bar is 
 densest placement in this level, so it compares beats within a level and not between levels.
 
 ```
-    8.0  l1-basic-intro          0.55/s  ############
-   35.5  l1-light-intro          0.88/s  ###################
-   59.5  l1-basic-light-mix      1.55/s  #################################
-   86.0  l1-tank-solo            1.00/s  #####################
-   92.0  l1-tank-intro-b         0.90/s  ###################
-  112.0  l1-rush-intro-a         0.76/s  ################
-  126.5  l1-tank-solo            1.00/s  #####################
-  129.0  l1-rush-intro-b         0.56/s  ############
-  138.0  l1-carrier-intro        0.36/s  ########
-  166.0  l1-shooter-intro        0.65/s  ##############
-  183.0  l1-veteran-mix          1.36/s  #############################
-  208.0  l1-carrier-pair         0.38/s  ########
-  245.0  l1-rest-basic           0.09/s  ##
-  256.0  l1-finale-a             1.88/s  ########################################
-  297.0  l1-tank-solo            1.00/s  #####################
+    0.0  l1-opening-calm         0.13/s  ##
+    8.0  l1-first-basics         0.93/s  #################
+   22.0  l1-light-and-fast       1.18/s  ######################
+   33.0  l1-combined-formations  1.77/s  #################################
+   46.0  l1-tanks-and-priority   1.08/s  ####################
+   58.0  l1-super-fast           0.78/s  ###############
+   67.0  l1-heavy-carrier        0.54/s  ##########
+   80.0  l1-evolved-shooters     1.30/s  ########################
+   88.0  l1-high-pressure        1.91/s  ####################################
+   97.5  l1-twin-carriers-attachment  0.50/s  #########
+  113.5  l1-brief-rest           0.17/s  ###
+  119.5  l1-final-escalation     2.13/s  ########################################
 ```
 
 ## Wave by wave
@@ -179,212 +173,174 @@ Each wave this level places, once, in the order it first appears. **Placed at** 
 absolute time the level starts it: a wave is reusable, so editing one for one beat edits every
 placement of it, and nothing in `assets/data/waves.json` says so.
 
-### `l1-basic-intro`
+### `l1-opening-calm`
 
-**Ends:** `fixedDuration`, 27.5 s
+**Ends:** `fixedDuration`, 8.0 s
 
-**Placed 1 time:** #1 at 8.0 s
+**Placed 1 time:** #1 at 0.0 s
+
+| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
+|---|---|---|---|---|---|---|---|
+| 5.0 | `enemy-basic` | `single` (1) | 0.20 | `slow-descent` | 36.1 .. 47.1 | same | — |
+
+### `l1-first-basics`
+
+**Ends:** `fixedDuration`, 14.0 s
+
+**Placed 1 time:** #2 at 8.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | — |
-| 4.5 | `enemy-basic` | `single` (1) | 0.28 | `slow-descent` | 52.7 .. 63.7 | same | — |
-| 8.5 | `enemy-basic` | `single` (1) | 0.72 | `slow-descent` | 144.3 .. 155.3 | same | — |
-| 13.0 | `enemy-basic` | `line-3` (3) | 0.50 | `slow-descent` | 78.5 .. 129.5 | same | `weapon-upgrade` slot 1 |
-| 17.5 | `enemy-basic` | `line-3` (3) | 0.25 | `slow-descent` | 26.5 .. 77.5 | same | — |
-| 21.0 | `enemy-basic` | `line-3` (3) | 0.75 | `slow-descent` | 130.5 .. 181.5 | same | — |
-| 24.0 | `enemy-basic` | `column-3` (3) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | — |
+| 3.0 | `enemy-basic` | `line-3` (3) | 0.50 | `slow-descent` | 78.5 .. 129.5 | same | `weapon-upgrade` slot 1 |
+| 6.5 | `enemy-basic` | `line-3` (3) | 0.28 | `slow-descent` | 32.7 .. 83.7 | same | — |
+| 9.5 | `enemy-basic` | `line-3` (3) | 0.72 | `slow-descent` | 124.3 .. 175.3 | same | — |
+| 12.0 | `enemy-basic` | `column-3` (3) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | — |
 
-### `l1-light-intro`
+### `l1-light-and-fast`
 
-**Ends:** `fixedDuration`, 24.0 s
+**Ends:** `fixedDuration`, 11.0 s
 
-**Placed 1 time:** #2 at 35.5 s
+**Placed 1 time:** #3 at 22.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-light` | `single` (1) | 0.70 | `swoop` | 141.1 .. 150.1 | 72.5 .. 150.1 | — |
-| 3.5 | `enemy-light` | `single` (1) | 0.85 | `swoop` | 172.3 .. 181.3 | 103.7 .. 181.3 | — |
-| 7.0 | `enemy-light` | `diagonal` (3) | 0.75 | `swoop` | 136.5 .. 175.5 | 67.9 .. 175.5 | — |
-| 10.5 | `enemy-light` | `diagonal` (3) | 0.40 | `swoop` | 63.7 .. 102.7 | -4.9 .. 102.7 **leaves** | — |
-| 14.0 | `enemy-light` | `diagonal-mirror` (3) | 0.35 | `swoop` | 53.3 .. 92.3 | -15.3 .. 92.3 **leaves** | — |
-| 17.5 | `enemy-light` | `vee-5` (5) | 0.60 | `swoop` | 88.3 .. 161.3 | 19.7 .. 161.3 | — |
-| 20.5 | `enemy-light` | `vee-5` (5) | 0.30 | `swoop` | 25.9 .. 98.9 | -42.7 .. 98.9 **leaves** | — |
+| 2.0 | `enemy-light` | `single` (1) | 0.55 | `swoop` | 109.9 .. 118.9 | 41.3 .. 118.9 | — |
+| 4.5 | `enemy-light` | `diagonal` (3) | 0.75 | `swoop` | 136.5 .. 175.5 | 67.9 .. 175.5 | — |
+| 7.0 | `enemy-light` | `diagonal-mirror` (3) | 0.60 | `swoop` | 105.3 .. 144.3 | 36.7 .. 144.3 | — |
+| 9.0 | `enemy-light` | `vee-5` (5) | 0.65 | `swoop` | 98.7 .. 171.7 | 30.1 .. 171.7 | — |
 
-### `l1-basic-light-mix`
+### `l1-combined-formations`
 
-**Ends:** `fixedDuration`, 26.5 s
+**Ends:** `fixedDuration`, 13.0 s
 
-**Placed 1 time:** #3 at 59.5 s
+**Placed 1 time:** #4 at 33.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
-| 1.5 | `enemy-light` | `diagonal` (3) | 0.85 | `swoop` | 157.3 .. 196.3 | 88.7 .. 196.3 | — |
-| 5.0 | `enemy-basic` | `line-3` (3) | 0.30 | `slow-descent` | 36.9 .. 87.9 | same | — |
-| 6.5 | `enemy-light` | `diagonal-mirror` (3) | 0.20 | `swoop` | 22.1 .. 61.1 | -46.5 .. 61.1 **leaves** | — |
-| 9.5 | `enemy-light` | `vee-5` (5) | 0.50 | `swoop` | 67.5 .. 140.5 | -1.1 .. 140.5 **leaves** | — |
-| 11.5 | `enemy-basic` | `column-3` (3) | 0.15 | `slow-descent` | 25.7 .. 36.7 | same | — |
-| 12.0 | `enemy-basic` | `column-3` (3) | 0.85 | `slow-descent` | 171.3 .. 182.3 | same | — |
-| 16.0 | `enemy-basic` | `line-5` (5) | 0.40 | `slow-descent` | 37.7 .. 128.7 | same | — |
-| 17.5 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | 99.1 .. 206.7 | — |
-| 20.5 | `enemy-light` | `vee-5` (5) | 0.45 | `swoop` | 57.1 .. 130.1 | -11.5 .. 130.1 **leaves** | — |
-| 21.5 | `enemy-basic` | `line-3` (3) | 0.50 | `slow-descent` | 78.5 .. 129.5 | same | — |
+| 1.5 | `enemy-light` | `diagonal` (3) | 0.80 | `swoop` | 146.9 .. 185.9 | 78.3 .. 185.9 | — |
+| 4.0 | `enemy-basic` | `line-3` (3) | 0.30 | `slow-descent` | 36.9 .. 87.9 | same | — |
+| 5.5 | `enemy-light` | `diagonal-mirror` (3) | 0.55 | `swoop` | 94.9 .. 133.9 | 26.3 .. 133.9 | — |
+| 8.5 | `enemy-basic` | `column-3` (3) | 0.15 | `slow-descent` | 25.7 .. 36.7 | same | — |
+| 9.0 | `enemy-basic` | `column-3` (3) | 0.85 | `slow-descent` | 171.3 .. 182.3 | same | — |
+| 11.0 | `enemy-light` | `diagonal` (3) | 0.60 | `swoop` | 105.3 .. 144.3 | 36.7 .. 144.3 | — |
 
-### `l1-tank-solo`
+### `l1-tanks-and-priority`
 
-**Ends:** `fixedDuration`, 1.0 s
+**Ends:** `fixedDuration`, 12.0 s
 
-**Placed 3 times:** #4 at 86.0 s, #7 at 126.5 s, #15 at 297.0 s — **reused: an edit here lands on all of them.**
+**Placed 1 time:** #5 at 46.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
-| 0.0 | `enemy-tank` | `single` (1) | 0.50 | `crawl` | 93.5 .. 114.5 | same | — |
+| 0.0 | `enemy-tank` | `single` (1) | 0.35 | `crawl` | 62.3 .. 83.3 | same | — |
+| 2.0 | `enemy-basic` | `line-3` (3) | 0.70 | `slow-descent` | 120.1 .. 171.1 | same | `weapon-upgrade` slot 1 |
+| 5.0 | `enemy-tank` | `single` (1) | 0.65 | `crawl` | 124.7 .. 145.7 | same | — |
+| 7.5 | `enemy-light` | `diagonal` (3) | 0.80 | `swoop` | 146.9 .. 185.9 | 78.3 .. 185.9 | — |
+| 10.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
 
-### `l1-tank-intro-b`
-
-**Ends:** `fixedDuration`, 20.0 s
-
-**Placed 1 time:** #5 at 92.0 s
-
-| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
-|---|---|---|---|---|---|---|---|
-| 0.0 | `enemy-basic` | `line-3` (3) | 0.20 | `slow-descent` | 16.1 .. 67.1 | same | — |
-| 3.0 | `enemy-basic` | `line-3` (3) | 0.80 | `slow-descent` | 140.9 .. 191.9 | same | — |
-| 7.0 | `enemy-tank` | `single` (1) | 0.30 | `crawl` | 51.9 .. 72.9 | same | — |
-| 8.0 | `enemy-tank` | `single` (1) | 0.70 | `crawl` | 135.1 .. 156.1 | same | — |
-| 12.0 | `enemy-light` | `vee-5` (5) | 0.50 | `swoop` | 67.5 .. 140.5 | -1.1 .. 140.5 **leaves** | — |
-| 15.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
-
-### `l1-rush-intro-a`
-
-**Ends:** `fixedDuration`, 14.5 s
-
-**Placed 1 time:** #6 at 112.0 s
-
-| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
-|---|---|---|---|---|---|---|---|
-| 0.0 | `enemy-rush` | `single` (1) | 0.25 | `dive` | 48.0 .. 56.0 | same | — |
-| 3.0 | `enemy-rush` | `single` (1) | 0.75 | `dive` | 152.0 .. 160.0 | same | — |
-| 6.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
-| 10.0 | `enemy-rush` | `column-3` (3) | 0.20 | `dive` | 37.6 .. 45.6 | same | — |
-| 11.0 | `enemy-rush` | `column-3` (3) | 0.80 | `dive` | 162.4 .. 170.4 | same | — |
-
-### `l1-rush-intro-b`
+### `l1-super-fast`
 
 **Ends:** `fixedDuration`, 9.0 s
 
-**Placed 1 time:** #8 at 129.0 s
+**Placed 1 time:** #6 at 58.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
-| 0.0 | `enemy-rush` | `single` (1) | 0.35 | `dive` | 68.8 .. 76.8 | same | — |
-| 1.5 | `enemy-rush` | `single` (1) | 0.65 | `dive` | 131.2 .. 139.2 | same | — |
-| 4.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | `weapon-upgrade` slot 0 |
+| 0.0 | `enemy-rush` | `single` (1) | 0.30 | `dive` | 58.4 .. 66.4 | same | — |
+| 1.5 | `enemy-rush` | `single` (1) | 0.70 | `dive` | 141.6 .. 149.6 | same | — |
+| 3.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 6.0 | `enemy-rush` | `single` (1) | 0.40 | `strike-run` *(override)* | 79.2 .. 87.2 | same | — |
+| 7.0 | `enemy-rush` | `single` (1) | 0.60 | `strike-run` *(override)* | 120.8 .. 128.8 | same | — |
 
-### `l1-carrier-intro`
+### `l1-heavy-carrier`
 
-**Ends:** `fixedDuration`, 28.0 s
+**Ends:** `fixedDuration`, 13.0 s
 
-**Placed 1 time:** #9 at 138.0 s
+**Placed 1 time:** #7 at 67.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-carrier` | `single` (1) | 0.50 | `crawl` | 89.0 .. 119.0 | same | — |
-| 13.0 | `enemy-basic` | `line-3` (3) | 0.15 | `slow-descent` | 5.7 .. 56.7 | same | — |
-| 19.0 | `enemy-basic` | `line-3` (3) | 0.85 | `slow-descent` | 151.3 .. 202.3 | same | — |
-| 22.0 | `enemy-light` | `diagonal` (3) | 0.70 | `swoop` | 126.1 .. 165.1 | 57.5 .. 165.1 | — |
+| 5.0 | `enemy-basic` | `line-3` (3) | 0.25 | `slow-descent` | 26.5 .. 77.5 | same | — |
+| 9.0 | `enemy-light` | `diagonal-mirror` (3) | 0.70 | `swoop` | 126.1 .. 165.1 | 57.5 .. 165.1 | — |
 
-### `l1-shooter-intro`
+### `l1-evolved-shooters`
 
-**Ends:** `fixedDuration`, 17.0 s
+**Ends:** `fixedDuration`, 10.0 s
 
-**Placed 1 time:** #10 at 166.0 s
+**Placed 1 time:** #8 at 80.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-shooter` | `single` (1) | 0.40 | `slow-descent` | 76.7 .. 89.7 | same | — |
-| 3.0 | `enemy-shooter` | `single` (1) | 0.60 | `slow-descent` | 118.3 .. 131.3 | same | — |
-| 6.5 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | — |
-| 10.0 | `enemy-shooter` | `line-3` (3) | 0.25 | `slow-descent` | 25.5 .. 78.5 | same | — |
-| 11.0 | `enemy-light` | `diagonal-mirror` (3) | 0.80 | `swoop` | 146.9 .. 185.9 | 78.3 .. 185.9 | — |
+| 2.0 | `enemy-shooter` | `single` (1) | 0.60 | `slow-descent` | 118.3 .. 131.3 | same | — |
+| 4.5 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | — |
+| 6.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | `weapon-upgrade` slot 2 |
+| 8.5 | `enemy-shooter` | `line-3` (3) | 0.30 | `slow-descent` | 35.9 .. 88.9 | same | — |
 
-### `l1-veteran-mix`
+### `l1-high-pressure`
 
-**Ends:** `fixedDuration`, 25.0 s
+**Ends:** `fixedDuration`, 11.0 s
 
-**Placed 1 time:** #11 at 183.0 s
+**Placed 1 time:** #9 at 88.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
-| 0.0 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | `extra-life` slot 1 |
-| 1.5 | `enemy-rush` | `column-3` (3) | 0.15 | `dive` | 27.2 .. 35.2 | same | — |
-| 2.5 | `enemy-rush` | `column-3` (3) | 0.85 | `dive` | 172.8 .. 180.8 | same | — |
-| 5.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
-| 7.0 | `enemy-light` | `vee-5` (5) | 0.30 | `swoop` | 25.9 .. 98.9 | -42.7 .. 98.9 **leaves** | — |
-| 9.0 | `enemy-tank` | `single` (1) | 0.35 | `crawl` | 62.3 .. 83.3 | same | — |
-| 9.5 | `enemy-tank` | `single` (1) | 0.65 | `crawl` | 124.7 .. 145.7 | same | — |
-| 12.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
-| 14.0 | `enemy-basic` | `line-3` (3) | 0.20 | `slow-descent` | 16.1 .. 67.1 | same | — |
-| 14.5 | `enemy-basic` | `line-3` (3) | 0.80 | `slow-descent` | 140.9 .. 191.9 | same | — |
-| 17.0 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | 99.1 .. 206.7 | — |
-| 18.5 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | `shield` slot 0 |
+| 0.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
+| 1.0 | `enemy-light` | `single` (1) | 0.88 | `veer-left` *(override)* | 178.5 .. 187.5 | -125.5 .. 187.5 **leaves** | — |
+| 2.5 | `enemy-light` | `single` (1) | 0.12 | `veer-right` *(override)* | 20.5 .. 29.5 | 20.5 .. 333.5 **leaves** | — |
+| 4.5 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | `extra-life` slot 1 |
+| 6.0 | `enemy-rush` | `column-3` (3) | 0.20 | `dive` | 37.6 .. 45.6 | same | — |
+| 6.5 | `enemy-rush` | `column-3` (3) | 0.80 | `dive` | 162.4 .. 170.4 | same | — |
+| 9.0 | `enemy-light` | `vee-5` (5) | 0.60 | `swoop` | 88.3 .. 161.3 | 19.7 .. 161.3 | — |
 
-### `l1-carrier-pair`
+### `l1-twin-carriers-attachment`
 
-**Ends:** `fixedDuration`, 37.0 s
+**Ends:** `fixedDuration`, 16.0 s
 
-**Placed 1 time:** #12 at 208.0 s
+**Placed 1 time:** #10 at 97.5 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-carrier` | `pair` (2) | 0.50 | `crawl` | 45.0 .. 163.0 | same | `attachment` slot 0 |
-| 7.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
-| 16.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
-| 23.0 | `enemy-light` | `diagonal` (3) | 0.85 | `swoop` | 157.3 .. 196.3 | 88.7 .. 196.3 | — |
-| 25.0 | `enemy-light` | `diagonal-mirror` (3) | 0.15 | `swoop` | 11.7 .. 50.7 | -56.9 .. 50.7 **leaves** | — |
+| 4.0 | `enemy-rush` | `single` (1) | 0.35 | `strike-run` *(override)* | 68.8 .. 76.8 | same | — |
+| 5.0 | `enemy-rush` | `single` (1) | 0.65 | `strike-run` *(override)* | 131.2 .. 139.2 | same | — |
+| 9.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 12.0 | `enemy-rush` | `single` (1) | 0.88 | `veer-left` *(override)* | 179.0 .. 187.0 | -125.0 .. 187.0 **leaves** | — |
 
-### `l1-rest-basic`
+### `l1-brief-rest`
 
-**Ends:** `fixedDuration`, 11.0 s
+**Ends:** `fixedDuration`, 6.0 s
 
-**Placed 1 time:** #13 at 245.0 s
+**Placed 1 time:** #11 at 113.5 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-basic` | `single` (1) | 0.50 | `slow-descent` | 98.5 .. 109.5 | same | `bomb-recharge` slot 0 |
 
-### `l1-finale-a`
+### `l1-final-escalation`
 
-**Ends:** `fixedDuration`, 41.0 s
+**Ends:** `fixedDuration`, 15.0 s
 
-**Placed 1 time:** #14 at 256.0 s
+**Placed 1 time:** #12 at 119.5 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
-| 2.0 | `enemy-light` | `vee-5` (5) | 0.20 | `swoop` | 5.1 .. 78.1 | -63.5 .. 78.1 **leaves** | — |
-| 3.5 | `enemy-light` | `vee-5` (5) | 0.80 | `swoop` | 129.9 .. 202.9 | 61.3 .. 202.9 | — |
-| 5.0 | `enemy-rush` | `column-3` (3) | 0.35 | `dive` | 68.8 .. 76.8 | same | — |
-| 5.5 | `enemy-rush` | `column-3` (3) | 0.65 | `dive` | 131.2 .. 139.2 | same | — |
-| 8.0 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | `weapon-upgrade` slot 1 |
-| 11.0 | `enemy-basic` | `column-3` (3) | 0.10 | `slow-descent` | 15.3 .. 26.3 | same | — |
-| 11.5 | `enemy-basic` | `column-3` (3) | 0.90 | `slow-descent` | 181.7 .. 192.7 | same | — |
-| 14.0 | `enemy-tank` | `single` (1) | 0.25 | `crawl` | 41.5 .. 62.5 | same | — |
-| 14.5 | `enemy-tank` | `single` (1) | 0.75 | `crawl` | 145.5 .. 166.5 | same | — |
-| 17.0 | `enemy-light` | `diagonal` (3) | 0.90 | `swoop` | 167.7 .. 206.7 | 99.1 .. 206.7 | — |
-| 18.0 | `enemy-light` | `diagonal-mirror` (3) | 0.10 | `swoop` | 1.3 .. 40.3 | -67.3 .. 40.3 **leaves** | — |
-| 20.5 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
-| 23.0 | `enemy-shooter` | `line-3` (3) | 0.30 | `slow-descent` | 35.9 .. 88.9 | same | — |
-| 24.0 | `enemy-shooter` | `line-3` (3) | 0.70 | `slow-descent` | 119.1 .. 172.1 | same | — |
-| 26.5 | `enemy-basic` | `line-5` (5) | 0.45 | `slow-descent` | 48.1 .. 139.1 | same | — |
-| 28.0 | `enemy-rush` | `column-3` (3) | 0.20 | `dive` | 37.6 .. 45.6 | same | — |
-| 28.5 | `enemy-rush` | `column-3` (3) | 0.80 | `dive` | 162.4 .. 170.4 | same | — |
-| 31.0 | `enemy-carrier` | `single` (1) | 0.50 | `crawl` | 89.0 .. 119.0 | same | — |
-| 33.0 | `enemy-light` | `vee-5` (5) | 0.35 | `swoop` | 36.3 .. 109.3 | -32.3 .. 109.3 **leaves** | — |
-| 34.5 | `enemy-light` | `vee-5` (5) | 0.65 | `swoop` | 98.7 .. 171.7 | 30.1 .. 171.7 | — |
-| 37.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
-| 39.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
+| 1.0 | `enemy-light` | `vee-5` (5) | 0.55 | `swoop` | 77.9 .. 150.9 | 9.3 .. 150.9 | — |
+| 2.5 | `enemy-rush` | `single` (1) | 0.12 | `veer-right` *(override)* | 21.0 .. 29.0 | 21.0 .. 333.0 **leaves** | — |
+| 3.0 | `enemy-rush` | `single` (1) | 0.88 | `veer-left` *(override)* | 179.0 .. 187.0 | -125.0 .. 187.0 **leaves** | — |
+| 5.0 | `enemy-shooter` | `line-3` (3) | 0.30 | `slow-descent` | 35.9 .. 88.9 | same | — |
+| 5.5 | `enemy-shooter` | `line-3` (3) | 0.70 | `slow-descent` | 119.1 .. 172.1 | same | — |
+| 7.5 | `enemy-tank` | `single` (1) | 0.30 | `crawl` | 51.9 .. 72.9 | same | — |
+| 8.0 | `enemy-tank` | `single` (1) | 0.70 | `crawl` | 135.1 .. 156.1 | same | — |
+| 10.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
+| 11.0 | `enemy-light` | `diagonal` (3) | 0.75 | `swoop` | 136.5 .. 175.5 | 67.9 .. 175.5 | — |
+| 12.5 | `enemy-rush` | `single` (1) | 0.45 | `strike-run` *(override)* | 89.6 .. 97.6 | same | — |
+| 13.5 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
 
 **`x at spawn`** is `atX * 208 + slot.offsetX`, plus and minus the archetype's collider radius
 (`SpawnSystem.spawnWave`, `SpawnSystem.positionSpawned`). **Nothing clamps it** — a formation
@@ -405,12 +361,12 @@ the point: `rate 4.0` is a number, "one shot per pass" is what it means.
 
 | archetype | sprite | radius | fragile | health | shots to kill | score | default shape | screen time | weapon | shots per pass | spawner | children per pass | lifetime |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `enemy-basic` | `enemy-basic` | 5.5 | yes | none | 1 | 100 | `slow-descent` | 15.3 s | `straight-single`, every 3.2 s from 1.0 s, speed 70.0 | 5 | none | — | none |
+| `enemy-basic` | `enemy-basic` | 5.5 | yes | 20 | 2 | 100 | `slow-descent` | 15.3 s | `straight-single`, every 3.2 s from 1.0 s, speed 70.0 | 5 | none | — | none |
 | `enemy-light` | `enemy-light` | 4.5 | yes | none | 1 | 150 | `swoop` | 6.9 s | `straight-single`, every 2.4 s from 0.9 s, speed 130.0 | 3 | none | — | none |
-| `enemy-tank` | `enemy-tank` | 10.5 | no | 40 | 4 | 500 | `crawl` | 31.2 s | `straight-single`, every 4.8 s from 1.6 s, speed 60.0 | 7 | none | — | none |
+| `enemy-tank` | `enemy-tank` | 10.5 | no | 200 | 20 | 500 | `crawl` | 31.2 s | `straight-single`, every 4.8 s from 1.6 s, speed 60.0 | 7 | none | — | none |
 | `enemy-rush` | `enemy-rush` | 4.0 | yes | none | 1 | 250 | `dive` | 3.4 s | `straight-single`, every 4.0 s from 1.4 s, speed 120.0 | 1 | none | — | none |
-| `enemy-carrier` | `enemy-carrier` | 15.0 | no | 80 | 8 | 1000 | `crawl` | 31.7 s | none | — | `enemy-basic` every 4.0 s | 7 | none |
-| `enemy-shooter` | `enemy-shooter` | 6.5 | yes | none | 1 | 200 | `slow-descent` | 15.4 s | `straight-single`, every 1.8 s from 0.7 s, speed 90.0 | 9 | none | — | none |
+| `enemy-carrier` | `enemy-carrier` | 15.0 | no | 700 | 70 | 1000 | `crawl` | 31.7 s | none | — | `enemy-basic` every 3.0 s | 10 | none |
+| `enemy-shooter` | `enemy-shooter` | 6.5 | yes | 30 | 3 | 200 | `slow-descent` | 15.4 s | `straight-single`, every 1.8 s from 0.7 s, speed 90.0 | 9 | none | — | none |
 
 **shots to kill** is `ceil(health / weaponProjectileDamage)` against `weaponProjectileDamage 10`
 from `assets/data/balance.json`. An archetype with no `health` dies to one projectile — and so
@@ -440,6 +396,9 @@ refused and why, is `docs/plan/11c-movement-shapes/shape-catalogue.md`.
 | `swoop` | `constant` | -10.0 | -40.0 | — | — | — |
 | `crawl` | `constant` | 0.0 | -9.0 | — | — | — |
 | `dive` | `constant` | 0.0 | -80.0 | — | — | — |
+| `strike-run` | `arc` | 0.0 | -110.0 | 27.0 | 4.1 s | 224.1 below spawn |
+| `veer-left` | `arc` | -32.0 | -95.0 | 20.0 | 4.8 s | 225.6 below spawn |
+| `veer-right` | `arc` | 32.0 | -95.0 | 20.0 | 4.8 s | 225.6 below spawn |
 
 An `arc` turns at `-vy / ay` and bottoms out `vy² / (2·ay)` below where it spawned, evaluated in
 closed form from the entity's own elapsed time (`core/port/ArcTrajectoryDefinition.java`).
@@ -502,13 +461,12 @@ document cannot keep them honest** — if those lines move, this text does not c
 
 | at | kind | wave | carried by |
 |---|---|---|---|
-| 21.0 | `weapon-upgrade` | `l1-basic-intro` (#1) | `enemy-basic` in `line-3`, slot 1 |
-| 133.5 | `weapon-upgrade` | `l1-rush-intro-b` (#8) | `enemy-rush` in `column-3`, slot 0 |
-| 183.0 | `extra-life` | `l1-veteran-mix` (#11) | `enemy-shooter` in `line-3`, slot 1 |
-| 201.5 | `shield` | `l1-veteran-mix` (#11) | `enemy-basic` in `single`, slot 0 |
-| 208.0 | `attachment` | `l1-carrier-pair` (#12) | `enemy-carrier` in `pair`, slot 0 |
-| 245.0 | `bomb-recharge` | `l1-rest-basic` (#13) | `enemy-basic` in `single`, slot 0 |
-| 264.0 | `weapon-upgrade` | `l1-finale-a` (#14) | `enemy-shooter` in `line-3`, slot 1 |
+| 11.0 | `weapon-upgrade` | `l1-first-basics` (#2) | `enemy-basic` in `line-3`, slot 1 |
+| 48.0 | `weapon-upgrade` | `l1-tanks-and-priority` (#5) | `enemy-basic` in `line-3`, slot 1 |
+| 86.0 | `weapon-upgrade` | `l1-evolved-shooters` (#8) | `enemy-basic` in `line-5`, slot 2 |
+| 92.5 | `extra-life` | `l1-high-pressure` (#9) | `enemy-shooter` in `line-3`, slot 1 |
+| 97.5 | `attachment` | `l1-twin-carriers-attachment` (#10) | `enemy-carrier` in `pair`, slot 0 |
+| 113.5 | `bomb-recharge` | `l1-brief-rest` (#11) | `enemy-basic` in `single`, slot 0 |
 
 **A drop is delivered only if the player destroys the carrier.** `core/domain/system/LifetimeSystem.java`
 strips `ScoreValue`, `Drop` and `Collider` from an enemy that leaves the screen, so a drop placed
@@ -534,7 +492,7 @@ Attachment durability, the one content-driven part: `attachment` 1 (`assets/data
 | field | value |
 |---|---|
 | `id` | boss-l1 |
-| `entersAt` | 302.0 |
+| `entersAt` | 134.5 |
 | `coreHealth` | 1800.0 |
 | `podHealth` | 500.0 |
 | `armHealth` | 500.0 |
@@ -544,8 +502,8 @@ Attachment durability, the one content-driven part: `attachment` 1 (`assets/data
 | `entranceSpeed` | 25.0 |
 | `combatY` | 175.0 |
 | `patternCooldown` | 0.7 |
-| `spreadProjectileSpeed` | 95.0 |
-| `sweepProjectileSpeed` | 140.0 |
+| `spreadProjectileSpeed` | 85.0 |
+| `sweepProjectileSpeed` | 125.0 |
 
 | derived | value | how |
 |---|---|---|
@@ -559,12 +517,12 @@ through and how far it is from the boss when it crosses the height the player fl
 
 | pattern | vx ratio | vx | vy | leaves through | x from the boss at y 30.0 |
 |---|---|---|---|---|---|
-| spread | 0.25 | 23.8 | -85.5 | the floor, 2.0 s | 40.3 |
-| spread | 0.45 | 42.8 | -85.5 | the floor, 2.0 s | 72.5 |
-| spread | 0.70 | 66.5 | -85.5 | a side, 1.6 s | **off the playfield already** |
-| sweep | 0.55 | 77.0 | -91.0 | a side, 1.4 s | **off the playfield already** |
-| sweep | 0.75 | 105.0 | -91.0 | a side, 1.0 s | **off the playfield already** |
-| sweep | 0.95 | 133.0 | -91.0 | a side, 0.8 s | **off the playfield already** |
+| spread | 0.25 | 21.3 | -76.5 | the floor, 2.3 s | 40.3 |
+| spread | 0.45 | 38.3 | -76.5 | the floor, 2.3 s | 72.5 |
+| spread | 0.70 | 59.5 | -76.5 | a side, 1.7 s | **off the playfield already** |
+| sweep | 0.55 | 68.8 | -81.3 | a side, 1.5 s | **off the playfield already** |
+| sweep | 0.75 | 93.8 | -81.3 | a side, 1.1 s | **off the playfield already** |
+| sweep | 0.95 | 118.8 | -81.3 | a side, 0.9 s | **off the playfield already** |
 
 The ratios and `CORE_SPAWN_Y` are in `core/domain/system/BossSystem.java:74-89,140-151`, not in content.
 
@@ -576,7 +534,7 @@ rays reads that way is unlosable, with no error anywhere.** Where the player act
 theirs to choose; this document says only where the rays are.
 
 **`entersAt` is absolute level time**, compared against `BossSystem`'s own clock, which is
-independent of the wave chain. The waves end at 298.0 s and the boss enters at 302.0 s: a 4.0 s gap.
+independent of the wave chain. The waves end at 134.5 s and the boss enters at 134.5 s: a 0.0 s gap.
 
 ## Designing against the player
 
@@ -630,8 +588,8 @@ this document a generator can do and a human reliably will not.
 **Not checked, and still yours:** whether the level is any good. Density is not difficulty and
 this project tunes balance by playing.
 
-- `l1-carrier-pair`: `enemy-light` in `diagonal-mirror` at `atX 0.15` on `swoop` sweeps -56.9 .. 50.7 over 6.9 s in the playfield — about 53% of that width is outside 0 .. 208. It reads in range at the spawn instant and is not.
-- `l1-finale-a`: `enemy-light` in `diagonal-mirror` at `atX 0.10` on `swoop` sweeps -67.3 .. 40.3 over 6.9 s in the playfield — about 63% of that width is outside 0 .. 208. It reads in range at the spawn instant and is not.
+- placement #9 `l1-high-pressure` has `offset -2.0`, overlapping `l1-evolved-shooters` by 2.0 s. Overlap is the one thing in this format that produces pressure nothing else can, and it is the thing a reader misreads first.
+- placement #10 `l1-twin-carriers-attachment` has `offset -1.5`, overlapping `l1-high-pressure` by 1.5 s. Overlap is the one thing in this format that produces pressure nothing else can, and it is the thing a reader misreads first.
 
 ## The beat map
 

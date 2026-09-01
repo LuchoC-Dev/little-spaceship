@@ -9,6 +9,7 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
+import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.BossStatus;
@@ -198,8 +199,10 @@ class BossSystemTest {
     }
 
     @Test
-    @DisplayName("a spread volley fans three rays per pod, a sweep volley fans three per arm, alternating")
-    void volleyFansThreeRaysPerSideAndAlternatesPattern() {
+    @DisplayName(
+        "a spread volley fans five rays per pod, a sweep volley fans five per arm, "
+            + "alternating, every ray at the pattern's fixed speed")
+    void volleyFansFiveRaysPerSideAndAlternatesPattern() {
         TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
         World world = new World(content, new Rng(1), new GameEventQueue());
         BossSystem system = new BossSystem(LEVEL);
@@ -211,11 +214,56 @@ class BossSystemTest {
         java.util.Set<Integer> seen = new java.util.HashSet<>();
         java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> firstVolley =
             runToNextVolley(world, system, seen);
-        assertVxMagnitudes(firstVolley, new float[] {0.25f, 0.45f, 0.70f}, -0.90f, 180f);
+        assertVolleySpeeds(firstVolley, 180f);
 
         java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> secondVolley =
             runToNextVolley(world, system, seen);
-        assertVxMagnitudes(secondVolley, new float[] {0.55f, 0.75f, 0.95f}, -0.65f, 160f);
+        assertVolleySpeeds(secondVolley, 160f);
+    }
+
+    @Test
+    @DisplayName("the fan aims at the player's position as locked at the start of the tell, not at fire time")
+    void volleyAimsAtThePlayerLockedAtTellStart() {
+        TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
+        World world = new World(content, new Rng(1), new GameEventQueue());
+        int player = world.createEntity();
+        world.players().set(player, new dev.luchoc.littlespaceship.core.domain.component.Player(3, 2, 1));
+        world.transforms().set(
+            player, new dev.luchoc.littlespaceship.core.domain.component.Transform(20f, 30f));
+        BossSystem system = new BossSystem(LEVEL);
+
+        // Reach the fight: spawn, then the entrance in one jump, then the fixed 0.2 s cooldown of
+        // this fixture's own boss() definition.
+        system.update(world, STEP, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
+        system.update(world, 0.2f, InputFrame.IDLE);
+
+        // The tell has now begun and the aim is locked at (20, 30). Move the player far away before
+        // the volley actually fires: an honest tell dodges the frozen point, not a live-tracking one.
+        world.transforms().get(player).x = 150f;
+
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> volley =
+            runToNextVolley(world, system, seen);
+
+        int pod = podEntity(world);
+        Transform podOrigin = world.transforms().get(pod);
+        float expectedDx = 20f - podOrigin.x;
+        float expectedDy = 30f - podOrigin.y;
+        float expectedLength = (float) Math.sqrt(expectedDx * expectedDx + expectedDy * expectedDy);
+        // The centre ray of the fan (ratio 0) reproduces the locked aim direction exactly.
+        dev.luchoc.littlespaceship.core.domain.component.Motion centreRay = null;
+        float bestAlignment = -2f;
+        for (dev.luchoc.littlespaceship.core.domain.component.Motion motion : volley) {
+            float speed = (float) Math.sqrt(motion.vx * motion.vx + motion.vy * motion.vy);
+            float alignment = (motion.vx * expectedDx + motion.vy * expectedDy) / (speed * expectedLength);
+            if (alignment > bestAlignment) {
+                bestAlignment = alignment;
+                centreRay = motion;
+            }
+        }
+        assertTrue(bestAlignment > 0.99f, "no ray points at the position locked at tell start");
+        assertTrue(centreRay != null);
     }
 
     /**
@@ -249,35 +297,18 @@ class BossSystemTest {
     }
 
     /**
-     * A volley must be exactly six projectiles — {@code FAN_COUNT} per side — three negative-vx and
-     * three positive-vx magnitudes matching {@code vxRatios * speed}, in either order across the two
-     * sides, all sharing the one {@code vyRatio * speed}.
+     * A volley must be exactly ten projectiles — {@code FAN_COUNT} (five) rays from each of the two
+     * firing parts — every one travelling at exactly {@code speed}, since the aimed fan spreads
+     * direction, never magnitude. The rays' directions are covered separately by {@code
+     * volleyAimsAtThePlayerLockedAtTellStart}.
      */
-    private static void assertVxMagnitudes(
-        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> volley,
-        float[] vxRatios, float vyRatio, float speed) {
-        assertEquals(6, volley.size(), "a volley must fan three rays from each of two firing parts");
-        float expectedVy = vyRatio * speed;
-        java.util.List<Float> expectedMagnitudes = new java.util.ArrayList<>();
-        for (float ratio : vxRatios) {
-            expectedMagnitudes.add(ratio * speed);
-        }
-        java.util.List<Float> remaining = new java.util.ArrayList<>(expectedMagnitudes);
-        remaining.addAll(expectedMagnitudes);
+    private static void assertVolleySpeeds(
+        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> volley, float speed) {
+        assertEquals(10, volley.size(), "a volley must fan five rays from each of two firing parts");
         for (dev.luchoc.littlespaceship.core.domain.component.Motion motion : volley) {
-            assertEquals(expectedVy, motion.vy, 0.01f, "every ray of a volley shares one vy ratio");
-            float magnitude = Math.abs(motion.vx);
-            Float match = null;
-            for (Float candidate : remaining) {
-                if (Math.abs(candidate - magnitude) < 0.01f) {
-                    match = candidate;
-                    break;
-                }
-            }
-            assertTrue(match != null, "unexpected vx magnitude " + magnitude);
-            remaining.remove(match);
+            float magnitude = (float) Math.sqrt(motion.vx * motion.vx + motion.vy * motion.vy);
+            assertEquals(speed, magnitude, 0.05f, "every ray of an aimed volley travels at the pattern's own speed");
         }
-        assertTrue(remaining.isEmpty(), "not every fixed ratio was fired");
     }
 
     private static int coreEntity(World world) {

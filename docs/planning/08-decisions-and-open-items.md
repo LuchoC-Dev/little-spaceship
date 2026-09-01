@@ -257,6 +257,44 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   is a written design or a shipped need, not an expectation."* The standard did not change when the
   MVP shipped; only the sentence's subject did.
 
+### Level 1 played, 01/09/2026
+
+Decided by the project owner after playing phase 11e's candidate on the desktop target. The session
+itself is recorded in `docs/plan/11e-level-one-redesigned/status/201-play-session.md`; only what it
+decided is here.
+
+- **Level 1 is fourteen beats, and twelve of them carry a wave.** **This reopens phase 11e's own
+  acceptance criterion**, which read *"Level 1 is fourteen waves, one per beat"*. The owner played the
+  candidate and found enemies at the very start and enemies still arriving as the boss entered, and
+  called both wrong. Beat 1, the audiovisual introduction, and beat 14, the boss, therefore carry no
+  wave of their own — which is what `docs/plan/11c-movement-shapes/shape-catalogue.md`'s original beat
+  map had already said for those two beats before 11e began. `assets/data/waves.json` cannot express
+  the alternative: `JsonContentSource.loadWaves` rejects a wave with no spawns, so a beat that occupies
+  time and spawns nothing has no representation. **A beat is a unit of design; a wave is a unit of
+  content, and the two do not have to be one-to-one.**
+- **Enemy health comes down across the board, one session after it went up.** `enemy-basic` 30 to 20,
+  `enemy-light` loses its `health` component entirely, `enemy-shooter` 40 to 30, `enemy-tank` 300 to
+  200, `enemy-carrier` 1000 to 700. The owner's report: the basic took three shots and the level was
+  hard until the first weapon upgrade; after it, the difficulty was high **but acceptable for the
+  genre**, and that half is deliberately untouched. `enemy-light` loses the component rather than
+  taking a low number, because `DamageSystem` makes any value at or below `weaponProjectileDamage`
+  behave exactly like no component at all.
+- **The boss's design is right and only its projectile speed moves.** The owner called the fight's
+  difficulty *ideal* — neither too hard nor too easy — one session after the same boss was diagnosed as
+  trivially beatable from screen centre. `spreadProjectileSpeed` 95 to 85 and `sweepProjectileSpeed`
+  140 to 125, and nothing else: the aim locked at tell-start, the tell itself, `patternCooldown 0.7`,
+  the part health and the entrance all stand. **The 21/08 decision holds** — one phase, two alternating
+  patterns, a clear tell.
+- **The three-minute target from 27/08 is met and stays met.** The owner's verdict on the length was
+  that the first level is right as played. The number is not restated here as a figure, because the
+  rule since 22/08 is that it is fixed by playing; the figure lives in the level and in the session
+  record.
+
+**Still open, and deliberately.** Whether `enemy-basic` reads as firing less often than
+`enemy-shooter` was answered **"se nota poco"** — it is hinted at and not clear — and it is recorded
+that way rather than resolved. Whether the boss's spread and sweep still read as two distinct patterns
+now that both fan around an aimed direction was not answered in this session and remains open.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.

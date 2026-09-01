@@ -832,3 +832,77 @@ content references any new shape id (`grep -rln "strike-run\|veer-left\|veer-rig
 returns only `trajectories.json`), confirming the "no wave points at a shape yet" claim.
 
 Related: [[audit-techniques]].
+
+56. **Phase 11e's two branches (#203 boss-aimed-attack, #204 enemy-health-numbers) are a second
+    clean-branch calibration point, and both status fragments self-flagged their own biggest risk
+    instead of waiting for review to find it.** #203's fragment names, unprompted, that collapsing
+    spread/sweep into one `fireAimedFan` method "narrows what makes them feel like two" and routes it
+    back to task 5's play session rather than asserting the decided "two alternating patterns" rule
+    is still intact — a claim I could not fully settle either (it is a rules judgement, not a fact),
+    so the honest move was to relay the same open question rather than resolve it either way. #204's
+    fragment flags `LevelScoreReplayTest.java:32`'s javadoc as now false without touching the file
+    (correctly, since it's `core-domain`'s), and separately flags `bombDamage 50` against the new
+    carrier `Health 1000` as dropping the bomb from removing 62% to 5% of a carrier's health — a real
+    numeric consequence of the change that the branch's own scope didn't ask it to fix. Both claims
+    checked out exactly as stated: `DamageSystem.java:93` genuinely never reads `Collider#fragile` on
+    the player-projectile branch (only `:149` ramming and `BombSystem.java:115` detonation do), and
+    regenerating `docs/levels/level-01.md` via `node tools/build-level-docs.js` in the branch's own
+    worktree produced zero diff. Pattern to reuse: when a fragment volunteers a limitation or a
+    downstream consequence unprompted, that is a strong signal of genuine care — verify it like any
+    other claim, but it more often survives verification than an unprompted claim of *correctness*
+    does.
+57. **`Math.sqrt` for vector renormalisation in `core` has a real precedent worth checking rather than
+    trusting.** `MotionSystem.java:116` (`scale = cap / Math.sqrt(lengthSquared)`) already does exactly
+    this for the velocity cap, so a new use for aim-direction renormalisation in `BossSystem` citing it
+    as precedent is checkable with one grep rather than a determinism argument from first principles.
+    `Math.sin`/`cos` remain the thing to look for instead — still absent, still the actual TeaVM/JVM
+    float-parity risk this project treats as real.
+
+## PR #207 (`feat/fourteen-beat-level-one`, phase 11e task 1) — a content-only branch, clean, and the calibration case for "candidate not verdict"
+
+`assets/data/waves.json` + `level-01.json` + two generated docs + status fragment only (confirmed by
+`git diff --stat`), so invariants 1-6 are structurally out of reach. Verdict: accept. Worth recording
+because this is a strong example of the honest-partial-completion shape (patterns 21/22/36's positive
+case) and because it sharpens when a stated out-of-scope item is a real overstep versus a labelled,
+disclosed judgement call.
+
+46. **A per-wave "adapted" claim is checkable by diffing the spawn-tuple list, not by trusting the
+    table's prose.** Extracted `(spawn, formation, atX, trajectory)` per wave from both sides of the
+    diff with a five-line Python script (`json.load` on `git show <rev>:assets/data/waves.json`,
+    compare by wave id). Of nine "adapted" waves, seven were genuine trims (formations and order kept,
+    duplicate entries dropped, `atX` raised where the fragment says so). Two went further than a trim
+    without the fragment flagging it specifically: `l1-tanks-and-priority` reordered its spawns and
+    swapped `vee-5`→`diagonal` for its light entry, and `l1-evolved-shooters` dropped `enemy-light`
+    entirely and added an `enemy-basic line-5` in its place. Neither is a violation — the fragment
+    never claims "shape kept intact" for either of them the way it does for beat 3, and the beat's
+    thematic content survives — but it is the check to run every time a status fragment tables
+    kept/adapted/new: extract the tuples, diff them, and see whether the *specific* wave that claims
+    a bare "adapted" (no shape-preservation sentence attached) is doing more than trimming.
+47. **A candidate branch changing a number an issue's own "out of scope" section assigns to a later
+    task is not automatically an overstep — check whether the later task can even be evaluated without
+    it.** #198 says "the length... is task 2's and fixed by playing, not here," and the branch moved
+    `level-01.json`'s `boss.entersAt` from 302 to 139.5. `boss.entersAt` is independent of the wave
+    chain (confirmed by reading the generated doc's own note and `BossSystem`), so leaving it at 302
+    was a real option — the branch chose not to. What makes this a defensible judgement call rather
+    than a violation: the status fragment states the new number as a proposal with its derivation
+    (budget backward from "~3 min, boss included" against the fourteen beats' target durations),
+    labels it explicitly "not a verdict: task 2 owns the length," and the plan's own workflow frames
+    tasks 1-4 as landing together into one playable candidate for a single play session (#201) — a
+    13-wave-then-155-seconds-of-nothing level would not let that session answer the length question at
+    all. Recorded as the case to reuse: when a branch touches a value an issue nominally reserves for
+    a sibling task, check (a) whether the value is structurally independent of what this issue actually
+    builds, (b) whether the branch's own record calls it a proposal or a decision, and (c) whether the
+    sibling task could function without this branch having picked *some* value. All three favour
+    "accept, note for the coordinator" over "revert before merge" here.
+- Also confirmed clean by direct reproduction, not by trusting the write-up: `node
+  tools/build-level-docs.js` in the branch's own worktree produced zero diff against the committed
+  `docs/levels/{level-01,waves}.md`; every veer placement (`0.88`/`0.12`) satisfies the 11c
+  `atX >= 0.75` / `<= 0.25` rule; the swoop-drift arithmetic for the two previously-open Checks
+  findings (`l1-carrier-pair`, `l1-finale-a`) recomputed clean inside `0..208` for every remaining
+  `enemy-light`/`swoop` spawn in the new content; the per-beat start/end times in the fragment's own
+  table match the generated doc to the tenth of a second; `enemies.json` genuinely untouched
+  (`git diff --stat`); tank 300 / carrier 1000 / `weaponProjectileDamage 10` confirmed in
+  `assets/data/{enemies,balance}.json`, and zero `"cleared"`-type waves confirmed by grep, backing the
+  fragment's "every wave is `fixedDuration` on purpose" reasoning. `tools/pre-pr-check --base
+  phase/11e-level-one-redesigned` reproduced the PR body's pasted output verbatim, including the real
+  `./gradlew build` pass.

@@ -704,3 +704,45 @@ the beat is the use of it. Section 14's recommendation is amended accordingly.
 **The decision itself stands.** Inferring intent from a wave id would have been wrong about
 `l1-tank-solo` three times over, which is the case section 14 already reasoned from and which the
 generated document now confirms with the wave in front of it.
+
+## Corrections from phase 11e's first content change — 01/09/2026
+
+11d predicted that its document would be tested by its first reader who had not helped build it.
+Phase 11e was that test twice over: once by `level-designer` reading it to rebalance level 1
+([#206](https://github.com/LuchoC-Dev/little-spaceship/issues/206)), and once by the level actually
+changing underneath it.
+
+### C8 — The pointer C7 blessed broke on the first content change, one day later.
+
+C7, written 31/08/2026, closed with: *"The document sends the reader to `shape-catalogue.md` →
+'What points at what', which is right and stays."*
+
+On 01/09/2026, [#198](https://github.com/LuchoC-Dev/little-spaceship/issues/198) rebuilt level 1 as
+fourteen waves. **Every one of the fourteen wave ids in that table stopped existing** —
+`l1-basic-intro`, `l1-light-intro`, `l1-basic-light-mix`, `l1-tank-solo`, `l1-tank-intro-b`,
+`l1-rush-intro-a`, `l1-rush-intro-b`, `l1-carrier-intro`, `l1-shooter-intro`, `l1-veteran-mix`,
+`l1-carrier-pair`, `l1-rest-basic`, `l1-finale-a`. Not one survived. The table was corrected by hand
+in phase 11e and carries a dated note saying so.
+
+**The observation, and it is not that the table was wrong.** `docs/levels/level-01.md` is generated
+and `.github/workflows/ci.yml` fails if it drifts, so the generated half could not rot. Section 14
+deliberately delegates the one thing it cannot generate — beat intent — to a hand-written table. That
+delegation is therefore **the single place in the chain where a level document can be wrong**, and it
+went wrong at the first opportunity, in under twenty-four hours, silently, with CI green throughout.
+
+C7 was not mistaken about the table being the right *place* today. It was mistaken about the pointer
+being stable: the entry says the table "stays", and nothing was proposed to keep it true.
+
+**What this does not change.** Section 14's refusal to infer beat intent from a wave id still holds,
+and 11e strengthened it — `l1-twin-carriers-attachment` and `l1-heavy-carrier` are legible, but
+`l1-super-fast` merges what were two waves and its id says nothing about that.
+
+**What it argues for.** The `"note"` string section 14 recommends to phase 12, on the **placement**
+rather than the wave, is now the only proposal on the table that would let this mapping live where CI
+can see it. Until it exists, `shape-catalogue.md`'s table needs a check that fails when it names a
+wave id `assets/data/waves.json` does not have. That is a generator or `tools/` change and therefore
+its own issue, not a correction anyone can make inside this file.
+
+**Not checked:** whether any other hand-written document names a live wave id. `docs/plan/11b-*` and
+`docs/plan/11d-*` status files also name the old ids, but those are dated records of what was true
+when they were written, which is what a status file is, and correcting them would falsify them.
