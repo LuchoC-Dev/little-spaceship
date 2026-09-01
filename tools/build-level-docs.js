@@ -777,10 +777,14 @@ function buildLevel(levelFile, content) {
         `the sum across all ${CODE.boss.parts} parts, so killing pods shortens the bar without shortening the fight`],
     ]));
     w();
-    w('**How low a shot leaves the playfield**, from `combatY` and the fixed velocity ratios. Every');
-    w('ratio is shallower than 45 degrees, so every projectile exits through a side edge and how far');
-    w('down it gets is a pure function of `combatY`:');
+    w('**Where each ray goes**, from `combatY` and the fixed velocity ratios. `combatY` alone decides');
+    w('whether this boss can hit anything, so the two columns that matter are which edge a ray leaves');
+    w('through and how far it is from the boss when it crosses the height the player flies at.');
     w();
+    // #192: this used to print "y at the side edge" for every ray and assert that all six leave
+    // through a side, which is false — a ratio steeper than 45 degrees reaches the floor first, and
+    // the column then gave a y below the playfield for a place the projectile never gets to. Which
+    // edge a ray takes is derived here rather than assumed.
     const shots = [];
     const half = CODE.playfieldWidth.value / 2;
     for (const [name, ratios, vyRatio, speed] of [
@@ -790,14 +794,30 @@ function buildLevel(levelFile, content) {
       for (const r of ratios) {
         const vx = r * speed;
         const vy = vyRatio * speed;
-        shots.push([name, s2(r), s1(vx), s1(vy), s1(b.combatY - (half / vx) * Math.abs(vy))]);
+        const toSide = half / vx;
+        const toFloor = b.combatY / Math.abs(vy);
+        const atPlayer = vx * ((b.combatY - balance.playerStartY) / Math.abs(vy));
+        shots.push([
+          name,
+          s2(r),
+          s1(vx),
+          s1(vy),
+          toFloor < toSide ? `the floor, ${s1(toFloor)} s` : `a side, ${s1(toSide)} s`,
+          atPlayer > half ? '**off the playfield already**' : s1(atPlayer),
+        ]);
       }
     }
-    w(table(['pattern', 'vx ratio', 'vx', 'vy', 'y at the side edge'], shots));
+    w(table(['pattern', 'vx ratio', 'vx', 'vy', 'leaves through', `x from the boss at y ${s1(balance.playerStartY)}`],
+      shots));
     w();
-    w(`The ratios and \`CORE_SPAWN_Y\` are in ${CODE.boss.from}, not in content. **A \`y at the side`);
-    w(`edge\` above the player's band around \`playerStartY ${s1(balance.playerStartY)}\` means that ray never reaches them**,`);
-    w('which is how a boss becomes unlosable with no error anywhere.');
+    w(`The ratios and \`CORE_SPAWN_Y\` are in ${CODE.boss.from}, not in content.`);
+    w();
+    w(`**The last column is the one to read.** It is how far to either side of the boss a ray has`);
+    w(`travelled by the time it reaches \`playerStartY ${s1(balance.playerStartY)}\`, the height the player starts at, measured`);
+    w('from the boss\'s own centre — so a ray whose figure is larger than the half-width, 104, has left');
+    w('the playfield before it ever gets down there and threatens nobody. **A boss every one of whose');
+    w('rays reads that way is unlosable, with no error anywhere.** Where the player actually stands is');
+    w('theirs to choose; this document says only where the rays are.');
     w();
     w("**`entersAt` is absolute level time**, compared against `BossSystem`'s own clock, which is");
     w('independent of the wave chain. ' + (exact
