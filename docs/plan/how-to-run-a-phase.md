@@ -130,6 +130,34 @@ build on it.
 `docs/design/04-hud-layout.md` and `HudRenderer` are what it looks like done properly — the most
 accurate document/code pair in the repository, and the one where each side quotes the other by name.
 
+## Running the game is not playing it
+
+**An agent may launch the game only to confirm it starts** — the window opens and the menu renders — and nothing beyond that. It does not play it, does not steer to reach a wave, does not try to trigger a drop, and does not try to survive long enough to see an effect.
+
+Decided by the project owner on 01/09/2026, when a `game-presentation` agent on
+[#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) began driving the game to see the
+shield and the attachment for itself.
+
+**Judging the game by playing it is the project owner's role, and it is reserved on purpose.** Phase
+11e was built around that: agents produce a candidate, the owner plays it, and
+[`11e-level-one-redesigned/plan.md`](11e-level-one-redesigned/plan.md) states that the candidate is
+not the deliverable and that a balance verdict from anything but a session does not satisfy the
+acceptance criteria. An agent driving the game is neither a build check nor a play session — it is
+slow, it demonstrates very little, and it produces claims nobody should rely on.
+
+**What an agent does instead**, and all three of these are legitimate observations under the evidence
+rule in `CLAUDE.md`:
+
+- **compile, and cite the command and its output** — `./gradlew build`, the web build, `tools/pre-pr-check`;
+- **launch once, at most, to confirm it starts**, and say that is what was done;
+- **write "not checked" for everything else**, together with the exact steps the project owner would
+  follow to see it. `CLAUDE.md` already says "not checked" is always an acceptable answer and is never
+  treated as a failure. **Claiming to have seen something the agent drove the game to reach is worse
+  than saying it did not look.**
+
+This is the same boundary phase 11f's plan draws for the web target from the other direction: headless
+Chrome cannot validate the web runtime, so CI proves the build compiles and a human proves it runs.
+
 ## Two failures and you stop
 
 If the same thing fails twice, stop and report. Do not try a third variation.

@@ -17,3 +17,4 @@
 - [FileHandle#list() avoided for TeaVM](project_filehandle-list-avoided-for-teavm.md) — why level content stays keyed by an explicit id instead of enumerating `level-*.json` files.
 - [waves.json loader: a load-time flattening bridge that existed briefly, then was deleted](project_wave-loader-flattening-bridge.md) — what happens when a core contract lands before its consumer.
 - [SpawnEvent's "trajectory" key is read but deliberately not validated at load time](project_spawn-event-trajectory-override.md) — matches how enemyId/formationId already resolve lazily, in SpawnSystem.
+- [Pointer lock loss detection](project_pointer-lock-loss-detection.md) — poll `isCursorCatched()` against the self-set flag; pause reuses the existing overlay instead of new UI; real-browser check still open.
