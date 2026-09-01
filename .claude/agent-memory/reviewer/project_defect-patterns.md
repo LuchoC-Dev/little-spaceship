@@ -832,3 +832,28 @@ content references any new shape id (`grep -rln "strike-run\|veer-left\|veer-rig
 returns only `trajectories.json`), confirming the "no wave points at a shape yet" claim.
 
 Related: [[audit-techniques]].
+
+56. **Phase 11e's two branches (#203 boss-aimed-attack, #204 enemy-health-numbers) are a second
+    clean-branch calibration point, and both status fragments self-flagged their own biggest risk
+    instead of waiting for review to find it.** #203's fragment names, unprompted, that collapsing
+    spread/sweep into one `fireAimedFan` method "narrows what makes them feel like two" and routes it
+    back to task 5's play session rather than asserting the decided "two alternating patterns" rule
+    is still intact — a claim I could not fully settle either (it is a rules judgement, not a fact),
+    so the honest move was to relay the same open question rather than resolve it either way. #204's
+    fragment flags `LevelScoreReplayTest.java:32`'s javadoc as now false without touching the file
+    (correctly, since it's `core-domain`'s), and separately flags `bombDamage 50` against the new
+    carrier `Health 1000` as dropping the bomb from removing 62% to 5% of a carrier's health — a real
+    numeric consequence of the change that the branch's own scope didn't ask it to fix. Both claims
+    checked out exactly as stated: `DamageSystem.java:93` genuinely never reads `Collider#fragile` on
+    the player-projectile branch (only `:149` ramming and `BombSystem.java:115` detonation do), and
+    regenerating `docs/levels/level-01.md` via `node tools/build-level-docs.js` in the branch's own
+    worktree produced zero diff. Pattern to reuse: when a fragment volunteers a limitation or a
+    downstream consequence unprompted, that is a strong signal of genuine care — verify it like any
+    other claim, but it more often survives verification than an unprompted claim of *correctness*
+    does.
+57. **`Math.sqrt` for vector renormalisation in `core` has a real precedent worth checking rather than
+    trusting.** `MotionSystem.java:116` (`scale = cap / Math.sqrt(lengthSquared)`) already does exactly
+    this for the velocity cap, so a new use for aim-direction renormalisation in `BossSystem` citing it
+    as precedent is checkable with one grep rather than a determinism argument from first principles.
+    `Math.sin`/`cos` remain the thing to look for instead — still absent, still the actual TeaVM/JVM
+    float-parity risk this project treats as real.
