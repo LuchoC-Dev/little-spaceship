@@ -87,3 +87,45 @@ under SwiftShader even when a real browser works. This is the project owner's to
 
 No file under `core/` was touched. `game/src/main/java/dev/luchoc/littlespaceship/game/adapter/input/InputAdapter.java`
 still imports only `core.port` (`BalanceValues`, `InputFrame`), unchanged from before this fix.
+
+## Addendum — a false pause on the click that engages capture (found in review)
+
+The reviewer flagged, and the coordinator confirmed from `backend-web-1.6.1-sources.jar`
+(`com/github/xpenatan/gdx/teavm/backends/web/WebInput.java`), that the original fix could pause
+the game the moment the player clicked to engage mouse control, on the web target specifically.
+
+**Why.** `setCursorCatchedJSNI` on the web backend calls the browser's `element.requestPointerLock()`,
+which is asynchronous: the grant arrives later via a `pointerlockchange` event, and
+`isCursorCatchedJSNI` (`document.pointerLockElement === canvas`) still reads false the instant
+`requestPointerLock()` returns. The original `managePointerCapture` ran the request and the loss
+check in the same call with nothing separating them, so:
+
+1. click → `pointerCaptureRequested = true`, `setCursorCatched(true)` called
+2. same call → `isCursorCatched()` is still false (grant pending)
+3. → read as an unasked-for revocation → `pointerCaptureLostUnexpectedly = true` → `PlayScreen`
+   pauses on the very click meant to start mouse control.
+
+**Why a desktop run could not have caught this.** LWJGL3's `setCursorCatched` grants the catch
+synchronously, so `isCursorCatched()` is already true by the time the loss check runs on desktop.
+The bug is invisible to any local desktop launch and only exists on the web backend's async path —
+exactly the kind of thing this phase's evidence rule exists for: I could not have found this by
+running the game, only by reading the platform source, which is what the coordinator did.
+
+**The fix, and why a single-frame `return` was not enough.** A `return` right after setting
+`pointerCaptureRequested = true` would suppress the false pause on the request frame itself, but
+the coordinator's question stands: nothing guarantees a browser grants the lock within one frame.
+If the grant takes longer, a bare one-frame guard just moves the false pause to the second frame.
+So instead of counting frames, `managePointerCapture` now gates the loss check on a new
+`pointerCaptureConfirmed` flag: the loss check is inert until `isCursorCatched()` has been observed
+`true` at least once since the request. A pending grant — however many frames it takes — is
+silently waited out; only a capture that was actually confirmed and then revoked counts as an
+unexpected loss. Escape's deliberate-release branch clears both flags and is unaffected.
+
+**Verification after the fix.**
+- `./gradlew :game:compileJava :desktop:compileJava` — `BUILD SUCCESSFUL`.
+- `./gradlew :web:gdx_teavm_web_js_build` — `BUILD SUCCESSFUL`.
+- The async-grant race itself is still **not checked** against a real browser — the same
+  real-browser verification gap the original report already named. The reproduction steps above
+  now additionally ask the project owner to confirm that clicking to engage mouse control does
+  **not** immediately show the `PAUSED` overlay, since that would mean the grace window is still
+  insufficient in practice.
