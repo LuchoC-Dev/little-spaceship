@@ -145,21 +145,33 @@ public final class PlayScreen implements Screen {
         }
         if (!paused) {
             InputFrame frame = input.sample(delta, content.balance(), game.settings().mouseEnabled());
-            loop.advance(delta, frame);
+            if (input.pointerCaptureLostUnexpectedly()) {
+                // The browser revoked pointer lock on its own — a notification, alt-tab, or a click
+                // outside the canvas — not the player pressing Escape. Issue #41: without this, the
+                // ship kept reading deltas from a now-free cursor, losing its centring and then
+                // losing movement entirely once the cursor hit a screen edge. Pausing, rather than
+                // falling back to keyboard-only or a click-to-resume prompt, means a player who
+                // alt-tabs mid-fight comes back to a game waiting for them instead of a ship that
+                // silently drifted while they were away. This frame's mouse-derived deltas in
+                // `frame` are discarded along with it.
+                pauseGameplay();
+            } else {
+                loop.advance(delta, frame);
 
-            WorldView view = simulation.view();
-            audioDirector.update(view, view.player());
-            LevelOutcome outcome = view.outcome();
-            if (outcome != LevelOutcome.IN_PROGRESS) {
-                PlayerStatus status = view.player();
-                if (outcome == LevelOutcome.DEFEATED) {
-                    game.setScreen(new DefeatScreen(game, status.score()));
-                } else {
-                    CompletionBonus bonus = view.completionBonus();
-                    game.setScreen(new VictoryScreen(
-                        game, status.score(), bonus.livesBonus(), bonus.bombsBonus()));
+                WorldView view = simulation.view();
+                audioDirector.update(view, view.player());
+                LevelOutcome outcome = view.outcome();
+                if (outcome != LevelOutcome.IN_PROGRESS) {
+                    PlayerStatus status = view.player();
+                    if (outcome == LevelOutcome.DEFEATED) {
+                        game.setScreen(new DefeatScreen(game, status.score()));
+                    } else {
+                        CompletionBonus bonus = view.completionBonus();
+                        game.setScreen(new VictoryScreen(
+                            game, status.score(), bonus.livesBonus(), bonus.bombsBonus()));
+                    }
+                    return;
                 }
-                return;
             }
         }
 
