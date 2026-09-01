@@ -295,6 +295,32 @@ decided is here.
 that way rather than resolved. Whether the boss's spread and sweep still read as two distinct patterns
 now that both fan around an aimed direction was not answered in this session and remains open.
 
+### In-game options, 01/09/2026
+
+Decided while closing [#42](https://github.com/LuchoC-Dev/little-spaceship/issues/42), found by
+playing the deployed build on 25/08/2026: the pause panel offered only RESUME and QUIT TO MENU, so
+changing volume mid-run meant abandoning it. This changes what section "Pause" of
+`02-mvp-functional-spec.md` says the pause panel offers.
+
+- **The pause panel gains an OPTIONS entry, and it opens an inline panel rebuilt in place inside
+  `PlayScreen`'s own pause `Stage`, not the existing `OptionsScreen`.** `OptionsScreen` is a full
+  `Screen`; showing it over a paused run would mean either running two stages at once or replacing
+  `PlayScreen` outright, and `LittleSpaceshipGame#setScreen` disposes the outgoing screen the moment a
+  new one is set — the same reason `OptionsScreen`'s own BACK button already takes a `Supplier<Screen>`
+  rather than a screen instance. Replacing `PlayScreen` to show a slider would tear down the run's
+  `Simulation` to change a number. The pause panel's `Table` swaps its own children between the
+  RESUME/OPTIONS/QUIT state and the volume state instead, so the playfield stays frozen, the pause
+  `Stage`'s pointer-lock and input-processor state are untouched, and there is nothing to restore on
+  the way back.
+- **Only master, music and effects volume are exposed in-game.** Issue #42 names volume as the one
+  setting that costs a run to reach; nothing else was asked for. Mouse control is excluded because it
+  changes what `InputAdapter#sample` reads while a live pointer-lock state is in effect, which is a
+  different, riskier claim than a volume slider and not the one #42 makes. Credits and licences are
+  excluded because they have no relationship to a paused run and are already one click from the main
+  menu. Both stay exactly where `OptionsScreen` already puts them.
+
+Implemented in `game/src/main/java/dev/luchoc/littlespaceship/game/screen/PlayScreen.java`.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.
