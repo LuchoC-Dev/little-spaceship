@@ -405,12 +405,12 @@ the point: `rate 4.0` is a number, "one shot per pass" is what it means.
 
 | archetype | sprite | radius | fragile | health | shots to kill | score | default shape | screen time | weapon | shots per pass | spawner | children per pass | lifetime |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `enemy-basic` | `enemy-basic` | 5.5 | yes | none | 1 | 100 | `slow-descent` | 15.3 s | `straight-single`, every 3.2 s from 1.0 s, speed 70.0 | 5 | none | — | none |
-| `enemy-light` | `enemy-light` | 4.5 | yes | none | 1 | 150 | `swoop` | 6.9 s | `straight-single`, every 2.4 s from 0.9 s, speed 130.0 | 3 | none | — | none |
-| `enemy-tank` | `enemy-tank` | 10.5 | no | 40 | 4 | 500 | `crawl` | 31.2 s | `straight-single`, every 4.8 s from 1.6 s, speed 60.0 | 7 | none | — | none |
+| `enemy-basic` | `enemy-basic` | 5.5 | yes | 30 | 3 | 100 | `slow-descent` | 15.3 s | `straight-single`, every 3.2 s from 1.0 s, speed 70.0 | 5 | none | — | none |
+| `enemy-light` | `enemy-light` | 4.5 | yes | 20 | 2 | 150 | `swoop` | 6.9 s | `straight-single`, every 2.4 s from 0.9 s, speed 130.0 | 3 | none | — | none |
+| `enemy-tank` | `enemy-tank` | 10.5 | no | 300 | 30 | 500 | `crawl` | 31.2 s | `straight-single`, every 4.8 s from 1.6 s, speed 60.0 | 7 | none | — | none |
 | `enemy-rush` | `enemy-rush` | 4.0 | yes | none | 1 | 250 | `dive` | 3.4 s | `straight-single`, every 4.0 s from 1.4 s, speed 120.0 | 1 | none | — | none |
-| `enemy-carrier` | `enemy-carrier` | 15.0 | no | 80 | 8 | 1000 | `crawl` | 31.7 s | none | — | `enemy-basic` every 4.0 s | 7 | none |
-| `enemy-shooter` | `enemy-shooter` | 6.5 | yes | none | 1 | 200 | `slow-descent` | 15.4 s | `straight-single`, every 1.8 s from 0.7 s, speed 90.0 | 9 | none | — | none |
+| `enemy-carrier` | `enemy-carrier` | 15.0 | no | 1000 | 100 | 1000 | `crawl` | 31.7 s | none | — | `enemy-basic` every 4.0 s | 7 | none |
+| `enemy-shooter` | `enemy-shooter` | 6.5 | yes | 40 | 4 | 200 | `slow-descent` | 15.4 s | `straight-single`, every 1.8 s from 0.7 s, speed 90.0 | 9 | none | — | none |
 
 **shots to kill** is `ceil(health / weaponProjectileDamage)` against `weaponProjectileDamage 10`
 from `assets/data/balance.json`. An archetype with no `health` dies to one projectile — and so
