@@ -37,6 +37,7 @@ public final class InputAdapter {
     private final Viewport viewport;
 
     private boolean pointerCaptureRequested;
+    private boolean pointerCaptureConfirmed;
     private boolean pointerCaptureLostUnexpectedly;
 
     public InputAdapter(Viewport viewport) {
@@ -150,6 +151,16 @@ public final class InputAdapter {
      * one place that distinguishes the two: Escape sets {@link #pointerCaptureLostUnexpectedly} to
      * false, an unasked-for revocation sets it to true, for
      * {@link dev.luchoc.littlespaceship.game.screen.PlayScreen} to react to.
+     *
+     * <p>The web backend's {@code requestPointerLock()} is asynchronous: {@code isCursorCatched()}
+     * can keep reporting false for an unknown number of frames after the request, until the browser
+     * grants the lock and fires {@code pointerlockchange}. The desktop LWJGL3 backend grants it
+     * synchronously, which is why this only shows up on web. Testing for loss the very frame capture
+     * is requested — or even the next one — would read the still-pending grant as an unexpected
+     * revocation and pause the game on the click meant to start it. {@link #pointerCaptureConfirmed}
+     * exists for this: the loss check only arms once {@code isCursorCatched()} has been observed
+     * true at least once since the request, so a slow grant is just silently waited out rather than
+     * bounded to a fixed number of frames.
      */
     private void managePointerCapture(boolean mouseEnabled) {
         pointerCaptureLostUnexpectedly = false;
@@ -160,14 +171,24 @@ public final class InputAdapter {
                 || Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT))) {
             Gdx.input.setCursorCatched(true);
             pointerCaptureRequested = true;
+            pointerCaptureConfirmed = false;
         }
 
         if (escapeJustPressed && pointerCaptureRequested) {
             Gdx.input.setCursorCatched(false);
             pointerCaptureRequested = false;
-        } else if (pointerCaptureRequested && !Gdx.input.isCursorCatched()) {
-            pointerCaptureRequested = false;
-            pointerCaptureLostUnexpectedly = true;
+            pointerCaptureConfirmed = false;
+        } else if (pointerCaptureRequested) {
+            if (Gdx.input.isCursorCatched()) {
+                // The asynchronous grant has landed; the loss check below may now fire on a future
+                // frame where the browser actually revokes it.
+                pointerCaptureConfirmed = true;
+            } else if (pointerCaptureConfirmed) {
+                pointerCaptureRequested = false;
+                pointerCaptureConfirmed = false;
+                pointerCaptureLostUnexpectedly = true;
+            }
+            // else: the grant is still pending — not yet confirmed, so not yet a loss.
         }
     }
 }
