@@ -321,6 +321,35 @@ changing volume mid-run meant abandoning it. This changes what section "Pause" o
 
 Implemented in `game/src/main/java/dev/luchoc/littlespaceship/game/screen/PlayScreen.java`.
 
+### Menu and screens, 01/09/2026
+
+Decided by the project owner while closing [#40](https://github.com/LuchoC-Dev/little-spaceship/issues/40),
+found by playing the deployed build on 25/08/2026.
+
+- **On the web target, QUIT keeps its slot and means something else: it opens a farewell screen with a
+  way back to the menu.** `game/screen/MenuScreen.java` branches on
+  `Gdx.app.getType() == ApplicationType.WebGL`, and the screen is
+  `game/screen/FarewellScreen.java`, modelled on `CreditsScreen`. **On desktop QUIT still exits**, and
+  the entry, its label and its position are identical on both targets.
+
+  `MenuScreen` wired QUIT to `Gdx.app::exit`, which closes the window on desktop and **can do nothing
+  in a browser**: JavaScript may not close a tab it did not open. `02-mvp-functional-spec.md` asks for
+  Play/Options/Quit and was written for a desktop game, so this changes what that section means rather
+  than correcting a mistake in it.
+
+  Two alternatives were put to the project owner and refused: hiding the entry on web, which leaves
+  the main menu different on each target for a reason the player cannot see; and repurposing the slot
+  as a fullscreen toggle, which stops being a meaning for QUIT and becomes a different button.
+
+  **The farewell screen carries no score, deliberately.** QUIT lives on the main menu, where no run is
+  in progress, and `game/GameSettings.java` persists only volumes and the mouse toggle — there is no
+  stored score to show. Adding one would be a design decision nobody has taken. This was put to the
+  project owner as a weakness of the option before they chose it.
+
+  Verified from the backend source rather than assumed: `WebApplication.java:440-441` of
+  `gdx-teavm` 1.6.1 returns `ApplicationType.WebGL` as a constant, so the branch is reached.
+  **Not checked:** the deployed build, which is the project owner's.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.
