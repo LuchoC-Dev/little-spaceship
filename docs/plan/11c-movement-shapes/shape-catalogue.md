@@ -119,20 +119,31 @@ a shape, not a level edit** — redesigning level 1 is [11e](../11e-level-one-re
 
 | # | Beat | Wave today | Shape it points at |
 |---|---|---|---|
-| 1 | audiovisual introduction | — | none; no enemies |
-| 2 | initial calm | `l1-basic-intro` | `slow-descent` |
-| 3 | first isolated basics | `l1-basic-intro` | `slow-descent` |
-| 4 | light/fast | `l1-light-intro` | `swoop` — plain, so the archetype is readable before it is combined |
-| 5 | combined formations | `l1-basic-light-mix` | `slow-descent`, `swoop` |
-| 6 | tanks and shifts in priority | `l1-tank-solo`, `l1-tank-intro-b` | `crawl` — the shift in priority *is* the 30 s of screen time |
-| 7 | super-fast | `l1-rush-intro-a`, then `-b` | `dive` first, then **`strike-run`** |
-| 8 | one or two heavy carriers | `l1-carrier-intro` | `crawl` |
-| 9 | evolved basics/shooters | `l1-shooter-intro` | `slow-descent` |
-| 10 | high-pressure combinations | `l1-veteran-mix` | **`veer-left`, `veer-right`** across descending basics |
-| 11 | difficult encounter → attachment | `l1-carrier-pair` | `crawl` carriers plus **`strike-run`** rushes |
-| 12 | brief rest | `l1-rest-basic` | `slow-descent` |
-| 13 | final escalation | `l1-finale-a` | everything, **`strike-run`** and both veers included |
-| 14 | boss | — | out of scope: `BossSystem` is its own problem ([#88](https://github.com/LuchoC-Dev/little-spaceship/issues/88)) |
+| 1 | audiovisual introduction | `l1-intro-flyover` | **`dive`** on `enemy-light` — a flyover, nothing to shoot back at |
+| 2 | initial calm | `l1-opening-calm` | `slow-descent` |
+| 3 | first isolated basics | `l1-first-basics` | `slow-descent` |
+| 4 | light/fast | `l1-light-and-fast` | `swoop` — plain, so the archetype is readable before it is combined |
+| 5 | combined formations | `l1-combined-formations` | `slow-descent`, `swoop` |
+| 6 | tanks and shifts in priority | `l1-tanks-and-priority` | `crawl` — the shift in priority *is* the screen time |
+| 7 | super-fast | `l1-super-fast` | `dive`, then **`strike-run`** |
+| 8 | one or two heavy carriers | `l1-heavy-carrier` | `crawl` |
+| 9 | evolved basics/shooters | `l1-evolved-shooters` | `slow-descent` |
+| 10 | high-pressure combinations | `l1-high-pressure` | **`veer-left`, `veer-right`** across descending basics |
+| 11 | difficult encounter → attachment | `l1-twin-carriers-attachment` | `crawl` carriers plus **`strike-run`** and **`veer-left`** |
+| 12 | brief rest | `l1-brief-rest` | `slow-descent` |
+| 13 | final escalation | `l1-final-escalation` | everything, **`strike-run`** and both veers included |
+| 14 | boss | `l1-boss-approach` | `slow-descent`, `swoop`, `dive` — an escort over the boss's descent; the fight itself is `BossSystem`'s ([#88](https://github.com/LuchoC-Dev/little-spaceship/issues/88)) |
+
+**Updated 01/09/2026, in phase 11e.** Every wave id in the table above was replaced when
+[#198](https://github.com/LuchoC-Dev/little-spaceship/issues/198) rebuilt level 1 as fourteen waves.
+The table as 11c wrote it named `l1-basic-intro`, `l1-tank-solo`, `l1-carrier-pair` and nine others,
+and **not one of them still existed** the day after the phase that blessed this pointer closed. The
+prose below is unchanged: it argues from beats, and the beats did not move.
+
+That this table needs a dated correction at all is the finding, and it is recorded as **C8** in
+`docs/plan/11d-per-level-document/document-contract.md`. `docs/levels/level-01.md` is generated and
+CI refuses to let it drift; it sends the reader here for the one thing it cannot generate, and here
+is hand-written, so this is the single place in the chain where a level document can be wrong.
 
 Beat by beat, why each new entry ships:
 
