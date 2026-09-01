@@ -1,6 +1,6 @@
 # Phase 11d — The per-level document · status
 
-**State:** done on the phase branch — open as a pull request against `dev`, unmerged, awaiting the project owner's approval
+**State:** done — merged into `dev` in [#195](https://github.com/LuchoC-Dev/little-spaceship/pull/195), approved by the project owner on 31/08/2026
 **Updated:** 31/08/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
@@ -47,4 +47,4 @@ The document is fifteen sections — the fourteen [`document-contract.md`](docum
 
 **Two spawns in shipped content are flagged and were not fixed.** `l1-carrier-pair` and `l1-finale-a` each place `enemy-light` in `diagonal-mirror` on `swoop` far enough left that 53% and 63% of the swept width sits outside `0 .. 208`. They read in range at the spawn instant. `assets/data/` is `level-designer`'s and level 1's content is 11e's, so they are reported in the document's own Checks section and left there.
 
-**#177's fix has not been observed passing on a real runner.** That needs a `dev` → `main` pull request and there was nothing to release. The first release after this merges is the observation, and whoever opens it should record the run id in [`status/177-pr-check-release-exemption.md`](status/177-pr-check-release-exemption.md).
+**#177's fix has not been observed passing on a real runner.** That needs a `dev` → `main` pull request, and none has been opened since it merged. The first release after this merges is the observation, and whoever opens it should record the run id in [`status/177-pr-check-release-exemption.md`](status/177-pr-check-release-exemption.md).
