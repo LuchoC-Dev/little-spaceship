@@ -30,3 +30,22 @@ garbage deltas from a freed cursor. See `docs/plan/11f-web-defects/status/41-poi
 triggers `isCursorCatched() == false` the way the desktop LWJGL3 backend does. Could not open a
 real browser from this sandbox. This is exactly the kind of claim phase 09 got away with skipping —
 don't repeat that; say "not checked" until someone with a real browser confirms it.
+
+## Correction — `setCursorCatched(true)` is asynchronous on the web backend
+
+Found in review (phase 11f, PR #221), from reading `backend-web-1.6.1-sources.jar`,
+`com/github/xpenatan/gdx/teavm/backends/web/WebInput.java`, not from running anything: on the web
+target, `Gdx.input.setCursorCatched(true)` calls the browser's `element.requestPointerLock()`,
+which is **asynchronous** — the grant lands later via a `pointerlockchange` event, and
+`isCursorCatched()` (`document.pointerLockElement === canvas`) still reads false the instant
+`setCursorCatched(true)` returns, for an unknown number of subsequent frames too.
+
+This means: never test `isCursorCatched()` for "did I just lose the lock" in the same call, or the
+next few calls, that requested it — that reads a still-pending grant as a revocation. The desktop
+LWJGL3 backend grants the catch synchronously, so this class of bug is invisible to any local
+desktop run and can only be caught by reading the platform source or by testing in a real browser.
+
+The fix that held up under review was not a fixed number of frames of grace (that just moves the
+race rather than closing it) but a latch: only treat `isCursorCatched() == false` as a loss once
+`isCursorCatched() == true` has been observed at least once since the request. A slow grant is then
+waited out for as long as it actually takes.
