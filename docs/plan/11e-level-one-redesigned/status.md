@@ -1,6 +1,6 @@
 # Phase 11e — Level 1 redesigned, balance and the boss · status
 
-**State:** done on the phase branch — six issues closed through six pull requests, the candidate played by the project owner on 01/09/2026 and tuned from that session. **Pull request open against `dev` and unmerged**, waiting on the project owner's direct approval.
+**State:** done on the phase branch — six issues closed through six pull requests, the candidate played by the project owner on 01/09/2026, tuned from that session, and **confirmed by a second session the same day: the level's design is correct and nothing further is to be modified.** **Pull request open against `dev` and unmerged**, waiting on the project owner's direct approval.
 **Updated:** 01/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
@@ -52,7 +52,7 @@ The phase was structured around a rule this project decided twice, on 22/08 and 
 - [#205](https://github.com/LuchoC-Dev/little-spaceship/issues/205) — `LevelScoreReplayTest`'s javadoc cites enemy health values that no longer exist. The test passes; the sentence is false. `core-domain`'s.
 - [#206](https://github.com/LuchoC-Dev/little-spaceship/issues/206) — the generated document's `shots to kill` counts projectiles, while `core/domain/system/WeaponSystem.java` fires up to five per trigger pull. Found by the first reader of 11d's document who had not helped build it, which is the test [`plan.md`](plan.md) predicted this phase would be.
 - [#208](https://github.com/LuchoC-Dev/little-spaceship/issues/208) — nothing fails when `shape-catalogue.md` names a wave id that no longer exists. See below.
-- The carrier's mechanism. **The 3.0 s interval closes beat 8 by 0.5 s and does not close beat 11**, where an ideally firing player at shot level 4 kills a carrier in 2.1 s. Beat 11 is the difficult encounter that hands over the attachment, so it is the beat where the mechanism matters most. Going below 3.0 s was refused: a carrier producing a child every 2 s is a different encounter rather than the same one repaired.
+- ~~The carrier's mechanism.~~ **Closed on 01/09/2026 by a second play session: the carrier spawns children.** The arithmetic said it would not in beat 11 — an ideally firing player at shot level 4 kills a carrier in 2.1 s, and no `Spawner` interval above 2.0 s delivers a child in that time. The `Spawner` interval had come 4.0 s to 3.0 s for exactly this. **Play answered the question the arithmetic could not**: ideal fire is not real fire, and the margin the calculation said was missing is there when someone is also dodging. The number stays at 3.0 s and the concern is withdrawn rather than carried forward.
 
 **Two of the session's six questions are not settled, and are recorded that way** — the acceptance criteria say an unclear answer is an acceptable one:
 
@@ -65,6 +65,10 @@ The phase was structured around a rule this project decided twice, on 22/08 and 
 
 **Two pull requests were merged without a `reviewer` pass** — [#211](https://github.com/LuchoC-Dev/little-spaceship/pull/211) and [#212](https://github.com/LuchoC-Dev/little-spaceship/pull/212) — on the project owner's explicit instruction. The coordinator verified the five health values, the twelve wave definitions and twelve placements, `boss.entersAt`, both projectile speeds and the Checks section directly against `assets/data/`. **That is a coordinator's check and not an independent audit**, and it is written here rather than left to be inferred from the absence of a review. `reviewer` did audit the other four.
 
-**The next session's first item is now two items**, because the 3.0 s interval split them: does the carrier spawn children in beat 8, and does it in beat 11?
+**The second session, later on 01/09/2026, closed the level.** The project owner played again after the tuning and reported: the design of the level is correct, the carrier spawns children, and the shots and the level are right. **Nothing further to modify.** That answers the one open mechanism question this phase carried and it is struck through above.
+
+**It is also the second time in one day that play contradicted this repository's own arithmetic and was right.** The first was enemy health, raised by #199 on a derived table and lowered again by the session. The second was the carrier: the table in `docs/planning/10-mvp-initial-values.md` computes an ideal time-to-kill of 2.1 s in beat 11 against a 3.0 s interval and concludes the child cannot arrive. It does arrive. **Ideal fire is a bound, not a prediction**, and this phase has now paid twice for reading it as one. The tables stay — they are how a candidate gets built at all — but a number they flag is a question for a session, never a verdict.
+
+**What the next session should carry instead**, since the carrier is settled: whether the boss's spread and sweep still read as two distinct patterns. That is the one open item that touches a decided rule.
 
 **Phase 12 is the honest measurement of whether this group worked**, and the roadmap says to treat that as an acceptance criterion rather than a hope. Level 1 was built by the phase that also built the mechanisms; levels 2 and 3 will be built by someone using them cold.
