@@ -21,6 +21,10 @@
 - [Shape placement arithmetic](project_shape-placement-arithmetic.md) — how far a drifting shape
   carries a formation off screen, the `atX` windows for `swoop` and the veers, the generator's 50%
   threshold, and why a wave cannot be empty.
+- [Carrier spawner survival window](project_carrier-spawner-survival-window.md) — a spawner's first
+  child arrives one whole interval late, so a carrier's health has a floor of `interval x ideal dps`.
+- [Apply the owner's numbers exactly](feedback_apply-owner-numbers-exactly.md) — ship a play-session
+  number verbatim and record the disagreement in the fragment; make the JSON say what is true.
 - [Wave migration mechanics](project_wave-migration-mechanics.md) — a wave's `FixedDuration` is shared
   across every placement that reuses it, negative offsets overlap two `FixedDuration` waves since 11b, no
   test touches the real `assets/data/level-01.json`, and how to live-run it without a full app context.
