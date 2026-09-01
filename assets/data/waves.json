@@ -34,7 +34,7 @@
       "spawns": [
         { "at": 0.0, "spawn": "enemy-basic", "formation": "line-5", "atX": 0.5 },
         { "at": 1.5, "spawn": "enemy-light", "formation": "diagonal", "atX": 0.80 },
-        { "at": 4.0, "spawn": "enemy-basic", "formation": "line-3", "atX": 0.30 },
+        { "at": 4.0, "spawn": "enemy-basic", "formation": "line-3", "atX": 0.30, "drop": "shield", "dropSlot": 1 },
         { "at": 5.5, "spawn": "enemy-light", "formation": "diagonal-mirror", "atX": 0.55 },
         { "at": 8.5, "spawn": "enemy-basic", "formation": "column-3", "atX": 0.15 },
         { "at": 9.0, "spawn": "enemy-basic", "formation": "column-3", "atX": 0.85 },

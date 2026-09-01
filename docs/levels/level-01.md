@@ -137,7 +137,7 @@ keeps producing children reads low here and plays hard.
 | 1 | `l1-opening-calm` | 0.0 | 0.0 | 8.0 | 8.0 s | 1 | 0.13/s | `enemy-basic` | — |
 | 2 | `l1-first-basics` | 0.0 | 8.0 | 22.0 | 14.0 s | 13 | 0.93/s | `enemy-basic` | `weapon-upgrade` |
 | 3 | `l1-light-and-fast` | 0.0 | 22.0 | 33.0 | 11.0 s | 13 | 1.18/s | `enemy-light` | — |
-| 4 | `l1-combined-formations` | 0.0 | 33.0 | 46.0 | 13.0 s | 23 | 1.77/s | `enemy-basic` `enemy-light` | — |
+| 4 | `l1-combined-formations` | 0.0 | 33.0 | 46.0 | 13.0 s | 23 | 1.77/s | `enemy-basic` `enemy-light` | `shield` |
 | 5 | `l1-tanks-and-priority` | 0.0 | 46.0 | 58.0 | 12.0 s | 13 | 1.08/s | `enemy-tank` `enemy-basic` `enemy-light` | `weapon-upgrade` |
 | 6 | `l1-super-fast` | 0.0 | 58.0 | 67.0 | 9.0 s | 7 | 0.78/s | `enemy-rush` | — |
 | 7 | `l1-heavy-carrier` | 0.0 | 67.0 | 80.0 | 13.0 s | 7 | 0.54/s | `enemy-carrier` `enemy-basic` `enemy-light` | — |
@@ -221,7 +221,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 |---|---|---|---|---|---|---|---|
 | 0.0 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
 | 1.5 | `enemy-light` | `diagonal` (3) | 0.80 | `swoop` | 146.9 .. 185.9 | 78.3 .. 185.9 | — |
-| 4.0 | `enemy-basic` | `line-3` (3) | 0.30 | `slow-descent` | 36.9 .. 87.9 | same | — |
+| 4.0 | `enemy-basic` | `line-3` (3) | 0.30 | `slow-descent` | 36.9 .. 87.9 | same | `shield` slot 1 |
 | 5.5 | `enemy-light` | `diagonal-mirror` (3) | 0.55 | `swoop` | 94.9 .. 133.9 | 26.3 .. 133.9 | — |
 | 8.5 | `enemy-basic` | `column-3` (3) | 0.15 | `slow-descent` | 25.7 .. 36.7 | same | — |
 | 9.0 | `enemy-basic` | `column-3` (3) | 0.85 | `slow-descent` | 171.3 .. 182.3 | same | — |
@@ -462,6 +462,7 @@ document cannot keep them honest** — if those lines move, this text does not c
 | at | kind | wave | carried by |
 |---|---|---|---|
 | 11.0 | `weapon-upgrade` | `l1-first-basics` (#2) | `enemy-basic` in `line-3`, slot 1 |
+| 37.0 | `shield` | `l1-combined-formations` (#4) | `enemy-basic` in `line-3`, slot 1 |
 | 48.0 | `weapon-upgrade` | `l1-tanks-and-priority` (#5) | `enemy-basic` in `line-3`, slot 1 |
 | 86.0 | `weapon-upgrade` | `l1-evolved-shooters` (#8) | `enemy-basic` in `line-5`, slot 2 |
 | 92.5 | `extra-life` | `l1-high-pressure` (#9) | `enemy-shooter` in `line-3`, slot 1 |
