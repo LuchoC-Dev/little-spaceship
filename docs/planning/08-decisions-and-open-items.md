@@ -295,6 +295,61 @@ decided is here.
 that way rather than resolved. Whether the boss's spread and sweep still read as two distinct patterns
 now that both fan around an aimed direction was not answered in this session and remains open.
 
+### In-game options, 01/09/2026
+
+Decided while closing [#42](https://github.com/LuchoC-Dev/little-spaceship/issues/42), found by
+playing the deployed build on 25/08/2026: the pause panel offered only RESUME and QUIT TO MENU, so
+changing volume mid-run meant abandoning it. This changes what section "Pause" of
+`02-mvp-functional-spec.md` says the pause panel offers.
+
+- **The pause panel gains an OPTIONS entry, and it opens an inline panel rebuilt in place inside
+  `PlayScreen`'s own pause `Stage`, not the existing `OptionsScreen`.** `OptionsScreen` is a full
+  `Screen`; showing it over a paused run would mean either running two stages at once or replacing
+  `PlayScreen` outright, and `LittleSpaceshipGame#setScreen` disposes the outgoing screen the moment a
+  new one is set — the same reason `OptionsScreen`'s own BACK button already takes a `Supplier<Screen>`
+  rather than a screen instance. Replacing `PlayScreen` to show a slider would tear down the run's
+  `Simulation` to change a number. The pause panel's `Table` swaps its own children between the
+  RESUME/OPTIONS/QUIT state and the volume state instead, so the playfield stays frozen, the pause
+  `Stage`'s pointer-lock and input-processor state are untouched, and there is nothing to restore on
+  the way back.
+- **Only master, music and effects volume are exposed in-game.** Issue #42 names volume as the one
+  setting that costs a run to reach; nothing else was asked for. Mouse control is excluded because it
+  changes what `InputAdapter#sample` reads while a live pointer-lock state is in effect, which is a
+  different, riskier claim than a volume slider and not the one #42 makes. Credits and licences are
+  excluded because they have no relationship to a paused run and are already one click from the main
+  menu. Both stay exactly where `OptionsScreen` already puts them.
+
+Implemented in `game/src/main/java/dev/luchoc/littlespaceship/game/screen/PlayScreen.java`.
+
+### Menu and screens, 01/09/2026
+
+Decided by the project owner while closing [#40](https://github.com/LuchoC-Dev/little-spaceship/issues/40),
+found by playing the deployed build on 25/08/2026.
+
+- **On the web target, QUIT keeps its slot and means something else: it opens a farewell screen with a
+  way back to the menu.** `game/screen/MenuScreen.java` branches on
+  `Gdx.app.getType() == ApplicationType.WebGL`, and the screen is
+  `game/screen/FarewellScreen.java`, modelled on `CreditsScreen`. **On desktop QUIT still exits**, and
+  the entry, its label and its position are identical on both targets.
+
+  `MenuScreen` wired QUIT to `Gdx.app::exit`, which closes the window on desktop and **can do nothing
+  in a browser**: JavaScript may not close a tab it did not open. `02-mvp-functional-spec.md` asks for
+  Play/Options/Quit and was written for a desktop game, so this changes what that section means rather
+  than correcting a mistake in it.
+
+  Two alternatives were put to the project owner and refused: hiding the entry on web, which leaves
+  the main menu different on each target for a reason the player cannot see; and repurposing the slot
+  as a fullscreen toggle, which stops being a meaning for QUIT and becomes a different button.
+
+  **The farewell screen carries no score, deliberately.** QUIT lives on the main menu, where no run is
+  in progress, and `game/GameSettings.java` persists only volumes and the mouse toggle — there is no
+  stored score to show. Adding one would be a design decision nobody has taken. This was put to the
+  project owner as a weakness of the option before they chose it.
+
+  Verified from the backend source rather than assumed: `WebApplication.java:440-441` of
+  `gdx-teavm` 1.6.1 returns `ApplicationType.WebGL` as a constant, so the branch is reached.
+  **Not checked:** the deployed build, which is the project owner's.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.

@@ -906,3 +906,76 @@ disclosed judgement call.
   fragment's "every wave is `fixedDuration` on purpose" reasoning. `tools/pre-pr-check --base
   phase/11e-level-one-redesigned` reproduced the PR body's pasted output verbatim, including the real
   `./gradlew build` pass.
+
+## PRs #221 (`fix/pointer-lock-recovery`, #41) and #224 (`feat/shield-attachment-visible`, #43), phase 11f — both accept, one real second-guess finding
+
+Both branches touch `PlayScreen.java` in disjoint regions (#221 the `render()` body, #224 one line in
+`show()`); merged both into a scratch worktree (`git worktree add ... --detach phase/11f-web-defects`,
+two plain `git merge --no-edit`s) with zero conflicts, and `./gradlew clean build -q` on the merge
+result was green across all five modules. Worth recording as the technique: don't reason about whether
+two diffs "should" combine, actually merge them.
+
+46. **A same-call read-after-write of a platform-reported flag, right after requesting the change that
+    flag reports.** `InputAdapter.managePointerCapture` requests pointer capture
+    (`Gdx.input.setCursorCatched(true)`) and, in the same method invocation, falls through to `else if
+    (pointerCaptureRequested && !Gdx.input.isCursorCatched())` — which, if the platform's capture grant
+    is not synchronous (Pointer Lock in a real browser is asynchronous; a JS `requestPointerLock()`
+    call resolves via a later `pointerlockchange` event, not before the calling frame returns), would
+    read the not-yet-confirmed state on the very same frame and immediately fire "unexpectedly lost",
+    pausing the game the instant the player clicks to engage the mouse. Confirmed the code shape by
+    reading the method top to bottom (`if (mouseEnabled && !pointerCaptureRequested && click) { ... }`
+    falls through with no `return`/`else`, straight into the `if (escapeJustPressed...) else if
+    (pointerCaptureRequested && !isCursorCatched())` pair). Could not confirm or refute the TeaVM/GWT
+    backend's actual synchrony for `setCursorCatched`/`isCursorCatched` from this environment (would
+    need the gdx-teavm backend source, not present in this repo; searching the Gradle cache for the jar
+    timed out) — this is the "unverifiable is not the same as wrong" shape from
+    [[audit-techniques]], reported as a suspicion worth a one-line guard (skip the unexpected-loss
+    check on the same call that just requested capture) rather than a confirmed defect.
+47. **A design document read narrowly by a PR turned out to be read correctly, confirmed by checking
+    both the doc and the atlas.** #224 argues `04-hud-layout.md`'s "Invulnerability is shown on the
+    ship, not in the plate" is scoped to the three `InvulnerabilitySource` grace periods (respawn,
+    damage-absorbed, power-up) and not to `shieldActive`'s own persistent HUD icon, and that no
+    shield-ring sprite exists to draw on the ship instead. Both checked out: the document's own "on the
+    ship" table lists exactly those three named sources and nothing else, and `assets/atlas/
+    sprites.atlas` has `pickup-shield` (the drop capsule) and `icon-shield` (the HUD glyph, now wired)
+    but no third, on-ship shield-ring id. A deliberate omission argued from a document is worth
+    re-reading against the document before accepting *or* rejecting it — this one held.
+
+Calibration in both directions: keyboard-only play cannot trigger the pointer-loss pause at all
+(`pointerCaptureRequested` only ever becomes `true` inside the `mouseEnabled` branch), Escape's
+deliberate release and the unexpected-loss branch are mutually exclusive on the same call (`if`/`else
+if`, no case where both fire), and skipping `loop.advance` for the lost-lock frame is exactly the
+existing pause semantics (`audioDirector.update`/outcome-check already sit inside the same `if
+(!paused)` block) — not a new hole in accumulated fixed-step time or the outcome check. Also confirmed:
+all six atlas ids the two PRs newly reference exist in `assets/atlas/sprites.atlas` at the lines
+`module-satellite:153`, `icon-life:209`, `icon-bomb:216`, `icon-shield:223`, `icon-invuln:230`,
+`icon-module:237`; the null-region HUD fallback is whole-widget (icon or full old rect+outline, never
+a mix); `WorldRenderer.drawAttachment` adds no new mutable field, reusing the same call's `x`/`y`.
+
+48. **A `pauseGameplay()` guarded by `if (!paused)` makes a second entry point (browser pointer-lock
+    loss) safe to call repeatedly without extra guards.** #227 (phase 11f, in-game options) added a
+    second panel state (`buildPauseOptionsPanel()`) swapped in place on the same pause `Stage`, and its
+    own fragment flagged "does the pointer-lock-loss path re-entering pause while options is open
+    double-attach listeners or strand the panel" as unchecked. Traced it: `PlayScreen.render()` only
+    calls `input.sample()`/checks `pointerCaptureLostUnexpectedly()` inside `if (!paused)`, and
+    `pauseGameplay()` itself no-ops when `paused` is already `true` — so once paused (menu or options
+    state), the unexpected-loss branch is never even evaluated again. No double-build, no doubled
+    `MenuNavigator`, no dead end. Worth checking this shape on any future PR that adds a second trigger
+    for an existing state-guarded method: read the guard first, then trace whether the second trigger's
+    call site is itself gated on the same flag.
+49. **An excluded feature's justification checked out because of a *pre-existing* gap the author didn't
+    even cite.** #227 excluded a live mouse-control toggle from the in-game options panel, arguing it
+    "interacts with live pointer-lock state" without pointing at code. Reading `InputAdapter
+    .managePointerCapture` found the actual mechanism: pointer-capture release is gated solely on
+    Escape (`escapeJustPressed && pointerCaptureRequested`), never on `mouseEnabled` going false — so a
+    live toggle-off mid-run would leave the cursor captured/hidden with no release path but pause. The
+    exclusion was sound, but the fragment's own reasoning was vaguer than the code justifies; citing the
+    actual gate would have made "not decided lightly" into "here is the line that would break."
+50. **Octopus-merging two same-phase sibling branches with disjoint file sets in a throwaway detached
+    worktree is a fast, real conflict/build check** — `git worktree add --detach <tmp> <phase-branch>`,
+    then `git merge --no-edit <branchA> <branchB>`, then `./gradlew build -q`, then
+    `git worktree remove --force <tmp>`. Confirms both "do these PRs conflict" and "does the combination
+    still build" in one pass without touching either sub-branch's own worktree. `git worktree remove`
+    can transiently fail with a Windows file-lock ("Permission denied") right after Gradle touched the
+    tree; retrying (or just re-running `git worktree list`) after a couple seconds resolves it — it is
+    not a sign the worktree needs manual cleanup.

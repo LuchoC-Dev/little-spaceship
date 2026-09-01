@@ -1,6 +1,6 @@
 # Phase 11e — Level 1 redesigned, balance and the boss · status
 
-**State:** done on the phase branch — six issues closed through six pull requests, the candidate played by the project owner on 01/09/2026, tuned from that session, and **confirmed by a second session the same day: the level's design is correct and nothing further is to be modified.** **Pull request open against `dev` and unmerged**, waiting on the project owner's direct approval.
+**State:** **done and merged into `dev`** in [#214](https://github.com/LuchoC-Dev/little-spaceship/pull/214), with the project owner's direct approval on 01/09/2026. Six issues closed through six pull requests; the candidate was played by the project owner on 01/09, tuned from that session, and confirmed by a second session the same day — the level's design is correct and nothing further is to be modified.
 **Updated:** 01/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.

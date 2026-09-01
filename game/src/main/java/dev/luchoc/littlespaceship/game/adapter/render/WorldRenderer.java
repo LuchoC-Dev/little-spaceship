@@ -59,6 +59,27 @@ public final class WorldRenderer implements SpriteVisitor {
      */
     private static final String PLAYER_SPRITE_ID = "ship-basic";
 
+    /**
+     * The attachment's visual token, drawn beside the ship whenever {@link
+     * PlayerStatus#attachmentId()} is not empty. One id for every kind of attachment: {@code
+     * docs/design/02-sprite-sizes.md}'s "Attachment satellite" row names {@code module-*} as the
+     * family and the atlas built from {@code 01-sprites.js} only ever produced one member of it,
+     * {@code module-satellite} — there is no per-kind art to choose between yet, matching how the
+     * MVP's {@code Attachment} component itself carries no visual distinction beyond its content id.
+     * Built once, not per frame, the same reason {@link #PLAYER_SPRITE_ID} is a plain constant
+     * rather than a fresh {@link SpriteId} every call.
+     */
+    private static final SpriteId ATTACHMENT_SPRITE_ID = new SpriteId("module-satellite");
+
+    /**
+     * Horizontal offset from the ship's centre to the satellite's centre, in logical units. {@code
+     * 02-sprite-sizes.md} calls the slot "one per side, flanking" without fixing a distance; this
+     * clears the 15 px wide ship's silhouette (half-width 7.5) plus half the satellite's own 7 px
+     * width, so the two never overlap. The MVP equips a single attachment, so only the right flank
+     * is drawn — there is no second one to put on the left.
+     */
+    private static final float ATTACHMENT_OFFSET_X = 11f;
+
     /** Respawn blinks 4 ticks drawn, 4 ticks dimmed, per {@code 04-hud-layout.md}. */
     private static final int RESPAWN_BLINK_TICKS = 4;
     private static final float RESPAWN_BLINK_ALPHA = 0.35f;
@@ -199,6 +220,35 @@ public final class WorldRenderer implements SpriteVisitor {
         if (frame == TELL_BEAT_3) {
             drawTellOutline(logicalX, y, width, height);
         }
+
+        if (isPlayer && !playerStatus.attachmentId().isEmpty()) {
+            drawAttachment(logicalX, y);
+        }
+    }
+
+    /**
+     * The equipped attachment, drawn flanking the ship at its own live position every frame —
+     * "following the ship" per issue #43, achieved for free by reusing the player's own {@code x}/
+     * {@code y} from this same {@link #accept} call rather than tracking a second position: the
+     * attachment has no {@code Transform} of its own in {@code core.domain}, only the {@code
+     * Attachment} component's content id {@link PlayerStatus#attachmentId()} already exposes.
+     * Skipped silently, like every other id, if {@link #ATTACHMENT_SPRITE_ID} is not in {@link
+     * #atlas} — logged once through the same {@link #missingSpritesLogged} path {@link #accept}
+     * itself uses for the ship it was called for.
+     */
+    private void drawAttachment(float shipLogicalX, float shipY) {
+        TextureRegion region = atlas.region(ATTACHMENT_SPRITE_ID);
+        if (region == null) {
+            if (missingSpritesLogged.add(ATTACHMENT_SPRITE_ID.value())) {
+                Gdx.app.error("WorldRenderer", "no placeholder region for sprite id '"
+                    + ATTACHMENT_SPRITE_ID.value() + "', skipping");
+            }
+            return;
+        }
+        float width = region.getRegionWidth();
+        float height = region.getRegionHeight();
+        float centerX = shipLogicalX + ATTACHMENT_OFFSET_X;
+        batch.draw(region, centerX - width / 2f, shipY - height / 2f, width, height);
     }
 
     /**
