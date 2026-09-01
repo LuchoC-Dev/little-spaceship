@@ -37,6 +37,8 @@ public final class InputAdapter {
     private final Viewport viewport;
 
     private boolean pointerCaptureRequested;
+    private boolean pointerCaptureConfirmed;
+    private boolean pointerCaptureLostUnexpectedly;
 
     public InputAdapter(Viewport viewport) {
         if (viewport == null) {
@@ -126,20 +128,67 @@ public final class InputAdapter {
     }
 
     /**
+     * True for exactly the frame the browser revoked pointer lock on its own — a notification,
+     * alt-tab, or a click outside the canvas can all do this without the game asking. Distinguished
+     * from the player's own Escape release in {@link #managePointerCapture(boolean)}: only this path
+     * should pause the game, because the deltas {@link #mouseX(float)}/{@link #mouseY(float)} would
+     * otherwise keep reading now come from a free cursor rather than a locked one, which is exactly
+     * the bug in issue #41.
+     */
+    public boolean pointerCaptureLostUnexpectedly() {
+        return pointerCaptureLostUnexpectedly;
+    }
+
+    /**
      * Captures the pointer on the first click, which is both what a relative mouse needs to keep
      * producing deltas past the window edge and what the browser's Pointer Lock API requires before
-     * it will engage. Escape releases it, so the player is never stuck without a visible cursor.
+     * it will engage. Escape releases it deliberately, so the player is never stuck without a
+     * visible cursor.
+     *
+     * <p>The browser can also revoke the lock on its own, without the game asking — that is the case
+     * {@code isCursorCatched()} exists to observe rather than trust {@link #pointerCaptureRequested},
+     * a flag this class set itself and has no way to know the browser overrode. This method is the
+     * one place that distinguishes the two: Escape sets {@link #pointerCaptureLostUnexpectedly} to
+     * false, an unasked-for revocation sets it to true, for
+     * {@link dev.luchoc.littlespaceship.game.screen.PlayScreen} to react to.
+     *
+     * <p>The web backend's {@code requestPointerLock()} is asynchronous: {@code isCursorCatched()}
+     * can keep reporting false for an unknown number of frames after the request, until the browser
+     * grants the lock and fires {@code pointerlockchange}. The desktop LWJGL3 backend grants it
+     * synchronously, which is why this only shows up on web. Testing for loss the very frame capture
+     * is requested — or even the next one — would read the still-pending grant as an unexpected
+     * revocation and pause the game on the click meant to start it. {@link #pointerCaptureConfirmed}
+     * exists for this: the loss check only arms once {@code isCursorCatched()} has been observed
+     * true at least once since the request, so a slow grant is just silently waited out rather than
+     * bounded to a fixed number of frames.
      */
     private void managePointerCapture(boolean mouseEnabled) {
+        pointerCaptureLostUnexpectedly = false;
+        boolean escapeJustPressed = Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
+
         if (mouseEnabled && !pointerCaptureRequested
             && (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)
                 || Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT))) {
             Gdx.input.setCursorCatched(true);
             pointerCaptureRequested = true;
+            pointerCaptureConfirmed = false;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && pointerCaptureRequested) {
+
+        if (escapeJustPressed && pointerCaptureRequested) {
             Gdx.input.setCursorCatched(false);
             pointerCaptureRequested = false;
+            pointerCaptureConfirmed = false;
+        } else if (pointerCaptureRequested) {
+            if (Gdx.input.isCursorCatched()) {
+                // The asynchronous grant has landed; the loss check below may now fire on a future
+                // frame where the browser actually revokes it.
+                pointerCaptureConfirmed = true;
+            } else if (pointerCaptureConfirmed) {
+                pointerCaptureRequested = false;
+                pointerCaptureConfirmed = false;
+                pointerCaptureLostUnexpectedly = true;
+            }
+            // else: the grant is still pending — not yet confirmed, so not yet a loss.
         }
     }
 }
