@@ -15,6 +15,9 @@
 - [Reading a document back](feedback_reading-a-document-back.md) — grep the document for every fact you
   used instead of grading yourself on whether you managed to write the file; and restoring broken
   generated content means restoring the source and the output.
+- [Enemy durability arithmetic](project_enemy-durability-arithmetic.md) — a trigger pull fires 1/2/3/5
+  projectiles by weapon level so `shots to kill` overstates durability up to 5x; `fragile` is orthogonal
+  to Health, and the bomb ignores Health on a fragile enemy entirely.
 - [Wave migration mechanics](project_wave-migration-mechanics.md) — a wave's `FixedDuration` is shared
   across every placement that reuses it, negative offsets overlap two `FixedDuration` waves since 11b, no
   test touches the real `assets/data/level-01.json`, and how to live-run it without a full app context.
