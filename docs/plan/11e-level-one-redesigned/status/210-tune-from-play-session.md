@@ -141,3 +141,44 @@ The third finding the previous run carried — the boss entering over a running 
   set, so this cannot be a JUnit test.
 - **Not checked:** the level was not played. Everything above about how it feels is arithmetic over the
   generated document, which is the point of the next session.
+
+## Coordinator addendum, 01/09/2026 — the `Spawner` interval, 4.0 s to 3.0 s
+
+**Added by the coordinator after this task reported, on the project owner's decision.** The finding
+below was put to the owner with three options: keep 700 and let the next session judge, raise the
+carrier back toward 850, or lower the `Spawner` interval. **They chose the interval, at 3.0 s.**
+
+`assets/data/enemies.json`, `enemy-carrier.components.spawner.interval`: **4.0 -> 3.0**. Nothing else
+moved, and the health stays at the 700 the session decided.
+
+**The reasoning is the one this fragment already named:** the defect is that the carrier dies before
+its mechanism runs, and the mechanism is the interval, not the health. Fixing it in the health would
+have walked back the difficulty the owner approved by playing, one question after they approved it.
+
+**What it closes, and what it does not — measured, not assumed:**
+
+| beat | ideal time to kill | first child at 3.0 s? |
+|---|---|---|
+| `l1-heavy-carrier` (67.0 s, shot level 3) | 3.5 s | **yes, by 0.5 s** |
+| `l1-twin-carriers-attachment` (97.5 s, shot level 4) | 2.1 s | **no — still under** |
+
+**Beat 11 is not closed and this is stated rather than rounded away.** At shot level 4 an ideally
+firing player kills a carrier in 2.1 s, so no interval above 2.0 s delivers a child there — and beat
+11 is the difficult encounter that hands over the attachment, the beat where the mechanism matters
+most. Going below 3.0 s was not taken: a carrier producing a child every 2 s is a different encounter
+rather than the same one repaired. The project owner was told this before the number was applied.
+
+**Still the first thing the next session should report, and now in two parts:** does the carrier spawn
+children in beat 8, and does it in beat 11? They are no longer the same question.
+
+`docs/planning/10-mvp-initial-values.md` is updated: the spawner section records `interval 3.0` as
+decided on 01/09/2026 with its reason, and the carrier warning carries the table above.
+
+**Re-run after the change:** `node tools/build-level-docs.js` (`level-01.md` updated, `waves.md`
+unchanged) and `./gradlew build`, green.
+
+**This task was merged without a `reviewer` pass**, on the project owner's explicit instruction. The
+coordinator verified the five health values, the twelve wave definitions and twelve placements,
+`boss.entersAt 134.5`, the two projectile speeds and the Checks section directly against
+`assets/data/` before merging. That is a coordinator's check, not an independent audit, and it is
+recorded here as such.
