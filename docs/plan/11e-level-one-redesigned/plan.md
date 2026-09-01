@@ -118,7 +118,14 @@ confirming it does not need its own branch.
 
 ## Acceptance criteria
 
-- Level 1 is fourteen waves, one per beat, and each wave's id names its beat.
+- ~~Level 1 is fourteen waves, one per beat, and each wave's id names its beat.~~ **Reopened by the
+  project owner on 01/09/2026, after playing the candidate.** Level 1 is **fourteen beats, twelve of
+  which carry a wave**, and each wave's id names its beat. Beat 1 (audiovisual introduction) and beat
+  14 (boss) carry none: the session found enemies at the very start and enemies still arriving as the
+  boss entered, and called both wrong. `shape-catalogue.md`'s original beat map had already said "none"
+  for those two, and `JsonContentSource.loadWaves` rejects a wave with no spawns, so the alternative
+  has no representation in `assets/data/`. Recorded in `docs/planning/08-decisions-and-open-items.md`
+  under "Level 1 played, 01/09/2026".
 - The boss enters at the decided time, and the decided time is written down with the session that
   produced it.
 - **The verdict comes from playing.** A session played, what it felt like, what changed as a result.
