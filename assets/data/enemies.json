@@ -7,7 +7,7 @@
         "sprite": { "id": "enemy-basic" },
         "collider": { "radius": 5.5, "fragile": true },
         "scoreValue": { "points": 100 },
-        "health": { "points": 30 },
+        "health": { "points": 20 },
         "weapon": { "pattern": "straight-single", "rate": 3.2, "speed": 70, "firstShotDelay": 1.0 }
       }
     },
@@ -18,7 +18,6 @@
         "sprite": { "id": "enemy-light" },
         "collider": { "radius": 4.5, "fragile": true },
         "scoreValue": { "points": 150 },
-        "health": { "points": 20 },
         "weapon": { "pattern": "straight-single", "rate": 2.4, "speed": 130, "firstShotDelay": 0.9 }
       }
     },
@@ -29,7 +28,7 @@
         "sprite": { "id": "enemy-shooter" },
         "collider": { "radius": 6.5, "fragile": true },
         "scoreValue": { "points": 200 },
-        "health": { "points": 40 },
+        "health": { "points": 30 },
         "weapon": { "pattern": "straight-single", "rate": 1.8, "speed": 90, "firstShotDelay": 0.7 }
       }
     },
@@ -50,7 +49,7 @@
         "sprite": { "id": "enemy-tank" },
         "collider": { "radius": 10.5, "fragile": false },
         "scoreValue": { "points": 500 },
-        "health": { "points": 300 },
+        "health": { "points": 200 },
         "weapon": { "pattern": "straight-single", "rate": 4.8, "speed": 60, "firstShotDelay": 1.6 }
       }
     },
@@ -61,7 +60,7 @@
         "sprite": { "id": "enemy-carrier" },
         "collider": { "radius": 15.0, "fragile": false },
         "scoreValue": { "points": 1000 },
-        "health": { "points": 1000 },
+        "health": { "points": 700 },
         "spawner": { "enemyId": "enemy-basic", "interval": 4.0, "offsetX": 0, "offsetY": -24 }
       }
     }

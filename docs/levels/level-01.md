@@ -112,13 +112,13 @@ the Roster and Formations sections below, printed per entry rather than as a sch
 
 |  |  |
 |---|---|
-| placements | 14 |
-| distinct waves | 14 |
-| spawn events | 67 |
-| entities spawned directly | 166 |
-| the waves end at | 146.5 s |
-| the boss enters at | 139.5 s (2.3 min) |
-| gap between them | -7.0 s |
+| placements | 12 |
+| distinct waves | 12 |
+| spawn events | 61 |
+| entities spawned directly | 152 |
+| the waves end at | 134.5 s |
+| the boss enters at | 134.5 s (2.2 min) |
+| gap between them | 0.0 s |
 
 **Every wave ends on `fixedDuration`, so every time below is exact arithmetic.** The moment one
 wave uses `{"type": "cleared"}` (`core/port/WaveEndCondition.java`), every absolute time after
@@ -134,20 +134,18 @@ keeps producing children reads low here and plays hard.
 
 | # | wave | offset | start | end | lasts | entities | density | archetypes | drops |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `l1-intro-flyover` | 0.0 | 0.0 | 5.0 | 5.0 s | 5 | 1.00/s | `enemy-light` | — |
-| 2 | `l1-opening-calm` | 0.0 | 5.0 | 13.0 | 8.0 s | 1 | 0.13/s | `enemy-basic` | — |
-| 3 | `l1-first-basics` | 0.0 | 13.0 | 27.0 | 14.0 s | 13 | 0.93/s | `enemy-basic` | `weapon-upgrade` |
-| 4 | `l1-light-and-fast` | 0.0 | 27.0 | 38.0 | 11.0 s | 13 | 1.18/s | `enemy-light` | — |
-| 5 | `l1-combined-formations` | 0.0 | 38.0 | 51.0 | 13.0 s | 23 | 1.77/s | `enemy-basic` `enemy-light` | — |
-| 6 | `l1-tanks-and-priority` | 0.0 | 51.0 | 63.0 | 12.0 s | 13 | 1.08/s | `enemy-tank` `enemy-basic` `enemy-light` | `weapon-upgrade` |
-| 7 | `l1-super-fast` | 0.0 | 63.0 | 72.0 | 9.0 s | 7 | 0.78/s | `enemy-rush` | — |
-| 8 | `l1-heavy-carrier` | 0.0 | 72.0 | 85.0 | 13.0 s | 7 | 0.54/s | `enemy-carrier` `enemy-basic` `enemy-light` | — |
-| 9 | `l1-evolved-shooters` | 0.0 | 85.0 | 95.0 | 10.0 s | 13 | 1.30/s | `enemy-shooter` `enemy-basic` | `weapon-upgrade` |
-| 10 | `l1-high-pressure` | -2.0 | 93.0 | 104.0 | 11.0 s | 21 | 1.91/s | `enemy-basic` `enemy-light` `enemy-shooter` `enemy-rush` | `extra-life` |
-| 11 | `l1-twin-carriers-attachment` | -1.5 | 102.5 | 118.5 | 16.0 s | 8 | 0.50/s | `enemy-carrier` `enemy-rush` | `attachment` |
-| 12 | `l1-brief-rest` | 0.0 | 118.5 | 124.5 | 6.0 s | 1 | 0.17/s | `enemy-basic` | `bomb-recharge` |
-| 13 | `l1-final-escalation` | 0.0 | 124.5 | 139.5 | 15.0 s | 32 | 2.13/s | `enemy-basic` `enemy-light` `enemy-rush` `enemy-shooter` `enemy-tank` | — |
-| 14 | `l1-boss-approach` | 0.0 | 139.5 | 146.5 | 7.0 s | 9 | 1.29/s | `enemy-shooter` `enemy-light` `enemy-rush` | — |
+| 1 | `l1-opening-calm` | 0.0 | 0.0 | 8.0 | 8.0 s | 1 | 0.13/s | `enemy-basic` | — |
+| 2 | `l1-first-basics` | 0.0 | 8.0 | 22.0 | 14.0 s | 13 | 0.93/s | `enemy-basic` | `weapon-upgrade` |
+| 3 | `l1-light-and-fast` | 0.0 | 22.0 | 33.0 | 11.0 s | 13 | 1.18/s | `enemy-light` | — |
+| 4 | `l1-combined-formations` | 0.0 | 33.0 | 46.0 | 13.0 s | 23 | 1.77/s | `enemy-basic` `enemy-light` | — |
+| 5 | `l1-tanks-and-priority` | 0.0 | 46.0 | 58.0 | 12.0 s | 13 | 1.08/s | `enemy-tank` `enemy-basic` `enemy-light` | `weapon-upgrade` |
+| 6 | `l1-super-fast` | 0.0 | 58.0 | 67.0 | 9.0 s | 7 | 0.78/s | `enemy-rush` | — |
+| 7 | `l1-heavy-carrier` | 0.0 | 67.0 | 80.0 | 13.0 s | 7 | 0.54/s | `enemy-carrier` `enemy-basic` `enemy-light` | — |
+| 8 | `l1-evolved-shooters` | 0.0 | 80.0 | 90.0 | 10.0 s | 13 | 1.30/s | `enemy-shooter` `enemy-basic` | `weapon-upgrade` |
+| 9 | `l1-high-pressure` | -2.0 | 88.0 | 99.0 | 11.0 s | 21 | 1.91/s | `enemy-basic` `enemy-light` `enemy-shooter` `enemy-rush` | `extra-life` |
+| 10 | `l1-twin-carriers-attachment` | -1.5 | 97.5 | 113.5 | 16.0 s | 8 | 0.50/s | `enemy-carrier` `enemy-rush` | `attachment` |
+| 11 | `l1-brief-rest` | 0.0 | 113.5 | 119.5 | 6.0 s | 1 | 0.17/s | `enemy-basic` | `bomb-recharge` |
+| 12 | `l1-final-escalation` | 0.0 | 119.5 | 134.5 | 15.0 s | 32 | 2.13/s | `enemy-basic` `enemy-light` `enemy-rush` `enemy-shooter` `enemy-tank` | — |
 
 ## The curve
 
@@ -155,20 +153,18 @@ The same numbers as a shape, because a column of numbers is not one. The bar is 
 densest placement in this level, so it compares beats within a level and not between levels.
 
 ```
-    0.0  l1-intro-flyover        1.00/s  ###################
-    5.0  l1-opening-calm         0.13/s  ##
-   13.0  l1-first-basics         0.93/s  #################
-   27.0  l1-light-and-fast       1.18/s  ######################
-   38.0  l1-combined-formations  1.77/s  #################################
-   51.0  l1-tanks-and-priority   1.08/s  ####################
-   63.0  l1-super-fast           0.78/s  ###############
-   72.0  l1-heavy-carrier        0.54/s  ##########
-   85.0  l1-evolved-shooters     1.30/s  ########################
-   93.0  l1-high-pressure        1.91/s  ####################################
-  102.5  l1-twin-carriers-attachment  0.50/s  #########
-  118.5  l1-brief-rest           0.17/s  ###
-  124.5  l1-final-escalation     2.13/s  ########################################
-  139.5  l1-boss-approach        1.29/s  ########################
+    0.0  l1-opening-calm         0.13/s  ##
+    8.0  l1-first-basics         0.93/s  #################
+   22.0  l1-light-and-fast       1.18/s  ######################
+   33.0  l1-combined-formations  1.77/s  #################################
+   46.0  l1-tanks-and-priority   1.08/s  ####################
+   58.0  l1-super-fast           0.78/s  ###############
+   67.0  l1-heavy-carrier        0.54/s  ##########
+   80.0  l1-evolved-shooters     1.30/s  ########################
+   88.0  l1-high-pressure        1.91/s  ####################################
+   97.5  l1-twin-carriers-attachment  0.50/s  #########
+  113.5  l1-brief-rest           0.17/s  ###
+  119.5  l1-final-escalation     2.13/s  ########################################
 ```
 
 ## Wave by wave
@@ -177,23 +173,11 @@ Each wave this level places, once, in the order it first appears. **Placed at** 
 absolute time the level starts it: a wave is reusable, so editing one for one beat edits every
 placement of it, and nothing in `assets/data/waves.json` says so.
 
-### `l1-intro-flyover`
-
-**Ends:** `fixedDuration`, 5.0 s
-
-**Placed 1 time:** #1 at 0.0 s
-
-| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
-|---|---|---|---|---|---|---|---|
-| 0.0 | `enemy-light` | `single` (1) | 0.10 | `dive` *(override)* | 16.3 .. 25.3 | same | — |
-| 0.8 | `enemy-light` | `single` (1) | 0.90 | `dive` *(override)* | 182.7 .. 191.7 | same | — |
-| 2.2 | `enemy-light` | `diagonal` (3) | 0.85 | `dive` *(override)* | 157.3 .. 196.3 | same | — |
-
 ### `l1-opening-calm`
 
 **Ends:** `fixedDuration`, 8.0 s
 
-**Placed 1 time:** #2 at 5.0 s
+**Placed 1 time:** #1 at 0.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -203,7 +187,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 14.0 s
 
-**Placed 1 time:** #3 at 13.0 s
+**Placed 1 time:** #2 at 8.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -217,7 +201,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 11.0 s
 
-**Placed 1 time:** #4 at 27.0 s
+**Placed 1 time:** #3 at 22.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -231,7 +215,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 13.0 s
 
-**Placed 1 time:** #5 at 38.0 s
+**Placed 1 time:** #4 at 33.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -247,7 +231,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 12.0 s
 
-**Placed 1 time:** #6 at 51.0 s
+**Placed 1 time:** #5 at 46.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -261,7 +245,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 9.0 s
 
-**Placed 1 time:** #7 at 63.0 s
+**Placed 1 time:** #6 at 58.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -275,7 +259,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 13.0 s
 
-**Placed 1 time:** #8 at 72.0 s
+**Placed 1 time:** #7 at 67.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -287,7 +271,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 10.0 s
 
-**Placed 1 time:** #9 at 85.0 s
+**Placed 1 time:** #8 at 80.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -301,7 +285,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 11.0 s
 
-**Placed 1 time:** #10 at 93.0 s
+**Placed 1 time:** #9 at 88.0 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -317,7 +301,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 16.0 s
 
-**Placed 1 time:** #11 at 102.5 s
+**Placed 1 time:** #10 at 97.5 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -331,7 +315,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 6.0 s
 
-**Placed 1 time:** #12 at 118.5 s
+**Placed 1 time:** #11 at 113.5 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -341,7 +325,7 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 
 **Ends:** `fixedDuration`, 15.0 s
 
-**Placed 1 time:** #13 at 124.5 s
+**Placed 1 time:** #12 at 119.5 s
 
 | at | archetype | formation | atX | shape | x at spawn | x swept | drop |
 |---|---|---|---|---|---|---|---|
@@ -357,18 +341,6 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 | 11.0 | `enemy-light` | `diagonal` (3) | 0.75 | `swoop` | 136.5 .. 175.5 | 67.9 .. 175.5 | — |
 | 12.5 | `enemy-rush` | `single` (1) | 0.45 | `strike-run` *(override)* | 89.6 .. 97.6 | same | — |
 | 13.5 | `enemy-basic` | `line-5` (5) | 0.50 | `slow-descent` | 58.5 .. 149.5 | same | — |
-
-### `l1-boss-approach`
-
-**Ends:** `fixedDuration`, 7.0 s
-
-**Placed 1 time:** #14 at 139.5 s
-
-| at | archetype | formation | atX | shape | x at spawn | x swept | drop |
-|---|---|---|---|---|---|---|---|
-| 0.0 | `enemy-shooter` | `line-3` (3) | 0.50 | `slow-descent` | 77.5 .. 130.5 | same | — |
-| 2.0 | `enemy-light` | `diagonal` (3) | 0.80 | `swoop` | 146.9 .. 185.9 | 78.3 .. 185.9 | — |
-| 4.0 | `enemy-rush` | `column-3` (3) | 0.50 | `dive` | 100.0 .. 108.0 | same | — |
 
 **`x at spawn`** is `atX * 208 + slot.offsetX`, plus and minus the archetype's collider radius
 (`SpawnSystem.spawnWave`, `SpawnSystem.positionSpawned`). **Nothing clamps it** — a formation
@@ -389,12 +361,12 @@ the point: `rate 4.0` is a number, "one shot per pass" is what it means.
 
 | archetype | sprite | radius | fragile | health | shots to kill | score | default shape | screen time | weapon | shots per pass | spawner | children per pass | lifetime |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `enemy-light` | `enemy-light` | 4.5 | yes | 20 | 2 | 150 | `swoop` | 6.9 s | `straight-single`, every 2.4 s from 0.9 s, speed 130.0 | 3 | none | — | none |
-| `enemy-basic` | `enemy-basic` | 5.5 | yes | 30 | 3 | 100 | `slow-descent` | 15.3 s | `straight-single`, every 3.2 s from 1.0 s, speed 70.0 | 5 | none | — | none |
-| `enemy-tank` | `enemy-tank` | 10.5 | no | 300 | 30 | 500 | `crawl` | 31.2 s | `straight-single`, every 4.8 s from 1.6 s, speed 60.0 | 7 | none | — | none |
+| `enemy-basic` | `enemy-basic` | 5.5 | yes | 20 | 2 | 100 | `slow-descent` | 15.3 s | `straight-single`, every 3.2 s from 1.0 s, speed 70.0 | 5 | none | — | none |
+| `enemy-light` | `enemy-light` | 4.5 | yes | none | 1 | 150 | `swoop` | 6.9 s | `straight-single`, every 2.4 s from 0.9 s, speed 130.0 | 3 | none | — | none |
+| `enemy-tank` | `enemy-tank` | 10.5 | no | 200 | 20 | 500 | `crawl` | 31.2 s | `straight-single`, every 4.8 s from 1.6 s, speed 60.0 | 7 | none | — | none |
 | `enemy-rush` | `enemy-rush` | 4.0 | yes | none | 1 | 250 | `dive` | 3.4 s | `straight-single`, every 4.0 s from 1.4 s, speed 120.0 | 1 | none | — | none |
-| `enemy-carrier` | `enemy-carrier` | 15.0 | no | 1000 | 100 | 1000 | `crawl` | 31.7 s | none | — | `enemy-basic` every 4.0 s | 7 | none |
-| `enemy-shooter` | `enemy-shooter` | 6.5 | yes | 40 | 4 | 200 | `slow-descent` | 15.4 s | `straight-single`, every 1.8 s from 0.7 s, speed 90.0 | 9 | none | — | none |
+| `enemy-carrier` | `enemy-carrier` | 15.0 | no | 700 | 70 | 1000 | `crawl` | 31.7 s | none | — | `enemy-basic` every 4.0 s | 7 | none |
+| `enemy-shooter` | `enemy-shooter` | 6.5 | yes | 30 | 3 | 200 | `slow-descent` | 15.4 s | `straight-single`, every 1.8 s from 0.7 s, speed 90.0 | 9 | none | — | none |
 
 **shots to kill** is `ceil(health / weaponProjectileDamage)` against `weaponProjectileDamage 10`
 from `assets/data/balance.json`. An archetype with no `health` dies to one projectile — and so
@@ -420,8 +392,8 @@ refused and why, is `docs/plan/11c-movement-shapes/shape-catalogue.md`.
 
 | shape | kind | vx | vy | ay | turns after | apex depth |
 |---|---|---|---|---|---|---|
-| `swoop` | `constant` | -10.0 | -40.0 | — | — | — |
 | `slow-descent` | `constant` | 0.0 | -18.0 | — | — | — |
+| `swoop` | `constant` | -10.0 | -40.0 | — | — | — |
 | `crawl` | `constant` | 0.0 | -9.0 | — | — | — |
 | `dive` | `constant` | 0.0 | -80.0 | — | — | — |
 | `strike-run` | `arc` | 0.0 | -110.0 | 27.0 | 4.1 s | 224.1 below spawn |
@@ -440,10 +412,10 @@ at `atX <= 0.25` — or the shape happens off screen. That constraint is the cat
 
 | formation | slots | offsets (x, y) | span | occupied width, per archetype |
 |---|---|---|---|---|
-| `single` | 1 | (0, 0) | 0.0 | `enemy-light` 9.0, `enemy-basic` 11.0, `enemy-tank` 21.0, `enemy-rush` 8.0, `enemy-carrier` 30.0, `enemy-shooter` 13.0 |
-| `diagonal` | 3 | (-15, 0) (0, -15) (15, -30) | 30.0 | `enemy-light` 39.0 |
+| `single` | 1 | (0, 0) | 0.0 | `enemy-basic` 11.0, `enemy-light` 9.0, `enemy-tank` 21.0, `enemy-rush` 8.0, `enemy-carrier` 30.0, `enemy-shooter` 13.0 |
 | `line-3` | 3 | (-20, 0) (0, 0) (20, 0) | 40.0 | `enemy-basic` 51.0, `enemy-shooter` 53.0 |
 | `column-3` | 3 | (0, 0) (0, 22) (0, 44) | 0.0 | `enemy-basic` 11.0, `enemy-rush` 8.0 |
+| `diagonal` | 3 | (-15, 0) (0, -15) (15, -30) | 30.0 | `enemy-light` 39.0 |
 | `diagonal-mirror` | 3 | (15, 0) (0, -15) (-15, -30) | 30.0 | `enemy-light` 39.0 |
 | `vee-5` | 5 | (-32, 16) (-16, 8) (0, 0) (16, 8) (32, 16) | 64.0 | `enemy-light` 73.0 |
 | `line-5` | 5 | (-40, 0) (-20, 0) (0, 0) (20, 0) (40, 0) | 80.0 | `enemy-basic` 91.0 |
@@ -459,9 +431,9 @@ and a burst on a fast one:
 
 | formation | archetype | shape | y spread | first to last |
 |---|---|---|---|---|
-| `diagonal` | `enemy-light` | `swoop` | 30 | 0.75 s |
 | `column-3` | `enemy-basic` | `slow-descent` | 44 | 2.44 s |
 | `column-3` | `enemy-rush` | `dive` | 44 | 0.55 s |
+| `diagonal` | `enemy-light` | `swoop` | 30 | 0.75 s |
 | `diagonal-mirror` | `enemy-light` | `swoop` | 30 | 0.75 s |
 | `vee-5` | `enemy-light` | `swoop` | 16 | 0.40 s |
 
@@ -470,8 +442,8 @@ and a burst on a fast one:
 | fired by | speed | damage | radius |
 |---|---|---|---|
 | the player | 220.0 | 10 | not in content |
-| `enemy-light` | 130.0 | contact | 2.0 |
 | `enemy-basic` | 70.0 | contact | 2.0 |
+| `enemy-light` | 130.0 | contact | 2.0 |
 | `enemy-tank` | 60.0 | contact | 2.0 |
 | `enemy-rush` | 120.0 | contact | 2.0 |
 | `enemy-shooter` | 90.0 | contact | 2.0 |
@@ -489,12 +461,12 @@ document cannot keep them honest** — if those lines move, this text does not c
 
 | at | kind | wave | carried by |
 |---|---|---|---|
-| 16.0 | `weapon-upgrade` | `l1-first-basics` (#3) | `enemy-basic` in `line-3`, slot 1 |
-| 53.0 | `weapon-upgrade` | `l1-tanks-and-priority` (#6) | `enemy-basic` in `line-3`, slot 1 |
-| 91.0 | `weapon-upgrade` | `l1-evolved-shooters` (#9) | `enemy-basic` in `line-5`, slot 2 |
-| 97.5 | `extra-life` | `l1-high-pressure` (#10) | `enemy-shooter` in `line-3`, slot 1 |
-| 102.5 | `attachment` | `l1-twin-carriers-attachment` (#11) | `enemy-carrier` in `pair`, slot 0 |
-| 118.5 | `bomb-recharge` | `l1-brief-rest` (#12) | `enemy-basic` in `single`, slot 0 |
+| 11.0 | `weapon-upgrade` | `l1-first-basics` (#2) | `enemy-basic` in `line-3`, slot 1 |
+| 48.0 | `weapon-upgrade` | `l1-tanks-and-priority` (#5) | `enemy-basic` in `line-3`, slot 1 |
+| 86.0 | `weapon-upgrade` | `l1-evolved-shooters` (#8) | `enemy-basic` in `line-5`, slot 2 |
+| 92.5 | `extra-life` | `l1-high-pressure` (#9) | `enemy-shooter` in `line-3`, slot 1 |
+| 97.5 | `attachment` | `l1-twin-carriers-attachment` (#10) | `enemy-carrier` in `pair`, slot 0 |
+| 113.5 | `bomb-recharge` | `l1-brief-rest` (#11) | `enemy-basic` in `single`, slot 0 |
 
 **A drop is delivered only if the player destroys the carrier.** `core/domain/system/LifetimeSystem.java`
 strips `ScoreValue`, `Drop` and `Collider` from an enemy that leaves the screen, so a drop placed
@@ -520,7 +492,7 @@ Attachment durability, the one content-driven part: `attachment` 1 (`assets/data
 | field | value |
 |---|---|
 | `id` | boss-l1 |
-| `entersAt` | 139.5 |
+| `entersAt` | 134.5 |
 | `coreHealth` | 1800.0 |
 | `podHealth` | 500.0 |
 | `armHealth` | 500.0 |
@@ -530,8 +502,8 @@ Attachment durability, the one content-driven part: `attachment` 1 (`assets/data
 | `entranceSpeed` | 25.0 |
 | `combatY` | 175.0 |
 | `patternCooldown` | 0.7 |
-| `spreadProjectileSpeed` | 95.0 |
-| `sweepProjectileSpeed` | 140.0 |
+| `spreadProjectileSpeed` | 85.0 |
+| `sweepProjectileSpeed` | 125.0 |
 
 | derived | value | how |
 |---|---|---|
@@ -545,12 +517,12 @@ through and how far it is from the boss when it crosses the height the player fl
 
 | pattern | vx ratio | vx | vy | leaves through | x from the boss at y 30.0 |
 |---|---|---|---|---|---|
-| spread | 0.25 | 23.8 | -85.5 | the floor, 2.0 s | 40.3 |
-| spread | 0.45 | 42.8 | -85.5 | the floor, 2.0 s | 72.5 |
-| spread | 0.70 | 66.5 | -85.5 | a side, 1.6 s | **off the playfield already** |
-| sweep | 0.55 | 77.0 | -91.0 | a side, 1.4 s | **off the playfield already** |
-| sweep | 0.75 | 105.0 | -91.0 | a side, 1.0 s | **off the playfield already** |
-| sweep | 0.95 | 133.0 | -91.0 | a side, 0.8 s | **off the playfield already** |
+| spread | 0.25 | 21.3 | -76.5 | the floor, 2.3 s | 40.3 |
+| spread | 0.45 | 38.3 | -76.5 | the floor, 2.3 s | 72.5 |
+| spread | 0.70 | 59.5 | -76.5 | a side, 1.7 s | **off the playfield already** |
+| sweep | 0.55 | 68.8 | -81.3 | a side, 1.5 s | **off the playfield already** |
+| sweep | 0.75 | 93.8 | -81.3 | a side, 1.1 s | **off the playfield already** |
+| sweep | 0.95 | 118.8 | -81.3 | a side, 0.9 s | **off the playfield already** |
 
 The ratios and `CORE_SPAWN_Y` are in `core/domain/system/BossSystem.java:74-89,140-151`, not in content.
 
@@ -562,7 +534,7 @@ rays reads that way is unlosable, with no error anywhere.** Where the player act
 theirs to choose; this document says only where the rays are.
 
 **`entersAt` is absolute level time**, compared against `BossSystem`'s own clock, which is
-independent of the wave chain. The waves end at 146.5 s and the boss enters at 139.5 s: a -7.0 s gap.
+independent of the wave chain. The waves end at 134.5 s and the boss enters at 134.5 s: a 0.0 s gap.
 
 ## Designing against the player
 
@@ -616,9 +588,8 @@ this document a generator can do and a human reliably will not.
 **Not checked, and still yours:** whether the level is any good. Density is not difficulty and
 this project tunes balance by playing.
 
-- placement #10 `l1-high-pressure` has `offset -2.0`, overlapping `l1-evolved-shooters` by 2.0 s. Overlap is the one thing in this format that produces pressure nothing else can, and it is the thing a reader misreads first.
-- placement #11 `l1-twin-carriers-attachment` has `offset -1.5`, overlapping `l1-high-pressure` by 1.5 s. Overlap is the one thing in this format that produces pressure nothing else can, and it is the thing a reader misreads first.
-- `boss.entersAt 139.5` is earlier than the last placement's end at 146.5 s, so the boss enters over a running wave. Legal, occasionally intended, never accidental.
+- placement #9 `l1-high-pressure` has `offset -2.0`, overlapping `l1-evolved-shooters` by 2.0 s. Overlap is the one thing in this format that produces pressure nothing else can, and it is the thing a reader misreads first.
+- placement #10 `l1-twin-carriers-attachment` has `offset -1.5`, overlapping `l1-high-pressure` by 1.5 s. Overlap is the one thing in this format that produces pressure nothing else can, and it is the thing a reader misreads first.
 
 ## The beat map
 
