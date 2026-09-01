@@ -1,6 +1,6 @@
 # Phase 11d — The per-level document
 
-**Lane:** process + code · **Owner:** a coordinator session, with `level-designer` on what the document must contain · **Depends on:** 11b, 11c
+**Lane:** process + code · **Owner:** a coordinator session, with `level-designer` on what the document must contain and on reading it back · **Depends on:** 11b, 11c
 
 ## Before you start
 
@@ -57,6 +57,39 @@ in two days, per `docs/STATUS.md`.
    separate.** `docs-refs` — fail the build when a document names code that does not exist — is 10a's
    other mechanism, still unbuilt, and it is the same class of check on the same documents. Doing both
    in one phase is cheaper than doing them twice; deciding they are different is fine, but decide it.
+
+## The running order
+
+Decided by the project owner on 31/08/2026, when the phase opened, and written here rather than in
+`status.md` because it is a decision about how the phase is run, not a record of how far it has got.
+
+**11c's plan named one agent too few, twice**, and `docs/plan/11c-movement-shapes/status.md` closed
+with the warning that the next plan saying "loaded from `assets/data/`" would read the same way. This
+is that plan, so the question was asked before any issue was opened rather than after an agent hit the
+boundary: **who reads `assets/data/*.json` here?**
+
+The answer is that this phase does not read it from Java at all. **The generator is a Node script in
+`tools/`, following the precedent the plan's own decision section cites** —
+`docs/design/atlas/build-atlas.js` and `docs/design/fonts/build-fnt.js`. `tools/` belongs to no agent,
+Node is already on `ubuntu-latest`, and nothing in `core/` or `game/` is touched, so
+`game/adapter/content/JsonContentSource.java` — the file 11c's correction was about — stays out of this
+phase entirely. The alternative, a Gradle task, was refused for the opposite reason: the project's only
+JSON parser is that adapter, it drags libGDX in, and it belongs to `game-presentation`.
+
+| Round | Issues | Who | Why here |
+|---|---|---|---|
+| 1 | task 1 | `level-designer` | What the document must contain is set before the generator exists, or the generator's output decides it by accident — which is the "dump of every field" the Risks section refuses |
+| 2 | tasks 2 and 3 | the coordinator, in `tools/` and `.github/workflows/` | The generator and the check that makes disagreement fail are one mechanism; splitting them ships a convenience nobody enforces |
+| 3 | task 4 | `level-designer`, **not the coordinator** | Task 4 is a judgement on the generator's output, and the person who wrote the generator is the wrong person to make it. This is the task the Risks section names as most likely to be skipped |
+| 3 | task 5 (#56) | the coordinator | A decision about a second CI check, made once the first one exists and its cost is known rather than guessed |
+| — | [#177](https://github.com/LuchoC-Dev/little-spaceship/issues/177) | the coordinator | A defect found before the phase opened, not a task from the plan. `how-to-run-a-phase.md` provides for this: it gets its own issue, branch, fragment and pull request like any other |
+
+`reviewer` audits at the close of the phase, as in 11c.
+
+**Why #177 rides in this phase.** `pr-check` fails every `dev` → `main` release, and there is no
+sanctioned branch to fix it on: rule 1 of that same workflow accepts only `phase/*` or `docs/*` against
+`dev`. **Rule 1 is not weakened to let the fix through** — a phase branch is the sanctioned path and
+this is one. Phases 10d and 11c both spent reviews documenting that failure mode.
 
 ## Acceptance criteria
 
