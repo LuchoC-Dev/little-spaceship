@@ -2,3 +2,4 @@
 - [HUD and size constraints](project_hud-and-size-constraints.md) - what the existing code decided about hitboxes, anchors and the boss bar.
 - [Silhouette primitives are spent](project_silhouette-primitives-are-spent.md) - six archetypes, six shapes, and what the iris and the warm pixels are reserved for.
 - [Generate what is not a silhouette](feedback_generate-what-is-not-a-silhouette.md) - hand-draw only what the player reads, and Read the PNG before believing any grid.
+- [On-ship state language](project_on-ship-state-language.md) - what the renderer actually draws on the ship, which is not what the HUD document says.
