@@ -154,8 +154,13 @@ answering.
 | Animation | none, one static frame |
 | Lifetime | exactly while the shield component is present |
 
-**Not built.** No renderer reads `fx-shield` yet; the art and this specification are what [#236](https://github.com/LuchoC-Dev/little-spaceship/issues/236)
-delivers first, and the wiring in `game/adapter/render/WorldRenderer.java` is a separate change.
+**Built.** `game/adapter/render/WorldRenderer.java`'s `drawShield` reads `fx-shield` and draws it
+centred on the player, gated on `core/port/PlayerStatus.shieldActive()` — the same value the left
+plate's `STATE` block already reads for `icon-shield`, so the ship and the plate cannot disagree.
+The draw order above falls out of `accept()`'s existing sequence rather than being imposed on it:
+the aura is drawn, then the shell, then the ship. Delivered by
+[#236](https://github.com/LuchoC-Dev/little-spaceship/issues/236) in two parts, the art and this
+specification first and the wiring second.
 
 It must never be mistaken for the invulnerability aura, which is the one real risk here, so it
 differs from it on three axes at once and the player has to remember none of them:
