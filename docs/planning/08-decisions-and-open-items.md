@@ -350,6 +350,22 @@ found by playing the deployed build on 25/08/2026.
   `gdx-teavm` 1.6.1 returns `ApplicationType.WebGL` as a constant, so the branch is reached.
   **Not checked:** the deployed build, which is the project owner's.
 
+### An active shield is drawn on the ship, 02/09/2026
+
+- **The plate is no longer the only place a shield shows.** `docs/design/04-hud-layout.md` said the
+  ship shows exactly three grace periods and that "a shield is active" belongs to the left plate's
+  `STATE` block alone; [#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) followed that
+  and `reviewer` upheld it. The project owner played level 1 on 02/09/2026, saw `icon-shield` lit
+  with nothing on the ship, and overruled the document ([#236](https://github.com/LuchoC-Dev/little-spaceship/issues/236)).
+- **A ring around the ship**, chosen over two alternatives that were put to the owner and refused:
+  tinting or pulsing `ship-basic` with no new art, which collides with the language the grace
+  periods already use; and a soft halo, which cannot be kept clean at 480x270 with nearest-neighbour.
+- The art is `fx-shield`, 21x23, green, static, authored in `docs/design/mockups/src/01-sprites.js`
+  and packed by `docs/design/atlas/build-atlas.js`. It differs from the `C1` invulnerability aura in
+  shape, colour and proportion at once; the reasoning is in `docs/design/04-hud-layout.md`.
+- The three grace periods did **not** move. This decision adds one state to the ship, it does not
+  reopen the section.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.
