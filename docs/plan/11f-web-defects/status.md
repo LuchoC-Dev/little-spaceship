@@ -1,6 +1,6 @@
 # Phase 11f — The four web defects · status
 
-**State:** done on the phase branch — five tasks, five pull requests, and **all four defects verified by the project owner on 01/09/2026 in a real browser and on the desktop build**. Pull request open against `dev` and unmerged, waiting on the project owner's direct approval.
+**State:** **done and merged into `dev`** in [#232](https://github.com/LuchoC-Dev/little-spaceship/pull/232), with the project owner's direct approval on 01/09/2026. Five tasks, five pull requests, and all four defects verified by the project owner in a real browser and on the desktop build. **This completed the 11 group.**
 **Updated:** 01/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.

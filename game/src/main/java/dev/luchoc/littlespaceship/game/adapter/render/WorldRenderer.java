@@ -80,6 +80,14 @@ public final class WorldRenderer implements SpriteVisitor {
      */
     private static final float ATTACHMENT_OFFSET_X = 11f;
 
+    /**
+     * The active shield's shell, drawn centred on the ship with no offset while {@link
+     * PlayerStatus#shieldActive()} is {@code true}, per {@code 04-hud-layout.md}'s "An active
+     * shield is drawn on the ship". A real 21x23 region, not an alias — built once for the same
+     * reason {@link #PLAYER_SPRITE_ID} and {@link #ATTACHMENT_SPRITE_ID} are plain constants.
+     */
+    private static final SpriteId SHIELD_SPRITE_ID = new SpriteId("fx-shield");
+
     /** Respawn blinks 4 ticks drawn, 4 ticks dimmed, per {@code 04-hud-layout.md}. */
     private static final int RESPAWN_BLINK_TICKS = 4;
     private static final float RESPAWN_BLINK_ALPHA = 0.35f;
@@ -190,6 +198,10 @@ public final class WorldRenderer implements SpriteVisitor {
             drawAura(logicalX, y);
         }
 
+        if (isPlayer && playerStatus.shieldActive()) {
+            drawShield(logicalX, y);
+        }
+
         float alpha = 1f;
         Color tint = Color.WHITE;
         if (source == InvulnerabilitySource.RESPAWN) {
@@ -265,6 +277,30 @@ public final class WorldRenderer implements SpriteVisitor {
         batch.draw(pixel, left, bottom, 1f, height);
         batch.draw(pixel, left + width - 1f, bottom, 1f, height);
         batch.setColor(Color.WHITE);
+    }
+
+    /**
+     * The active shield's shell, drawn centred on the ship's live position with no offset, behind
+     * {@code ship-basic} and in front of the invulnerability aura — the caller in {@link #accept}
+     * runs this before the ship's own {@code batch.draw}, and after {@link #drawAura} when both are
+     * up, matching the draw order {@code 04-hud-layout.md} specifies. No tint, no alpha: the region
+     * is drawn exactly as authored, since {@code visual-designer} already resolved its colour and
+     * shape to stay distinct from the aura. Skipped silently, like every other id, if {@link
+     * #SHIELD_SPRITE_ID} is not in {@link #atlas} — logged once through the same {@link
+     * #missingSpritesLogged} path {@link #accept} itself uses.
+     */
+    private void drawShield(float shipLogicalX, float shipY) {
+        TextureRegion region = atlas.region(SHIELD_SPRITE_ID);
+        if (region == null) {
+            if (missingSpritesLogged.add(SHIELD_SPRITE_ID.value())) {
+                Gdx.app.error("WorldRenderer", "no placeholder region for sprite id '"
+                    + SHIELD_SPRITE_ID.value() + "', skipping");
+            }
+            return;
+        }
+        float width = region.getRegionWidth();
+        float height = region.getRegionHeight();
+        batch.draw(region, shipLogicalX - width / 2f, shipY - height / 2f, width, height);
     }
 
     /** The power-up's glow ring, drawn as a four-sided outline behind the ship, in {@code C1}. */

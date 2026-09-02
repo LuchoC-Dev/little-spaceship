@@ -114,6 +114,13 @@ adjacent to a boss that enters from the top, and costs the player nothing.
 
 ## Invulnerability is shown on the ship, not in the plate
 
+~~This section once said that the *only* player states shown on the ship are the three grace
+periods below, and that "a shield is currently active" is shown in the left plate's `STATE` block
+and nowhere else.~~ **Overruled by the project owner on 02/09/2026, after playing** ([#236](https://github.com/LuchoC-Dev/little-spaceship/issues/236)):
+a shield that is up is now drawn on the ship as well, see *An active shield is drawn on the ship*
+below. The rest of this section is unchanged and still holds — the three grace periods stay
+ship-shown, and nothing else moved into the playfield.
+
 Grace frames last one or two seconds. A widget that appears and disappears that fast in the corner
 of the eye is noise, and the player is looking at their ship anyway.
 
@@ -129,6 +136,50 @@ without reading anything.
 
 Alpha is a batch tint applied at draw time. It is not a colour in the sprite and it does not exist
 in the palette.
+
+## An active shield is drawn on the ship
+
+The `STATE` block still lists the shield, and that does not change. What changed is that the plate
+was the *only* place it appeared: the player collected a shield, an icon lit in a margin they were
+not looking at, and the ship they were looking at was identical to an unshielded one. The plate
+answers "what do I have"; the playfield has to answer "am I protected right now", and it was not
+answering.
+
+| What | Value |
+|---|---|
+| Region | `fx-shield`, 21x23, in `assets/atlas/sprites.png` |
+| Colour | `G3` across each plate, `G2` on the two pixels running into a seam |
+| Position | centred on the ship's `Transform`, no offset |
+| Draw order | behind `ship-basic`, in front of the `C1` aura ring |
+| Animation | none, one static frame |
+| Lifetime | exactly while the shield component is present |
+
+**Built.** `game/adapter/render/WorldRenderer.java`'s `drawShield` reads `fx-shield` and draws it
+centred on the player, gated on `core/port/PlayerStatus.shieldActive()` — the same value the left
+plate's `STATE` block already reads for `icon-shield`, so the ship and the plate cannot disagree.
+The draw order above falls out of `accept()`'s existing sequence rather than being imposed on it:
+the aura is drawn, then the shell, then the ship. Delivered by
+[#236](https://github.com/LuchoC-Dev/little-spaceship/issues/236) in two parts, the art and this
+specification first and the wiring second.
+
+It must never be mistaken for the invulnerability aura, which is the one real risk here, so it
+differs from it on three axes at once and the player has to remember none of them:
+
+| | Shield | Invulnerability power-up |
+|---|---|---|
+| Shape | rounded shell, four plates with a diagonal seam between them | hard square outline |
+| Colour | `G3`/`G2` green | `C1` cyan |
+| Size | 21x23, taller than wide, hugging the hull | 21x21, square |
+
+Cyan was already spent twice — it is the ship's own engine and fire, and it is the aura — so a cyan
+shell hugging the hull would read as the ship glowing rather than as something around it. Green is
+the colour of the capsule that granted it, `pickup-shield`; no enemy fire can be green, because
+hostile fire owns hues 320-350 campaign-wide; and no background may hold `G2` or `G3` at all.
+
+There are no partial states to draw. `core/domain/component/Shield.java` is a bare marker with no
+durability and `core/domain/system/DamageSystem.java` removes it in one hit, so the shell is either
+whole or absent. The moment it is spent is already covered by the *Feedback* table below: the icon
+flashes and a break effect plays on the ship.
 
 ## Feedback
 
