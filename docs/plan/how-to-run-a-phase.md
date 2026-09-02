@@ -78,6 +78,14 @@ path refuses and only a deliberate admin override gets through.
 1. the phase's `status.md` **`State:` line**, to what the phase actually is now, naming the PR;
 2. the phase table in `docs/STATUS.md`, which describes what is on `dev` rather than what a branch claims.
 
+**Both of them happen when the merge happens, in their own pull request against `dev`.** Not later,
+and **not carried on the next phase's branch** — that shortcut looks tidy, it saves the project owner
+one approval, and it works right up until there is no next phase. It was tried through 11e, 11f and
+11g and broke on the third: 11g merged into `dev` while `docs/STATUS.md` on `dev` still said its pull
+request was open and unmerged. Decided by the project owner on 02/09/2026, who pointed out that the
+write belongs to the moment of approval and that deferring it is what produced the drift. The extra
+approval is the price and it is small.
+
 Then read back over the `status.md` you just closed and strike out anything in it written in the
 future tense — "remains", "whoever merges should", "not yet" — that the merge has answered. A status
 file is a dated record and stays one; a *forward-looking* sentence in it is read as current by the

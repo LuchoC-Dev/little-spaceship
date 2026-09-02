@@ -1,6 +1,6 @@
 # Phase 11g — The shield drop, and a test harness for `game` · status
 
-**State:** done on the phase branch — three tasks, five pull requests, and **both play-verifiable results confirmed by the project owner on 02/09/2026**. Pull request open against `dev` and unmerged, waiting on the project owner.
+**State:** **done and merged into `dev`** in [#242](https://github.com/LuchoC-Dev/little-spaceship/pull/242), with the project owner's direct approval on 02/09/2026. Three tasks, five pull requests, and both play-verifiable results confirmed by the project owner.
 **Updated:** 02/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
