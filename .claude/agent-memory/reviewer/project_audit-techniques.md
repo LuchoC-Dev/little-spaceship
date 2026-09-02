@@ -260,3 +260,42 @@ Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
   a file a Bash `cp`/`cat` wrote — `/tmp/foo.json` from bash and `open('/tmp/foo.json')` from `python3`
   are two different filesystems here. Bash sees the scratchpad fine via its `/c/...` mount, so writing
   there from both sides is the one path that works for both tools.
+
+## For auditing a "vanishes on the same frame" claim about a per-frame-recomputed status field
+
+- **Trust it only after tracing three points: the component's removal, the status record's
+  construction, and the caller's ordering between tick and draw.** Phase 11g's shield ring
+  (issue #236, PR #239): `WorldView.player()` (`core/domain/World.java`) calls
+  `shields.has(entity)` fresh on every invocation rather than caching a flag, `DamageSystem`
+  (`resolvePlayerHit`) removes the `Shield` component and grants `DAMAGE` invulnerability in the
+  same method call, and `PlayScreen.render` calls `loop.advance` (which runs the tick) strictly
+  before `drawView.player()`/`worldRenderer.draw` for that same frame. All three together are what
+  make "the ring disappears the instant the shield is spent" true instead of merely claimed — a
+  cached/stale-by-one-frame field would fail exactly this chain, at the second or third point.
+- **A renderer field set once per `draw(...)` call and read only from inside the same call's
+  visitor callbacks cannot be stale**, including on the first frame, if the field has a real default
+  (not left uninitialised) and nothing else can trigger the callback. Checked for
+  `WorldRenderer.playerStatus`: default `PlayerStatus.NONE`, assigned before `view.forEachSprite(this)`
+  runs, and `accept()` has no other caller. Two greps (constructor/field default, call sites of
+  `accept`) settle it without a build.
+
+## For verifying an ASCII pixel-art sprite's claimed palette letters instead of eyeballing the grid
+
+- **Map each art character through the same `CHARS`/`NAMES` arrays the mockup renderer uses**,
+  rather than trusting a status fragment's colour claim by reading the ASCII rows visually.
+  `docs/design/mockups/src/00-palette.js`'s `CHARS` maps a letter to an index into `NAMES`
+  (`'g': 26 -> NAMES[26] = 'G2'`, `'G': 27 -> NAMES[27] = 'G3'`). A short Node one-liner counting
+  occurrences of each letter in the sprite's `art` array (phase 11g's `fx-shield`, 8 `g` + 44 `G`,
+  no `k`/outline character at all) turned "G3 across each plate, G2 on the seam pixels, no outline"
+  from a plausible-sounding claim into an exact, reproducible confirmation — same rows/width as
+  `docs/design/mockups/src/01-sprites.js` itself, no need to run the mockup build.
+
+## Calibration: a fully clean pair audited together (phase 11g, PR #239 + retrospective PR #237)
+
+Both passed on first read: draw order correct by tracing `accept()` top to bottom, vanish condition
+correct by the three-point trace above, no boundary violation (`WorldRenderer` only imports
+`core.port`, never `core.domain`), sprite claims verified exactly against the palette arrays, docs
+corrections properly struck-through-and-dated, decisions-log entry matching its neighbours' form,
+merge onto the phase branch clean, `./gradlew build` and `pre-pr-check` both green. Worth keeping
+as a second reference point next to the three MVP branches for what "nothing to report" looks like
+here — the absence of findings was earned by checking each claim, not assumed from a tidy diff.
