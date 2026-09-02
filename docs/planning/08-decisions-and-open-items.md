@@ -366,6 +366,56 @@ found by playing the deployed build on 25/08/2026.
 - The three grace periods did **not** move. This decision adds one state to the ship, it does not
   reopen the section.
 
+### Level 1 carries a shield, 02/09/2026
+
+Decided by the project owner in phase 11g, and **verified by playing on 02/09/2026**. It reopens the
+level signed off the day before, deliberately and by one pickup.
+
+- **Level 1 carries a `shield` drop at 37.0 s** — `l1-combined-formations`, `enemy-basic` in
+  `line-3`, slot 1, the middle of the three. Added so that the `icon-shield` HUD element wired by
+  [#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) is reachable at all: the icon was
+  correct and the level contained no `shield` drop, only `weapon-upgrade` x3, `extra-life`,
+  `attachment` and `bomb-recharge`.
+
+  **It is placed before the beats it defends against, not beside them.** The first half of the level
+  held one reward and the 11.0 s to 48.0 s gap was its longest drought; `l1-combined-formations` is
+  the level's first density spike at 1.77/s, not exceeded again until 88.0 s. Three alternatives were
+  refused with reasons, recorded in `docs/plan/11g-shield-and-test-harness/status/230-shield-drop-level-one.md`
+  — 22.0 s is too early for a marker with no durability, 46.0 s sits two seconds from a
+  `weapon-upgrade` and leaves the drought intact, and beat 6 cannot carry a drop at all because
+  `core/domain/system/LifetimeSystem.java` strips `Drop` from an escaping enemy.
+
+  **The cost, accepted:** one free hit carried into beats 5-8, a stretch tuned across two sessions
+  without it. Bounded — `core/domain/system/PickupSystem.java`'s `applyShield` grants points rather
+  than a second shield if one is already up, so it cannot stack. The project owner played it and
+  reported the placement correct and the reward cadence still fine.
+
+### An active shield is drawn on the ship, 02/09/2026
+
+Decided by the project owner on 02/09/2026, after playing the drop above and finding `icon-shield`
+lit in the HUD with nothing on the ship.
+
+- **This overrules `docs/design/04-hud-layout.md` as it stood.** That document says invulnerability is
+  shown on the ship and names exactly three sources — respawn, damage absorbed, and the
+  invulnerability power-up — and *"a shield is currently active"* was deliberately not one of them; it
+  lived in the left plate's `STATE` block alone.
+  [#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) followed that faithfully and
+  `reviewer` upheld the reading. The document was not wrong about what the code did; it was wrong
+  about what the game should do.
+- **A ring, not a tint and not a halo.** `fx-shield`, 21x23, a rounded shell in four plates, green,
+  static, drawn behind `ship-basic` and in front of the `C1` aura by
+  `game/adapter/render/WorldRenderer.java`'s `drawShield`, gated on
+  `core/port/PlayerStatus.shieldActive()` — the same value the plate reads, so the ship and the plate
+  cannot disagree. Two alternatives were put to the project owner and refused: tinting or pulsing
+  `ship-basic` with no new art, which collides with the visual language the invulnerability grace
+  periods already own, and a soft halo, which does not survive nearest-neighbour at 480x270.
+- **Green, and the reasoning is a rule worth keeping.** Cyan was already spent twice near the hull —
+  the ship's own engine and the `C1` aura — so a cyan shell reads as the ship glowing rather than as a
+  thing around it. Green is the colour of the capsule that granted it, hostile fire owns hues 320-350
+  so no enemy shot can be green, and no background may carry `G2` or `G3` at all.
+- **Verified by playing on 02/09/2026**: the shell appears on pickup, follows the ship, and vanishes
+  on the hit.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.
