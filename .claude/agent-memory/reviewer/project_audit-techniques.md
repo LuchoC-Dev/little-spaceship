@@ -299,3 +299,24 @@ corrections properly struck-through-and-dated, decisions-log entry matching its 
 merge onto the phase branch clean, `./gradlew build` and `pre-pr-check` both green. Worth keeping
 as a second reference point next to the three MVP branches for what "nothing to report" looks like
 here — the absence of findings was earned by checking each claim, not assumed from a tidy diff.
+
+## For reproducing a `JsonContentSource` "LoadCheck" claim independently
+
+- **There is no `jar` binary on this machine's PATH** (`which jar` finds nothing, even though
+  `javac`/`java` 25 do resolve). `jar tf <file>` then silently prints nothing instead of erroring —
+  read that as "command not found," not "empty jar." Use Python's `zipfile` to list jar contents
+  instead, and give it a Windows-style path (`C:\Users\...`), not the Git-Bash `/c/Users/...` form —
+  native Windows Python can't resolve the latter (matches the existing `/tmp` note, same root cause).
+- **`JsonContentSource`'s constructor is `(FileHandle dataDir, String levelId)`, scoped to one level
+  id, not a directory-wide loader.** A probe needs a fresh instance per level id
+  (`new JsonContentSource(dir, id)`), not one shared instance queried by id — confirmed at
+  `JsonContentSource.java:79`, `loadLevel(reader, dataDir.child(levelId + ".json"), levelId)` runs
+  once, in the constructor.
+- **`javac`/`java` classpath with `;`-joined jars works fine through this Bash tool once the jar
+  paths themselves are right** — the practical way to get a Windows absolute path for a jar under
+  the current repo is `$(pwd -W)/core/build/libs/core.jar`, and for a Gradle cache jar, just the
+  literal `C:\Users\...` path. Confirmed compiling and running a `LoadCheck` main against
+  `core.jar`, `game.jar` and a located `gdx-1.14.2.jar` from `~/.gradle/caches/modules-2`, reproducing
+  PR #246's exact claimed output.
+
+Related: [[defect-patterns]].

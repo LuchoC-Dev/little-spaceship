@@ -1040,3 +1040,20 @@ subjects conventional; `tools/pre-pr-check --base phase/11h-test-mode` reproduce
 fragment's every "not checked" (the four scenarios' correctness, the web target as a deliverable,
 `level-01.md` regeneration) matched what the branch actually could not have exercised, given
 `level-designer`'s files didn't exist on this branch — an honest partial scope, not an overclaim.
+
+## Calibration: another fully clean single-task PR (phase 11h task 2, PR #246, issue #245)
+
+Content-only branch (`assets/data/` + one status fragment, no code) that survived every check applied:
+level-01/waves/formations/trajectories genuinely absent from the diff (not just "unchanged" — not
+present at all, the strongest form of that check); the boss block's 13 keys verified one by one
+against `JsonContentSource.parseBoss`'s `requireOnlyKeys` list and against `level-01.json`'s own boss
+block, differing only in the one field the task allowed (`entersAt`); the wave-placement offset
+arithmetic (`start = max(previousEndTime + offset, levelTime)`, chained through `FixedDuration`) was
+reproduced by hand for the boss prelude's three overlapped placements and landed on the exact
+numbers the status fragment claimed (starts 0.0/4.0/8.0, last prelude spawn at 20.0, core in position
+at 31.4s); the LoadCheck claim was independently reproduced with a fresh probe, not just re-read; and
+`node tools/build-level-docs.js` really did print `unchanged` for both docs when run from the actual
+worktree. The one deviation from the signed-off level (three wave scenarios shipping at weapon level 1
+instead of the level's accumulated level 2-4) was argued with reasons, not asserted, and stated as a
+real trade-off rather than hidden. Worth keeping next to phase 11g's PR #239 as a second calibration
+point for what "nothing to report, and it was earned" looks like on a docs/content-only branch.
