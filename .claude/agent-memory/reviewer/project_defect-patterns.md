@@ -989,3 +989,54 @@ Merged both into a scratch worktree (`git worktree add ../ls-review-11g --detach
 48. **A harness's "no dependency added, single-threaded, no clock" claim and its "the test can actually fail" claim are independently and cheaply checkable without rebuilding the author's steps.** Reading `FakeInput`'s `invoke()` confirmed the proxy answers only named methods and returns the type's JDK default (false/0/null) for everything else — the exact shape the project's own memory warns can make a test pass for the wrong reason, but here the two real assertions (`keyboardAloneReachesTopSpeed`, `keyboardAndMouseCancelExactly`) both route through methods the proxy actually implements, and the arithmetic behind "cancel exactly" (`mouseX = -140*(208/208)/1 = -140`, `keyboardX(140) = +140`) reproduces on paper from `InputAdapter.sample`'s real formula, not from the test's own comment. The 140f→999f falsification claim is plausible on inspection (the assertion is a direct `assertEquals`, no rounding or pooling in the way) — not independently rerun this session, so that half stays "plausible, not independently reproduced" rather than "confirmed."
 
 Calibration in the other direction, worth keeping: no invariant-1 hit (`grep -rn "com.badlogic.gdx" core/src/main` first returned a spurious hit against `Rng.java` from a truncated `head` pipe; a clean, untruncated regrep of that exact file found nothing — when a grep result looks surprising, rerun it without piping through `head` before trusting it as a finding).
+
+## PR #247 (`feat/test-build-flavour`, phase 11h task 1, issue #244) — a build-flavour absence claim that reproduced exactly, and the calibration case for a public seam judged inert rather than dangerous
+
+Verdict: accept. The whole task turned on one criterion — "absence, not concealment" — and it was
+checkable by rebuilding twice, not by reading the Gradle DSL and trusting it.
+
+58. **A "the ordinary build's compiled output contains no trace" claim for a mutually-exclusive-
+    source-directory flavour is fully reproducible in under a minute and is worth reproducing every
+    time, not just reading the `sourceSets` block.** `game/build.gradle.kts` adds
+    `src/tests/java` (real `TestMode`/`TestMenuScreen`/`TestScenarios`) to the `main` source set
+    only when `providers.gradleProperty("tests").isPresent`, else `src/teststub/java` (a no-op
+    `TestMode`). Reproduced independently: `./gradlew clean :game:compileJava` (no property) then
+    `find game/build/classes/java/main -iname "TestMenu*" -o -iname "TestScenarios*"` — empty; same
+    command with `-Ptests` — three `.class` files appear; `./gradlew clean build` (no property) then
+    `unzip -l game/build/libs/game.jar | grep -i test` — exactly one line, the stub `TestMode.class`.
+    Went one step further than the author's own verification (which stopped at the jar): ran the
+    *actual* TeaVM compile, `./gradlew :web:gdx_teavm_web_js_build` (not the misleading `:web:build`,
+    which shows `compileTeavmJava NO-SOURCE` — see the existing TeaVM-dist entry in
+    [[audit-techniques]]), and grepped the emitted `app.js`: `TestMenuScreen`/`TestScenarios` — zero
+    hits; `TestMode` — 4 hits (the harmless stub, expected). This is the strongest form of the
+    absence claim this project asks for, and it held at every layer checked (compiled classes, jar,
+    TeaVM-compiled JS).
+59. **A public seam added to satisfy a documented precedent (`LEVEL_ID`'s own javadoc predicting
+    "the day a level-select flow exists, this field is the one place that changes") is judged inert
+    by grepping its call sites in the shipped source, separately from the flavour's own source-set
+    split.** `LittleSpaceshipGame.overrideLevelId(String)` is public, present in every build
+    (`main`, not `src/tests`), and has exactly one caller anywhere in the tree —
+    `TestMenuScreen.java`, which only compiles under `-Ptests`. `grep -rn overrideLevelId` across
+    `core`/`game`/`desktop`/`web` confirms it. A real, small surface (a public setter for which
+    level a run plays) but genuinely dead code in the shipped build, not merely hidden — worth
+    distinguishing from a runtime-hidden test hook, which this project's own architecture-test
+    family (pattern 2, "accessor with no call site") would otherwise treat as suspicious by default.
+    Here the absent caller is the point, not an oversight.
+60. **A naming assumption stated as "if `level-designer`'s ids differ, only this list changes"
+    reproduced exactly against the sibling branch that actually shipped, without coordination.**
+    `TestScenarios.ALL` hardcodes `test-wave-04`/`test-wave-09`/`test-wave-12`/`test-boss`; the
+    parallel `feat/scenario-levels`-shaped commit (`f19c3e8`, issue #245) added
+    `assets/data/{test-boss,test-wave-04,test-wave-09,test-wave-12}.json` — identical ids, confirmed
+    by `find assets/data -iname "test-*"` after the fact. Not something this task could have known in
+    advance; worth recording as a positive cross-check rather than crediting the branch with
+    foresight it couldn't have had.
+
+Also confirmed clean: `core/` and `assets/data/` both empty in `git diff origin/phase/11h-test-mode
+...origin/feat/test-build-flavour --stat`; no `Thread`/`ExecutorService`/`CompletableFuture`/
+`ReentrantLock`/`Math.random`/clock read introduced (grepped the diff directly); both commit
+subjects conventional; `tools/pre-pr-check --base phase/11h-test-mode` reproduced the PR's pasted
+"PASS — 2 commit(s), 8 file(s) changed" verbatim, from a worktree needing the usual
+`git checkout -b` first (bare detached HEAD — same tooling quirk as PR #170/#171). The status
+fragment's every "not checked" (the four scenarios' correctness, the web target as a deliverable,
+`level-01.md` regeneration) matched what the branch actually could not have exercised, given
+`level-designer`'s files didn't exist on this branch — an honest partial scope, not an overclaim.
