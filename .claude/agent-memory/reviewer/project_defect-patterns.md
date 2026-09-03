@@ -1057,3 +1057,43 @@ worktree. The one deviation from the signed-off level (three wave scenarios ship
 instead of the level's accumulated level 2-4) was argued with reasons, not asserted, and stated as a
 real trade-off rather than hidden. Worth keeping next to phase 11g's PR #239 as a second calibration
 point for what "nothing to report, and it was earned" looks like on a docs/content-only branch.
+
+## Phase 11h's two rejection-corrections, PR #254 and PR #253 — one clean, one mislabelled issue citation
+
+Both were narrow, single-file corrections the project owner asked for after reviewing PR #249.
+Both were code/content-correct and both passed every architectural and arithmetic check applied
+(rebuilt in scratch worktrees, not trusted from the diff): #254's stub/real `TestMode.startScreen`
+split confirmed by inspecting `game.jar` (only the stub `.class`, no `TestMenuScreen`/`TestScenarios`)
+and by running the *real* TeaVM task (`:web:gdx_teavm_web_js_build`, not `:web:build`) and grepping
+`app.js` for both names — zero hits, matching the claim; #253's boss-alone `entersAt` arithmetic
+(310 → 175, 135px at 25px/s = 5.4s, +2.0s start = 7.4s) reproduced by reading `BossSystem.java`
+directly, and the "empty `waves: []` loads and behaves" claim independently reproduced with a fresh
+`LoadCheck` probe against the built jars — output matched the fragment's pasted transcript
+character for character, including `placements=[]`.
+
+46. **A citation to an issue number can be checked exactly like a citation to a file line, and the
+    project's own precedent (false statements in documents outrank code defects) applies to it the
+    same way.** PR #253's status fragment says a content-format gap ("no way to place a standalone
+    power-up without an enemy dying") was "Filed as #252." Issue #252 is real, open, and entirely
+    about something else — pickups not falling once already dropped — filed by the *project owner*
+    (not by this branch's `level-designer` author), 23 seconds before #251, both in the same review
+    batch that produced #250/#251. `gh issue view 252` and `gh api .../issues/252 --jq
+    '{created,updated}'` (identical timestamps, never edited) settle both halves at once: the citation
+    doesn't check out, and it wasn't even this branch's author who created the issue being cited.
+    Whenever a status fragment says "filed as #N," open #N and read its actual title/body — do not
+    assume a number in a document is correct just because a plausible-looking issue with that number
+    exists in the tracker. Non-blocking here (the fix itself and every other claim in the fragment
+    checked out; this is a documentation-accuracy note, not a code defect), but exactly the class of
+    finding the project weighs most heavily.
+47. **Direct-quoting the project owner's original Spanish review comment inside an English status
+    fragment is a real, minor English-only violation, distinguishable from `docs/sources/`'s carved-
+    out exception.** PR #253's fragment quotes *"si el test es para el boss solo debería aparecer el
+    boss, no pre-enemigos"* and *"a lo sumo dejar power-ups"* verbatim — defensible in spirit (avoids
+    mistranslating the actual instruction, the same reason `docs/sources/` exists) but the exception
+    is written narrowly to that one directory, and this file is not in it. Worth a note on any status
+    fragment that quotes a Spanish-language review comment directly rather than paraphrasing it in
+    English.
+
+Calibration: #254 alone had nothing to report at all — every observation in its fragment
+reproduced exactly, including the one this project has burned itself on before (a `:web:build`-only
+claim would have proven nothing about TeaVM; this fragment named the real task and I ran it myself).
