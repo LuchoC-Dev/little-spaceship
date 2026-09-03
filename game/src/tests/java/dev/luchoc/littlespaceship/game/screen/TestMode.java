@@ -1,5 +1,6 @@
 package dev.luchoc.littlespaceship.game.screen;
 
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import dev.luchoc.littlespaceship.game.LittleSpaceshipGame;
@@ -12,7 +13,7 @@ import java.util.List;
  * counterpart under {@code src/teststub/java} for what a build without that property contains
  * instead, which is nothing of this package.
  */
-final class TestMode {
+public final class TestMode {
 
     private TestMode() {
     }
@@ -21,5 +22,16 @@ final class TestMode {
             List<KeyboardFocusable> focusables) {
         MenuEntries.add(content, game, skin, "TESTS",
             () -> game.setScreen(new TestMenuScreen(game)), focusables);
+    }
+
+    /**
+     * @return a fresh {@link TestMenuScreen}: this build flavour exists for exactly one purpose,
+     *     so {@code LittleSpaceshipGame#create()} boots straight into it instead of the main menu,
+     *     per issue #250. {@link TestMenuScreen}'s own BACK entry still leads to {@link
+     *     MenuScreen}, which carries the TESTS entry in this flavour too — the main menu is
+     *     skipped only at startup, not on every path back to it.
+     */
+    public static Screen startScreen(LittleSpaceshipGame game) {
+        return new TestMenuScreen(game);
     }
 }
