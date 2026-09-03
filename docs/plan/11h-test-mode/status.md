@@ -1,6 +1,6 @@
 # Phase 11h — A test mode, so a wave can be looked at without playing to it · status
 
-**State:** **complete on `phase/11h-test-mode`, and open as a pull request against `dev`.** Four tasks, four pull requests, all accepted by `reviewer` and merged into the phase branch on 03/09/2026 — two planned, and two asked for by the project owner while reviewing the phase. **Not merged into `dev`** — that waits on the project owner's direct approval on that pull request, and on their playing the four scenarios, which is the acceptance criterion no agent can satisfy.
+**State:** **done and merged into `dev`** in [#249](https://github.com/LuchoC-Dev/little-spaceship/pull/249), with the project owner's direct approval on 03/09/2026. Four tasks, four pull requests, all accepted by `reviewer` and merged on 03/09/2026 — two planned, and two asked for by the project owner while reviewing the phase. **Verified by the project owner**, who approved the pull request directly.
 **Updated:** 03/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
