@@ -28,6 +28,9 @@ public final class MenuScreen extends BaseUiScreen {
         MenuEntries.add(content, game, skin, "PLAY", () -> game.setScreen(new ShipSelectScreen(game)), focusables);
         MenuEntries.add(content, game, skin, "OPTIONS",
             () -> game.setScreen(new OptionsScreen(game, () -> new MenuScreen(game))), focusables);
+        // A no-op in every build that reaches a player; adds a TESTS entry only in the -Ptests
+        // flavour, per TestMode's own javadoc and game/build.gradle.kts.
+        TestMode.addMenuEntry(content, game, skin, focusables);
         // On the web target, Gdx.app.exit() does nothing: a script may not close a tab it did not
         // itself open. QUIT keeps its slot but leads to a farewell screen there instead of exiting;
         // see FarewellScreen's class javadoc and issue #40.
