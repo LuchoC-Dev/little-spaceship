@@ -28,6 +28,8 @@
 - [Reward cadence in level 1](project_reward-cadence-in-level-one.md) — the generated document charts
   density and never charts rewards, a second shield stacks with nothing, and why every drop rides a
   slow archetype.
+- [Scenario level files](project_scenario-level-files.md) — the doc generator only sees `level-NN.json`,
+  so a tool-only level is invisible to it; and no level file can set the player's starting state.
 - [Wave migration mechanics](project_wave-migration-mechanics.md) — a wave's `FixedDuration` is shared
   across every placement that reuses it, negative offsets overlap two `FixedDuration` waves since 11b, no
   test touches the real `assets/data/level-01.json`, and how to live-run it without a full app context.

@@ -32,3 +32,8 @@ only form available, and that is a limitation of the module, not a shortcut bein
 still loads and resolves; it is not dead content when the mechanism that selects it is a separate,
 later issue. Say so plainly in the status fragment rather than letting the reader assume the game
 already flies it.
+
+**A third Windows detail, 03/09/2026:** Git Bash mangles a multi-entry `-cp` argument even when it is
+quoted, and `javac` then reports `package com.badlogic.gdx.files does not exist` as if the jar were
+missing. `export MSYS2_ARG_CONV_EXCL='*'` before the `javac`/`java` calls fixes it. Same symptom as
+the POSIX-path trap above, different cause, so check both.
