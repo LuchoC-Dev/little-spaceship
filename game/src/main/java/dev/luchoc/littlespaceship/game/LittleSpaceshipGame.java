@@ -1,11 +1,13 @@
 package dev.luchoc.littlespaceship.game;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import dev.luchoc.littlespaceship.game.adapter.audio.AudioSystem;
 import dev.luchoc.littlespaceship.game.adapter.audio.MusicTrack;
 import dev.luchoc.littlespaceship.game.screen.MenuScreen;
 import dev.luchoc.littlespaceship.game.screen.PlayScreen;
+import dev.luchoc.littlespaceship.game.screen.TestMode;
 import dev.luchoc.littlespaceship.game.ui.GameSkin;
 
 /**
@@ -67,7 +69,12 @@ public final class LittleSpaceshipGame extends Game {
         skin = GameSkin.build();
         settings.load();
         audio = new AudioSystem(settings);
-        setScreen(new MenuScreen(this));
+        // TestMode.startScreen answers "no test mode" (null) in every build that reaches a
+        // player, so this falls back to the ordinary MenuScreen unchanged. Only the -Ptests
+        // flavour's own variant returns a screen, per issue #250: that build exists for exactly
+        // one purpose, so it boots straight into the TESTS submenu instead of the main menu.
+        Screen testScreen = TestMode.startScreen(this);
+        setScreen(testScreen != null ? testScreen : new MenuScreen(this));
     }
 
     /**
