@@ -416,6 +416,44 @@ lit in the HUD with nothing on the ship.
 - **Verified by playing on 02/09/2026**: the shell appears on pickup, follows the ship, and vanishes
   on the hit.
 
+### A test mode, and what level 1's depth means, 03/09/2026
+
+Decided by the project owner in the conversation that opened phase 11h. Two things: what "more depth
+in level 1" is, and the tool that has to exist before it can be worked on.
+
+**What depth means, and what it does not.** Level 1 gets more depth through **movement and
+grouping** — how enemies enter, move and combine. Three things are ruled out in the same breath:
+
+- **The boss moves as little as possible.** *"El jefe está bastante bien."* This does not reopen the
+  21/08 decision or the 01/09 speed tuning; it narrows what may touch them to nothing.
+- **No new enemy archetypes.** Existing ones may be modified. The roster in
+  `02-mvp-functional-spec.md` stands.
+- **Obstacles wait for the story and the final background.** This is the one axis of
+  `01-vision-and-scope.md:89` deliberately deferred rather than unused, and it is deferred to a
+  dependency rather than to a date.
+
+**A test mode, as a build flavour rather than a hidden feature.** `./gradlew :desktop:run -Ptests`
+carries a fourth main-menu entry, TESTS, listing named scenarios that start the game in one wave or
+at the boss. The ordinary build does not have it, and neither does anything that reaches `main`.
+
+- **The criterion is absence, not concealment.** A runtime flag would leave the test screens compiled
+  into the published `app.js`. `game/build.gradle.kts` instead swaps two mutually exclusive source
+  directories, `game/src/tests/java` and `game/src/teststub/java`, which define the same class
+  `TestMode` — one real, one a no-op. Verified by `reviewer` against the emitted `app.js` from
+  `./gradlew :web:gdx_teavm_web_js_build`: zero occurrences of `TestMenuScreen` or `TestScenarios`.
+- **A scenario is a level file, and the format needed nothing added.**
+  `game/adapter/content/JsonContentSource.java:349` accepts `boss`, `events` and `waves` and rejects
+  everything else, so a file naming one wave placement already *is* "start at that wave".
+  `assets/data/test-wave-04.json`, `test-wave-09.json`, `test-wave-12.json` and `test-boss.json`.
+- **The level format cannot express a starting player state, and no key was invented for it.**
+  `Simulation.java:66` fixes `PLAYER_INITIAL_SHOT_LEVEL = 1`. `test-boss.json` reaches weapon level 4
+  through content instead — a prelude of three overlapping `l1-first-basics` placements, whose
+  `weapon-upgrade` drops arrive before the boss enters at 26.0 s. The three wave scenarios start cold
+  at weapon level 1, on the argument that movement and grouping read the same at any weapon level.
+- **The rule that this tool does not relax:** an agent may launch the game only to confirm it starts.
+  A wave being reachable in five seconds is not permission to play it. Judging the game by playing is
+  the project owner's, as decided on 01/09/2026.
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.

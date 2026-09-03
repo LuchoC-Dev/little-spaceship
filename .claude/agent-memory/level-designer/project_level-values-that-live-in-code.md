@@ -37,3 +37,18 @@ the one in `docs/plan/11c-movement-shapes/shape-catalogue.md`, never by the cont
 
 See [[wave-migration-mechanics]] and [[level-one-content-mechanics]] for the format's behaviour
 itself.
+
+**Boss entrance arithmetic, learned 03/09/2026 (#251).** `entersAt` is the wait, not the arrival.
+The core spawns at `BossSystem.CORE_SPAWN_Y = PLAYFIELD_HEIGHT + (CORE_KEEL_RADIUS -
+CORE_KEEL_OFFSET_Y)` = `270 + (13 - (-27))` = **310** (`BossSystem.java:163,82,92`) and descends to
+`combatY` at `entranceSpeed`. For level 1's 175.0 / 25.0 that is 135 px, **5.4 s** of descent on top
+of `entersAt`. So a boss-only scenario at `entersAt` 2.0 has the boss fighting at t ≈ 7.4 s.
+
+**A level may declare `"waves": []`.** `JsonContentSource.loadLevel` only requires that exactly one
+of `events`/`waves` be *present*; `parsePlacements` iterates zero entries into an empty list, and it
+loads. That is how a boss-only level is expressed — the boss block plus an empty placement array.
+(Distinct from a *wave* with no spawns, which is rejected; see [[shape-placement-arithmetic]].)
+
+**A power-up cannot be placed on its own.** A pickup only ever comes from a dying holder's `Drop`
+(`CleanupSystem.java:65`, `spawnDropIfAny`), so "start the player with a weapon upgrade" is not
+content's to express at all — it needs a new mechanism in `core/`. Filed as issue #252.

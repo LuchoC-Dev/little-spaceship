@@ -1,11 +1,13 @@
 package dev.luchoc.littlespaceship.game;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import dev.luchoc.littlespaceship.game.adapter.audio.AudioSystem;
 import dev.luchoc.littlespaceship.game.adapter.audio.MusicTrack;
 import dev.luchoc.littlespaceship.game.screen.MenuScreen;
 import dev.luchoc.littlespaceship.game.screen.PlayScreen;
+import dev.luchoc.littlespaceship.game.screen.TestMode;
 import dev.luchoc.littlespaceship.game.ui.GameSkin;
 
 /**
@@ -41,6 +43,14 @@ public final class LittleSpaceshipGame extends Game {
      */
     private static final String LEVEL_ID = "level-01";
 
+    /**
+     * Set only by the {@code -Ptests} build flavour's TESTS menu ({@code TestMenuScreen}, present
+     * only in that flavour — see {@code game/build.gradle.kts}) to start a scenario other than
+     * {@link #LEVEL_ID}. {@code null} for the whole run otherwise, which is every build that
+     * reaches a player.
+     */
+    private String levelIdOverride;
+
     private Skin skin;
     private final GameSettings settings = new GameSettings();
     private AudioSystem audio;
@@ -59,7 +69,12 @@ public final class LittleSpaceshipGame extends Game {
         skin = GameSkin.build();
         settings.load();
         audio = new AudioSystem(settings);
-        setScreen(new MenuScreen(this));
+        // TestMode.startScreen answers "no test mode" (null) in every build that reaches a
+        // player, so this falls back to the ordinary MenuScreen unchanged. Only the -Ptests
+        // flavour's own variant returns a screen, per issue #250: that build exists for exactly
+        // one purpose, so it boots straight into the TESTS submenu instead of the main menu.
+        Screen testScreen = TestMode.startScreen(this);
+        setScreen(testScreen != null ? testScreen : new MenuScreen(this));
     }
 
     /**
@@ -114,7 +129,18 @@ public final class LittleSpaceshipGame extends Game {
 
     /** @return the content id of the level this run plays */
     public String levelId() {
-        return LEVEL_ID;
+        return levelIdOverride != null ? levelIdOverride : LEVEL_ID;
+    }
+
+    /**
+     * Overrides which level {@link #levelId()} returns for the rest of this run. Only the
+     * {@code -Ptests} flavour's {@code TestMenuScreen} calls this; the ordinary build never does,
+     * so {@link #levelId()} always returns {@link #LEVEL_ID} in every build that reaches a player.
+     *
+     * @param levelId the content id of the scenario to start, an existing level file's own id
+     */
+    public void overrideLevelId(String levelId) {
+        this.levelIdOverride = levelId;
     }
 
     @Override

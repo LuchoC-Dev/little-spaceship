@@ -989,3 +989,111 @@ Merged both into a scratch worktree (`git worktree add ../ls-review-11g --detach
 48. **A harness's "no dependency added, single-threaded, no clock" claim and its "the test can actually fail" claim are independently and cheaply checkable without rebuilding the author's steps.** Reading `FakeInput`'s `invoke()` confirmed the proxy answers only named methods and returns the type's JDK default (false/0/null) for everything else — the exact shape the project's own memory warns can make a test pass for the wrong reason, but here the two real assertions (`keyboardAloneReachesTopSpeed`, `keyboardAndMouseCancelExactly`) both route through methods the proxy actually implements, and the arithmetic behind "cancel exactly" (`mouseX = -140*(208/208)/1 = -140`, `keyboardX(140) = +140`) reproduces on paper from `InputAdapter.sample`'s real formula, not from the test's own comment. The 140f→999f falsification claim is plausible on inspection (the assertion is a direct `assertEquals`, no rounding or pooling in the way) — not independently rerun this session, so that half stays "plausible, not independently reproduced" rather than "confirmed."
 
 Calibration in the other direction, worth keeping: no invariant-1 hit (`grep -rn "com.badlogic.gdx" core/src/main` first returned a spurious hit against `Rng.java` from a truncated `head` pipe; a clean, untruncated regrep of that exact file found nothing — when a grep result looks surprising, rerun it without piping through `head` before trusting it as a finding).
+
+## PR #247 (`feat/test-build-flavour`, phase 11h task 1, issue #244) — a build-flavour absence claim that reproduced exactly, and the calibration case for a public seam judged inert rather than dangerous
+
+Verdict: accept. The whole task turned on one criterion — "absence, not concealment" — and it was
+checkable by rebuilding twice, not by reading the Gradle DSL and trusting it.
+
+58. **A "the ordinary build's compiled output contains no trace" claim for a mutually-exclusive-
+    source-directory flavour is fully reproducible in under a minute and is worth reproducing every
+    time, not just reading the `sourceSets` block.** `game/build.gradle.kts` adds
+    `src/tests/java` (real `TestMode`/`TestMenuScreen`/`TestScenarios`) to the `main` source set
+    only when `providers.gradleProperty("tests").isPresent`, else `src/teststub/java` (a no-op
+    `TestMode`). Reproduced independently: `./gradlew clean :game:compileJava` (no property) then
+    `find game/build/classes/java/main -iname "TestMenu*" -o -iname "TestScenarios*"` — empty; same
+    command with `-Ptests` — three `.class` files appear; `./gradlew clean build` (no property) then
+    `unzip -l game/build/libs/game.jar | grep -i test` — exactly one line, the stub `TestMode.class`.
+    Went one step further than the author's own verification (which stopped at the jar): ran the
+    *actual* TeaVM compile, `./gradlew :web:gdx_teavm_web_js_build` (not the misleading `:web:build`,
+    which shows `compileTeavmJava NO-SOURCE` — see the existing TeaVM-dist entry in
+    [[audit-techniques]]), and grepped the emitted `app.js`: `TestMenuScreen`/`TestScenarios` — zero
+    hits; `TestMode` — 4 hits (the harmless stub, expected). This is the strongest form of the
+    absence claim this project asks for, and it held at every layer checked (compiled classes, jar,
+    TeaVM-compiled JS).
+59. **A public seam added to satisfy a documented precedent (`LEVEL_ID`'s own javadoc predicting
+    "the day a level-select flow exists, this field is the one place that changes") is judged inert
+    by grepping its call sites in the shipped source, separately from the flavour's own source-set
+    split.** `LittleSpaceshipGame.overrideLevelId(String)` is public, present in every build
+    (`main`, not `src/tests`), and has exactly one caller anywhere in the tree —
+    `TestMenuScreen.java`, which only compiles under `-Ptests`. `grep -rn overrideLevelId` across
+    `core`/`game`/`desktop`/`web` confirms it. A real, small surface (a public setter for which
+    level a run plays) but genuinely dead code in the shipped build, not merely hidden — worth
+    distinguishing from a runtime-hidden test hook, which this project's own architecture-test
+    family (pattern 2, "accessor with no call site") would otherwise treat as suspicious by default.
+    Here the absent caller is the point, not an oversight.
+60. **A naming assumption stated as "if `level-designer`'s ids differ, only this list changes"
+    reproduced exactly against the sibling branch that actually shipped, without coordination.**
+    `TestScenarios.ALL` hardcodes `test-wave-04`/`test-wave-09`/`test-wave-12`/`test-boss`; the
+    parallel `feat/scenario-levels`-shaped commit (`f19c3e8`, issue #245) added
+    `assets/data/{test-boss,test-wave-04,test-wave-09,test-wave-12}.json` — identical ids, confirmed
+    by `find assets/data -iname "test-*"` after the fact. Not something this task could have known in
+    advance; worth recording as a positive cross-check rather than crediting the branch with
+    foresight it couldn't have had.
+
+Also confirmed clean: `core/` and `assets/data/` both empty in `git diff origin/phase/11h-test-mode
+...origin/feat/test-build-flavour --stat`; no `Thread`/`ExecutorService`/`CompletableFuture`/
+`ReentrantLock`/`Math.random`/clock read introduced (grepped the diff directly); both commit
+subjects conventional; `tools/pre-pr-check --base phase/11h-test-mode` reproduced the PR's pasted
+"PASS — 2 commit(s), 8 file(s) changed" verbatim, from a worktree needing the usual
+`git checkout -b` first (bare detached HEAD — same tooling quirk as PR #170/#171). The status
+fragment's every "not checked" (the four scenarios' correctness, the web target as a deliverable,
+`level-01.md` regeneration) matched what the branch actually could not have exercised, given
+`level-designer`'s files didn't exist on this branch — an honest partial scope, not an overclaim.
+
+## Calibration: another fully clean single-task PR (phase 11h task 2, PR #246, issue #245)
+
+Content-only branch (`assets/data/` + one status fragment, no code) that survived every check applied:
+level-01/waves/formations/trajectories genuinely absent from the diff (not just "unchanged" — not
+present at all, the strongest form of that check); the boss block's 13 keys verified one by one
+against `JsonContentSource.parseBoss`'s `requireOnlyKeys` list and against `level-01.json`'s own boss
+block, differing only in the one field the task allowed (`entersAt`); the wave-placement offset
+arithmetic (`start = max(previousEndTime + offset, levelTime)`, chained through `FixedDuration`) was
+reproduced by hand for the boss prelude's three overlapped placements and landed on the exact
+numbers the status fragment claimed (starts 0.0/4.0/8.0, last prelude spawn at 20.0, core in position
+at 31.4s); the LoadCheck claim was independently reproduced with a fresh probe, not just re-read; and
+`node tools/build-level-docs.js` really did print `unchanged` for both docs when run from the actual
+worktree. The one deviation from the signed-off level (three wave scenarios shipping at weapon level 1
+instead of the level's accumulated level 2-4) was argued with reasons, not asserted, and stated as a
+real trade-off rather than hidden. Worth keeping next to phase 11g's PR #239 as a second calibration
+point for what "nothing to report, and it was earned" looks like on a docs/content-only branch.
+
+## Phase 11h's two rejection-corrections, PR #254 and PR #253 — one clean, one mislabelled issue citation
+
+Both were narrow, single-file corrections the project owner asked for after reviewing PR #249.
+Both were code/content-correct and both passed every architectural and arithmetic check applied
+(rebuilt in scratch worktrees, not trusted from the diff): #254's stub/real `TestMode.startScreen`
+split confirmed by inspecting `game.jar` (only the stub `.class`, no `TestMenuScreen`/`TestScenarios`)
+and by running the *real* TeaVM task (`:web:gdx_teavm_web_js_build`, not `:web:build`) and grepping
+`app.js` for both names — zero hits, matching the claim; #253's boss-alone `entersAt` arithmetic
+(310 → 175, 135px at 25px/s = 5.4s, +2.0s start = 7.4s) reproduced by reading `BossSystem.java`
+directly, and the "empty `waves: []` loads and behaves" claim independently reproduced with a fresh
+`LoadCheck` probe against the built jars — output matched the fragment's pasted transcript
+character for character, including `placements=[]`.
+
+46. **A citation to an issue number can be checked exactly like a citation to a file line, and the
+    project's own precedent (false statements in documents outrank code defects) applies to it the
+    same way.** PR #253's status fragment says a content-format gap ("no way to place a standalone
+    power-up without an enemy dying") was "Filed as #252." Issue #252 is real, open, and entirely
+    about something else — pickups not falling once already dropped — filed by the *project owner*
+    (not by this branch's `level-designer` author), 23 seconds before #251, both in the same review
+    batch that produced #250/#251. `gh issue view 252` and `gh api .../issues/252 --jq
+    '{created,updated}'` (identical timestamps, never edited) settle both halves at once: the citation
+    doesn't check out, and it wasn't even this branch's author who created the issue being cited.
+    Whenever a status fragment says "filed as #N," open #N and read its actual title/body — do not
+    assume a number in a document is correct just because a plausible-looking issue with that number
+    exists in the tracker. Non-blocking here (the fix itself and every other claim in the fragment
+    checked out; this is a documentation-accuracy note, not a code defect), but exactly the class of
+    finding the project weighs most heavily.
+47. **Direct-quoting the project owner's original Spanish review comment inside an English status
+    fragment is a real, minor English-only violation, distinguishable from `docs/sources/`'s carved-
+    out exception.** PR #253's fragment quotes *"si el test es para el boss solo debería aparecer el
+    boss, no pre-enemigos"* and *"a lo sumo dejar power-ups"* verbatim — defensible in spirit (avoids
+    mistranslating the actual instruction, the same reason `docs/sources/` exists) but the exception
+    is written narrowly to that one directory, and this file is not in it. Worth a note on any status
+    fragment that quotes a Spanish-language review comment directly rather than paraphrasing it in
+    English.
+
+Calibration: #254 alone had nothing to report at all — every observation in its fragment
+reproduced exactly, including the one this project has burned itself on before (a `:web:build`-only
+claim would have proven nothing about TeaVM; this fragment named the real task and I ran it myself).
