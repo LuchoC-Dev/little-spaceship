@@ -3,8 +3,8 @@
 `level-designer`, branch `fix/boss-scenario-alone`, on `assets/data/test-boss.json` only.
 
 A correction to task 2 (`docs/plan/11h-test-mode/status/245-test-scenarios.md`), asked for by the
-project owner reviewing PR #249: *"si el test es para el boss solo debería aparecer el boss, no
-pre-enemigos"*.
+project owner reviewing PR #249: *"if the test is for the boss only the boss should appear, no
+pre-enemies"*.
 
 ## The change
 
@@ -37,13 +37,20 @@ s**. So the boss reaches its fighting position around **t = 7.4 s**, against 31.
 
 ## What starting cold costs and what it buys
 
-The owner allowed *"a lo sumo dejar power-ups"*, and **the content format cannot express that
+The owner allowed *"at most leave power-ups"*, and **the content format cannot express that
 today**. A pickup exists only as the consequence of a holder dying — `CleanupSystem.java:65`,
 `spawnDropIfAny`, reads the dying entity's `Drop` and `Transform` — so the only way to hand the
 player a power-up is to make them kill something for it, which is the prelude the owner just
 rejected. Inventing a standalone pickup placement is out: `JsonContentSource:349` rejects any
 top-level key other than `boss`, `events`, `waves`, and the mechanism would be `core-domain`'s. Filed
-as **#252**.
+as **[#255](https://github.com/LuchoC-Dev/little-spaceship/issues/255)**.
+
+**Corrected on 03/09/2026.** This paragraph first cited **#252**, which is a different problem — a
+dropped pickup having no `Motion` and hanging in the air. The two are neighbours in
+`CleanupSystem` and they are not the same: #252 is how a pickup behaves once it exists, #255 is the
+absence of any way to make one exist without an enemy dying. **The wrong number came from the
+coordinator's launch prompt, not from this branch**, and `reviewer` caught it by checking the
+citation against what the issue actually said rather than against what it was called.
 
 So the scenario starts at weapon level 1, three lives, two bombs
 (`core/application/Simulation.java:66` `PLAYER_INITIAL_SHOT_LEVEL = 1`; `balance.json`
@@ -59,7 +66,7 @@ So the scenario starts at weapon level 1, three lives, two bombs
 I agree with the brief's opinion, and would sharpen it: for **watching how the boss attacks**, which
 is the case the owner named, the longer fight is the feature — more cycles of spread and sweep
 observed per launch, and no chance of deleting a phase before it is read. Where cold is genuinely
-wrong is **judging the fight's balance**, which this file cannot support until #252 exists. Anyone
+wrong is **judging the fight's balance**, which this file cannot support until [#255](https://github.com/LuchoC-Dev/little-spaceship/issues/255) exists. Anyone
 reading a difficulty conclusion out of this scenario is reading it out of the wrong file.
 
 ## Verification
