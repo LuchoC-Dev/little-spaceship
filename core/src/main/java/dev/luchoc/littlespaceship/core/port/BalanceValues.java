@@ -131,6 +131,32 @@ public interface BalanceValues {
     float pickupRadius();
 
     /**
+     * Speed at which a dropped pickup falls once it exists, in logical units per second, growing
+     * downward the same way a descending enemy's vertical velocity does — the caller negates it
+     * before writing it into {@code Motion.vy} since {@code Transform.y} grows upward.
+     *
+     * <p>Without this a pickup has no {@code Motion} at all and hangs exactly where its carrier
+     * died, which reads as pinned to the window rather than part of a scrolling world (issue #252).
+     * A feel question, not an arithmetic one: reported by {@link
+     * dev.luchoc.littlespaceship.core.domain.system.CleanupSystem} to fall at the background's own
+     * rate, faster reads as dropping, slower as floating — settled by the project owner playing it,
+     * same as {@link #playerSpeed()}.
+     *
+     * <p><b>Default, not abstract:</b> {@code JsonBalanceValues} (in {@code game}, not {@code core})
+     * is a record enumerating every {@code balance.json} key by hand, so an abstract addition here
+     * would fail the whole-repo build before {@code game} adds the field — the same reasoning {@code
+     * ContentSource.wave(String)} used in phase 11b. The value returned here is a placeholder that
+     * must be kept equal to {@code assets/data/balance.json}'s own {@code pickupFallSpeed} by hand
+     * until {@code game-presentation} wires the key into {@code JsonBalanceValues}, at which point
+     * this should become abstract like every other value on this interface.
+     *
+     * @return the fall speed's magnitude, strictly positive
+     */
+    default float pickupFallSpeed() {
+        return 20f;
+    }
+
+    /**
      * Seconds of invulnerability granted by the invulnerability power-up.
      *
      * <p>Not yet in {@code 10-mvp-initial-values.md}: the document lists invulnerability among the
