@@ -18,3 +18,4 @@
 - [Movement shape content contract](project_movement-shape-content-contract.md) — sealing TrajectoryDefinition over arc/constant; holding the game/ boundary even when the task's own scope line and the catalogue point straight at JsonContentSource.
 - [Trajectory evaluation wiring](project_trajectory-evaluation-wiring.md) — Trajectory stores an id not a definition, attached uniformly for every kind, and the SpawnEvent constructor trick reused for a shape override.
 - [Boss aimed-fan design](project_boss-aimed-fan-design.md) — lock-then-fan for tell honesty, vector-only fan geometry via sqrt instead of sin/cos, and why the old fixed-angle test had to be deleted, not adapted.
+- [Pickup fall and lifetime](project_pickup-fall-and-lifetime.md) — LifetimeSystem silently excluded PICKUP from expiry, MotionSystem.integrate needed no change, default-method trade repeats on BalanceValues.
