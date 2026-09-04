@@ -67,8 +67,16 @@ complete stop just below the top of the screen and a little left of centre, **ha
 a half seconds while shooting**, and then drops straight down and out of the bottom, fast. The stop
 should read as a decision, not as a stutter — 2.5 s is long enough to be unmistakable.
 
-**Arithmetic:** the sweep ends at (67, 236.5) at t = 2.5 s; the wait holds that point to t = 5.0 s;
-the drop crosses y = 0 at t ~ 7.6 s and the safety box at t ~ 9.0 s. The `{"wait": ...}` shorthand is
+**Arithmetic:** the sweep ends at (67, 236.5) at t = 2.0 s; the wait holds that point to t = 4.5 s;
+the drop crosses y = 0 at t ~ 7.1 s and the safety box at t ~ 8.55 s.
+
+**Corrected by the coordinator on 04/09/2026**, from `reviewer`'s audit of this pull request. The
+four timestamps above first read 2.5 s, 5.0 s, ~7.6 s and ~9.0 s — every one from the wait onward
+shifted about half a second late, because the wait's own 2.5 s had been added to the sweep's
+*claimed* end rather than its real one. The sweep segment's `duration` is 2.0. **The JSON was always
+right; the description was wrong**, which is the failure this task was written to be able to produce
+and the reason it was asked to write down what each path is meant to look like at all. It was found
+by the only reader who had both the intent and the data. The `{"wait": ...}` shorthand is
 used here on purpose — it is the loader's own sugar and this is the only entry that reads it.
 
 ### 4. `stair-descent` — the bounded loop. Scenario `test-path-loop`, spawned at `atX 0.85` (x = 177)
@@ -132,7 +140,7 @@ it, and it is not in `assets/data/`.
 ### 2. The waves had to go in `waves.json`, which the issue told me not to touch
 
 `JsonContentSource` reads waves from exactly one file — `dataDir.child("waves.json")`,
-`game/adapter/content/JsonContentSource.java:91` — and `SpawnSystem` reads **only** placements
+`game/adapter/content/JsonContentSource.java:95` — and `SpawnSystem` reads **only** placements
 (`SpawnSystem.java:128`; nothing in `core/` calls `ContentSource.timeline`), so a level file's legacy
 flat `"events"` list parses but spawns nothing. **There is no way to make a spawn happen without an
 entry in `waves.json`.** The alternative was to ship no scenario at all.
