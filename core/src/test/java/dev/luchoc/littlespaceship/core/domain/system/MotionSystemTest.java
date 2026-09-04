@@ -14,9 +14,12 @@ import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
 import dev.luchoc.littlespaceship.core.domain.rng.Rng;
 import dev.luchoc.littlespaceship.core.port.ArcTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.PathSegment;
+import dev.luchoc.littlespaceship.core.port.PathTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.testsupport.TestBalance;
 import dev.luchoc.littlespaceship.core.testsupport.TestContent;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +30,10 @@ class MotionSystemTest {
     private final TestBalance balance = new TestBalance();
     private final TestContent content = new TestContent(balance)
         .withTrajectory(new SimpleTrajectoryDefinition("steady-descent", 0f, -30f))
-        .withTrajectory(new ArcTrajectoryDefinition("strike-run", 0f, -110f, 27f));
+        .withTrajectory(new ArcTrajectoryDefinition("strike-run", 0f, -110f, 27f))
+        .withTrajectory(new PathTrajectoryDefinition("enter-and-turn", List.of(
+            new PathSegment(0f, -40f, 2f),
+            new PathSegment(-30f, 0f, 3f))));
     private final World world = new World(content, new Rng(1), new GameEventQueue());
     private final MotionSystem system = new MotionSystem();
 
@@ -262,6 +268,29 @@ class MotionSystemTest {
         // Closed form, not accumulation: at t = 5s, past the turn, verticalVelocityAt(5) = -110 + 27*5 = 25.
         assertEquals(-110f + 27f * 5f, world.motions().get(enemy).vy, 0.01f);
         assertTrue(sawSignChange, "the entity should climb back up after bottoming out, proving the path curves");
+    }
+
+    @Test
+    @DisplayName("a path shape turns: horizontal velocity changes tick by tick, not just vertical")
+    void pathShapeTurnsHorizontalVelocity() {
+        int enemy = world.createEntity();
+        world.transforms().set(enemy, new Transform(50f, 274f));
+        world.motions().set(enemy, new Motion(0f, -40f));
+        world.trajectories().set(enemy, new Trajectory("enter-and-turn"));
+
+        // Still inside the first segment (2s at vx=0, vy=-40): horizontal velocity stays zero.
+        for (int i = 0; i < Math.round(1f / STEP); i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+        }
+        assertEquals(0f, world.motions().get(enemy).vx, 0.0001f);
+        assertEquals(-40f, world.motions().get(enemy).vy, 0.0001f);
+
+        // Past the turn (2s mark): the second segment's horizontal velocity now applies.
+        for (int i = 0; i < Math.round(1.5f / STEP); i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+        }
+        assertEquals(-30f, world.motions().get(enemy).vx, 0.0001f);
+        assertEquals(0f, world.motions().get(enemy).vy, 0.0001f);
     }
 
     @Test
