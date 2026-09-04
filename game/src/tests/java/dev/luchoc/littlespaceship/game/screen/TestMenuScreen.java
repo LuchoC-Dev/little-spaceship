@@ -83,10 +83,22 @@ final class TestMenuScreen extends BaseUiScreen {
      * view. Plain {@link MenuEntries}/{@link MenuNavigator} have no notion of a scrollable
      * container — no other screen has ever needed one — so that behaviour is added here instead of
      * touching either shared class for a need this screen alone has.
+     *
+     * <p><b>The first entry cannot rely on {@code scrollTo} (issue #293).</b> {@code ScrollPane}'s
+     * own "minimal distance to make the rectangle visible" clamp lands exactly on the boundary
+     * scroll offset where the target row has zero pixels of overlap with the viewport, not one —
+     * confirmed by reproducing the exact down-then-up navigation outside this codebase, against the
+     * real {@code ScrollPane} class, with the same trailing-gap row geometry {@link
+     * MenuEntries#add} builds ({@code padBottom} trails every row, including the first). Every
+     * other row still has enough slack on at least one side for the clamp to land inside the
+     * visible range instead of on its edge, so only the first row needs the explicit override:
+     * {@link ScrollPane#setScrollY} to the pane's own top, mirroring the guard the constructor
+     * already applies on first open, rather than trusting {@code scrollTo}'s minimal move.
      */
     private void addScrollingEntry(Table entries, ScrollPane scrollPane,
             LittleSpaceshipGame game, String label, Runnable action,
             List<KeyboardFocusable> focusables) {
+        boolean isFirstEntry = focusables.isEmpty();
         TextButton button = MenuEntries.add(entries, game, skin, label, action, focusables);
         KeyboardFocusable inner = focusables.remove(focusables.size() - 1);
         focusables.add(new KeyboardFocusable() {
@@ -94,8 +106,12 @@ final class TestMenuScreen extends BaseUiScreen {
             public void setFocused(boolean focused) {
                 inner.setFocused(focused);
                 if (focused) {
-                    scrollPane.scrollTo(button.getX(), button.getY(),
-                        button.getWidth(), button.getHeight());
+                    if (isFirstEntry) {
+                        scrollPane.setScrollY(0f);
+                    } else {
+                        scrollPane.scrollTo(button.getX(), button.getY(),
+                            button.getWidth(), button.getHeight());
+                    }
                 }
             }
 
