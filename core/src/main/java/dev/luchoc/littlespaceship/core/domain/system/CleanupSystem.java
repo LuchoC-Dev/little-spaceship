@@ -4,6 +4,7 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
+import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
@@ -77,6 +78,10 @@ public final class CleanupSystem implements GameSystem {
         world.colliders().set(pickup, new Collider(balance.pickupRadius(), CollisionLayer.PICKUP));
         world.sprites().set(pickup, new Sprite(new SpriteId("pickup-" + drop.pickupId)));
         world.pickups().set(pickup, new Pickup(drop.pickupId));
+        // A pickup falls like everything else the scroll carries past the player (issue #252) — with
+        // no Motion it hangs exactly where its carrier died, reading as pinned to the window rather
+        // than part of a moving world. Negative because Transform.y grows upward.
+        world.motions().set(pickup, new Motion(0f, -balance.pickupFallSpeed()));
     }
 
     /**
