@@ -35,6 +35,7 @@ final class TestScenarios {
         new Scenario("test-path-turn", "PATH: TURN"),
         new Scenario("test-path-mirror", "PATH: MIRROR"),
         new Scenario("test-path-wait", "PATH: WAIT"),
-        new Scenario("test-path-loop", "PATH: LOOP")
+        new Scenario("test-path-loop", "PATH: LOOP"),
+        new Scenario("test-path-oscillate", "PATH: OSCILLATE")
     );
 }
