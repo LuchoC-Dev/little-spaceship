@@ -38,6 +38,19 @@
       ],
       "loopStart": 1,
       "loopCount": 4
+    },
+
+    {
+      "id": "descend-and-oscillate",
+      "type": "path",
+      "segments": [
+        { "vx": 0, "vy": -55, "duration": 2.0 },
+        { "vx": 60, "vy": 0, "duration": 0.5 },
+        { "vx": -60, "vy": 0, "duration": 1.0 },
+        { "vx": 60, "vy": 0, "duration": 1.0 }
+      ],
+      "loopStart": 2,
+      "loopCount": 3
     }
   ]
 }

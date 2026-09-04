@@ -162,6 +162,13 @@
         { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.85, "trajectory": "stair-descent" }
       ],
       "end": { "type": "fixedDuration", "seconds": 15.0 }
+    },
+    {
+      "id": "test-path-oscillate",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.50, "trajectory": "descend-and-oscillate" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 13.0 }
     }
   ]
 }
