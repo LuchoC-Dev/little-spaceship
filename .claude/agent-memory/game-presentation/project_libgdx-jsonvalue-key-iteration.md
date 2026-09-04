@@ -12,6 +12,14 @@ checking `c.name` against an allow-list. This is what closed phase 07's "unknown
 silently does nothing" gap in `JsonContentSource`: `getString`/`getInt`/etc. only ever check for a
 key's *presence*, never flag one that exists but isn't expected.
 
+**Outdated as of phase 11i (04/09/2026): `game` now has a real test source set.** `game/src/test/java`
+exists with JUnit tests (`InputAdapterTest`, and `JsonContentSourcePathTrajectoryTest` added in phase
+11i), and `testImplementation`/JUnit are wired at the root `build.gradle.kts` for every subproject —
+`./gradlew :game:test` runs them directly, no throwaway classpath needed any more for anything that
+fits as a normal test. The classpath trick below is still useful for a one-off script that must not
+become a committed test (e.g. exercising a truly private method nobody wants a permanent test class
+for), just not for the common case any more.
+
 **Getting a real classpath to run a throwaway verification program against `game`'s compiled
 classes, when `game` has no test source set configured (`build.gradle.kts` only declares
 `implementation`, no `testImplementation`/JUnit):** append a temporary Gradle task to `game/build.gradle.kts`
