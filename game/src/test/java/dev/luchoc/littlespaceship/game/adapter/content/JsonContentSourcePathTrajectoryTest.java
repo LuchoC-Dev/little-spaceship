@@ -48,6 +48,7 @@ final class JsonContentSourcePathTrajectoryTest {
               "respawnInvulnerability": 2.0, "damageInvulnerability": 1.0, "maxedPickupBonus": 500,
               "playerSpeed": 140, "playerSlowFactor": 0.45, "playerStartX": 104, "playerStartY": 30,
               "weaponFireCooldown": 0.15, "weaponProjectileSpeed": 220, "pickupRadius": 6.0,
+              "pickupFallSpeed": 20.0,
               "invulnerabilityPickupDuration": 3.0, "lifeCompletionBonus": 1000,
               "bombCompletionBonus": 300, "weaponProjectileDamage": 10, "bombDamage": 50
             }
