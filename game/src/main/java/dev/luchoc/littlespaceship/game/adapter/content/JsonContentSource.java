@@ -11,6 +11,8 @@ import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationSlot;
+import dev.luchoc.littlespaceship.core.port.PathSegment;
+import dev.luchoc.littlespaceship.core.port.PathTrajectoryDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleAttachmentDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleBossDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
@@ -28,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -155,42 +158,185 @@ public final class JsonContentSource implements ContentSource {
         return inFile(file, () -> JsonBalanceValues.from(reader.parse(file)));
     }
 
+    /**
+     * Reads {@code trajectories.json} in two passes so a {@code "mirrorOf"} entry — which names no
+     * {@code "type"} at all — can point at any other entry in the file regardless of which one is
+     * written first. The first pass parses every entry that carries a {@code "type"} (or defaults to
+     * {@code "constant"}) straight into {@link #trajectories}; the second resolves every
+     * {@code "mirrorOf"} entry against that map, recursively, so a mirror of a mirror works and a
+     * cycle or a dangling reference fails loudly instead of looping or leaving an id unresolved. See
+     * {@link #resolveMirror} for the mirroring contract itself.
+     */
     private void loadTrajectories(JsonReader reader, FileHandle file) {
         inFile(file, () -> {
+            Map<String, JsonValue> mirrorEntries = new HashMap<>();
             for (JsonValue entry : reader.parse(file).get("trajectories")) {
-                TrajectoryDefinition trajectory = parseTrajectory(entry);
-                trajectories.put(trajectory.id(), trajectory);
+                String id = entry.getString("id");
+                if (entry.has("mirrorOf")) {
+                    requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "mirrorOf");
+                    mirrorEntries.put(id, entry);
+                } else {
+                    TrajectoryDefinition trajectory = parseTrajectory(entry);
+                    trajectories.put(trajectory.id(), trajectory);
+                }
+            }
+            for (String id : mirrorEntries.keySet()) {
+                resolveMirror(id, mirrorEntries, new LinkedHashSet<>());
             }
             return null;
         });
     }
 
     /**
+     * Resolves the trajectory named {@code id} to a fully built {@link TrajectoryDefinition},
+     * recursively following {@code "mirrorOf"} chains — a mirror may itself be mirrored, since
+     * nothing about the mechanism cares whether the source it negates is an authored shape or another
+     * mirror. {@code resolving} is the chain of ids currently being resolved, in encounter order: a
+     * name reappearing in it is a cycle (e.g. {@code a} mirrors {@code b} mirrors {@code a}), reported
+     * with the whole chain rather than just the repeated id, and a name that resolves to neither an
+     * already-parsed trajectory nor a pending mirror entry is a reference to something that does not
+     * exist in this file. Both fail loudly, at load, naming the trajectory id — this method's own
+     * exceptions are the ones {@link #inFile} prefixes with the file's path.
+     *
+     * <p>Building the mirror itself is composition over the already-public record constructors — see
+     * {@link #mirror(String, TrajectoryDefinition)} — exactly as {@code core-domain} argued on
+     * {@link TrajectoryDefinition}'s own javadoc and demonstrated in {@code core}'s test: no new
+     * {@code core} API, no fourth sealed kind.
+     */
+    private TrajectoryDefinition resolveMirror(
+        String id, Map<String, JsonValue> mirrorEntries, Set<String> resolving) {
+        TrajectoryDefinition existing = trajectories.get(id);
+        if (existing != null) {
+            return existing;
+        }
+        if (!mirrorEntries.containsKey(id)) {
+            throw new IllegalArgumentException(
+                "trajectory mirrors unknown trajectory '" + id + "'");
+        }
+        if (!resolving.add(id)) {
+            throw new IllegalArgumentException(
+                "trajectory mirror cycle: " + String.join(" -> ", resolving) + " -> " + id);
+        }
+        JsonValue mirrorEntry = mirrorEntries.get(id);
+        TrajectoryDefinition original =
+            resolveMirror(mirrorEntry.getString("mirrorOf"), mirrorEntries, resolving);
+        TrajectoryDefinition mirrored = mirror(id, original);
+        trajectories.put(id, mirrored);
+        resolving.remove(id);
+        return mirrored;
+    }
+
+    /**
+     * Builds the mirror of {@code original} under a new {@code id}: negate every horizontal
+     * component, keep every vertical field and every duration or loop parameter untouched, using each
+     * kind's own public constructor. No new {@code core} type and no new {@code core} API — every
+     * {@link TrajectoryDefinition} implementation is a record whose fields are already readable
+     * through their accessors, which is the whole mechanism {@code core-domain} left for this loader
+     * to compose.
+     */
+    private static TrajectoryDefinition mirror(String id, TrajectoryDefinition original) {
+        if (original instanceof SimpleTrajectoryDefinition simple) {
+            return new SimpleTrajectoryDefinition(id, -simple.vx(), simple.vy());
+        }
+        if (original instanceof ArcTrajectoryDefinition arc) {
+            return new ArcTrajectoryDefinition(id, -arc.vx(), arc.vy(), arc.ay());
+        }
+        if (original instanceof PathTrajectoryDefinition path) {
+            List<PathSegment> mirroredSegments = new ArrayList<>();
+            for (PathSegment segment : path.segments()) {
+                mirroredSegments.add(new PathSegment(-segment.vx(), segment.vy(), segment.duration()));
+            }
+            return new PathTrajectoryDefinition(
+                id, mirroredSegments, path.loopStart(), path.loopCount());
+        }
+        throw new IllegalStateException(
+            "unreachable: TrajectoryDefinition is sealed to the three kinds handled above");
+    }
+
+    /**
      * Parses one {@code trajectories.json} entry into the {@link TrajectoryDefinition} kind its
      * {@code "type"} names — {@code "constant"} (the default, so the four entries that shipped
-     * before {@code "type"} existed still load unchanged) or {@code "arc"}, the two kinds
-     * {@code docs/plan/11c-movement-shapes/shape-catalogue.md} decides and {@link
+     * before {@code "type"} existed still load unchanged), {@code "arc"} or {@code "path"}, the three
+     * kinds {@code docs/plan/11c-movement-shapes/shape-catalogue.md} and phase 11i decide and {@link
      * TrajectoryDefinition} is sealed to. Any other value fails loudly naming both the trajectory id
      * and the bad type — deliberately not defaulted to {@code "constant"}, the same reasoning {@link
      * #parseEndCondition} already applies to a wave's end condition: a typo in {@code "type"} silently
      * loading as a different shape is a wrong game, not a crash, and this loader used to be exactly
      * that permissive by reading only {@code id}, {@code vx} and {@code vy} and ignoring everything
-     * else.
+     * else. An entry naming {@code "mirrorOf"} instead of {@code "type"} never reaches this method —
+     * {@link #loadTrajectories} routes it to {@link #resolveMirror} instead.
      */
     private static TrajectoryDefinition parseTrajectory(JsonValue entry) {
         String id = entry.getString("id");
         String type = entry.getString("type", "constant");
         if ("constant".equals(type)) {
             requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "type", "vx", "vy");
-            return new SimpleTrajectoryDefinition(id, entry.getFloat("vx"), entry.getFloat("vy"));
+            return construct(id, () ->
+                new SimpleTrajectoryDefinition(id, entry.getFloat("vx"), entry.getFloat("vy")));
         }
         if ("arc".equals(type)) {
             requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "type", "vx", "vy", "ay");
-            return new ArcTrajectoryDefinition(
-                id, entry.getFloat("vx"), entry.getFloat("vy"), entry.getFloat("ay"));
+            return construct(id, () -> new ArcTrajectoryDefinition(
+                id, entry.getFloat("vx"), entry.getFloat("vy"), entry.getFloat("ay")));
+        }
+        if ("path".equals(type)) {
+            requireOnlyKeys(
+                entry, "trajectory '" + id + "'", "id", "type", "segments", "loopStart", "loopCount");
+            List<PathSegment> segments = parseSegments(entry.get("segments"), id);
+            int loopStart = entry.getInt("loopStart", segments.size());
+            int loopCount = entry.getInt("loopCount", 1);
+            return construct(id, () -> new PathTrajectoryDefinition(id, segments, loopStart, loopCount));
         }
         throw new IllegalArgumentException(
             "trajectory '" + id + "' has an unknown type '" + type + "'");
+    }
+
+    /**
+     * Runs a {@link TrajectoryDefinition}'s public constructor and, if {@code core}'s own validation
+     * rejects it (e.g. {@link PathTrajectoryDefinition}'s rule-3 check on a path that ends at rest),
+     * rethrows with the trajectory id prefixed. {@code core}'s exceptions correctly know nothing of
+     * ids or files — see {@code PathTrajectoryDefinition}'s own javadoc — so this is the other half
+     * "fails at load, naming the file and the id" needs, symmetric with {@link #inFile} adding the
+     * file name at the top of this class.
+     */
+    private static TrajectoryDefinition construct(String id, Loader<TrajectoryDefinition> loader) {
+        try {
+            return loader.load();
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("trajectory '" + id + "': " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Parses a {@code "path"} trajectory's {@code "segments"} array into {@link PathSegment}s. A
+     * segment is either {@code {vx, vy, duration}} or the {@code {"wait": seconds}} shorthand the
+     * issue #259 comment offers — translated here to {@code PathSegment(0, 0, seconds)} since {@code
+     * core} only ever sees the three-field record; a "wait" is a content-authoring convenience, not a
+     * distinct kind. An "indefinite" wait or a "permanent" loop is simply a very large {@code
+     * duration}/{@code loopCount} — a convention, not a key this loader treats specially.
+     */
+    private static List<PathSegment> parseSegments(JsonValue segmentsValue, String trajectoryId) {
+        if (segmentsValue == null || segmentsValue.size == 0) {
+            throw new IllegalArgumentException(
+                "trajectory '" + trajectoryId + "' has no segments");
+        }
+        List<PathSegment> segments = new ArrayList<>();
+        String context = "trajectory '" + trajectoryId + "' segment";
+        for (JsonValue segment : segmentsValue) {
+            if (segment.has("wait")) {
+                requireOnlyKeys(segment, context, "wait");
+                segments.add(new PathSegment(0f, 0f, segment.getFloat("wait")));
+            } else {
+                requireOnlyKeys(segment, context, "vx", "vy", "duration");
+                if (!segment.has("vx") || !segment.has("vy") || !segment.has("duration")) {
+                    throw new IllegalArgumentException(
+                        context + " needs 'vx', 'vy' and 'duration' (or a 'wait' shorthand)");
+                }
+                segments.add(new PathSegment(
+                    segment.getFloat("vx"), segment.getFloat("vy"), segment.getFloat("duration")));
+            }
+        }
+        return segments;
     }
 
     private void loadFormations(JsonReader reader, FileHandle file) {
