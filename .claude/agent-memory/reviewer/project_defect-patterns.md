@@ -1230,3 +1230,34 @@ Four `path` trajectories (`descend-and-turn-left`/`-right` as a mirror pair, `sw
 **A `git log` gotcha that produced a false alarm worth naming**: `git log --oneline --all -20 <ref>` does not scope to `<ref>` — `--all` overrides the positional argument and walks every ref in the repo, silently. Comparing `origin/feat/path-entries` against `origin/phase/11i-path-vocabulary` with a raw two-tip `git diff` (rather than against their `git merge-base`) likewise produces a diff that looks like the feature branch *removes* work (here, the TESTS-menu wiring) that a sibling PR had meanwhile added to the phase branch — it does not; the feature branch simply predates that sibling merge. Always diff a PR branch against `git merge-base <phase-branch> <feature-branch>`, never against the phase branch's current tip, when phase work is landing in parallel.
 
 **Calibration**: `docs/plan/11i-path-vocabulary/status/271-path-entries.md`'s honesty is real — "not checked: how any of the four paths looks", "not checked: whether 2.5 s / four steps / `enemy-tank` are the right choices" are both present and both true (confirmed no `gradlew :desktop:run` beyond a start-and-kill). The waves.json boundary violation is disclosed, not hidden, and is correct on the merits per the coordinator's own admitted error (`JsonContentSource` reads waves from exactly one file, confirmed at line 95; the four entries are purely additive, `level-01.json`/`formations.json` diff empty, confirmed against `merge-base`). `./gradlew build` green (reproduced, exit 0), `tools/pre-pr-check` output matches exactly when rerun, `node tools/build-level-docs.js` prints `unchanged` for both generated docs on this branch (reproduced), and the pre-existing `pickupFallSpeed` drift is correctly attributed to task 4/#252 (confirmed: `balance.json` untouched by this branch's diff, and the phase branch already carried that line before this branch's base commit). The TESTS-menu limitation the fragment reports as unresolved has, independently, already been fixed by a merged sibling PR (#275) using the exact ids/labels this fragment itself suggested — worth noting as resolved-by-the-time-this-lands rather than a defect.
+
+## PR #288 (`feat/absolute-path-syntax`, phase 11j task 1, issue #287) — a clean implementation next to a real, unmentioned red check
+
+The loader work itself (`"waypoints"` as a mutually-exclusive absolute alternative to `"segments"`,
+resolved at load into the same `PathSegment`s) is sound on every substantive axis checked: the
+two-key distinction really is unambiguous and structurally refuses per-leg mixing (confirmed by
+mutating `hasSegments == hasWaypoints` to `!hasSegments && !hasWaypoints` in place and watching
+exactly the mixed-form test go red, nothing else); the relative/absolute equivalence claim is real
+(mutating the `dx`/`dy` order in the `PathSegment` construction turned the equivalence test red,
+along with two others that happened to share the same arithmetic); rule 3 genuinely cannot be
+broken through the absolute form (traced by hand through every edge case the task named — a
+same-point destination, a wait-only tail, a single-waypoint list, an entry point carrying a speed —
+each already refused before `core` would ever see it, or reaching `core`'s existing refusal
+unchanged); `core/` and `assets/data/` genuinely untouched; JSON read with `JsonReader`/`JsonValue`
+only; commit subjects clean; no `Co-Authored-By`.
+
+66. **A PR's own "## CI" section quoting one green `gh run list` row is not the same as CI being
+    green**, when a second workflow triggers on the `pull_request` event and the author only ever
+    ran `gh run list --branch <name>` and read the row they expected. `.github/workflows/pr-check.yml`
+    (added 28/08/2026) runs separately from `ci.yml` and enforces, among other things, that a PR is
+    *opened* as a draft. PR #288 was opened ready, and `pr-check` failed 3 seconds after the PR's own
+    `createdAt` with "FAIL opened ready rather than as a draft" — a real, current, red check, visible
+    in the exact same `gh run list --branch feat/absolute-path-syntax` output the PR body quotes, on
+    a different row than the one the body describes. This is the same shape as phase 09's "`ci.yml`
+    has never run on a runner" — a check that exists and is red, described as if it did not exist —
+    except here the omission is very plausibly an oversight (`tools/pre-pr-check` cannot see draft
+    state at all, by design, since it runs before a PR exists) rather than an invented claim. Still:
+    every row `gh run list` prints for the branch needs accounting for in the CI section, not just
+    the row that matches what the author expected to see.
+
+Related: [[audit-techniques]].
