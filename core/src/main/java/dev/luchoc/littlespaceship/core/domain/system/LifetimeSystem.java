@@ -91,7 +91,7 @@ public final class LifetimeSystem implements GameSystem {
     @Override
     public void update(World world, float step, InputFrame input) {
         tickLifetimes(world, step);
-        expireProjectiles(world);
+        expireProjectilesAndPickups(world);
         expireEnemies(world);
     }
 
@@ -102,7 +102,7 @@ public final class LifetimeSystem implements GameSystem {
         }
     }
 
-    private static void expireProjectiles(World world) {
+    private static void expireProjectilesAndPickups(World world) {
         ComponentStore<Collider> colliders = world.colliders();
         ComponentStore<Transform> transforms = world.transforms();
         for (int i = 0; i < colliders.size(); i++) {
