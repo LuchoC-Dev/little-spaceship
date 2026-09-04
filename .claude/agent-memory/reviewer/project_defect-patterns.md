@@ -1133,4 +1133,74 @@ correctly-argued deferral look like, since both were explicit judgment calls thi
   --name-only` against the phase branch), and `tools/pre-pr-check --base phase/11i-path-vocabulary`
   reproducing the PR's pasted transcript exactly.
 
+## PR #262 (`fix/pickups-fall`, phase 11i task 4, issues #260/#252) — the `BalanceValues` trap fires for real this time
+
+The sibling case to PR #263's `default`-method calibration above, and the two are worth reading
+together: #263's default was the legitimate kind, this one is the actual trap the calibration entry
+was contrasting against.
+
+48. **A `default` method on a content-value contract that returns a literal is indistinguishable, by
+    type-checking alone, from an interface enumerated exhaustively by its one real implementer** —
+    and the second reading is the true one here. `BalanceValues.pickupFallSpeed()` defaults to `20f`;
+    `game`'s `JsonBalanceValues` (grepped directly, confirmed) has no `pickupFallSpeed` field and
+    never calls `root.getFloat("pickupFallSpeed")`, so every running build — desktop, web, the game
+    the project owner will actually play — uses the hardcoded `20f` regardless of what
+    `assets/data/balance.json` says. The JSON key is not malformed or unread-with-an-error; it is
+    silently inert, because `JsonBalanceValues.from` only ever reads keys it names, never rejects a
+    key it doesn't recognise. This **does fail the acceptance criterion** ("a dropped pickup falls,
+    at a speed read from `balance.json`") as shipped by this PR alone — it is true only once the
+    filed follow-up (#261) lands. The author filed #261 rather than editing `game/`, correctly
+    respecting the module boundary, and said so plainly in both the PR body and the fragment; not an
+    overclaim, but the criterion is unmet until a second PR merges. **The `default` itself is the
+    right call to keep**, not the defect — removing it would break `game`'s compile immediately
+    (confirmed: `JsonBalanceValues` doesn't implement it), which is a worse failure mode than a
+    silently-inert JSON key for exactly the length of one follow-up PR. What would have caught the gap
+    without needing #261 to remember to close it: a test asserting the value comes from *content*
+    (e.g. a `JsonBalanceValues.from` unit test reading a fixture JSON and asserting the field), as
+    opposed to every test actually shipped, which only asserts the number a `TestBalance`/default
+    field returns — indistinguishable, by any test in this PR, from a constant.
+49. **A method's name can start lying the moment its javadoc stops matching it, without a single line
+    of its own body changing shape.** `LifetimeSystem.expireProjectiles` gained a third layer,
+    `CollisionLayer.PICKUP`, in its one guard condition — the class-level javadoc was updated
+    ("Projectiles and pickups are expired…") but the private method itself, and its name, were not.
+    Trivial to rename (`expireProjectilesAndPickups` or similar); flagged as a note, not a blocker,
+    since nothing outside this one file reads the method by name and the class javadoc already tells
+    the truth. Worth checking on every PR that widens a layer guard: does the *method* name still
+    describe the guard, separately from whether the *class* javadoc was updated.
+50. **A replay test's golden fingerprint staying byte-for-byte unchanged across a behavioural PR can
+    mean the fixture never actually reached the changed code path within its own tick budget, not
+    that the change is provably inert.** `LevelScoreReplayTest`'s 900-tick fixture drops two pickups
+    (`shield` at t=9.0s, `attachment` at t=9.5s) and its golden (`entities=11`, unchanged by this PR's
+    diff) still passed after the fix. Reproduced independently with a scratch probe compiled against
+    `core/build/classes/java/{main,test}` (see `[[audit-techniques]]`'s probe technique) instrumenting
+    `world.pickups()` every tick: exactly one pickup entity exists across the whole run, first
+    appearing around tick 608 (~t=10.1s) and still present at the final tick 899, at `y=173.15`,
+    having fallen from spawn but never within 16 units of the playfield's lower margin and never
+    collided with the player. The fixture exercises `CleanupSystem` attaching a real, falling `Motion`
+    (confirmed: y decreases exactly 10 units per 30 ticks = 20 units/s = the balance value) but never
+    exercises `LifetimeSystem`'s new `PICKUP`-layer expiry at all — the golden's insensitivity to the
+    change is coincidental (the pickup just hadn't finished falling when the script ended), not
+    evidence the expiry path preserves the score/entity-count invariant this golden is supposed to
+    guard. Not attributed to the author as an overclaim — the fragment never claims this replay covers
+    the expiry rule, only that the golden still passes, which is true and considerably weaker than it
+    sounds. Whenever a PR touches a system a long-running golden-fingerprint replay could exercise,
+    trace whether the fixture's own script actually reaches the changed branch within its tick count,
+    the same way pattern 34 asks for the *system* to be reached — here it's a *temporal* budget, not a
+    missing `.withX(...)` call, that keeps the golden from being real evidence.
+
+Everything else checked out clean: 335 `core` tests, 0 failures (`--rerun-tasks`, XML-aggregated,
+matching the fragment exactly); no `com.badlogic.gdx`/`Math.random`/clock read/`Thread`-family
+construct in the diff; `level-01.json`/`waves.json`/`formations.json`/`trajectories.json` absent from
+the diff entirely; the module boundary held against the sibling `feat/path-trajectories` branch (zero
+file overlap, confirmed by diffing both against the same merge-base); commit subject 58 characters;
+`MotionSystem.integrate` genuinely needs no change (walks every `Motion` generically, a pickup has no
+`Trajectory` so `advanceTrajectories` skips it); no per-frame allocation (the new `Motion` is
+allocated once per drop-spawn event, the same shape as the `Transform`/`Collider`/`Sprite`/`Pickup`
+allocations already there); no `GameEventSink`/HUD/audio consumer expects an event for a pickup's
+destruction, collected or expired (only `EnemyDestroyed` exists as a concrete `GameEvent` anywhere in
+`core`, confirmed by grep) — matching the issue's own framing that a missed pickup is silent, not a
+special case. The fragment states the 20 units/s figure as a candidate throughout, cites the level-1
+cost honestly (five drop kinds, seven spawn events, no content file touched), and correctly writes
+"not checked" for playing the game.
+
 Related: [[defect-patterns]].
