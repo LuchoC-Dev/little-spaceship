@@ -34,6 +34,9 @@ import dev.luchoc.littlespaceship.core.port.BalanceValues;
  * @param bombCompletionBonus points awarded per remaining bomb when the level is completed
  * @param weaponProjectileDamage hit points a player projectile subtracts from an enemy's health
  * @param bombDamage hit points the bomb subtracts from a resistant enemy's health
+ * @param pickupFallSpeed magnitude of the downward speed a dropped pickup falls at, overriding
+ *     {@link BalanceValues}'s own {@code default} so a change to {@code balance.json}'s value is
+ *     not silently inert
  */
 public record JsonBalanceValues(
     int initialLives,
@@ -55,7 +58,8 @@ public record JsonBalanceValues(
     int lifeCompletionBonus,
     int bombCompletionBonus,
     int weaponProjectileDamage,
-    int bombDamage) implements BalanceValues {
+    int bombDamage,
+    float pickupFallSpeed) implements BalanceValues {
 
     /**
      * Reads every field from the parsed {@code balance.json} root. Every {@code get*(String)}
@@ -86,6 +90,7 @@ public record JsonBalanceValues(
             root.getInt("lifeCompletionBonus"),
             root.getInt("bombCompletionBonus"),
             root.getInt("weaponProjectileDamage"),
-            root.getInt("bombDamage"));
+            root.getInt("bombDamage"),
+            root.getFloat("pickupFallSpeed"));
     }
 }

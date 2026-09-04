@@ -42,7 +42,8 @@ final class InputAdapterTest {
         6f,
         5f,
         1000, 500,
-        1, 4);
+        1, 4,
+        20f);
 
     @AfterEach
     void clearGdxStatics() {
