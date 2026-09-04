@@ -32,3 +32,18 @@ prelude. Two consequences worth remembering before promising a starting state:
 The fix, if it is ever wanted, is a `player` block in the level file — `core-domain`'s, not content's.
 See [[level-values-that-live-in-code]] for the other constants that have nowhere in `assets/data/` to
 live.
+
+**Updated 04/09/2026, phase 11i (#271), two things that cost time when building four more scenarios:**
+
+- **A level file's `"events"` list parses but spawns nothing.** `JsonContentSource.loadLevel` still
+  accepts the pre-11b flat `events` form and files it under `timelines`, but `SpawnSystem` reads only
+  `world.content().placements(levelId)` — nothing in `core/` calls `ContentSource.timeline` any more.
+  So `events` looks like a way to write a self-contained scenario without touching `waves.json`, and
+  it is not. **Every spawn must come from a wave, and waves come from exactly one file**,
+  `dataDir.child("waves.json")`. A scenario that needs a new wave has to append to `waves.json`; make
+  the entry additive and `test-`prefixed and level 1 stays untouched, but there is no avoiding the
+  file. The generated `docs/levels/waves.md` will then list it as `**unplaced**`, which is accurate.
+- **The TESTS menu is a hardcoded list in `game/`**, not a directory scan:
+  `game/src/tests/java/.../screen/TestScenarios.java`, a `List.of(Scenario(levelId, label))`. Adding
+  a `test-*.json` therefore does **not** make it reachable. Content alone cannot finish a scenario —
+  budget a `game-presentation` line, or say so in the fragment.
