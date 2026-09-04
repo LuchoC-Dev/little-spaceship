@@ -1097,3 +1097,40 @@ character for character, including `placements=[]`.
 Calibration: #254 alone had nothing to report at all — every observation in its fragment
 reproduced exactly, including the one this project has burned itself on before (a `:web:build`-only
 claim would have proven nothing about TeaVM; this fragment named the real task and I ran it myself).
+
+## Calibration: a fully clean single-task PR (phase 11i, PR #263, `feat/path-trajectories`)
+
+Passed on first read. Worth keeping as a reference for what a legitimate `default` method and a
+correctly-argued deferral look like, since both were explicit judgment calls this task asked for.
+
+- **A `default` interface method is not automatically the `BalanceValues` trap.** That trap was a
+  fallback masking an unread JSON key — a genuine gap nobody would notice failing. Here,
+  `TrajectoryDefinition.horizontalVelocityAt`'s default (`return vx()`) is the actual, permanent,
+  correct behaviour for two of the three sealed permits (`constant`/`arc` have no case for
+  horizontal acceleration anywhere in the catalogue) — not a stand-in for something unbuilt. The
+  test: does the default skip reading data that exists and matters (trap), or does it encode a
+  design fact that will only ever change by an explicit override on a new permit (legitimate)?
+  `grep`-ing for any other implementer or exhaustive `switch`/`instanceof` chain over the sealed
+  type outside `core` (there was none) is what confirms the second reading rather than assuming it.
+- **A task can satisfy "argue where a mechanism lives" without shipping it, when the phase plan
+  itself splits the argument (task N) from the implementation (task N+1) across different owners/
+  modules.** PR #263 argues mirroring belongs in `game/` as content-load composition over public
+  record accessors, demonstrates it once in a `core` test with no new API, and ships zero mirroring
+  code — correct here specifically because the issue and plan explicitly scope the loader to a later
+  task in a different agent's module, not because "argued, not delivered" is generally acceptable.
+  Check the plan's own task split before treating a deferral as a gap.
+- **A refusal reopened vs. dissolved is easy to fake by symmetry of prose and easy to verify by
+  asking whether the *named cost* still applies.** `enterAndHold`'s hazard (LifetimeSystem never
+  collects a resting entity) is unchanged for the unbounded case and only answered by a new
+  constraint (bounding) — genuinely reopened. Waypoints' named cost ("per-entity path state") is
+  the thing that stopped existing once loops/waits are bounded — dissolved. Reading which specific
+  clause of the old refusal text the new one answers is faster and more reliable than reading the
+  tone of "reopened"/"dissolved" labels themselves.
+- Verified independently rather than taken on the status fragment's word: `./gradlew :core:test
+  --rerun-tasks` (348 tests, 0 failures/skipped, via the XML aggregation technique), a full
+  `./gradlew build`, the "no exhaustive switch on the sealed type outside `core`" claim (two greps),
+  `Trajectory.java` untouched (`git diff` empty), declared-forbidden files untouched (`git diff
+  --name-only` against the phase branch), and `tools/pre-pr-check --base phase/11i-path-vocabulary`
+  reproducing the PR's pasted transcript exactly.
+
+Related: [[defect-patterns]].
