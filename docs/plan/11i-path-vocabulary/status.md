@@ -1,6 +1,6 @@
 # Phase 11i — A path is a list of segments, and a shape can be mirrored · status
 
-**State:** **complete on `phase/11i-path-vocabulary`, and open as a pull request against `dev`.** Eleven issues closed through eleven pull requests, all merged into the phase branch on 04/09/2026, CI green. **The project owner played the five path scenarios and approved the system.** Not merged into `dev` — that waits on their direct approval on that pull request.
+**State:** **done and merged into `dev`** in [#284](https://github.com/LuchoC-Dev/little-spaceship/pull/284), with the project owner's approval on 04/09/2026. Eleven issues closed through eleven pull requests, all merged into the phase branch on 04/09/2026, CI green. **The project owner played the five path scenarios and approved the system.** All eleven issues were closed by hand in the same pass, since GitHub does not auto-close on a merge to a phase branch.
 **Updated:** 04/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
