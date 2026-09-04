@@ -28,6 +28,7 @@ public final class TestBalance implements BalanceValues {
     public float weaponFireCooldown = 0.15f;
     public float weaponProjectileSpeed = 220f;
     public float pickupRadius = 6f;
+    public float pickupFallSpeed = 20f;
     public float invulnerabilityPickupDuration = 3f;
     public int lifeCompletionBonus = 1000;
     public int bombCompletionBonus = 300;
@@ -107,6 +108,11 @@ public final class TestBalance implements BalanceValues {
     @Override
     public float pickupRadius() {
         return pickupRadius;
+    }
+
+    @Override
+    public float pickupFallSpeed() {
+        return pickupFallSpeed;
     }
 
     @Override

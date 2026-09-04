@@ -30,6 +30,9 @@
   slow archetype.
 - [Scenario level files](project_scenario-level-files.md) — the doc generator only sees `level-NN.json`,
   so a tool-only level is invisible to it; and no level file can set the player's starting state.
+- [Path shape authoring](project_path-shape-authoring.md) — a `path`'s loop range always ends the
+  segment list, so a zero-drift loop can only exit sideways; the lead-in leg that centres an
+  oscillation; and the stale scratchpad class that ran instead of the fresh one.
 - [Wave migration mechanics](project_wave-migration-mechanics.md) — a wave's `FixedDuration` is shared
   across every placement that reuses it, negative offsets overlap two `FixedDuration` waves since 11b, no
   test touches the real `assets/data/level-01.json`, and how to live-run it without a full app context.

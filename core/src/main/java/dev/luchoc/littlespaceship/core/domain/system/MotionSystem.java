@@ -32,16 +32,17 @@ import dev.luchoc.littlespaceship.core.port.TrajectoryDefinition;
  * <p>This is also where an entity's {@link Trajectory} advances: {@link Trajectory#elapsed} is
  * incremented by the fixed step, once per tick, before velocities are integrated — never read from
  * the system clock, so a replay reproduces it exactly. The same pass then re-evaluates {@link
- * Trajectory#trajectoryId}'s vertical velocity at that updated elapsed time and writes it into the
- * entity's own {@link Motion#vy}, so a shape whose velocity is a function of time — {@code arc}, per
- * {@code docs/plan/11c-movement-shapes/shape-catalogue.md} — is actually followed tick after tick,
- * not only snapshotted once at spawn. The evaluation is the closed form {@link
- * TrajectoryDefinition#verticalVelocityAt(float)} computes from {@code elapsed} directly, never an
- * accumulation of per-tick deltas, which is what keeps it exact rather than drifting from the
- * catalogue's own worked numbers. A {@code constant} shape's {@code verticalVelocityAt} ignores
- * elapsed time and returns the same value every tick, so this re-evaluation is a no-op for it and
- * changes nothing about the four shapes that shipped before this system read {@link Trajectory} at
- * all.
+ * Trajectory#trajectoryId}'s velocity at that updated elapsed time and writes both components into
+ * the entity's own {@link Motion}, so a shape whose velocity is a function of time — {@code arc} and,
+ * since phase 11i, {@code path} — is actually followed tick after tick, not only snapshotted once at
+ * spawn. The evaluation is each definition's own closed form — {@link
+ * TrajectoryDefinition#horizontalVelocityAt(float)} and {@link
+ * TrajectoryDefinition#verticalVelocityAt(float)} — computed from {@code elapsed} directly, never an
+ * accumulation of per-tick deltas, which is what keeps it exact rather than drifting. A {@code
+ * constant} or {@code arc} shape's {@code horizontalVelocityAt} ignores elapsed time and returns the
+ * same value every tick — per {@code docs/plan/11c-movement-shapes/shape-catalogue.md}, horizontal
+ * velocity never varies with time in either — so this re-evaluation is a no-op for both and changes
+ * nothing about the shapes that shipped before {@code path} existed.
  */
 public final class MotionSystem implements GameSystem {
 
@@ -71,11 +72,11 @@ public final class MotionSystem implements GameSystem {
 
     /**
      * Accumulates the fixed step into every entity's {@link Trajectory#elapsed}, then re-evaluates
-     * {@link Trajectory#trajectoryId}'s vertical velocity at that updated elapsed time and writes it
-     * into the entity's own {@link Motion#vy} — before {@link #integrate} runs, so this tick's
-     * integration already uses this tick's velocity. An entity with a {@link Trajectory} but no
-     * {@link Motion} is left alone: nothing to write the evaluated velocity into, and nothing in the
-     * catalogue attaches one without the other.
+     * {@link Trajectory#trajectoryId}'s velocity at that updated elapsed time and writes both
+     * components into the entity's own {@link Motion} — before {@link #integrate} runs, so this
+     * tick's integration already uses this tick's velocity. An entity with a {@link Trajectory} but
+     * no {@link Motion} is left alone: nothing to write the evaluated velocity into, and nothing in
+     * the catalogue attaches one without the other.
      */
     private static void advanceTrajectories(World world, float step) {
         ComponentStore<Trajectory> trajectories = world.trajectories();
@@ -90,6 +91,7 @@ public final class MotionSystem implements GameSystem {
                 continue;
             }
             TrajectoryDefinition definition = content.trajectory(trajectory.trajectoryId);
+            motion.vx = definition.horizontalVelocityAt(trajectory.elapsed);
             motion.vy = definition.verticalVelocityAt(trajectory.elapsed);
         }
     }

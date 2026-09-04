@@ -1097,3 +1097,136 @@ character for character, including `placements=[]`.
 Calibration: #254 alone had nothing to report at all — every observation in its fragment
 reproduced exactly, including the one this project has burned itself on before (a `:web:build`-only
 claim would have proven nothing about TeaVM; this fragment named the real task and I ran it myself).
+
+## Calibration: a fully clean single-task PR (phase 11i, PR #263, `feat/path-trajectories`)
+
+Passed on first read. Worth keeping as a reference for what a legitimate `default` method and a
+correctly-argued deferral look like, since both were explicit judgment calls this task asked for.
+
+- **A `default` interface method is not automatically the `BalanceValues` trap.** That trap was a
+  fallback masking an unread JSON key — a genuine gap nobody would notice failing. Here,
+  `TrajectoryDefinition.horizontalVelocityAt`'s default (`return vx()`) is the actual, permanent,
+  correct behaviour for two of the three sealed permits (`constant`/`arc` have no case for
+  horizontal acceleration anywhere in the catalogue) — not a stand-in for something unbuilt. The
+  test: does the default skip reading data that exists and matters (trap), or does it encode a
+  design fact that will only ever change by an explicit override on a new permit (legitimate)?
+  `grep`-ing for any other implementer or exhaustive `switch`/`instanceof` chain over the sealed
+  type outside `core` (there was none) is what confirms the second reading rather than assuming it.
+- **A task can satisfy "argue where a mechanism lives" without shipping it, when the phase plan
+  itself splits the argument (task N) from the implementation (task N+1) across different owners/
+  modules.** PR #263 argues mirroring belongs in `game/` as content-load composition over public
+  record accessors, demonstrates it once in a `core` test with no new API, and ships zero mirroring
+  code — correct here specifically because the issue and plan explicitly scope the loader to a later
+  task in a different agent's module, not because "argued, not delivered" is generally acceptable.
+  Check the plan's own task split before treating a deferral as a gap.
+- **A refusal reopened vs. dissolved is easy to fake by symmetry of prose and easy to verify by
+  asking whether the *named cost* still applies.** `enterAndHold`'s hazard (LifetimeSystem never
+  collects a resting entity) is unchanged for the unbounded case and only answered by a new
+  constraint (bounding) — genuinely reopened. Waypoints' named cost ("per-entity path state") is
+  the thing that stopped existing once loops/waits are bounded — dissolved. Reading which specific
+  clause of the old refusal text the new one answers is faster and more reliable than reading the
+  tone of "reopened"/"dissolved" labels themselves.
+- Verified independently rather than taken on the status fragment's word: `./gradlew :core:test
+  --rerun-tasks` (348 tests, 0 failures/skipped, via the XML aggregation technique), a full
+  `./gradlew build`, the "no exhaustive switch on the sealed type outside `core`" claim (two greps),
+  `Trajectory.java` untouched (`git diff` empty), declared-forbidden files untouched (`git diff
+  --name-only` against the phase branch), and `tools/pre-pr-check --base phase/11i-path-vocabulary`
+  reproducing the PR's pasted transcript exactly.
+
+## PR #262 (`fix/pickups-fall`, phase 11i task 4, issues #260/#252) — the `BalanceValues` trap fires for real this time
+
+The sibling case to PR #263's `default`-method calibration above, and the two are worth reading
+together: #263's default was the legitimate kind, this one is the actual trap the calibration entry
+was contrasting against.
+
+48. **A `default` method on a content-value contract that returns a literal is indistinguishable, by
+    type-checking alone, from an interface enumerated exhaustively by its one real implementer** —
+    and the second reading is the true one here. `BalanceValues.pickupFallSpeed()` defaults to `20f`;
+    `game`'s `JsonBalanceValues` (grepped directly, confirmed) has no `pickupFallSpeed` field and
+    never calls `root.getFloat("pickupFallSpeed")`, so every running build — desktop, web, the game
+    the project owner will actually play — uses the hardcoded `20f` regardless of what
+    `assets/data/balance.json` says. The JSON key is not malformed or unread-with-an-error; it is
+    silently inert, because `JsonBalanceValues.from` only ever reads keys it names, never rejects a
+    key it doesn't recognise. This **does fail the acceptance criterion** ("a dropped pickup falls,
+    at a speed read from `balance.json`") as shipped by this PR alone — it is true only once the
+    filed follow-up (#261) lands. The author filed #261 rather than editing `game/`, correctly
+    respecting the module boundary, and said so plainly in both the PR body and the fragment; not an
+    overclaim, but the criterion is unmet until a second PR merges. **The `default` itself is the
+    right call to keep**, not the defect — removing it would break `game`'s compile immediately
+    (confirmed: `JsonBalanceValues` doesn't implement it), which is a worse failure mode than a
+    silently-inert JSON key for exactly the length of one follow-up PR. What would have caught the gap
+    without needing #261 to remember to close it: a test asserting the value comes from *content*
+    (e.g. a `JsonBalanceValues.from` unit test reading a fixture JSON and asserting the field), as
+    opposed to every test actually shipped, which only asserts the number a `TestBalance`/default
+    field returns — indistinguishable, by any test in this PR, from a constant.
+49. **A method's name can start lying the moment its javadoc stops matching it, without a single line
+    of its own body changing shape.** `LifetimeSystem.expireProjectiles` gained a third layer,
+    `CollisionLayer.PICKUP`, in its one guard condition — the class-level javadoc was updated
+    ("Projectiles and pickups are expired…") but the private method itself, and its name, were not.
+    Trivial to rename (`expireProjectilesAndPickups` or similar); flagged as a note, not a blocker,
+    since nothing outside this one file reads the method by name and the class javadoc already tells
+    the truth. Worth checking on every PR that widens a layer guard: does the *method* name still
+    describe the guard, separately from whether the *class* javadoc was updated.
+50. **A replay test's golden fingerprint staying byte-for-byte unchanged across a behavioural PR can
+    mean the fixture never actually reached the changed code path within its own tick budget, not
+    that the change is provably inert.** `LevelScoreReplayTest`'s 900-tick fixture drops two pickups
+    (`shield` at t=9.0s, `attachment` at t=9.5s) and its golden (`entities=11`, unchanged by this PR's
+    diff) still passed after the fix. Reproduced independently with a scratch probe compiled against
+    `core/build/classes/java/{main,test}` (see `[[audit-techniques]]`'s probe technique) instrumenting
+    `world.pickups()` every tick: exactly one pickup entity exists across the whole run, first
+    appearing around tick 608 (~t=10.1s) and still present at the final tick 899, at `y=173.15`,
+    having fallen from spawn but never within 16 units of the playfield's lower margin and never
+    collided with the player. The fixture exercises `CleanupSystem` attaching a real, falling `Motion`
+    (confirmed: y decreases exactly 10 units per 30 ticks = 20 units/s = the balance value) but never
+    exercises `LifetimeSystem`'s new `PICKUP`-layer expiry at all — the golden's insensitivity to the
+    change is coincidental (the pickup just hadn't finished falling when the script ended), not
+    evidence the expiry path preserves the score/entity-count invariant this golden is supposed to
+    guard. Not attributed to the author as an overclaim — the fragment never claims this replay covers
+    the expiry rule, only that the golden still passes, which is true and considerably weaker than it
+    sounds. Whenever a PR touches a system a long-running golden-fingerprint replay could exercise,
+    trace whether the fixture's own script actually reaches the changed branch within its tick count,
+    the same way pattern 34 asks for the *system* to be reached — here it's a *temporal* budget, not a
+    missing `.withX(...)` call, that keeps the golden from being real evidence.
+
+Everything else checked out clean: 335 `core` tests, 0 failures (`--rerun-tasks`, XML-aggregated,
+matching the fragment exactly); no `com.badlogic.gdx`/`Math.random`/clock read/`Thread`-family
+construct in the diff; `level-01.json`/`waves.json`/`formations.json`/`trajectories.json` absent from
+the diff entirely; the module boundary held against the sibling `feat/path-trajectories` branch (zero
+file overlap, confirmed by diffing both against the same merge-base); commit subject 58 characters;
+`MotionSystem.integrate` genuinely needs no change (walks every `Motion` generically, a pickup has no
+`Trajectory` so `advanceTrajectories` skips it); no per-frame allocation (the new `Motion` is
+allocated once per drop-spawn event, the same shape as the `Transform`/`Collider`/`Sprite`/`Pickup`
+allocations already there); no `GameEventSink`/HUD/audio consumer expects an event for a pickup's
+destruction, collected or expired (only `EnemyDestroyed` exists as a concrete `GameEvent` anywhere in
+`core`, confirmed by grep) — matching the issue's own framing that a missed pickup is silent, not a
+special case. The fragment states the 20 units/s figure as a candidate throughout, cites the level-1
+cost honestly (five drop kinds, seven spawn events, no content file touched), and correctly writes
+"not checked" for playing the game.
+
+Related: [[defect-patterns]].
+
+## PR #267 (`feat/path-loader`, phase 11i task 2, issue #264) — a coordinator's framing that didn't match the primary source, and a rule-3 guard confirmed closed on every axis
+
+The task brief handed to me characterised the `{"wait": seconds}` shorthand as "not in the published contract" and an unprompted addition by the loader's author. Reading `gh issue view 259 --comments` directly showed the opposite: `core-domain`'s own comment on #259 explicitly offers it ("The loader is free to accept a `"wait": <seconds>` shorthand and translate it to `{ "vx": 0, "vy": 0, "duration": <seconds> }` if that reads better in the JSON"). The shorthand is a written case, not an unauthorised extension — invariant 6 is satisfied, not violated. The status fragment and PR body both correctly cite the issue comment for it.
+
+61. **A task brief's characterisation of "what the contract said" is itself a claim to verify against the primary source, not a premise to build the review around.** Whoever wrote my instructions read #259 loosely or from memory; `gh issue view 259 --comments` settled it in one command. Read the cited issue comment yourself before accepting a framing of what was or wasn't authorised, even when the framing comes from the coordinator rather than from the branch under review.
+62. **A sealed-type mirror mechanism that reconstructs through each kind's own canonical constructor cannot let mirroring flip a validity guard, and this is provable by algebra on the guard's condition, not just by testing cases.** `PathTrajectoryDefinition`'s rule-3 check is `last.vx() == 0f && last.vy() == 0f`; the mirror negates only `vx` per segment. Since `-x == 0 ⇔ x == 0`, the truth value of the guard is invariant under the mirror transform — a legal path's mirror is always legal, an illegal one's mirror (if it could be built at all) would always still be illegal. Combined with both `PathTrajectoryDefinition` constructors delegating to the compact constructor (confirmed by reading the record — the 2-arg convenience constructor calls `this(...)`, so there is no back door), this closes the "mirror of a legal path becoming illegal or vice versa" question by proof rather than by enumeration. Worth the general technique: when a transform only touches fields a boundary guard doesn't read, or only negates fields the guard tests for zero-equality, check whether the guard's condition is provably invariant under the transform before reaching for a test.
+63. **A recursive multi-hop resolution's test can pass under a mutation that removes the recursion, purely because of `HashMap` bucket order for the specific ids chosen.** Mutating `resolveMirror`'s recursive call to a direct `trajectories.get(...)` lookup (breaking "a mirror of a mirror works regardless of declaration order") correctly turned two *other* tests red (`mirrorCycleFailsAtLoadNamingFileAndId`, `badMirrorReferenceFailsAtLoadNamingFileAndId`, both via an uncaught `IllegalStateException` from `mirror(id, null)`) but left `mirrorOfAMirrorResolvesRegardlessOfDeclarationOrder` green, reproducibly across reruns. Cause: the fixture's mirror ids are `"a"`/`"b"`/`"c"`; `"b".hashCode() & 15 = 2` and `"c".hashCode() & 15 = 3` in a default-capacity `HashMap`, so `mirrorEntries.keySet()`'s iteration order happens to resolve `"b"` before `"c"`, and the mutated one-hop lookup then finds `"b"` already promoted to `trajectories` by the time `"c"` is processed — accidentally reproducing the recursive result for this specific 2-mirror chain. The production code is genuinely recursive and correct (confirmed by reading it — resolution never depends on outer-loop order), so this is not a defect; it is a limit on what this one test's failure would have proven, worth naming because the test's own name promises order-independence and the mutation found a hole in demonstrating that, not in the guarantee itself. Whenever mutating a recursive/order-independent resolution to confirm a test's claim, also check whether the fixture's specific identifiers could accidentally satisfy a weaker, non-recursive implementation via incidental iteration order — three-or-more-hop chains with ids chosen to land in adjacent hash buckets are more likely to survive this coincidence than genuinely random ones.
+
+Everything else checked out clean and is not repeated in detail here: diff exactly 3 files (matching the PR's own claim), commit subjects 45/58 chars, no forbidden import (`Thread`/`Executor`/`CompletableFuture`/`ReentrantLock`/`Math.random`/`new Json(`) introduced, `core/`, `JsonBalanceValues.java`, and all four `assets/data/*.json` content files empty in the diff, full `./gradlew build` green, the malformed-segment mutation (dropping the `has("duration")` check in favour of JDK-default `getFloat` overloads) correctly turned `malformedSegmentFailsAtLoadNamingFileAndId` red and was restored clean afterward.
+
+Related: [[audit-techniques]].
+
+## PR #272 (`feat/path-entries`, phase 11i task 3, issue #271) — a real timing error in the one arithmetic the task exists to get right, everything else clean
+
+Four `path` trajectories (`descend-and-turn-left`/`-right` as a mirror pair, `sweep-wait-drop`, `stair-descent`) plus four `test-path-*` waves and scenario files. Reconstructed all four independently by stepping `segmentAt`'s accumulation logic in a standalone script rather than trusting the fragment's own numbers, per the task's own instruction.
+
+64. **`sweep-wait-drop`'s "meant to look like" arithmetic in the status fragment is internally inconsistent with its own JSON, by a systematic 0.5 s.** Segments are `{vx:-60,vy:-22,duration:2.0}`, `{wait:2.5}`, `{vx:0,vy:-90,duration:5.0}` — the sweep segment's own duration is 2.0 s. The fragment writes "the sweep ends at (67, 236.5) at t = 2.5 s" (position right, time wrong — it ends at t = 2.0 s), then "the wait holds that point to t = 5.0 s" (should be t = 4.5 s, i.e. 2.0 + 2.5), then claims the drop crosses y = 0 at "t ~ 7.6 s" and the safety box at "t ~ 9.0 s" — reproducing the segment walk by hand gives t ≈ 7.13 s and t ≈ 8.55 s respectively. Every position value in the fragment is correct; every elapsed-time label from the wait onward is shifted by the sweep segment's own duration, as if the author added the *wait's* duration to the *sweep's claimed* end instead of its *real* end. The other three paths' arithmetic (turn's x=0/safety-box crossings, the mirror's exact vx-negation, the loop's four-repeat stop-and-fall) all reproduced exactly by independent simulation — this was one path's arithmetic, not a pattern across the PR. **Technique**: when a fragment claims to have derived positions "by stepping the real function," do not just spot-check the final position — recompute the *cumulative segment-boundary times* by hand from the JSON's own durations and diff every intermediate `t` the fragment names, not only the terminal one. A wrong final position is easy to catch; a right position with a wrong time label under it is not, and it is exactly the kind of error a reader would carry forward when placing a real wave around this trajectory (a level built expecting the stop to end at t=5.0 will be off by half a second every time this shape is used).
+
+65. **A citation with the wrong line number, for a claim that is otherwise true.** The fragment and PR body both cite `JsonContentSource.java:91` for "reads waves from exactly one file — `dataDir.child("waves.json")`". Line 91 in the constructor's five-line load sequence is actually `loadTrajectories(...)`; `loadWaves(reader, dataDir.child("waves.json"))` is line 95. The substantive claim (waves load only from that one file, confirmed independently) holds — it is a four-line miscount, not a fabrication — but it is exactly the kind of small citation slip that CLAUDE.md's "name the file, or say not built" convention exists to catch, and it is worth grep-confirming every `file:line` a fragment cites rather than trusting the surrounding prose.
+
+**A tool gotcha worth its own entry**: reproducing "all nine level ids load through a real `JsonContentSource`" from this Git Bash meant compiling a throwaway `LoadCheck.java` against `core`'s and `game`'s compiled classes plus the `gdx` jar. Joining two absolute Windows-style paths (via `$(pwd)/core/build/...` interpolated as `/c/Users/...`) with `;` in a single `-cp` argument silently breaks — `javac`/`java` report the second and third classpath entries' packages as not existing, with no warning that the classpath itself was mangled. Joining the exact same paths with `:` (POSIX classpath style) works, because Git Bash's argv path-conversion recognizes and correctly rewrites a `:`-joined multi-path argument into a proper Windows `;`-joined one, but does not do the same for an argument that already contains literal `;`. **Always build multi-entry classpaths for `javac`/`java` in Git Bash with `:` as the separator, never `;`, regardless of how the paths were obtained.**
+
+**A `git log` gotcha that produced a false alarm worth naming**: `git log --oneline --all -20 <ref>` does not scope to `<ref>` — `--all` overrides the positional argument and walks every ref in the repo, silently. Comparing `origin/feat/path-entries` against `origin/phase/11i-path-vocabulary` with a raw two-tip `git diff` (rather than against their `git merge-base`) likewise produces a diff that looks like the feature branch *removes* work (here, the TESTS-menu wiring) that a sibling PR had meanwhile added to the phase branch — it does not; the feature branch simply predates that sibling merge. Always diff a PR branch against `git merge-base <phase-branch> <feature-branch>`, never against the phase branch's current tip, when phase work is landing in parallel.
+
+**Calibration**: `docs/plan/11i-path-vocabulary/status/271-path-entries.md`'s honesty is real — "not checked: how any of the four paths looks", "not checked: whether 2.5 s / four steps / `enemy-tank` are the right choices" are both present and both true (confirmed no `gradlew :desktop:run` beyond a start-and-kill). The waves.json boundary violation is disclosed, not hidden, and is correct on the merits per the coordinator's own admitted error (`JsonContentSource` reads waves from exactly one file, confirmed at line 95; the four entries are purely additive, `level-01.json`/`formations.json` diff empty, confirmed against `merge-base`). `./gradlew build` green (reproduced, exit 0), `tools/pre-pr-check` output matches exactly when rerun, `node tools/build-level-docs.js` prints `unchanged` for both generated docs on this branch (reproduced), and the pre-existing `pickupFallSpeed` drift is correctly attributed to task 4/#252 (confirmed: `balance.json` untouched by this branch's diff, and the phase branch already carried that line before this branch's base commit). The TESTS-menu limitation the fragment reports as unresolved has, independently, already been fixed by a merged sibling PR (#275) using the exact ids/labels this fragment itself suggested — worth noting as resolved-by-the-time-this-lands rather than a defect.

@@ -454,6 +454,58 @@ at the boss. The ordinary build does not have it, and neither does anything that
   A wave being reachable in five seconds is not permission to play it. Judging the game by playing is
   the project owner's, as decided on 01/09/2026.
 
+### Paths, and what scaling a shape costs, 04/09/2026
+
+Decided by the project owner in phase 11i — the first three while planning it, the rest after playing
+its five path scenarios and approving the system.
+
+- **A movement shape may be an ordered list of bounded segments**, with waits and repeats.
+  `core/port/PathTrajectoryDefinition.java`, `"type": "path"`, `segments: [{vx, vy, duration}]`, a
+  `{"wait": seconds}` shorthand, and optional `loopStart`/`loopCount`.
+- **Loops and waits are bounded, never indefinite.** The owner's own reasoning: *"por ahí sería más
+  fácil dejarla que se repita x veces y después que se vaya"*. An indefinite wait is a large number;
+  a permanent loop is a large count. **This is what keeps the catalogue's rule 3 true** — every
+  expressible path still leaves the playfield in finite time — so `LifetimeSystem` needed no change
+  and `Cleared` stays usable rather than being poisoned by shapes that can deadlock it.
+- **Two of `shape-catalogue.md`'s eight refusals move, and not in the same way.** Waypoints were
+  refused over *"per-entity path state beyond the elapsed-time clock"*, and bounded segments do not
+  cost that — a path is still a pure function of `elapsed`, and `Trajectory` still holds only
+  `trajectoryId` and `elapsed`. **Dissolved.** `enterAndHold` was refused because a resting entity
+  never leaves; **genuinely reopened**, by a written case that did not exist, and answered by bounding.
+  Both struck through and dated in that file.
+- **A mirror costs no second definition.** `{"mirrorOf": "<id>"}`, resolved at content load in
+  `game/adapter/content/JsonContentSource.java` — no new `core` API and no fourth kind. It replaces
+  the pattern `assets/data/formations.json` still shows, where `diagonal` and `diagonal-mirror` are
+  two hand-written entries.
+- **A dropped pickup falls**, at `pickupFallSpeed` in `assets/data/balance.json`, and one that reaches
+  the bottom uncollected is destroyed with no event. **This changes level 1**, which the owner had
+  approved: five drops become five drops that can be missed.
+- **Raising a path's speed scales the shape, and that is accepted as a feature.** A segment is
+  velocity × duration, so doubling velocities doubles every distance: an L becomes a bigger L with the
+  same angles. The owner's reading, and their reason for keeping it. **It has a ceiling nobody had
+  stated**: the playfield is 208×270, so a shape already crossing half the screen leaves it when
+  doubled.
+- **A loop is always the tail of a path.** The range is `[loopStart, segments.size())`, so nothing can
+  follow it. A zero-drift oscillation therefore leaves sideways by necessity, not by choice, and
+  *"circle three times and then dive"* cannot be expressed.
+  [#280](https://github.com/LuchoC-Dev/little-spaceship/issues/280) records it as a limit rather than a
+  defect; no sketch the owner has drawn needs it yet.
+
+**Deferred to phase 11j, together with level 1's redesign**, and named here so the next planner does
+not re-derive them:
+
+- **An absolute authoring syntax, which costs nothing in `core`.** *"Entry point, exit point, speed"*
+  is a reparameterization — `direction = normalize(B − A)`, `duration = |B − A| / speed` — that the
+  loader resolves into the same `PathSegment`. The same category as `mirrorOf` and `wait`. **The cost
+  to accept knowingly: an absolutely-authored path can only happen in one place**, because a wave's
+  `atX` stops meaning anything for it.
+- **A speed multiplier, once it is settled which "faster" is meant** — the same shape *bigger*, or the
+  same shape at the same size traversed sooner (velocities up **and** durations down). **Open.**
+- **Curves.** A semicircle of constant-velocity segments is a polygon, unreadable in JSON past a few
+  segments. True circular motion needs a rotating velocity, i.e. sin/cos — and `BossSystem` was
+  deliberately built from vector arithmetic and `Math.sqrt` instead, *"so that determinism survives
+  TeaVM"*. **Its own decision, with a constraint this project has already measured once.**
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.

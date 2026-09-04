@@ -6,6 +6,51 @@
     { "id": "crawl", "vx": 0, "vy": -9 },
     { "id": "strike-run", "type": "arc", "vx": 0, "vy": -110, "ay": 27 },
     { "id": "veer-left", "type": "arc", "vx": -32, "vy": -95, "ay": 20 },
-    { "id": "veer-right", "type": "arc", "vx": 32, "vy": -95, "ay": 20 }
+    { "id": "veer-right", "type": "arc", "vx": 32, "vy": -95, "ay": 20 },
+
+    {
+      "id": "descend-and-turn-left",
+      "type": "path",
+      "segments": [
+        { "vx": 0, "vy": -45, "duration": 3.0 },
+        { "vx": -55, "vy": 0, "duration": 6.0 }
+      ]
+    },
+    { "id": "descend-and-turn-right", "mirrorOf": "descend-and-turn-left" },
+
+    {
+      "id": "sweep-wait-drop",
+      "type": "path",
+      "segments": [
+        { "vx": -60, "vy": -22, "duration": 2.0 },
+        { "wait": 2.5 },
+        { "vx": 0, "vy": -90, "duration": 5.0 }
+      ]
+    },
+
+    {
+      "id": "stair-descent",
+      "type": "path",
+      "segments": [
+        { "vx": 0, "vy": -50, "duration": 1.2 },
+        { "vx": -45, "vy": 0, "duration": 0.8 },
+        { "vx": 0, "vy": -45, "duration": 0.8 }
+      ],
+      "loopStart": 1,
+      "loopCount": 4
+    },
+
+    {
+      "id": "descend-and-oscillate",
+      "type": "path",
+      "segments": [
+        { "vx": 0, "vy": -55, "duration": 2.0 },
+        { "vx": 60, "vy": 0, "duration": 0.5 },
+        { "vx": -60, "vy": 0, "duration": 1.0 },
+        { "vx": 60, "vy": 0, "duration": 1.0 }
+      ],
+      "loopStart": 2,
+      "loopCount": 3
+    }
   ]
 }

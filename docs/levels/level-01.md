@@ -555,6 +555,7 @@ The same for every level, repeated here so no lookup leaves this document.
 | `maxBombs` | 3 |
 | `maxLives` | 5 |
 | `maxedPickupBonus` | 500 |
+| `pickupFallSpeed` | 20 |
 | `pickupRadius` | 6 |
 | `playerSlowFactor` | 0.45 |
 | `playerSpeed` | 140 |

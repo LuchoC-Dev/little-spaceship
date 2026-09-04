@@ -132,6 +132,43 @@
         { "at": 13.5, "spawn": "enemy-basic", "formation": "line-5", "atX": 0.50 }
       ],
       "end": { "type": "fixedDuration", "seconds": 15.0 }
+    },
+
+    {
+      "id": "test-path-turn",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.85, "trajectory": "descend-and-turn-left" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 12.0 }
+    },
+    {
+      "id": "test-path-mirror",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.85, "trajectory": "descend-and-turn-left" },
+        { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.15, "trajectory": "descend-and-turn-right" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 12.0 }
+    },
+    {
+      "id": "test-path-wait",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.90, "trajectory": "sweep-wait-drop" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 12.0 }
+    },
+    {
+      "id": "test-path-loop",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.85, "trajectory": "stair-descent" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 15.0 }
+    },
+    {
+      "id": "test-path-oscillate",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.50, "trajectory": "descend-and-oscillate" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 13.0 }
     }
   ]
 }
