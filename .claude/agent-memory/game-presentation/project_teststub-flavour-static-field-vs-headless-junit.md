@@ -63,3 +63,15 @@ alphabetically," treat that as the *safe* answer to fall back to, not the first 
 task also references a specific numbered decision (#291) by name — the decision that named it is the
 one to satisfy, not reason past. Worth pausing to ask, rather than answering the letter of "make it
 deterministic" while missing the actual constraint the issue number was pointing at.
+
+**A regex capture group feeding straight into `Integer.valueOf` is an unbounded-input bug, and
+`reviewer` (not this agent) found it.** `rankOf`'s pattern, `^test-(\d+)-(.+)$`, bounds the digit
+*shape* but not the digit *count* — `\d+` matches any length, so a level id with an absurdly long
+number matches the pattern and then overflows `int`, throwing `NumberFormatException` out of a
+comparator `List.sort` drives, with no guard anywhere between it and the screen constructor that
+calls `discover()`. The general shape to watch for: any regex-then-`Integer.valueOf`/`parseInt` on
+data that ultimately comes from a file name or user-authored content needs its own `try/catch`
+independent of whatever `try/catch` sits around the method that calls it — `labelFor`'s existing
+lenience did not automatically cover `rankOf`, because they are separate call paths from `discover`,
+not nested. Mutation-checking this one was cheap and exact: revert the `try/catch` to nothing,
+re-run the one new test, watch the precise exception `reviewer` described, restore it.
