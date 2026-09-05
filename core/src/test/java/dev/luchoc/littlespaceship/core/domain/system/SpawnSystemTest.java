@@ -722,6 +722,38 @@ class SpawnSystemTest {
     }
 
     @Test
+    @DisplayName("a Cleared wave does not end while a placed pickup scheduled later is still pending")
+    void clearedWaveWaitsForAPendingPlacedPickup() {
+        // One spawn at local time 0, destroyed on the second tick — every entity the wave itself
+        // spawned is gone well before the pickup, scheduled at local time 30s, is due. A Cleared
+        // wave must not resolve on entity-clearance alone while its own pickup cursor still has
+        // pickups left to place, the same structural guard spawns() already gets from cursor.
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withWave(new SimpleWaveDefinition(WAVE,
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                List.of(new PlacedPickup(30f, PickupSystem.KIND_SHIELD, 0.5f, 0.5f)),
+                new WaveEndCondition.Cleared()))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+        int enemy = world.colliders().entityAt(0);
+        world.destroyEntity(enemy);
+
+        // Forty more one-second ticks reach local time 41s, well past the pickup's own 30s — every
+        // enemy the wave spawned has been gone since tick 2, but the pickup must still appear.
+        for (int i = 0; i < 40; i++) {
+            system.update(world, 1f, InputFrame.IDLE);
+        }
+
+        assertEquals(1, world.pickups().size(),
+            "the placed pickup at 30s must still spawn even though the wave's own entities cleared "
+                + "well before it was due");
+    }
+
+    @Test
     @DisplayName("an unrecognised placed pickup kind fails naming the wave and the timestamp")
     void unrecognisedPlacedPickupKindFailsWithMessage() {
         TestContent content = new TestContent()

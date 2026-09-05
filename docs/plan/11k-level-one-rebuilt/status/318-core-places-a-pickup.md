@@ -72,6 +72,40 @@ same as `unrecognisedDropIdFailsAtSpawnTime` already does for `Drop`.
 `Motion` a dropped one already does (post-#252 fix), so it does not make the neighbouring issue better
 or worse.
 
+## Defect found by `reviewer`, fixed on this branch
+
+`reviewer` reproduced a real bug in `hasEnded`'s `Cleared` branch: it checked `wave.cursor >=
+spawns().size()` and `noEntityCarries` but never `wave.pickupCursor >= pickups().size()`. A `Cleared`
+wave whose entities all die before its own later-scheduled `PlacedPickup` is due gets resolved and
+removed from `activeWaves` early — the pending pickup is then never spawned, silently, no exception, no
+log. Fixed with the one-line symmetric guard `&& wave.pickupCursor >= wave.definition.pickups().size()`,
+mirroring the guard `spawns()` already gets structurally from `wave.cursor`.
+
+**Confirmed the addition actually catches it**: `clearedWaveWaitsForAPendingPlacedPickup` in
+`SpawnSystemTest` — a `Cleared` wave with one spawn at local `t=0` (destroyed on the second tick) and
+one `PlacedPickup` at local `t=30s` — failed before the guard was added (`./gradlew :core:test --tests
+"*clearedWaveWaitsForAPendingPlacedPickup*"` red) and passes after it. My original
+`placedPickupCarriesNoWaveOrigin` test could never have caught this: it places its pickup at `at=0f`,
+always already due before the wave's own end condition is even checked.
+
+**Not touched, on `reviewer`'s own instruction**: a *spawn* scheduled past a `FixedDuration` wave's own
+duration is also silently lost today. Pre-existing, symmetric to the pickup case, and not part of this
+issue's scope.
+
+## A timing difference nobody decided, found by `reviewer`
+
+**A placed pickup is collectable one tick earlier than a dropped one, for the same reason `#252`'s own
+javadoc names.** `SpawnSystem` (which creates a placed pickup) runs at `SystemOrder.SPAWN` (5), before
+`COLLISION` (10) — the placed pickup is visible to this very tick's collision pass. `CleanupSystem`
+(which creates a dropped pickup) runs at `SystemOrder.CLEANUP` (14), after `COLLISION` already ran —
+per that class's own javadoc, a dropped pickup "only becomes collectable from the next tick's
+`CollisionSystem` pass." Both paths build the identical entity through the same
+`createFallingPickup(world, x, y, kind)` — "same entity" is true, "same timing" is false. Nobody has
+decided this should be the rule; it falls out of the fixed `SystemOrder` each path already runs at, not
+from anything this task chose. Documented in `createFallingPickup`'s own javadoc (`CleanupSystem.java`)
+rather than only asserted here, so the loader author and whoever authors content both see it before it
+surfaces on screen as an unexplained one-tick difference.
+
 ## Acceptance criteria
 
 - [x] `core` exposes a way for content to place a pickup of a given kind at a given time and position,
@@ -80,8 +114,9 @@ or worse.
 - [x] The rule is asserted by tests named after it — `SpawnSystemTest.placedPickupExistsAtItsScheduledTimeAndPosition`,
   `placedPickupNotDueYetDoesNotExist`, `placedPickupNeedsNoEnemyOrFormation`,
   `placedPickupFallsLikeADroppedOne`, `placedPickupCarriesNoWaveOrigin`,
-  `unrecognisedPlacedPickupKindFailsWithMessage`; `PlacedPickup`'s own validation and
-  `SimpleWaveDefinition`'s pickup-list validation are pinned in `ContentDefinitionsTest`.
+  `clearedWaveWaitsForAPendingPlacedPickup`, `unrecognisedPlacedPickupKindFailsWithMessage`;
+  `PlacedPickup`'s own validation and `SimpleWaveDefinition`'s pickup-list validation are pinned in
+  `ContentDefinitionsTest`.
 - [x] `core` still has no libGDX on its classpath — `grep -rn "com.badlogic.gdx" core/src/main/java`
   prints nothing. Still reads no clock, still calls no `Math.random()` — no new code touches either.
 - [x] `./gradlew build` green, and `:rngparity` (the replay-reproduction module) builds clean as part

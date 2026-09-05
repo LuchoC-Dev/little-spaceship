@@ -280,6 +280,7 @@ public final class SpawnSystem implements GameSystem {
         }
         if (condition instanceof WaveEndCondition.Cleared) {
             return wave.cursor >= wave.definition.spawns().size()
+                && wave.pickupCursor >= wave.definition.pickups().size()
                 && noEntityCarries(world, wave.definition.id());
         }
         // WaveEndCondition is sealed to exactly these two, per its own class javadoc.

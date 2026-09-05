@@ -83,6 +83,17 @@ public final class CleanupSystem implements GameSystem {
      * where {@code x}/{@code y} and {@code kind} come from, never in what a pickup entity is made of.
      * Carries no {@code WaveOrigin}, on either path — a level's {@code Cleared} end condition must
      * never wait on a pickup the player has no obligation to collect.
+     *
+     * <p><b>The two call sites do not put the entity in front of {@code CollisionSystem} at the same
+     * tick.</b> A dropped pickup is only collectable from the <em>next</em> tick's pass, per this
+     * class's own javadoc above — it is created here, at {@code SystemOrder.CLEANUP} (14), after
+     * {@code COLLISION} (10) already ran this tick. A placed pickup is created by {@code SpawnSystem}
+     * at {@code SystemOrder.SPAWN} (5), before {@code COLLISION} runs, so it is collectable the very
+     * same tick it appears — one tick earlier than a dropped pickup at the same position would be.
+     * Nobody has decided this difference should exist; it is a direct, unavoidable consequence of the
+     * fixed {@link SystemOrder} each path runs at, not a divergence in what this method builds — the
+     * entity itself is byte-identical either way. Recorded here because whoever writes the loader or
+     * authors content needs to know it, not discover it on screen.
      */
     static void createFallingPickup(World world, float x, float y, String kind) {
         BalanceValues balance = world.content().balance();
