@@ -606,6 +606,7 @@ this document a generator can do and a human reliably will not.
 - a spawn whose `at` is past its wave’s duration, which never fires
 - a formation whose extent at the spawn instant leaves `0 .. 208`
 - **a spawn whose swept extent is mostly outside `0 .. 208`**, which the spawn-instant extent cannot see, and the veer-side rule when a veer is the cause
+- **an absolutely-authored path (`waypoints`) placed at an `atX` that does not reproduce its entry waypoint**, within the rounding a two-decimal `atX` can introduce
 - a `dropSlot` past its formation’s slot count
 - a drop kind outside the six
 - a `cleared` wave holding a shape that never leaves the playfield, so it can never end
