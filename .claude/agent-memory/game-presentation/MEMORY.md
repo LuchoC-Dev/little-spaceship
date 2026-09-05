@@ -29,3 +29,4 @@
 - [JsonReader.parse(String) for fixture-based content tests](project_jsonreader-parse-string-for-fixtures.md) — no temp file needed; mutation-verify by reverting the wiring and watching red, then restoring.
 - [ScrollPane + keyboard focus: validate() before MenuNavigator, then setScrollY(0f)](project_scrollpane-initial-focus-scroll-bug.md) — #276: the first setFocused(true) runs pre-layout, and scrollTo(0,0,...) means "show the bottom", not "no-op".
 - [Absolute path waypoints syntax and the atX cost left undocumented-not-enforced](project_absolute-path-waypoints-syntax.md) — #287: two mutually exclusive top-level keys beat per-segment field guessing; why no cross-file atX check was built.
+- [ScrollPane#scrollTo boundary case and headless-repro technique](project_scrollpane-scrollto-boundary-and-headless-repro.md) — #293: the first row of a trailing-gap list can get zero pixels of overlap; how to reproduce scene2d.ui bugs standalone, no game, no GL context.
