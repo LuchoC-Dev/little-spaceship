@@ -1261,3 +1261,56 @@ only; commit subjects clean; no `Co-Authored-By`.
     the row that matches what the author expected to see.
 
 Related: [[audit-techniques]].
+
+## PR #298 (`feat/path-speed-multiplier`, phase 11j task 2, issue #296) — a clean mechanism, a false claim about which guard actually fires
+
+Verdict: accept. `core`/`assets/data` genuinely untouched (`git diff --stat phase/11j-absolute-paths...HEAD -- core assets/data` empty), no forbidden import, `ay × k²` arithmetic independently reconstructed and correct, the two-pass `resolveDerived` (renamed from `resolveMirror`) genuinely composes `mirrorOf`/`speedOf` in either order via cycle-safe recursion using a fresh `LinkedHashSet` per top-level id (traced both possible `HashMap` iteration orders for the `a`/`b` cycle fixture by hand — both throw, both name `a`).
+
+67. **A guard's javadoc and its test's own name can both misattribute *which* field rejected an
+    extreme input, while the observable behaviour (fails, names the id) stays correct.**
+    `faster()`'s javadoc claims "an absurd multiplier that underflows a duration to zero is refused
+    by `PathSegment`", and the test `aMultiplierThatUnderflowsASegmentDurationFailsNamingTheDerivedId`
+    asserts exactly that framing. Reproduced the actual arithmetic in an isolated scratch copy of the
+    repo (never touching the audited worktree — `cp -r` to `/tmp`, mutate there, run there, discard):
+    for the test's own fixture (`vy=-30`, `multiplier=3e38`), `duration / multiplier` computes to
+    `3.333333E-39` — a tiny but nonzero, non-underflowed float, which `PathSegment`'s `duration <= 0f`
+    check does **not** reject. What actually throws is `vy * multiplier = -9e39`, which overflows
+    float range to `-Infinity` and trips `PathSegment`'s separate `requireFinite` check on velocity,
+    not duration. Confirmed by constructing `PathSegment` directly with the computed values and
+    printing the real exception message ("a path segment's vy must be a finite number, was
+    -Infinity"). The velocity-overflow threshold (`multiplier > Float.MAX_VALUE / |vy|`, ~1.1e37 for
+    `vy=-30`) is reached at far smaller multipliers than the duration-underflow-to-exact-zero
+    threshold (~duration × 7e44), so for any realistic non-zero velocity this "duration underflow"
+    guard the docs describe essentially never fires — the test's chosen multiplier could not have
+    exercised it even if it existed as a distinct path. Notably the *authorising issue comment*
+    (`gh issue view 296`) hedges correctly — "a velocity **or** a duration out of range" — so the
+    narrower, wrong claim was introduced only in the code's javadoc and the test's name/doc, not in
+    the design discussion. Non-blocking (both the failure and its file/id naming are real), but exactly
+    the class of claim worth a one-line correction: reword the javadoc/test name to "a velocity or
+    duration pushed out of range" rather than pinning the mechanism to one field, since the actual
+    field that fires depends on which of the two thresholds the chosen numbers happen to cross first.
+    **Technique reusable beyond this PR**: when a status/javadoc claims "X is refused because value V
+    underflows/overflows", don't just confirm the test throws — construct the intermediate value by
+    hand (a five-line throwaway program against the module's own compiled classes, in `/tmp`, `:`-joined
+    classpath per the existing Git Bash note) and check which specific guard's condition it actually
+    trips. A `Set.of()`-shaped extreme-value test is not proof of *which* clause caught it.
+
+Also independently reproduced rather than trusted: the 16/16 zero-failure test count
+(`game/build/test-results/test/TEST-...SpeedMultiplierTest.xml`); the mutation-testing claim
+("`faster` mutated to a `scale`... 16 tests completed, 5 failed") by applying the exact same mutation
+(`ay × multiplier` instead of `× multiplier²`, segment `duration()` left unscaled) in an isolated `cp
+-r` scratch copy — reproduced the identical 5 failing test names; the mirror/speed composition
+arithmetic for both orders by hand; and that no current wave in `waves.json`/`level-01.json` uses one
+shape at two speeds within a wave, backing the branch's "nothing written asks for the spawn-event
+alternative" argument. The plan's own task-2 text (`docs/plan/11j-absolute-paths/plan.md:58`) already
+frames the load-vs-spawn-event choice in the same terms the PR argues it in — not a post-hoc
+rationalisation.
+
+**Technique reused deliberately, worth naming explicitly**: mutation-testing a claim by editing the
+audited repo's own file, even when planning to revert, is out of bounds for a read-only auditor — the
+auto-mode classifier itself blocked a `sed`-based in-place edit of `JsonContentSource.java` here. The
+correct move, used twice in this review, is `cp -r <repo> /tmp/<scratch>`, mutate and run entirely
+inside the copy, then `rm -rf` it — proves the same thing without ever writing to the worktree under
+review.
+
+Related: [[audit-techniques]].
