@@ -1430,4 +1430,46 @@ checks agree) and to fix exactly the case named (a `path` whose legs drift in op
     in isolation, and only shows up by asking what the *other* edge of the same entity was doing at
     the reported moment.
 
+## PR #316 (`feat/absolute-path-atx-check`, phase 11k task 2, issue #300) — clean, and the reflection claim held up independently
+
+`tools/build-level-docs.js` gained an `entryX` field on any `path` resolved from `waypoints`
+(never from `segments`), propagated through `mirrorOf` (reflection, `width - entryX`) and `speedOf`
+(unchanged), and a new per-spawn check comparing `sp.atX * 208` against it within
+`ATX_TOLERANCE_PX = 1.1`. Verdict: accept, nothing new. Reproduced independently rather than trusted
+from the status fragment: `cp -r` the worktree to the scratchpad (in-place edits to a repo under
+audit are the kind of thing the auto-mode classifier can refuse — see
+`[[audit-techniques]]`'s TeaVM-dist entry for the same workaround), built scratch `mirrorOf`/`speedOf`
+derivations of both shipped absolute trajectories plus a `level-99.json` exercising them, and got
+the exact same three findings and two silences the author reported, including the one that actually
+proves the claim: mirroring `sweep-the-width-and-drop` (`entryX 20.8`) requires `atX 0.90`, not the
+`0.10` a plain sign-flip on the mirror would have produced. Idempotency (`unchanged` on both docs)
+and `pre-pr-check`'s pasted output both reproduced verbatim.
+
+68. **A reflection-vs-negation claim about a derived field can only be told apart by an entry point
+    that is not equidistant from the centre either way.** Both trajectories this repo had already
+    shipped with `waypoints` before this task (`hold-the-line-and-exit`, entry `x=104`, exactly the
+    playfield's centre) are the wrong fixture to test a reflection formula against, because
+    `width - entryX` and `-entryX` (mod width, informally) agree at the centre — the author noticed
+    this and built an off-centre scratch fixture (`sweep-the-width-and-drop`, `entryX 20.8`) instead
+    of trusting the shipped content to distinguish the two formulas. Generalizes past this PR: before
+    accepting that a "mirror negates X" javadoc/comment is correct for a field that is a *position*
+    rather than a *delta*, check whether every value the claim was tested against sits on the mirror
+    axis itself.
+69. **A per-spawn check that compares one `atX` against one trajectory field is implicitly checking
+    the formation's anchor, not any individual entity — worth naming even when current content never
+    exercises the gap.** `SpawnSystem.positionSpawned` computes each entity's real x as
+    `anchorX + slot.offsetX()`, and every formation in `formations.json` except `pair` (`±44`, no
+    zero-offset slot) has at least one slot at `offsetX: 0`; both trajectories carrying `entryX` are
+    placed with `formation: "single"` (`offsetX: 0`), so `anchorX` and the one real entity's `x`
+    coincide today and the check's silence on the anchor really does mean the entity is correctly
+    placed. Nothing in `core` or this check would catch an absolute path placed on a multi-slot
+    formation whose anchor matches `entryX` while every other slot flies the same waypoint-authored
+    shape shifted sideways by its own `offsetX` — arguably not a bug (a formation flying one shared
+    shape shifted per slot is exactly what a `constant`/`arc` trajectory already does), but nothing
+    documents that an absolute path's literal-coordinate meaning is anchor-only until it is combined
+    with a multi-slot formation, and `JsonContentSource.parseWaypoints`'s own javadoc already names
+    the general version of this cost ("an absolutely-authored path can only happen in one place").
+    Not a defect in this PR — a suspicion to hand forward to whichever phase first pairs an absolute
+    path with a formation other than `single`.
+
 Related: [[audit-techniques]].
