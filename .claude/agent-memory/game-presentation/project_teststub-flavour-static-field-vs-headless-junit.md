@@ -49,3 +49,17 @@ wasn't found), but it is enough to make the same call that class already made. A
 here rather than avoiding `list()` altogether because this code is `-Ptests`-only, has never shipped
 combined with `:web`, and the task's own acceptance criterion was "the `-Ptests` build compiles," not
 "runs correctly under TeaVM."
+
+**Alphabetical-by-id was the wrong ordering call, and the project owner corrected it after review**
+(still #311, same PR). The reasoning that no recency signal survives a filesystem listing was correct
+and stood; the conclusion drawn from it — that #291's "newest first" stack had to be dropped — was
+not the owner's to make and was wrong. The actual fix: the recency signal moves into the file name
+itself, `test-NNN-<name>.json`, and discovery reads the number back out with a regex and sorts
+descending. A level id with no number sorts after every numbered one, alphabetically among its own
+kind — a policy that turned out to have a real, non-synthetic test case already on disk: the four
+scenario files phase 11h authored (`test-boss`, `test-wave-04/09/12`) before this convention existed.
+**Lesson for next time:** when a task explicitly hands ordering to "no signal survives, sort
+alphabetically," treat that as the *safe* answer to fall back to, not the first thing to ship, if the
+task also references a specific numbered decision (#291) by name — the decision that named it is the
+one to satisfy, not reason past. Worth pausing to ask, rather than answering the letter of "make it
+deterministic" while missing the actual constraint the issue number was pointing at.
