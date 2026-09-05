@@ -200,25 +200,52 @@ an unconditional `src/test/java` file would break `./gradlew :game:test` for eve
 
 `TestScenariosTest` (`game/src/testsTest/java/.../screen/TestScenariosTest.java`) exercises
 `TestScenarios.discover(FileHandle)` against a `@TempDir` fixture directory, never against the real
-`assets/data/` — thirteen tests: prefix filtering, numbered scenarios sorting by rank descending
+`assets/data/` — fourteen tests: prefix filtering, numbered scenarios sorting by rank descending
 regardless of creation order, numbered scenarios sorting before every unnumbered one, unnumbered
 scenarios sorting alphabetically among themselves, a numbered scenario's rank disappearing from its
-fallback label, each label kind (`BOSS`, `LINE`, `PATH`, `ABS`, `ARC`), a mirrored trajectory taking
+fallback label, an oversized recency number sorting as unnumbered rather than throwing (`reviewer`'s
+finding, below), each label kind (`BOSS`, `LINE`, `PATH`, `ABS`, `ARC`), a mirrored trajectory taking
 its target's kind, a wave with no trajectory override falling back to its id-derived name, and a
 cyclical `mirrorOf` pair falling back rather than looping forever.
+
+## `reviewer`'s finding on PR #313, and the fix
+
+`reviewer` accepted the PR with one defect: `rankOf`'s pattern, `^test-(\d+)-(.+)$`, bounds the digit
+count in no way, and the captured group went straight into `Integer.valueOf` with no `try/catch`. A
+level id like `test-99999999999999999999-name` matches the pattern and then overflows `int`, throwing
+`NumberFormatException` out of `rankOf`, out of `compareByRecency` (the comparator `List.sort` calls
+from inside `discover`), out of `discover` itself, and into `TestMenuScreen`'s constructor — which
+has no guard around the call. One malformed file name did not cost that one scenario its recency
+rank, it crashed the whole TESTS menu at construction. `reviewer` reproduced it directly against an
+isolated scratch file before reporting it; reproduced here too, by reverting the fix on this exact
+code and re-running `TestScenariosTest`, watching `anOversizedRecencyNumberSortsAsUnnumberedRatherThanThrowing`
+fail with `NumberFormatException` at the line the fix removes, then restoring it.
+
+The javadoc's claim that label derivation "never throws" was also imprecise: it genuinely holds for
+`labelFor` (which has its own `try/catch`, added in the first cut of this task) but did not extend to
+`rankOf`, which decides sort order rather than label text and had none. Fixed both: `rankOf` now
+catches `NumberFormatException` and returns `null` — the same value it already returns for a level id
+the pattern does not match at all, so no new branch in `compareByRecency` was needed — and the class
+javadoc now states the guarantee against both methods, with the reason `rankOf` needs it explicitly:
+a level-designer typo must not take the whole menu down with it.
 
 ## Verified
 
 - `./gradlew :game:compileJava -Ptests` — `BUILD SUCCESSFUL`.
-- `./gradlew :game:test -Ptests` — `BUILD SUCCESSFUL`, all thirteen new tests plus the existing suite
+- `./gradlew :game:test -Ptests` — `BUILD SUCCESSFUL`, all fourteen new tests plus the existing suite
   green.
 - `./gradlew :game:clean :game:test` (no `-Ptests`) — `BUILD SUCCESSFUL`, and
   `find game/build/classes -iname "*TestScenarios*"` printed nothing: the ordinary build compiles
   none of it, exactly as before this change.
-- `./gradlew :web:gdx_teavm_web_js_build` (no `-Ptests`, the shipped configuration) — run twice
-  across both revisions of this task, `BUILD SUCCESSFUL` both times;
-  `grep -c "TestMenuScreen\|TestScenarios" web/build/dist/js/webapp/app.js` printed `0` both times.
-  The shipped web build still contains none of it, same proof 11h used.
+- `./gradlew :web:gdx_teavm_web_js_build` (no `-Ptests`, the shipped configuration) — run across all
+  three revisions of this task (including after `reviewer`'s fix), `BUILD SUCCESSFUL` every time;
+  `grep -c "TestMenuScreen\|TestScenarios" web/build/dist/js/webapp/app.js` printed `0` every time.
+  `reviewer` independently re-ran this same check and reported `0` too. The shipped web build still
+  contains none of it, same proof 11h used.
+- Mutation-checked `reviewer`'s finding: reverted `rankOf`'s `try/catch` back to the throwing form,
+  re-ran `./gradlew :game:test -Ptests --tests "*TestScenariosTest*"`, watched
+  `anOversizedRecencyNumberSortsAsUnnumberedRatherThanThrowing` fail with the exact
+  `NumberFormatException` `reviewer` described, then restored the fix and confirmed green again.
 - `./gradlew :desktop:run -Ptests` — launched, reached a running LWJGL3 window titled
   `little-spaceship`, no exception in the log (only the usual LWJGL/JDK native-access warnings seen
   on every desktop run in this environment). Killed once confirmed running, per "running the game is
