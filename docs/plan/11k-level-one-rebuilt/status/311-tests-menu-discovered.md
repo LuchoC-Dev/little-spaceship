@@ -46,25 +46,128 @@ cannot tell `PATH` from `ABS` apart, since both authoring forms compile down to 
 `PathSegment` list by design (11j). The raw JSON's `"segments"` vs `"waypoints"` key is the only
 place that distinction still exists.
 
-Checked against every scenario the repository ships today (`node`-style manual trace, not a script):
-`LINE: CROSS`, `PATH: TURN`, `PATH: MIRROR`, `PATH: WAIT`, `PATH: LOOP`, `PATH: OSCILLATE`,
-`ABS: HOLD LINE`, `BOSS`, `WAVE 04`/`WAVE 09`/`WAVE 12` all come out identical or equivalent to the
-old hand-picked labels; `PATH: SLIDE DESCEND`, `PATH: DIVE RETREAT` and `ABS: SWEEP WIDTH` are longer
-than the old shorthand (`PATH: SLIDE`, `PATH: RETREAT`, `ABS: SWEEP`) but not wrong — this is a
-finding for the project owner, not a defect: whether the longer, fully-derived names read worse on
-screen is theirs to judge, not checked here.
+Checked against every scenario the repository ships today, with a real `discover()` call against the
+actual `assets/data/` (a throwaway classpath run against the compiled `-Ptests` classes, reflection to
+reach the package-private method, no game launch):
 
-## Ordering: alphabetical by level id, not "newest first"
+```
+test-100-cross          LINE: CROSS
+test-090-slide-descend  PATH: SLIDE DESCEND
+test-080-dive-retreat   PATH: DIVE RETREAT
+test-070-hold-line      ABS: HOLD LINE
+test-060-sweep-width    ABS: SWEEP WIDTH
+test-050-path-oscillate PATH: OSCILLATE
+test-040-path-turn      PATH: TURN
+test-030-path-mirror    PATH: MIRROR
+test-020-path-wait      PATH: WAIT
+test-010-path-loop      PATH: LOOP
+test-boss               BOSS
+test-wave-04            WAVE 04
+test-wave-09            ARC: WAVE 09
+test-wave-12            ARC: WAVE 12
+```
 
-#291 decided a hand-ordered stack, newest entry on top, precisely because a human was choosing where
-each new line landed. Discovery removes that human, and nothing about a filesystem listing carries
-"when was this added" in any form this project can read deterministically — file modification time
-resets to checkout time on a fresh clone and is not the same across machines, which is exactly the
-kind of filesystem-dependent non-determinism invariant 2 rules out for the simulation and this
-sorts the same way. `FileHandle#list()`'s own iteration order is the filesystem's, unspecified and
-different across platforms, so the result is explicitly sorted by `Scenario#levelId()` afterward
-regardless of what order `list()` returns — confirmed by a test that writes fixture files in
-z-a-m order and asserts the discovered list comes out a-m-z.
+The order above is exactly what `discover()` returns — numbered scenarios descending, unnumbered ones
+after, alphabetically among themselves — which reproduces the old hardcoded list's order exactly for
+the ten renamed scenarios. Most labels come out identical or equivalent to the old hand-picked ones;
+`PATH: SLIDE DESCEND`, `PATH: DIVE RETREAT` and `ABS: SWEEP WIDTH` are longer than the old shorthand
+(`PATH: SLIDE`, `PATH: RETREAT`, `ABS: SWEEP`) but not wrong, left as an open item below.
+`test-wave-09` and `test-wave-12` were expected to fall back to a generic name like `test-wave-04`
+does, on the assumption every wave scenario plays its archetypes' own default movement — checking
+their actual content (`l1-high-pressure` and `l1-final-escalation`, not `l1-combined-formations`)
+shows they do override a spawn's trajectory with an arc shape, so `ARC: WAVE 09`/`ARC: WAVE 12` is the
+label deriving correctly from real content, not a bug.
+
+## Ordering, revised: the project owner ruled #291's stack stays
+
+**This section replaces the original answer this task shipped, which was a plain alphabetical sort.
+The project owner ruled on it after review: alphabetical does not satisfy #291 and cannot be kept —
+the stack stays, last-created first.** The first cut of this task reasoned that nothing about a
+filesystem listing carries "when was this added" deterministically, which is true, and concluded the
+recency signal had to be dropped. The actual answer is that it has to be carried by the content
+instead: a scenario file that wants to sort by recency is named `test-NNN-<name>.json`, where `NNN`
+is a number chosen at authoring time. `TestScenarios.rankOf` reads it back out of the level id with a
+regex (`^test-(\d+)-(.+)$`), and `discover` sorts numbered scenarios by it, **descending** — the
+highest number, first, exactly as the old hand-ordered stack put its newest entry on top. Numbers are
+spaced by ten (`010`, `020`, …) so a later scenario can be inserted between two existing ones without
+renaming anything, per the project owner's own instruction.
+
+`FileHandle#list()`'s own iteration order is still the filesystem's, unspecified and different across
+platforms — the fix is not to trust it, it is still explicitly re-sorted afterward, only now by the
+number in the name rather than the whole id. That determinism argument survives from the first cut;
+only the conclusion it was used to reach (that recency could not survive) was wrong.
+
+**A level id with no number is not dropped and not placed arbitrarily.** It carries no recency signal
+of any kind, so it cannot be honestly interleaved with the numbered ones — every unnumbered scenario
+sorts after every numbered one, and alphabetically among its own kind, the same determinism reasoning
+applied one level down. `test-boss.json`, `test-wave-04.json`, `test-wave-09.json` and
+`test-wave-12.json` are today's only examples: the batch phase 11h authored before this convention
+existed. They are deliberately left unrenamed — see "Scope of the rename" below — which means this
+policy is exercised by real shipped files, not only by a synthetic fixture.
+
+## Scope of the rename: ten files, not fourteen
+
+The ten scenarios phases 11i and 11j added (`test-cross`, `test-slide-descend`, `test-dive-retreat`,
+`test-hold-line`, `test-sweep-width`, `test-path-oscillate`, `test-path-turn`, `test-path-mirror`,
+`test-path-wait`, `test-path-loop`) are renamed to `test-NNN-<name>.json`. The batch order the old
+hardcoded `TestScenarios.ALL` list already encoded (front = newest) is the source of truth for what
+"authored order" means here — reversed to assign ascending numbers from oldest to newest, ten apart,
+starting at `010`:
+
+| old file | new file | rank |
+|---|---|---|
+| `test-path-loop.json` | `test-010-path-loop.json` | oldest of the ten |
+| `test-path-wait.json` | `test-020-path-wait.json` | |
+| `test-path-mirror.json` | `test-030-path-mirror.json` | |
+| `test-path-turn.json` | `test-040-path-turn.json` | |
+| `test-path-oscillate.json` | `test-050-path-oscillate.json` | |
+| `test-sweep-width.json` | `test-060-sweep-width.json` | |
+| `test-hold-line.json` | `test-070-hold-line.json` | |
+| `test-dive-retreat.json` | `test-080-dive-retreat.json` | |
+| `test-slide-descend.json` | `test-090-slide-descend.json` | |
+| `test-cross.json` | `test-100-cross.json` | newest of the ten |
+
+Sorted descending by rank this reproduces the exact order the old hardcoded list had them in —
+checked by hand, and by a real `discover()` run against the actual (renamed) `assets/data/`, below.
+
+**The other four scenario files — `test-boss.json`, `test-wave-04.json`, `test-wave-09.json`,
+`test-wave-12.json` — are deliberately left unrenamed.** They are the batch phase 11h authored before
+this ordering convention existed, and this task's scope, as stated, is "renaming those ten
+`test-*.json` files" — a stated exception to `assets/data/` being `level-designer`'s, and not wider
+than what was stated. Leaving them also gives the "file that does not match the convention" rule a
+real case to prove itself against, rather than only a synthetic one — see the ordering section above
+and `TestScenariosTest`'s fixtures shaped to match.
+
+**Only file names changed. No file's contents changed.** A level file's `"waves"` block references a
+*wave* id (from `waves.json`), which is independent of the level file's own name — `test-100-cross`
+still points at wave id `test-cross` inside `waves.json`, exactly as `test-wave-04` has always pointed
+at wave id `l1-combined-formations`, a completely different string. Renaming the level file changes
+nothing that any wave, trajectory, formation or enemy definition reads.
+
+### References the rename touches, and references it deliberately does not
+
+Checked every file in the repository containing any of the ten old names
+(`grep -rln` across `.md`/`.js`/`.java`/`.json`, excluding `assets/data/` itself and `web/build/`
+build output):
+
+- **`docs/levels/waves.md`** and **`docs/planning/08-decisions-and-open-items.md`** reference the
+  *wave* ids (`test-cross`, `test-path-turn`, …) and the *unrenamed* level ids
+  (`test-wave-04`/`09`/`12`, `test-boss`) — neither changes, because neither is the level filename
+  this task renames.
+- **`.claude/agent-memory/level-designer/…`** and **`.claude/agent-memory/reviewer/…`** only mention
+  the four unrenamed ids. Untouched — not this task's memory to edit even if they had mentioned a
+  renamed one.
+- **`docs/plan/11h-*/status/`, `docs/plan/11i-*/status/`, `docs/plan/11j-*/status/` and their
+  `status.md` files** are dated records of what those phases did, written in the past tense about
+  files that had those names at the time. Left exactly as written — rewriting them to use the new
+  names would misrepresent what those phases actually shipped and read. This task's own instruction
+  said so explicitly, and `docs/plan/11j-absolute-paths/status/301-tests-menu-11j-scenarios.md` in
+  particular is exactly this kind of record.
+- **This status fragment and `TestScenarios`'s own javadoc** are not sealed history — they are part
+  of this same task, not yet reviewed — so both are updated in place to describe the ranked
+  convention, rather than kept as a record of the alphabetical answer this task shipped first.
+- **Nothing under `tools/`** references any of these ids; confirmed by the same grep. Out of scope
+  either way, per this task's own instructions.
 
 ## The web-target risk, read and accepted rather than fixed
 
@@ -97,26 +200,32 @@ an unconditional `src/test/java` file would break `./gradlew :game:test` for eve
 
 `TestScenariosTest` (`game/src/testsTest/java/.../screen/TestScenariosTest.java`) exercises
 `TestScenarios.discover(FileHandle)` against a `@TempDir` fixture directory, never against the real
-`assets/data/` — ten tests: prefix filtering, alphabetical ordering regardless of file creation
-order, each label kind (`BOSS`, `LINE`, `PATH`, `ABS`, `ARC`), a mirrored trajectory taking its
-target's kind, a wave with no trajectory override falling back to its id-derived name, and a
+`assets/data/` — thirteen tests: prefix filtering, numbered scenarios sorting by rank descending
+regardless of creation order, numbered scenarios sorting before every unnumbered one, unnumbered
+scenarios sorting alphabetically among themselves, a numbered scenario's rank disappearing from its
+fallback label, each label kind (`BOSS`, `LINE`, `PATH`, `ABS`, `ARC`), a mirrored trajectory taking
+its target's kind, a wave with no trajectory override falling back to its id-derived name, and a
 cyclical `mirrorOf` pair falling back rather than looping forever.
 
 ## Verified
 
 - `./gradlew :game:compileJava -Ptests` — `BUILD SUCCESSFUL`.
-- `./gradlew :game:test -Ptests` — `BUILD SUCCESSFUL`, all ten new tests plus the existing suite
+- `./gradlew :game:test -Ptests` — `BUILD SUCCESSFUL`, all thirteen new tests plus the existing suite
   green.
 - `./gradlew :game:clean :game:test` (no `-Ptests`) — `BUILD SUCCESSFUL`, and
   `find game/build/classes -iname "*TestScenarios*"` printed nothing: the ordinary build compiles
   none of it, exactly as before this change.
-- `./gradlew :web:gdx_teavm_web_js_build` (no `-Ptests`, the shipped configuration) —
-  `BUILD SUCCESSFUL`; `grep -c "TestMenuScreen\|TestScenarios" web/build/dist/js/webapp/app.js`
-  printed `0`. The shipped web build still contains none of it, same proof 11h used.
+- `./gradlew :web:gdx_teavm_web_js_build` (no `-Ptests`, the shipped configuration) — run twice
+  across both revisions of this task, `BUILD SUCCESSFUL` both times;
+  `grep -c "TestMenuScreen\|TestScenarios" web/build/dist/js/webapp/app.js` printed `0` both times.
+  The shipped web build still contains none of it, same proof 11h used.
 - `./gradlew :desktop:run -Ptests` — launched, reached a running LWJGL3 window titled
   `little-spaceship`, no exception in the log (only the usual LWJGL/JDK native-access warnings seen
   on every desktop run in this environment). Killed once confirmed running, per "running the game is
   not playing it" — never navigated the menu, never opened a scenario.
+- A real `discover()` call against the renamed `assets/data/` — the throwaway-classpath technique,
+  no game launch — printed the fourteen-line table above, confirming the descending-rank/unnumbered
+  fallback order and every label against the actual shipped content, not only synthetic fixtures.
 - The discovered order and every label: read from the code and asserted by `TestScenariosTest`, not
   observed on screen, per this task's own instruction.
 
@@ -124,9 +233,9 @@ cyclical `mirrorOf` pair falling back rather than looping forever.
 
 - [x] Adding a scenario file under `assets/data/` and nothing else puts it in the TESTS menu —
   `discover` reads the directory itself; no code names any scenario by id anymore.
-- [x] The stack order #291 decided survives in spirit, not literally — replaced by an explicit,
-  deterministic alphabetical order, argued above and asserted by a test with adversarial input
-  order.
+- [x] The stack order #291 decided survives literally, per the project owner's ruling: last-created
+  first, via the `test-NNN-<name>.json` convention and a descending sort on `NNN`, argued above and
+  asserted by tests with adversarial input order.
 - [x] The order is read from the code / asserted by a test, not observed on screen.
 - [x] The `-Ptests` build still compiles; the shipped build still contains none of it — proven by
   the real TeaVM compile and a grep of the emitted `app.js`, as above.
@@ -137,8 +246,13 @@ cyclical `mirrorOf` pair falling back rather than looping forever.
   `FileType.Internal` storage. Not a problem today because `-Ptests` is desktop-only in practice, but
   it would need to move to a build-time generated source before this flavour could ever target
   `:web`.
-- The auto-derived labels for three existing scenarios (`test-slide-descend`, `test-dive-retreat`,
-  `test-sweep-width`) are longer than the hand-picked ones they replace. Not fixed here: shortening
-  them would mean either renaming the files (a `level-designer` concern) or reintroducing a
-  hand-maintained short name (exactly what this task removes). Left for the project owner to judge
-  on screen.
+- The auto-derived labels for three renamed scenarios (`test-090-slide-descend`,
+  `test-080-dive-retreat`, `test-060-sweep-width`) are longer than the hand-picked ones they replace.
+  Not fixed here: shortening them would mean either renaming the files further (this task's rename is
+  already a stated, narrow exception to `assets/data/` being `level-designer`'s, and stretching it
+  further to also shorten names was not part of what was asked) or reintroducing a hand-maintained
+  short name (exactly what discovery removes). Left for the project owner to judge on screen.
+- The four unrenamed scenarios (`test-boss`, `test-wave-04`, `test-wave-09`, `test-wave-12`) have no
+  recency signal and always sort after every numbered one. If a future phase wants them interleaved
+  by actual recency, they would need the same `test-NNN-<name>.json` rename this task gave the other
+  ten — a `level-designer` change, not this task's to make unasked.
