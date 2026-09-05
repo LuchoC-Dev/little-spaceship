@@ -1373,3 +1373,61 @@ question this task's own instructions raised does not arise in this content; `ga
 `gh run list` showed both checks green on the tip commit, matching the PR body.
 
 Related: [[audit-techniques]].
+
+## PR #312 (`fix/level-docs-reads-paths`, phase 11k task 1, issue #310) — a tools-only branch, and an asymmetric exit criterion inside a function that reads as symmetric
+
+`tools/build-level-docs.js` only (plus the regenerated `docs/levels/level-01.md` and the status
+fragment) — no `core`/`game`/`desktop`/`web`/`assets/data` diff, so invariants 1-6 are structurally
+out of reach; commit hygiene clean (2 commits, subjects 58/66 chars, no `Co-Authored-By`); both `gh
+run list` rows (`CI`, `PR check`) green on the tip commit, matching the PR body; `pre-pr-check`'s
+pasted output reproduced. Every arithmetic claim checked against `JsonContentSource.java` line for
+line matched exactly: `faster`'s `ay * multiplier²` (confirmed both by reading and by constructing a
+`speedOf` entry in a scratch `cp -r` copy and reading the generated `ay` — 27 → 108 at multiplier 2,
+i.e. ×4, not ×2), `mirror`'s vx-only negation, `parseWaypoints`'s `duration = |B-A|/speed` and
+`vx = dx/duration`, cycle detection (reproduced the exact `a -> b -> a` message on a scratch fixture)
+and order-independence (a `mirrorOf` pointing at an id declared *later* in the file resolved fine on
+a scratch fixture). The claimed pre-existing `same`-shortcut bug is real: `git show
+phase/11k-level-one-rebuilt:tools/build-level-docs.js` shows the old code compared a single `drift`
+field to `0.05`, and the new code compares `swept.min`/`swept.max` against the spawn footprint
+instead — confirmed to change nothing for `constant`/`arc` (their drift is monotonic, so the two
+checks agree) and to fix exactly the case named (a `path` whose legs drift in opposite directions).
+
+68. **A boundary-crossing walk that computes all four playfield edges with one function reads as
+    symmetric and is not: two axes use "fully off" (matching `core`'s own definition) and the other
+    two use "first touch."** `pathSweep`/`crossLeg` (new in this PR) mirror
+    `LifetimeSystem.isFullyOffPlayfield` exactly on the vertical axis — confirmed by their own
+    javadoc's derivation and by hand: `downTarget = -(270 + 2·radius)` is exactly the point at which
+    the *whole* entity's bottom edge clears the screen, matching `y + radius < 0`. But the horizontal
+    checks use `at.min + h` for a *leftward* exit and `at.max + h` for a *rightward* one — the
+    **leading** edge of the formation's footprint in the direction of travel, not the **trailing**
+    one. Reconstructed on two real, shipped fixtures: `test-path-turn`'s `descend-and-turn-left`
+    (`enemy-tank`, radius 10.5, `atX 0.85`) reports `x swept` `0.0..187.3` — the leading (left) edge
+    lands exactly on `0.0`, while the trailing (right) edge, `187.3`, is unchanged from spawn and
+    stays 10.5 units inside the visible screen at the moment the function calls the shape "gone."
+    `test-hold-line`'s `hold-the-line-and-exit` (`enemy-shooter`, radius 6.5, `atX 0.50`) similarly
+    reports `97.5..208.0`, landing exactly on the right edge with the trailing edge (97.5) still 6.5
+    units inside it. The true full-exit time is later by `radius / |vx|` (≈0.09-0.19 s in these two
+    cases) and, worked out by hand for `hold-the-line-and-exit`, actually falls *outside* [0, 208]
+    (swept max ≈ 221), which the current code can never report — because the function returns the
+    instant it finds *any* valid candidate, a path's `min`/`max` can structurally never exceed the
+    playfield bounds via a horizontal exit that starts on-screen, so the `**leaves**` marker (which
+    fires correctly for `constant`/`arc`, whose vertical-only stopping time is independent of the
+    horizontal one and can genuinely run past the width) is dead code for the common case of a
+    `path` that exits sideways from an on-screen spawn. The status fragment discusses, at length and
+    honestly, the *difference* between `path`'s dual-axis convention and `constant`/`arc`'s
+    vertical-only one — but never notices this second, internal asymmetry between the two halves of
+    its own dual-axis check. Reported as "worth arguing with" rather than a blocking defect: nothing
+    in the plan's acceptance criteria defines "on screen" precisely enough to call one convention
+    wrong, and the magnitude is small — but the phase's stated purpose for this document is exactly
+    "every content task after this one reads the numbers it prints to decide how much runway a shape
+    needs," and a systematically short, edge-shaped discrepancy that is invisible because it always
+    lands exactly on the boundary is precisely the shape phase 11j's radius-shaped finding (66) names,
+    one level up: there it was a missing term in a hand derivation, here it is an inconsistent
+    definition inside the tool meant to replace hand derivation. **Technique reused**: derive the
+    number for *both* directions of the same physical exit (leading edge vs. trailing edge) by hand,
+    not just the one direction the function returns — an asymmetry between two branches of one
+    function that both claim to answer "did it leave" is invisible from reading the branch that fires
+    in isolation, and only shows up by asking what the *other* edge of the same entity was doing at
+    the reported moment.
+
+Related: [[audit-techniques]].
