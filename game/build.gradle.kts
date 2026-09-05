@@ -43,6 +43,15 @@ sourceSets {
             java.srcDir("src/teststub/java")
         }
     }
+    // TestScenariosTest (issue #311) exercises TestScenarios directly, so it can only compile
+    // once TestScenarios itself is on the main sourceSet above — added only under the same
+    // property, in its own directory rather than ordinary `src/test/java`, so `./gradlew :game:test`
+    // without `-Ptests` never even tries to compile a reference to a class that does not exist yet.
+    if (testsFlavour) {
+        test {
+            java.srcDir("src/testsTest/java")
+        }
+    }
 }
 
 // Design-time only: regenerates the procedural WAV assets under assets/audio. Never part of
