@@ -345,3 +345,18 @@ here — the absence of findings was earned by checking each claim, not assumed 
   restored — `git status --short` empty both times before moving on.
 
 Related: [[defect-patterns]].
+
+## Update: mutating the audited worktree in place can now be blocked outright
+
+- **The auto-mode permission classifier can refuse an in-place edit of a file inside the repo under
+  audit, even when the plan is to revert it immediately.** Hit this on PR #298 (phase 11j task 2):
+  a `python3 -c` (via heredoc) that opened `game/.../JsonContentSource.java` for in-place mutation in
+  the actual reviewed worktree was denied by the classifier before it ran, independent of the earlier
+  scratchpad-backup workflow above. When this happens, don't negotiate with the classifier or try a
+  different tool to reach the same file — **`cp -r <repo-root> /tmp/<scratch-name>`, mutate and run
+  `./gradlew` entirely inside the copy, then `rm -rf` it.** Proves the identical claim (a mutation
+  reddens exactly the tests the author says) without ever writing to the worktree a reviewer is
+  supposed to leave untouched — cleaner than the scratchpad-backup approach anyway, since there is
+  nothing to restore afterward and no risk of forgetting to. Prefer this over the in-place approach
+  by default now; only fall back to editing in place if disk space or `cp -r` time (a multi-module
+  Gradle tree with a populated `build/` per module can be large) makes the copy impractical.

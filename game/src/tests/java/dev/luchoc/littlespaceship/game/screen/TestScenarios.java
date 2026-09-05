@@ -7,7 +7,8 @@ import java.util.List;
  * table: three waves chosen to exercise the level's range and the boss, chosen to prove a
  * scenario's starting state is configurable; plus four path scenarios added in phase 11i to
  * exercise the {@code path} trajectory vocabulary — a turn, a mirrored pair, a wait and a bounded
- * loop; plus an oscillation scenario added in phase 11j.
+ * loop; plus an oscillation scenario, and the five trajectories phase 11j built for level 1's
+ * redesign to draw on.
  *
  * <p>Each {@link Scenario#levelId()} is a level file under {@code assets/data/} in the existing
  * format — {@code game/adapter/content/JsonContentSource.java} loads it exactly as it loads
@@ -15,8 +16,17 @@ import java.util.List;
  * assumes the naming convention {@code test-wave-04}, {@code test-wave-09}, {@code test-wave-12}
  * and {@code test-boss}, and, for the path scenarios, {@code test-path-turn},
  * {@code test-path-mirror}, {@code test-path-wait}, {@code test-path-loop} and
- * {@code test-path-oscillate}; it does not enforce any of it — if {@code level-designer}'s
+ * {@code test-path-oscillate}; and, for phase 11j's five, {@code test-cross},
+ * {@code test-slide-descend}, {@code test-dive-retreat}, {@code test-hold-line} and
+ * {@code test-sweep-width}; it does not enforce any of it — if {@code level-designer}'s
  * scenario files use different ids, only this list needs to change.
+ *
+ * <p><strong>The prefix of a label names the authoring form the scenario exercises</strong>, not the
+ * word "path" generically: {@code LINE:} for a {@code constant} trajectory, {@code PATH:} for one
+ * written as relative {@code "segments"}, {@code ABS:} for one written as absolute
+ * {@code "waypoints"}. Decided in #301, because {@code test-cross} is a {@code constant} and
+ * labelling it {@code PATH:} would have said what it is not, in the one place the project owner
+ * reads while choosing what to open.
  */
 final class TestScenarios {
 
@@ -36,6 +46,11 @@ final class TestScenarios {
      * individually. Decided in #291.
      */
     static final List<Scenario> ALL = List.of(
+        new Scenario("test-cross", "LINE: CROSS"),
+        new Scenario("test-slide-descend", "PATH: SLIDE"),
+        new Scenario("test-dive-retreat", "PATH: RETREAT"),
+        new Scenario("test-hold-line", "ABS: HOLD LINE"),
+        new Scenario("test-sweep-width", "ABS: SWEEP"),
         new Scenario("test-path-oscillate", "PATH: OSCILLATE"),
         new Scenario("test-path-turn", "PATH: TURN"),
         new Scenario("test-path-mirror", "PATH: MIRROR"),
