@@ -1,11 +1,11 @@
 # Phase 11j — Paths written where they happen, and a speed that does not resize them · status
 
-**State:** **complete on `phase/11j-absolute-paths`, and open as a pull request against `dev`.** Seven issues closed through seven pull requests, all merged into the phase branch on 04–05/09/2026, CI green. **Not merged into `dev`** — that waits on the project owner's direct approval on that pull request, **and on their playing the five new trajectories**, which is this phase's last acceptance criterion and the one no test can stand in for.
+**State:** **complete on `phase/11j-absolute-paths`, and open as a pull request against `dev`.** Eight issues closed through eight pull requests, all merged into the phase branch on 04–05/09/2026, CI green. **The project owner played the five new trajectories on 05/09/2026 and approved them**, and the one defect that session found is fixed and merged. **Not merged into `dev`** — that waits on their direct approval on that pull request.
 **Updated:** 05/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
 
-**Per-task progress does not live here.** It lives in `status/`, one file per task, written by whoever did that task on its own branch. Six fragments.
+**Per-task progress does not live here.** It lives in `status/`, one file per task, written by whoever did that task on its own branch. Seven fragments.
 
 ## Why this phase existed
 
@@ -25,6 +25,7 @@ Their proposal was to keep the system relative underneath and put an absolute fo
 | — | [#291](https://github.com/LuchoC-Dev/little-spaceship/issues/291) | The TESTS menu as a stack, newest first | [#292](https://github.com/LuchoC-Dev/little-spaceship/pull/292) |
 | — | [#293](https://github.com/LuchoC-Dev/little-spaceship/issues/293) | The menu losing its first entry after scrolling | [#295](https://github.com/LuchoC-Dev/little-spaceship/pull/295) |
 | — | [#301](https://github.com/LuchoC-Dev/little-spaceship/issues/301) | The five new scenarios listed in the menu | [#302](https://github.com/LuchoC-Dev/little-spaceship/pull/302) |
+| — | [#305](https://github.com/LuchoC-Dev/little-spaceship/issues/305) | PLAY starting the last test scenario instead of level 1 | [#306](https://github.com/LuchoC-Dev/little-spaceship/pull/306) |
 | — | — | A criterion that needs playing is badly written | [#294](https://github.com/LuchoC-Dev/little-spaceship/pull/294) |
 
 `reviewer` audited the two planned tasks that ran in this session — #298 and #299 — and accepted both, each with corrections applied by the coordinator before merge because the workers were already closed. #287 and the two menu defects were audited by the coordinator; each fragment says which.
@@ -69,11 +70,13 @@ Neither changed a line of JSON or a rule, and both are recorded in their own fra
 - **Whether `tools/pre-pr-check` should run `node tools/build-level-docs.js`.** Carried from 11i, where four red runs proved the gap. It did not bite this phase: task 3 regenerated, and the generator prints `unchanged` for both documents on the closing tree.
 - **Whether the TESTS list should be discovered from `assets/data/test-*.json`.** The plan asked whether this phase changed that arithmetic. **It did.** Nine entries became fourteen; a content task shipped five scenarios it could not list, needing [#301](https://github.com/LuchoC-Dev/little-spaceship/issues/301) — a whole issue, branch and pull request in a second module to finish work already done. And **no test can cover the list**: `TestScenarios` lives only in the `-Ptests` source set, which `game`'s test source set is not compiled against, so "every id in `ALL` has a file" had to be run by hand as a shell loop. Three costs measured now, not one.
 
-## What has not been checked, and by whom it must be
+## Verified by the project owner
 
-**The project owner has not played the five new trajectories.** Every mechanical criterion passes — `./gradlew build`, CI, the document generator printing `unchanged`, the traced geometry test, the fourteen menu ids each resolving to a file. **None of that is the criterion.** Whether the shapes read the way their descriptions say they do is the owner's verdict, and this phase itself wrote the rule that says so: `how-to-run-a-phase.md`'s "And the half that is the coordinator's", added after 11j broke the no-playing rule twice — the second time because a coordinator wrote a criterion that could not be met without scrolling a menu.
+**Played on 05/09/2026 and approved.** All five new trajectories — `LINE: CROSS`, `PATH: SLIDE`, `PATH: RETREAT`, `ABS: HOLD LINE` and `ABS: SWEEP` — behave correctly. That verdict is the phase's last acceptance criterion, and no test stands in for it.
 
-Open the game with `-Ptests` and look at `LINE: CROSS`, `PATH: SLIDE`, `PATH: RETREAT`, `ABS: HOLD LINE` and `ABS: SWEEP`, at the top of the TESTS menu. `status/297-level-one-trajectories.md` says what each should look like, written from the JSON rather than from intent — that file is what the screen is checked against.
+**The session found one defect, and it was not in a trajectory.** After opening a scenario and returning to the menu, PLAY started that scenario again instead of level 1: `overrideLevelId` set `levelIdOverride` and nothing ever cleared it, a lifetime its own javadoc stated as a fact — *"for the rest of this run"*. Fixed in [#306](https://github.com/LuchoC-Dev/little-spaceship/pull/306) by clearing it when the main menu is entered, which is the broader boundary and also covers a scenario left behind by defeat or victory. **It never touched a build that reaches a player**: `overrideLevelId` is called only from `TestMenuScreen`, which exists only in the `-Ptests` source set.
+
+**They also asked why no new trajectory appears while playing.** None does, by design: the plan puts level 1 explicitly out of scope, and the phase's diff removes no line from `trajectories.json` or `waves.json` and does not touch `level-01.json`. The seven live in the file and are reachable only from the TESTS menu until **11k** rebuilds the level on them. Worth recording because it is the obvious thing to mistake for a missing deliverable, and the next reader will wonder the same.
 
 ## What comes after
 
