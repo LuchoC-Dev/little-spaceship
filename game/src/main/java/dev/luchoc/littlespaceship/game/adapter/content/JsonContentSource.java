@@ -307,8 +307,10 @@ public final class JsonContentSource implements ContentSource {
      * PathTrajectoryDefinition}'s own constructor, so a last segment at rest is still refused —
      * multiplying a zero velocity by anything leaves it zero, so a path that ends at rest cannot be
      * laundered into a legal one by going through {@code "speedOf"}. Conversely an absurd multiplier
-     * that underflows a duration to zero is refused by {@link PathSegment}, and {@link
-     * #resolveDerived} wraps the failure with the derived id.
+     * is refused by {@link PathSegment}, which checks both a segment's velocities and its duration —
+     * and it is a velocity that gives way first: at any velocity worth authoring, {@code vy *
+     * multiplier} overflows to infinity long before {@code duration / multiplier} could underflow to
+     * exact zero. {@link #resolveDerived} wraps whichever failure fires with the derived id.
      */
     private static TrajectoryDefinition faster(
         String id, TrajectoryDefinition original, float multiplier) {

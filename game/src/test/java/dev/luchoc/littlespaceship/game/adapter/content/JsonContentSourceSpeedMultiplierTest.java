@@ -450,11 +450,14 @@ final class JsonContentSourceSpeedMultiplierTest {
     }
 
     /**
-     * An absurd multiplier underflows a segment's duration to zero, which {@link PathSegment} refuses
-     * — and the failure still names the derived id, not just the arithmetic.
+     * An absurd multiplier pushes a segment out of {@code float}'s range, which {@link PathSegment}
+     * refuses — and the failure still names the derived id, not just the arithmetic. It is the
+     * <em>velocity</em> that gives way: with these numbers {@code vy * multiplier} is -9e39, which
+     * overflows to negative infinity, while {@code duration / multiplier} is 3.33e-39 — subnormal,
+     * but not zero. Naming duration here would name a guard that never fires.
      */
     @Test
-    void aMultiplierThatUnderflowsASegmentDurationFailsNamingTheDerivedId() {
+    void aMultiplierThatPushesASegmentOutOfFloatsRangeFailsNamingTheDerivedId() {
         assertFailsNaming("blink", """
             {
               "trajectories": [

@@ -110,3 +110,29 @@ a wait and lasts `s/k` — zero velocity times anything is zero.
   for free.
 - **An absolute (`waypoints`) path sped up inherits #287's unresolved cost unchanged**: its
   coordinates only mean what they say at `atX = 0`. Nothing here makes that better or worse.
+
+## Corrected by the coordinator after review, before merge
+
+`reviewer` accepted this branch with one finding, and the correction is the coordinator's because the
+worker was already closed. It is prose in two files, no behaviour changed.
+
+`faster()`'s javadoc and the test then called
+`aMultiplierThatUnderflowsASegmentDurationFailsNamingTheDerivedId` both said an absurd multiplier is
+refused because it **underflows a duration to zero**. It is not. With that test's own numbers —
+`vy = -30`, `multiplier = 3e38` — `vy * multiplier` is `-9e39`, which overflows to negative infinity
+and trips `PathSegment`'s finiteness check on the **velocity**, while `duration / multiplier` is
+`3.33e-39`: subnormal, and not zero. `reviewer` reproduced this by constructing a `PathSegment`
+directly in a scratch copy; the coordinator re-derived the arithmetic before applying the fix.
+
+The guard named was one that, at any velocity worth authoring, never fires. **The observable
+behaviour was always right** — it fails, and it names the file and the derived id — so this changed
+no test's assertion, only what the test and the javadoc claim about *why*. The test is now
+`aMultiplierThatPushesASegmentOutOfFloatsRangeFailsNamingTheDerivedId`, and both places say the
+velocity gives way first.
+
+Worth noting where the wrong claim came from: the syntax comment posted on
+[#296](https://github.com/LuchoC-Dev/little-spaceship/issues/296) hedged it correctly — "a velocity
+**or** a duration out of range". The narrower, wrong version appeared only when it was written into
+the code.
+
+`./gradlew :game:test --tests '*SpeedMultiplier*'` after the change: green.
