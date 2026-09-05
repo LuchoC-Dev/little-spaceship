@@ -1,6 +1,6 @@
 # Phase 11j — Paths written where they happen, and a speed that does not resize them · status
 
-**State:** **complete on `phase/11j-absolute-paths`, and open as a pull request against `dev`.** Eight issues closed through eight pull requests, all merged into the phase branch on 04–05/09/2026, CI green. **The project owner played the five new trajectories on 05/09/2026 and approved them**, and the one defect that session found is fixed and merged. **Not merged into `dev`** — that waits on their direct approval on that pull request.
+**State:** **done, and on `dev`.** Merged in [#304](https://github.com/LuchoC-Dev/little-spaceship/pull/304) on 05/09/2026, with the project owner's direct approval. Eight issues closed through eight pull requests, CI green. **The project owner played the five new trajectories and approved them**, and the one defect that session found is fixed and merged.
 **Updated:** 05/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the phase's opening and at its close.
