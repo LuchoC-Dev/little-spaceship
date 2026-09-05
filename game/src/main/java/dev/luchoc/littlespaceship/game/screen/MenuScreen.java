@@ -18,6 +18,10 @@ public final class MenuScreen extends BaseUiScreen {
 
     public MenuScreen(LittleSpaceshipGame game) {
         super(game, "LITTLE SPACESHIP");
+        // Entering the main menu ends whatever scenario TESTS started, so PLAY always starts the
+        // campaign level, not the last scenario opened. A no-op outside the -Ptests flavour, since
+        // the override is already always null there — see issue #305.
+        game.clearLevelIdOverride();
         content.top().left();
 
         Label subtitle = new Label(
