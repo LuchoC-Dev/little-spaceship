@@ -87,9 +87,31 @@ N times" line under each wave below is where to check.
 { "trajectories": [
   { "id": "slow-descent", "vx": 0, "vy": -18 },
                                   // no "type": a constant velocity, units per second, y up
-  { "id": "strike-run", "type": "arc", "vx": 0, "vy": -110, "ay": 27 }
+  { "id": "strike-run", "type": "arc", "vx": 0, "vy": -110, "ay": 27 },
                                   // "type":"arc" adds "ay", and only then. It turns after
                                   //   -vy/ay seconds and bottoms out vy^2/(2*ay) below spawn
+  { "id": "turn-out", "type": "path",
+    "segments": [ { "vx": 0, "vy": -45, "duration": 3.0 },
+                  { "wait": 1.0 },
+                  { "vx": -55, "vy": 0, "duration": 6.0 } ] },
+                                  // "segments": velocity held for a duration, leg after leg;
+                                  //   {"wait": s} is a leg with no velocity. Optional "loopStart"
+                                  //   / "loopCount" repeat a trailing range; the last leg (the
+                                  //   last of the repeated range, if there is one) must move —
+                                  //   a path that ends at rest is refused at load
+  { "id": "hold-then-slide", "type": "path",
+    "waypoints": [ { "x": 104, "y": 270 }, { "x": 104, "y": 190, "speed": 45 },
+                   { "x": 208, "y": 190, "speed": 70 } ] },
+                                  // "waypoints": destinations and a speed instead of a velocity
+                                  //   and a duration — "segments" and "waypoints" are mutually
+                                  //   exclusive on one entry. ABSOLUTE: the first waypoint is
+                                  //   the authoring origin, not a position the engine reads —
+                                  //   the wave placing this must use atX = (that x) / 208
+  { "id": "cross-right", "mirrorOf": "cross-left" },
+                                  // negates every horizontal component of "cross-left"
+  { "id": "dive-fast", "speedOf": "dive", "multiplier": 1.5 }
+                                  // the same shape traversed 1.5x sooner — velocities scale by
+                                  //   the multiplier, and an arc's "ay" by its square
 ] }
 ```
 
@@ -375,7 +397,10 @@ no-op (`core/domain/system/DamageSystem.java`).
 
 **screen time** is `(270 + radius) / |vy|`: the playfield height (`core/domain/system/SpawnSystem.java:92`) plus the
 radius the entity spawns above the edge (`SpawnSystem.positionSpawned`). It is `varies` on an
-`arc`, whose speed changes as it flies.
+`arc`, whose speed changes as it flies, and on a `path` for the same reason plus one more: this
+table has no spawn to measure a `path` from, so it cannot say where a horizontal leg would carry
+it off the sides. A `path`'s real screen time, for the spawn it is actually placed at, is the
+"x swept" column above.
 
 **shots per pass** is `1 + floor((screen time - firstShotDelay) / rate)`, and it is the number
 that matters: an archetype whose rate exceeds its screen time fires once whatever the rate says.
@@ -390,15 +415,15 @@ the lever stays visible.
 Only the shapes this level reaches. The full catalogue, including the eight shapes that were
 refused and why, is `docs/plan/11c-movement-shapes/shape-catalogue.md`.
 
-| shape | kind | vx | vy | ay | turns after | apex depth |
-|---|---|---|---|---|---|---|
-| `slow-descent` | `constant` | 0.0 | -18.0 | — | — | — |
-| `swoop` | `constant` | -10.0 | -40.0 | — | — | — |
-| `crawl` | `constant` | 0.0 | -9.0 | — | — | — |
-| `dive` | `constant` | 0.0 | -80.0 | — | — | — |
-| `strike-run` | `arc` | 0.0 | -110.0 | 27.0 | 4.1 s | 224.1 below spawn |
-| `veer-left` | `arc` | -32.0 | -95.0 | 20.0 | 4.8 s | 225.6 below spawn |
-| `veer-right` | `arc` | 32.0 | -95.0 | 20.0 | 4.8 s | 225.6 below spawn |
+| shape | kind | vx | vy | ay | turns after | apex depth | legs (path only) |
+|---|---|---|---|---|---|---|---|
+| `slow-descent` | `constant` | 0.0 | -18.0 | — | — | — | — |
+| `swoop` | `constant` | -10.0 | -40.0 | — | — | — | — |
+| `crawl` | `constant` | 0.0 | -9.0 | — | — | — | — |
+| `dive` | `constant` | 0.0 | -80.0 | — | — | — | — |
+| `strike-run` | `arc` | 0.0 | -110.0 | 27.0 | 4.1 s | 224.1 below spawn | — |
+| `veer-left` | `arc` | -32.0 | -95.0 | 20.0 | 4.8 s | 225.6 below spawn | — |
+| `veer-right` | `arc` | 32.0 | -95.0 | 20.0 | 4.8 s | 225.6 below spawn | — |
 
 An `arc` turns at `-vy / ay` and bottoms out `vy² / (2·ay)` below where it spawned, evaluated in
 closed form from the entity's own elapsed time (`core/port/ArcTrajectoryDefinition.java`).
