@@ -435,13 +435,22 @@ function pathLegSummary(t) {
  * i.e. `d > 0`) — the same symmetry `arcPlayfieldTime`'s "up" root already uses. Left/right compare
  * the footprint's own edges against `0`/`width`, not a bare point, because a formation with slot
  * offsets is wider than its anchor.
+ *
+ * **The horizontal checks use the trailing edge of the footprint, not the leading one** — the edge
+ * that clears the boundary *last*, matching `isFullyOffPlayfield`'s own "every pixel has left"
+ * criterion (`x + radius < 0`, `x - radius > width`, both stated against the far side of the
+ * circle from the direction of travel). Moving left (`vx < 0`), the footprint's rightmost edge
+ * (`at.max`) is the one still on screen after the leftmost edge has already crossed `0`, so it is
+ * `at.max + h` that must reach `0`. Moving right, symmetrically, it is the leftmost edge (`at.min`)
+ * that lags behind and must reach `width`. Checking the near edge instead (`at.min` going left,
+ * `at.max` going right) reports "first touches the boundary", not "fully gone" — issue #314.
  */
 function crossLeg(leg, d, h, downTarget, at, width) {
   const candidates = [];
   if (leg.vy < 0 && d > downTarget) candidates.push((downTarget - d) / leg.vy);
   if (leg.vy > 0 && d < 0) candidates.push((0 - d) / leg.vy);
-  if (leg.vx < 0 && at.min + h > 0) candidates.push((0 - (at.min + h)) / leg.vx);
-  if (leg.vx > 0 && at.max + h < width) candidates.push((width - (at.max + h)) / leg.vx);
+  if (leg.vx < 0 && at.max + h > 0) candidates.push((0 - (at.max + h)) / leg.vx);
+  if (leg.vx > 0 && at.min + h < width) candidates.push((width - (at.min + h)) / leg.vx);
   const valid = candidates.filter((tau) => tau >= 0 && tau <= leg.duration + 1e-9);
   const hEnd = h + leg.vx * leg.duration;
   const dEnd = d + leg.vy * leg.duration;
@@ -498,8 +507,8 @@ function pathSweep(traj, radius, at) {
   const candidates = [];
   if (last.vy < 0) candidates.push((downTarget - d) / last.vy);
   if (last.vy > 0) candidates.push((0 - d) / last.vy);
-  if (last.vx < 0) candidates.push((0 - (at.min + h)) / last.vx);
-  if (last.vx > 0) candidates.push((width - (at.max + h)) / last.vx);
+  if (last.vx < 0) candidates.push((0 - (at.max + h)) / last.vx);
+  if (last.vx > 0) candidates.push((width - (at.min + h)) / last.vx);
   // Unreachable in practice: rule 3 (a path's last segment has nonzero velocity) guarantees at
   // least one candidate above. Falling through would mean rule 3 no longer holds for this content.
   const tau = candidates.length ? Math.min(...candidates) : 0;
