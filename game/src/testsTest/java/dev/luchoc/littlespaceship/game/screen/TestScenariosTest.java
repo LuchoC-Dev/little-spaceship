@@ -95,6 +95,26 @@ final class TestScenariosTest {
         assertEquals("SLIDE DESCEND", labelOf("test-090-slide-descend"));
     }
 
+    /**
+     * `reviewer`'s finding on #313: {@code \d+} bounds no digit count, so a number too large for
+     * {@code int} matched the pattern and then overflowed {@code Integer#valueOf} inside {@code
+     * discover}'s own sort comparator, with no {@code try/catch} anywhere between it and {@link
+     * TestMenuScreen}'s constructor — one malformed file name crashed the whole menu rather than
+     * just losing its own recency rank. The real case is a future {@code level-designer} typo, not
+     * this exact digit string.
+     */
+    @Test
+    void anOversizedRecencyNumberSortsAsUnnumberedRatherThanThrowing() throws IOException {
+        writeLevel("test-99999999999999999999-name", "{ \"waves\": [] }");
+        writeLevel("test-010-real", "{ \"waves\": [] }");
+        writeTrajectories("{ \"trajectories\": [] }");
+
+        List<Scenario> scenarios = TestScenarios.discover(dataDir());
+
+        assertEquals(List.of("test-010-real", "test-99999999999999999999-name"),
+            scenarios.stream().map(Scenario::levelId).toList());
+    }
+
     @Test
     void aLevelWithABossIsLabelledBoss() throws IOException {
         writeLevel("test-boss", "{ \"boss\": { \"id\": \"b\" }, \"waves\": [] }");

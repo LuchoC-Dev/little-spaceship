@@ -76,10 +76,15 @@ import java.util.regex.Pattern;
  * override (an ordinary wave, or a boss with none) falls back to its id, and {@code "boss"} present
  * at the top of the level file is always labelled {@code BOSS} outright.
  *
- * <p>Label derivation is deliberately lenient: it never throws. A malformed or missing reference
- * yields the generic id-derived label instead of failing the whole menu, because the actual content
- * is validated for real, loudly, by {@code JsonContentSource} the moment a scenario is opened — this
- * class only decides what to print on a button before that happens.
+ * <p><strong>{@link #labelFor} is deliberately lenient: it never throws.</strong> A malformed or
+ * missing reference yields the generic id-derived label instead of failing the whole menu, because
+ * the actual content is validated for real, loudly, by {@code JsonContentSource} the moment a
+ * scenario is opened — this class only decides what to print on a button before that happens. The
+ * same guarantee holds for {@link #rankOf}, for the same reason, even though it decides sort order
+ * rather than label text and so has no {@code try/catch} of {@code labelFor}'s own: an oversized
+ * {@code NNN} (more digits than {@code int} holds) is treated exactly like no number at all rather
+ * than thrown, because one malformed file name must not crash {@link TestMenuScreen}'s constructor
+ * for every scenario, not just cost the one file its recency rank.
  */
 final class TestScenarios {
 
@@ -145,10 +150,25 @@ final class TestScenarios {
         return a.levelId().compareTo(b.levelId());
     }
 
-    /** The {@code NNN} in {@code test-NNN-<name>}, or {@code null} if {@code levelId} carries none. */
+    /**
+     * The {@code NNN} in {@code test-NNN-<name>}, or {@code null} if {@code levelId} carries none —
+     * including a number too large for {@code int}, treated exactly like no number at all rather than
+     * thrown. {@link Pattern#compile}'s {@code \d+} bounds the digit count in no way, so a scenario
+     * named e.g. {@code test-99999999999999999999-name.json} matches the pattern but overflows
+     * {@link Integer#valueOf}; this decides sort order, not label text, so it has no {@code labelFor}
+     * of its own to catch it, and a level-designer typo here must not take the whole menu down with
+     * it — {@link #discover} has no guard around this call.
+     */
     private static Integer rankOf(String levelId) {
         Matcher matcher = NUMBERED.matcher(levelId);
-        return matcher.matches() ? Integer.valueOf(matcher.group(1)) : null;
+        if (!matcher.matches()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(matcher.group(1));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static String labelFor(FileHandle dataDir, String levelId) {
