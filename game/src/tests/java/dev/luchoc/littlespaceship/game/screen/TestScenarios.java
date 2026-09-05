@@ -5,12 +5,13 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * The named scenarios {@link TestMenuScreen} lists, discovered from {@code assets/data/test-*.json}
@@ -35,13 +36,26 @@ import java.util.Set;
  * on the web target, discovery needs to move to build time (a generated source, the way the level
  * documents are generated) rather than trusting this backend's {@code list()} at run time.
  *
- * <p><strong>Order is alphabetical by level id, ascending</strong> — not the hand-curated
- * "newest first" stack #291 decided, which needed a human choosing where a new entry lands and has
- * no equivalent once the list is discovered rather than typed. {@code FileHandle#list()}'s own order
- * is the underlying filesystem's, which is exactly the non-determinism invariant 2 forbids ("the core
- * never reads the clock" extends in spirit to "this list never depends on the disk"), so the result is
- * always sorted by {@link Scenario#levelId()} before use, regardless of what order {@code list()}
- * handed back.
+ * <p><strong>#291's stack survives: newest first, ruled by the project owner on the ordering
+ * question this class first answered with a plain alphabetical sort — that answer did not satisfy
+ * #291 and was replaced.</strong> Nothing about a filesystem listing carries "when was this added" in
+ * any form this project can read deterministically (file modification time resets to checkout time on
+ * a fresh clone), so the signal is carried by the file name instead: a scenario meant to sort by
+ * recency is named {@code test-NNN-<name>.json}, where {@code NNN} is a number chosen when the file is
+ * authored and left with gaps so a later scenario can be inserted between two existing ones without
+ * renaming anything. {@link #rankOf} reads that number back out, and {@link #discover} sorts
+ * numbered scenarios by it, descending — the highest number, the most recently authored, first,
+ * exactly as the old hand-ordered stack put its newest entry on top.
+ *
+ * <p><strong>A level id with no {@code NNN} in it is not dropped and not placed arbitrarily.</strong>
+ * It carries no recency signal at all, so it cannot be interleaved with the numbered ones by any rule
+ * that would not be inventing an answer this class has no basis for; instead every such scenario
+ * sorts after every numbered one, and the unnumbered scenarios sort among themselves alphabetically by
+ * level id, for the same determinism reason the numbered ones are read from the name rather than the
+ * disk. {@code test-boss}, {@code test-wave-04}, {@code test-wave-09} and {@code test-wave-12} are
+ * today's only examples — the batch phase 11h authored before this ordering convention existed —
+ * and {@link TestScenariosTest} pins this exact case with real-shaped fixtures, not just a
+ * hypothetical one.
  *
  * <p>Each {@link Scenario#levelId()} is a level file under {@code assets/data/} in the existing
  * format — {@code game/adapter/content/JsonContentSource.java} loads it exactly as it loads
@@ -78,6 +92,9 @@ final class TestScenarios {
 
     private static final String PREFIX = "test-";
 
+    /** {@code test-<digits>-<name>}: the digits are the recency rank, the rest is the display name. */
+    private static final Pattern NUMBERED = Pattern.compile("^test-(\\d+)-(.+)$");
+
     /**
      * Discovers the scenario list against the real asset tree. A method, not a cached static field:
      * a static field's initializer runs the moment the class is loaded, which happens the moment
@@ -103,8 +120,35 @@ final class TestScenarios {
                 scenarios.add(new Scenario(levelId, labelFor(dataDir, levelId)));
             }
         }
-        scenarios.sort(Comparator.comparing(Scenario::levelId));
+        scenarios.sort(TestScenarios::compareByRecency);
         return List.copyOf(scenarios);
+    }
+
+    /**
+     * Numbered scenarios first, highest number (most recently authored) first; unnumbered scenarios
+     * after every numbered one, and alphabetically among themselves — see this class's own javadoc
+     * for why an unnumbered id cannot be interleaved with the numbered ones by any rule this class has
+     * a basis for.
+     */
+    private static int compareByRecency(Scenario a, Scenario b) {
+        Integer rankA = rankOf(a.levelId());
+        Integer rankB = rankOf(b.levelId());
+        if (rankA != null && rankB != null) {
+            return Integer.compare(rankB, rankA);
+        }
+        if (rankA != null) {
+            return -1;
+        }
+        if (rankB != null) {
+            return 1;
+        }
+        return a.levelId().compareTo(b.levelId());
+    }
+
+    /** The {@code NNN} in {@code test-NNN-<name>}, or {@code null} if {@code levelId} carries none. */
+    private static Integer rankOf(String levelId) {
+        Matcher matcher = NUMBERED.matcher(levelId);
+        return matcher.matches() ? Integer.valueOf(matcher.group(1)) : null;
     }
 
     private static String labelFor(FileHandle dataDir, String levelId) {
@@ -127,11 +171,17 @@ final class TestScenarios {
         }
     }
 
-    /** {@code "test-slide-descend"} becomes {@code "SLIDE DESCEND"}. */
+    /**
+     * {@code "test-090-slide-descend"} becomes {@code "SLIDE DESCEND"} — the recency number is a
+     * sorting key, not part of what the project owner reads on the button, so {@link #rankOf}'s own
+     * pattern strips it before the rest of this method runs. {@code "test-boss"}, which carries no
+     * number, is unaffected and simply loses its {@code "test-"} prefix as before.
+     */
     private static String fallbackName(String levelId) {
-        String withoutPrefix = levelId.startsWith(PREFIX)
-            ? levelId.substring(PREFIX.length())
-            : levelId;
+        Matcher numbered = NUMBERED.matcher(levelId);
+        String withoutPrefix = numbered.matches()
+            ? numbered.group(2)
+            : levelId.startsWith(PREFIX) ? levelId.substring(PREFIX.length()) : levelId;
         return withoutPrefix.replace('-', ' ').toUpperCase();
     }
 

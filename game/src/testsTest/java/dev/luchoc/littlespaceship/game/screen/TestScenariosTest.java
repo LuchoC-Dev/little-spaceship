@@ -18,6 +18,12 @@ import org.junit.jupiter.api.io.TempDir;
  * the label each entry gets. Only the discovery mechanism itself is exercised here, against a fixture
  * directory, never against the real {@code assets/data} — the game's own content is {@code
  * level-designer}'s, not this test's business.
+ *
+ * <p>The ordering rule the project owner settled on — {@code test-NNN-<name>.json}, sorted by
+ * {@code NNN} descending, an unnumbered id sorting after every numbered one and alphabetically among
+ * its own kind — is pinned here with synthetic fixtures shaped like the real ones: a file with no
+ * number at all is exactly the case {@code test-boss}/{@code test-wave-04}/{@code test-wave-09}/
+ * {@code test-wave-12} are today, the batch phase 11h authored before this convention existed.
  */
 final class TestScenariosTest {
 
@@ -38,7 +44,7 @@ final class TestScenariosTest {
     }
 
     @Test
-    void ordersAlphabeticallyByLevelIdRegardlessOfCreationOrder() throws IOException {
+    void unnumberedScenariosSortAlphabeticallyAmongThemselves() throws IOException {
         writeLevel("test-zebra", "{ \"waves\": [] }");
         writeLevel("test-apple", "{ \"waves\": [] }");
         writeLevel("test-mango", "{ \"waves\": [] }");
@@ -48,6 +54,45 @@ final class TestScenariosTest {
 
         assertEquals(List.of("test-apple", "test-mango", "test-zebra"),
             scenarios.stream().map(Scenario::levelId).toList());
+    }
+
+    @Test
+    void numberedScenariosSortByRankDescendingRegardlessOfCreationOrder() throws IOException {
+        // Written out of order on purpose: the number in the name decides the order, not the
+        // sequence these files happen to be created in, and not alphabetical order either — "020"
+        // sorts after "100" alphabetically but must come first here.
+        writeLevel("test-020-second", "{ \"waves\": [] }");
+        writeLevel("test-100-newest", "{ \"waves\": [] }");
+        writeLevel("test-010-oldest", "{ \"waves\": [] }");
+        writeTrajectories("{ \"trajectories\": [] }");
+
+        List<Scenario> scenarios = TestScenarios.discover(dataDir());
+
+        assertEquals(List.of("test-100-newest", "test-020-second", "test-010-oldest"),
+            scenarios.stream().map(Scenario::levelId).toList());
+    }
+
+    @Test
+    void numberedScenariosSortBeforeEveryUnnumberedOne() throws IOException {
+        // "test-a" would sort before "test-010-x" alphabetically; it must not once one of them
+        // carries a recency number and the other does not — a file with no signal at all is never
+        // interleaved with ones that have it, real or synthetic.
+        writeLevel("test-a", "{ \"waves\": [] }");
+        writeLevel("test-010-x", "{ \"waves\": [] }");
+        writeTrajectories("{ \"trajectories\": [] }");
+
+        List<Scenario> scenarios = TestScenarios.discover(dataDir());
+
+        assertEquals(List.of("test-010-x", "test-a"),
+            scenarios.stream().map(Scenario::levelId).toList());
+    }
+
+    @Test
+    void aNumberedScenarioLosesItsRecencyNumberFromTheLabel() throws IOException {
+        writeLevel("test-090-slide-descend", "{ \"waves\": [] }");
+        writeTrajectories("{ \"trajectories\": [] }");
+
+        assertEquals("SLIDE DESCEND", labelOf("test-090-slide-descend"));
     }
 
     @Test
