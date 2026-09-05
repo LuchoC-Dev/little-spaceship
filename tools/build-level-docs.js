@@ -151,7 +151,13 @@ function parseTrajectoryEntry(entry, id) {
       : resolveWaypointsField(entry.waypoints, id);
     const loopStart = entry.loopStart !== undefined ? entry.loopStart : segments.length;
     const loopCount = entry.loopCount !== undefined ? entry.loopCount : 1;
-    return { id, kind: 'path', segments, loopStart, loopCount };
+    const result = { id, kind: 'path', segments, loopStart, loopCount };
+    // Only a `waypoints`-authored path carries an authoring origin — `segments` is written as
+    // deltas from wherever it is placed and has no absolute position to check against. `entryX` is
+    // the first waypoint's `x`, the value `atX * 208` must equal for this path to land where it was
+    // written for (see requiredAtXFor / the atX check in section 13).
+    if (hasWaypoints) result.entryX = entry.waypoints[0].x;
+    return result;
   }
   return die(`assets/data/trajectories.json: trajectory '${id}' has an unknown type '${type}'`);
 }
@@ -195,17 +201,26 @@ function resolveWaypointsField(waypointsValue, id) {
 /**
  * Builds the mirror of an already-resolved trajectory: negate every horizontal component, keep every
  * vertical field and every duration or loop parameter. Mirrors `JsonContentSource.mirror`.
+ *
+ * **An absolute path's `entryX` mirrors too, and not by negation** — negating a coordinate is not
+ * reflecting it. Mirroring reflects the whole path across the playfield's own centre, so the mirrored
+ * entry point is `width - entryX`, the same reflection 11j's shipped mirror pairs already show:
+ * `descend-and-turn-left`/`-right` sit at `atX 0.85`/`0.15`, and `0.85 + 0.15 = 1.00`. A path mirrored
+ * from a relative (`segments`-authored) one carries no `entryX` and stays that way — there is nothing
+ * absolute to reflect.
  */
 function mirrorTrajectory(id, t) {
   if (t.kind === 'constant') return { id, kind: 'constant', vx: -t.vx, vy: t.vy };
   if (t.kind === 'arc') return { id, kind: 'arc', vx: -t.vx, vy: t.vy, ay: t.ay };
-  return {
+  const result = {
     id,
     kind: 'path',
     segments: t.segments.map((s) => ({ vx: -s.vx, vy: s.vy, duration: s.duration })),
     loopStart: t.loopStart,
     loopCount: t.loopCount,
   };
+  if (t.entryX !== undefined) result.entryX = CODE.playfieldWidth.value - t.entryX;
+  return result;
 }
 
 /**
@@ -222,7 +237,7 @@ function fasterTrajectory(id, t, multiplier) {
       id, kind: 'arc', vx: t.vx * multiplier, vy: t.vy * multiplier, ay: t.ay * multiplier * multiplier,
     };
   }
-  return {
+  const result = {
     id,
     kind: 'path',
     segments: t.segments.map((s) => (
@@ -230,6 +245,10 @@ function fasterTrajectory(id, t, multiplier) {
     loopStart: t.loopStart,
     loopCount: t.loopCount,
   };
+  // Scaling speed does not move the entry point — same reasoning as leaving `ay`'s sign or a
+  // `constant`'s direction alone, just for a field this function otherwise never touches.
+  if (t.entryX !== undefined) result.entryX = t.entryX;
+  return result;
 }
 
 /**
@@ -342,6 +361,30 @@ function footprint(spawn, enemy, formations) {
     max = Math.max(max, anchor + slot.offsetX + radius);
   }
   return { min, max, offScreen: min < 0 || max > CODE.playfieldWidth.value };
+}
+
+/**
+ * How far a spawn's `atX * 208` may sit from an absolute path's authoring origin before it is a
+ * misplacement rather than authoring noise. Issue #300.
+ *
+ * `atX` is authored to two decimals, so the closest it can land to a given `entryX` by rounding
+ * alone is half of one hundredth of the playfield width: `208 * 0.005 = 1.04` screen units. Anything
+ * past that is not rounding — it is a different number. `1.1` gives that a little headroom without
+ * widening it enough to miss a real one-hundredth-of-`atX` mistake, which would be at least `2.08`
+ * units away.
+ */
+const ATX_TOLERANCE_PX = 1.1;
+
+/**
+ * The `atX` an absolutely-authored `path` requires, or `null` for anything else — a `constant`, an
+ * `arc`, or a `path` authored with `segments`, which is written as deltas from wherever it is placed
+ * and has no absolute position to be checked against. `SpawnSystem.positionSpawned` puts the anchor
+ * at `atX * 208` and an absolute path only ever adds deltas to that, so the entry waypoint's `x` is
+ * the position the wave's `atX` must reproduce, not a position `core` itself reads.
+ */
+function requiredAtX(traj) {
+  if (traj.kind !== 'path' || traj.entryX === undefined) return null;
+  return traj.entryX / CODE.playfieldWidth.value;
 }
 
 /**
@@ -1215,6 +1258,7 @@ function buildLevel(levelFile, content) {
     'a spawn whose `at` is past its wave’s duration, which never fires',
     'a formation whose extent at the spawn instant leaves `0 .. 208`',
     '**a spawn whose swept extent is mostly outside `0 .. 208`**, which the spawn-instant extent cannot see, and the veer-side rule when a veer is the cause',
+    '**an absolutely-authored path (`waypoints`) placed at an `atX` that does not reproduce its entry waypoint**, within the rounding a two-decimal `atX` can introduce',
     'a `dropSlot` past its formation’s slot count',
     'a drop kind outside the six',
     'a `cleared` wave holding a shape that never leaves the playfield, so it can never end',
@@ -1233,6 +1277,7 @@ function buildLevel(levelFile, content) {
         findings.push(`\`${wave.id}\`: a spawn at ${s1(sp.at)} s never fires — the wave ends at ${s1(wave.end.seconds)} s. \`SpawnSystem.spawnDue\` only advances the cursor while the wave is active.`);
       }
       const enemy = resolve(enemies, sp.spawn, 'archetype', 'the checks section');
+      const t = resolve(trajectories, trajectoryOf(sp, enemy).id, 'trajectory', 'the checks section');
       const fp = footprint(sp, enemy, formations);
       if (fp.offScreen) {
         findings.push(`\`${wave.id}\`: \`${sp.spawn}\` in \`${sp.formation}\` at \`atX ${s2(sp.atX)}\` occupies ${s1(fp.min)} .. ${s1(fp.max)}, outside 0 .. ${CODE.playfieldWidth.value}. Nothing clamps it.`);
@@ -1241,7 +1286,6 @@ function buildLevel(levelFile, content) {
       // and spends its whole arc off screen; `l1-finale-a`'s swoop at 2.0 s is a real, milder case.
       const swept = sweptExtent(sp, enemy, formations, trajectories);
       if (swept.offScreen && swept.outsideFraction >= 0.5) {
-        const t = resolve(trajectories, trajectoryOf(sp, enemy).id, 'trajectory', 'the checks section');
         // The veer-side rule is the catalogue's and it is about the veers, which are the arcs that
         // carry a vx — not about any shape that happens to drift. `swoop` drifts by design.
         const veer = t.kind === 'arc' && t.vx > 0 && sp.atX > 0.25
@@ -1251,6 +1295,14 @@ function buildLevel(levelFile, content) {
             : '';
         findings.push(`\`${wave.id}\`: \`${sp.spawn}\` in \`${sp.formation}\` at \`atX ${s2(sp.atX)}\` on \`${t.id}\` sweeps ${s1(swept.min)} .. ${s1(swept.max)} over ${s1(swept.seconds)} s in the playfield — about ${Math.round(swept.outsideFraction * 100)}% of that width is outside 0 .. ${CODE.playfieldWidth.value}. It reads in range at the spawn instant and is not.${veer}`);
       }
+      // An absolutely-authored path's entry waypoint is a position in the playfield, not a delta
+      // from wherever it is placed — #300. `atX` must reproduce it or the path flies somewhere other
+      // than what its own coordinates describe.
+      const needsAtX = requiredAtX(t);
+      if (needsAtX !== null
+        && Math.abs(sp.atX * CODE.playfieldWidth.value - t.entryX) > ATX_TOLERANCE_PX) {
+        findings.push(`\`${wave.id}\`: \`${sp.spawn}\` on \`${t.id}\` is an absolutely-authored path whose entry waypoint sits at x ${s1(t.entryX)}, requiring \`atX ${s2(needsAtX)}\` — placed at \`atX ${s2(sp.atX)}\` instead.`);
+      }
       const slots = resolve(formations, sp.formation, 'formation', 'the checks section').slots.length;
       if (sp.dropSlot !== undefined && sp.dropSlot >= slots) {
         findings.push(`\`${wave.id}\`: \`dropSlot ${sp.dropSlot}\` on \`${sp.formation}\`, which has ${slots} slot(s). Fatal at spawn time (\`SpawnSystem.requireSlotInRange\`).`);
@@ -1259,7 +1311,6 @@ function buildLevel(levelFile, content) {
         findings.push(`\`${wave.id}\`: drop kind \`${sp.drop}\` is outside the six ${DROP_KINDS_FROM} recognises. Fatal at spawn time.`);
       }
       if (wave.end.type === 'cleared') {
-        const t = resolve(trajectories, trajectoryOf(sp, enemy).id, 'trajectory', 'the checks section');
         // Only a `constant` with a non-negative vy can fail to leave: an `arc` turns and a `path`'s
         // rule 3 (its last leg has nonzero velocity) both guarantee an eventual exit, on one axis or
         // the other, in finite time.
