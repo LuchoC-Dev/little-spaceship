@@ -31,3 +31,4 @@
 - [Absolute path waypoints syntax and the atX cost left undocumented-not-enforced](project_absolute-path-waypoints-syntax.md) — #287: two mutually exclusive top-level keys beat per-segment field guessing; why no cross-file atX check was built.
 - [ScrollPane#scrollTo boundary case and headless-repro technique](project_scrollpane-scrollto-boundary-and-headless-repro.md) — #293: the first row of a trailing-gap list can get zero pixels of overlap; how to reproduce scene2d.ui bugs standalone, no game, no GL context.
 - [Trajectory derivations share one resolution pass](project_trajectory-derivations-share-one-pass.md) — #296: speedOf beside mirrorOf; an arc's ay takes the square of the multiplier; mutation-checking a geometry claim.
+- [Level override clear boundary](project_level-override-clear-boundary.md) — #305: why MenuScreen's constructor clears levelIdOverride, not the PLAY entry; clearing is a no-op outside -Ptests, so it needs no flavour check.
