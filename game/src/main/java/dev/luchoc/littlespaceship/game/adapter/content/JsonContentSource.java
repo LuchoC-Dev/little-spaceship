@@ -175,29 +175,38 @@ public final class JsonContentSource implements ContentSource {
     }
 
     /**
-     * Reads {@code trajectories.json} in two passes so a {@code "mirrorOf"} entry — which names no
-     * {@code "type"} at all — can point at any other entry in the file regardless of which one is
-     * written first. The first pass parses every entry that carries a {@code "type"} (or defaults to
-     * {@code "constant"}) straight into {@link #trajectories}; the second resolves every
-     * {@code "mirrorOf"} entry against that map, recursively, so a mirror of a mirror works and a
-     * cycle or a dangling reference fails loudly instead of looping or leaving an id unresolved. See
-     * {@link #resolveMirror} for the mirroring contract itself.
+     * Reads {@code trajectories.json} in two passes so a <em>derived</em> entry — one that names
+     * another trajectory instead of a {@code "type"} — can point at any other entry in the file
+     * regardless of which one is written first. The first pass parses every entry that carries a
+     * {@code "type"} (or defaults to {@code "constant"}) straight into {@link #trajectories}; the
+     * second resolves every derived entry against that map, recursively, so a derivation of a
+     * derivation works and a cycle or a dangling reference fails loudly instead of looping or leaving
+     * an id unresolved.
+     *
+     * <p>There are two derivations and they share this machinery on purpose: {@code "mirrorOf"}
+     * (issue #264) and {@code "speedOf"} (issue #296). Both take one existing trajectory and produce
+     * another under a new id, so a faster mirror and a mirrored faster version are both expressible,
+     * and a cycle through either kind is caught by the same chain check. See {@link #resolveDerived},
+     * {@link #mirror} and {@link #faster} for the contracts themselves.
      */
     private void loadTrajectories(JsonReader reader, FileHandle file) {
         inFile(file, () -> {
-            Map<String, JsonValue> mirrorEntries = new HashMap<>();
+            Map<String, JsonValue> derivedEntries = new HashMap<>();
             for (JsonValue entry : reader.parse(file).get("trajectories")) {
                 String id = entry.getString("id");
                 if (entry.has("mirrorOf")) {
                     requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "mirrorOf");
-                    mirrorEntries.put(id, entry);
+                    derivedEntries.put(id, entry);
+                } else if (entry.has("speedOf")) {
+                    requireOnlyKeys(entry, "trajectory '" + id + "'", "id", "speedOf", "multiplier");
+                    derivedEntries.put(id, entry);
                 } else {
                     TrajectoryDefinition trajectory = parseTrajectory(entry);
                     trajectories.put(trajectory.id(), trajectory);
                 }
             }
-            for (String id : mirrorEntries.keySet()) {
-                resolveMirror(id, mirrorEntries, new LinkedHashSet<>());
+            for (String id : derivedEntries.keySet()) {
+                resolveDerived(id, derivedEntries, new LinkedHashSet<>());
             }
             return null;
         });
@@ -205,41 +214,124 @@ public final class JsonContentSource implements ContentSource {
 
     /**
      * Resolves the trajectory named {@code id} to a fully built {@link TrajectoryDefinition},
-     * recursively following {@code "mirrorOf"} chains — a mirror may itself be mirrored, since
-     * nothing about the mechanism cares whether the source it negates is an authored shape or another
-     * mirror. {@code resolving} is the chain of ids currently being resolved, in encounter order: a
+     * recursively following {@code "mirrorOf"} and {@code "speedOf"} chains — a mirror may itself be
+     * mirrored or sped up, since nothing about either mechanism cares whether the source it transforms
+     * is an authored shape or another derivation. {@code resolving} is the chain of ids currently
+     * being resolved, in encounter order: a
      * name reappearing in it is a cycle (e.g. {@code a} mirrors {@code b} mirrors {@code a}), reported
      * with the whole chain rather than just the repeated id, and a name that resolves to neither an
      * already-parsed trajectory nor a pending mirror entry is a reference to something that does not
      * exist in this file. Both fail loudly, at load, naming the trajectory id — this method's own
      * exceptions are the ones {@link #inFile} prefixes with the file's path.
      *
-     * <p>Building the mirror itself is composition over the already-public record constructors — see
-     * {@link #mirror(String, TrajectoryDefinition)} — exactly as {@code core-domain} argued on
-     * {@link TrajectoryDefinition}'s own javadoc and demonstrated in {@code core}'s test: no new
-     * {@code core} API, no fourth sealed kind.
+     * <p>Building the derived trajectory itself is composition over the already-public record
+     * constructors — see {@link #mirror(String, TrajectoryDefinition)} and {@link #faster(String,
+     * TrajectoryDefinition, float)} — exactly as {@code core-domain} argued on {@link
+     * TrajectoryDefinition}'s own javadoc and demonstrated in {@code core}'s test: no new {@code core}
+     * API, no fourth sealed kind.
      */
-    private TrajectoryDefinition resolveMirror(
-        String id, Map<String, JsonValue> mirrorEntries, Set<String> resolving) {
+    private TrajectoryDefinition resolveDerived(
+        String id, Map<String, JsonValue> derivedEntries, Set<String> resolving) {
         TrajectoryDefinition existing = trajectories.get(id);
         if (existing != null) {
             return existing;
         }
-        if (!mirrorEntries.containsKey(id)) {
+        if (!derivedEntries.containsKey(id)) {
             throw new IllegalArgumentException(
-                "trajectory mirrors unknown trajectory '" + id + "'");
+                "trajectory derives from unknown trajectory '" + id + "'");
         }
         if (!resolving.add(id)) {
             throw new IllegalArgumentException(
-                "trajectory mirror cycle: " + String.join(" -> ", resolving) + " -> " + id);
+                "trajectory derivation cycle: " + String.join(" -> ", resolving) + " -> " + id);
         }
-        JsonValue mirrorEntry = mirrorEntries.get(id);
-        TrajectoryDefinition original =
-            resolveMirror(mirrorEntry.getString("mirrorOf"), mirrorEntries, resolving);
-        TrajectoryDefinition mirrored = mirror(id, original);
-        trajectories.put(id, mirrored);
+        JsonValue entry = derivedEntries.get(id);
+        boolean isMirror = entry.has("mirrorOf");
+        String sourceId = entry.getString(isMirror ? "mirrorOf" : "speedOf");
+        TrajectoryDefinition original = resolveDerived(sourceId, derivedEntries, resolving);
+        TrajectoryDefinition derived = isMirror
+            ? mirror(id, original)
+            : construct(id, () -> faster(id, original, requireMultiplier(entry, id)));
+        trajectories.put(id, derived);
         resolving.remove(id);
-        return mirrored;
+        return derived;
+    }
+
+    /**
+     * Reads and validates a {@code "speedOf"} entry's {@code "multiplier"}. It must be present,
+     * finite and strictly positive: zero would divide every duration by zero, a negative one would
+     * reverse the path rather than speed it up (that is {@code "mirrorOf"}'s job, and only for the
+     * horizontal axis), and a non-finite one produces velocities {@code core} refuses anyway but far
+     * from where the mistake was written. Every message names the trajectory id; {@link #inFile} adds
+     * the file.
+     */
+    private static float requireMultiplier(JsonValue entry, String id) {
+        if (!entry.has("multiplier")) {
+            throw new IllegalArgumentException(
+                "trajectory '" + id + "' needs a 'multiplier' alongside 'speedOf'");
+        }
+        float multiplier = entry.getFloat("multiplier");
+        if (!(multiplier > 0f) || Float.isInfinite(multiplier)) {
+            throw new IllegalArgumentException(
+                "trajectory '" + id + "' has a speed multiplier that is not a finite positive "
+                    + "number, was " + multiplier);
+        }
+        return multiplier;
+    }
+
+    /**
+     * Builds the same trajectory traversed {@code multiplier} times sooner, under a new {@code id}:
+     * <strong>the geometry is identical — same shape, same size — and only the traversal time
+     * changes.</strong> That is the whole of what the project owner decided "faster" means on
+     * 04/09/2026; the other meaning, velocities up alone, scales the shape and stays an authoring
+     * consequence rather than a knob (plan 11j, and invariant 6).
+     *
+     * <p>The arithmetic, per kind, is the substitution {@code t -> multiplier * t} applied to each
+     * kind's own closed form, so the traced curve is pointwise the same set of positions:
+     *
+     * <ul>
+     *   <li>{@code constant}: velocities times {@code k}. The path is a ray from the spawn point; its
+     *       direction is unchanged because both components scale by the same factor.
+     *   <li>{@code arc}: velocities times {@code k}, {@code ay} times {@code k * k}. From
+     *       {@code x = vx t}, {@code y = vy t + ay t² / 2}, the scaled arc at {@code t/k} gives
+     *       {@code k·vx·(t/k) = vx·t} and {@code k·vy·(t/k) + k²·ay·(t/k)²/2 = vy·t + ay·t²/2} — the
+     *       same parabola, walked sooner. This is why {@code ay} takes the square and the velocities
+     *       do not.
+     *   <li>{@code path}: every segment's velocities times {@code k} and its duration divided by
+     *       {@code k}, so each leg's displacement {@code v·d} is unchanged and its direction with it.
+     *       A {@code wait} (zero velocity) stays a wait and simply lasts less. {@code loopStart} and
+     *       {@code loopCount} are copied untouched: a repeat is a range of the same legs, so the
+     *       repeated geometry scales with them.
+     * </ul>
+     *
+     * <p>Rule 3 is not weakened, and is not trusted either: the result goes back through {@link
+     * PathTrajectoryDefinition}'s own constructor, so a last segment at rest is still refused —
+     * multiplying a zero velocity by anything leaves it zero, so a path that ends at rest cannot be
+     * laundered into a legal one by going through {@code "speedOf"}. Conversely an absurd multiplier
+     * that underflows a duration to zero is refused by {@link PathSegment}, and {@link
+     * #resolveDerived} wraps the failure with the derived id.
+     */
+    private static TrajectoryDefinition faster(
+        String id, TrajectoryDefinition original, float multiplier) {
+        if (original instanceof SimpleTrajectoryDefinition simple) {
+            return new SimpleTrajectoryDefinition(
+                id, simple.vx() * multiplier, simple.vy() * multiplier);
+        }
+        if (original instanceof ArcTrajectoryDefinition arc) {
+            return new ArcTrajectoryDefinition(
+                id, arc.vx() * multiplier, arc.vy() * multiplier, arc.ay() * multiplier * multiplier);
+        }
+        if (original instanceof PathTrajectoryDefinition path) {
+            List<PathSegment> scaled = new ArrayList<>();
+            for (PathSegment segment : path.segments()) {
+                scaled.add(new PathSegment(
+                    segment.vx() * multiplier,
+                    segment.vy() * multiplier,
+                    segment.duration() / multiplier));
+            }
+            return new PathTrajectoryDefinition(id, scaled, path.loopStart(), path.loopCount());
+        }
+        throw new IllegalStateException(
+            "unreachable: TrajectoryDefinition is sealed to the three kinds handled above");
     }
 
     /**
@@ -280,7 +372,7 @@ public final class JsonContentSource implements ContentSource {
      * loading as a different shape is a wrong game, not a crash, and this loader used to be exactly
      * that permissive by reading only {@code id}, {@code vx} and {@code vy} and ignoring everything
      * else. An entry naming {@code "mirrorOf"} instead of {@code "type"} never reaches this method —
-     * {@link #loadTrajectories} routes it to {@link #resolveMirror} instead.
+     * {@link #loadTrajectories} routes it, like a {@code "speedOf"} entry, to {@link #resolveDerived} instead.
      */
     private static TrajectoryDefinition parseTrajectory(JsonValue entry) {
         String id = entry.getString("id");
