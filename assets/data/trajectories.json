@@ -51,6 +51,51 @@
       ],
       "loopStart": 2,
       "loopCount": 3
+    },
+
+    { "id": "cross-left", "vx": -45, "vy": -45 },
+    { "id": "cross-right", "mirrorOf": "cross-left" },
+
+    {
+      "id": "slide-left-then-descend",
+      "type": "path",
+      "segments": [
+        { "vx": -40, "vy": -30, "duration": 2.5 },
+        { "vx": 0, "vy": -55, "duration": 8.0 }
+      ]
+    },
+    { "id": "slide-right-then-descend", "mirrorOf": "slide-left-then-descend" },
+
+    {
+      "id": "dive-and-retreat",
+      "type": "path",
+      "segments": [
+        { "vx": 0, "vy": -95, "duration": 2.2 },
+        { "wait": 0.8 },
+        { "vx": 0, "vy": 70, "duration": 6.0 }
+      ]
+    },
+
+    {
+      "id": "hold-the-line-and-exit",
+      "type": "path",
+      "waypoints": [
+        { "x": 104, "y": 270 },
+        { "x": 104, "y": 190, "speed": 45 },
+        { "wait": 2.5 },
+        { "x": 208, "y": 190, "speed": 70 }
+      ]
+    },
+
+    {
+      "id": "sweep-the-width-and-drop",
+      "type": "path",
+      "waypoints": [
+        { "x": 20.8, "y": 270 },
+        { "x": 20.8, "y": 214, "speed": 60 },
+        { "x": 187.2, "y": 214, "speed": 55 },
+        { "x": 187.2, "y": 0, "speed": 80 }
+      ]
     }
   ]
 }

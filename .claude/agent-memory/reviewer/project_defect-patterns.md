@@ -1230,3 +1230,146 @@ Four `path` trajectories (`descend-and-turn-left`/`-right` as a mirror pair, `sw
 **A `git log` gotcha that produced a false alarm worth naming**: `git log --oneline --all -20 <ref>` does not scope to `<ref>` — `--all` overrides the positional argument and walks every ref in the repo, silently. Comparing `origin/feat/path-entries` against `origin/phase/11i-path-vocabulary` with a raw two-tip `git diff` (rather than against their `git merge-base`) likewise produces a diff that looks like the feature branch *removes* work (here, the TESTS-menu wiring) that a sibling PR had meanwhile added to the phase branch — it does not; the feature branch simply predates that sibling merge. Always diff a PR branch against `git merge-base <phase-branch> <feature-branch>`, never against the phase branch's current tip, when phase work is landing in parallel.
 
 **Calibration**: `docs/plan/11i-path-vocabulary/status/271-path-entries.md`'s honesty is real — "not checked: how any of the four paths looks", "not checked: whether 2.5 s / four steps / `enemy-tank` are the right choices" are both present and both true (confirmed no `gradlew :desktop:run` beyond a start-and-kill). The waves.json boundary violation is disclosed, not hidden, and is correct on the merits per the coordinator's own admitted error (`JsonContentSource` reads waves from exactly one file, confirmed at line 95; the four entries are purely additive, `level-01.json`/`formations.json` diff empty, confirmed against `merge-base`). `./gradlew build` green (reproduced, exit 0), `tools/pre-pr-check` output matches exactly when rerun, `node tools/build-level-docs.js` prints `unchanged` for both generated docs on this branch (reproduced), and the pre-existing `pickupFallSpeed` drift is correctly attributed to task 4/#252 (confirmed: `balance.json` untouched by this branch's diff, and the phase branch already carried that line before this branch's base commit). The TESTS-menu limitation the fragment reports as unresolved has, independently, already been fixed by a merged sibling PR (#275) using the exact ids/labels this fragment itself suggested — worth noting as resolved-by-the-time-this-lands rather than a defect.
+
+## PR #288 (`feat/absolute-path-syntax`, phase 11j task 1, issue #287) — a clean implementation next to a real, unmentioned red check
+
+The loader work itself (`"waypoints"` as a mutually-exclusive absolute alternative to `"segments"`,
+resolved at load into the same `PathSegment`s) is sound on every substantive axis checked: the
+two-key distinction really is unambiguous and structurally refuses per-leg mixing (confirmed by
+mutating `hasSegments == hasWaypoints` to `!hasSegments && !hasWaypoints` in place and watching
+exactly the mixed-form test go red, nothing else); the relative/absolute equivalence claim is real
+(mutating the `dx`/`dy` order in the `PathSegment` construction turned the equivalence test red,
+along with two others that happened to share the same arithmetic); rule 3 genuinely cannot be
+broken through the absolute form (traced by hand through every edge case the task named — a
+same-point destination, a wait-only tail, a single-waypoint list, an entry point carrying a speed —
+each already refused before `core` would ever see it, or reaching `core`'s existing refusal
+unchanged); `core/` and `assets/data/` genuinely untouched; JSON read with `JsonReader`/`JsonValue`
+only; commit subjects clean; no `Co-Authored-By`.
+
+66. **A PR's own "## CI" section quoting one green `gh run list` row is not the same as CI being
+    green**, when a second workflow triggers on the `pull_request` event and the author only ever
+    ran `gh run list --branch <name>` and read the row they expected. `.github/workflows/pr-check.yml`
+    (added 28/08/2026) runs separately from `ci.yml` and enforces, among other things, that a PR is
+    *opened* as a draft. PR #288 was opened ready, and `pr-check` failed 3 seconds after the PR's own
+    `createdAt` with "FAIL opened ready rather than as a draft" — a real, current, red check, visible
+    in the exact same `gh run list --branch feat/absolute-path-syntax` output the PR body quotes, on
+    a different row than the one the body describes. This is the same shape as phase 09's "`ci.yml`
+    has never run on a runner" — a check that exists and is red, described as if it did not exist —
+    except here the omission is very plausibly an oversight (`tools/pre-pr-check` cannot see draft
+    state at all, by design, since it runs before a PR exists) rather than an invented claim. Still:
+    every row `gh run list` prints for the branch needs accounting for in the CI section, not just
+    the row that matches what the author expected to see.
+
+Related: [[audit-techniques]].
+
+## PR #298 (`feat/path-speed-multiplier`, phase 11j task 2, issue #296) — a clean mechanism, a false claim about which guard actually fires
+
+Verdict: accept. `core`/`assets/data` genuinely untouched (`git diff --stat phase/11j-absolute-paths...HEAD -- core assets/data` empty), no forbidden import, `ay × k²` arithmetic independently reconstructed and correct, the two-pass `resolveDerived` (renamed from `resolveMirror`) genuinely composes `mirrorOf`/`speedOf` in either order via cycle-safe recursion using a fresh `LinkedHashSet` per top-level id (traced both possible `HashMap` iteration orders for the `a`/`b` cycle fixture by hand — both throw, both name `a`).
+
+67. **A guard's javadoc and its test's own name can both misattribute *which* field rejected an
+    extreme input, while the observable behaviour (fails, names the id) stays correct.**
+    `faster()`'s javadoc claims "an absurd multiplier that underflows a duration to zero is refused
+    by `PathSegment`", and the test `aMultiplierThatUnderflowsASegmentDurationFailsNamingTheDerivedId`
+    asserts exactly that framing. Reproduced the actual arithmetic in an isolated scratch copy of the
+    repo (never touching the audited worktree — `cp -r` to `/tmp`, mutate there, run there, discard):
+    for the test's own fixture (`vy=-30`, `multiplier=3e38`), `duration / multiplier` computes to
+    `3.333333E-39` — a tiny but nonzero, non-underflowed float, which `PathSegment`'s `duration <= 0f`
+    check does **not** reject. What actually throws is `vy * multiplier = -9e39`, which overflows
+    float range to `-Infinity` and trips `PathSegment`'s separate `requireFinite` check on velocity,
+    not duration. Confirmed by constructing `PathSegment` directly with the computed values and
+    printing the real exception message ("a path segment's vy must be a finite number, was
+    -Infinity"). The velocity-overflow threshold (`multiplier > Float.MAX_VALUE / |vy|`, ~1.1e37 for
+    `vy=-30`) is reached at far smaller multipliers than the duration-underflow-to-exact-zero
+    threshold (~duration × 7e44), so for any realistic non-zero velocity this "duration underflow"
+    guard the docs describe essentially never fires — the test's chosen multiplier could not have
+    exercised it even if it existed as a distinct path. Notably the *authorising issue comment*
+    (`gh issue view 296`) hedges correctly — "a velocity **or** a duration out of range" — so the
+    narrower, wrong claim was introduced only in the code's javadoc and the test's name/doc, not in
+    the design discussion. Non-blocking (both the failure and its file/id naming are real), but exactly
+    the class of claim worth a one-line correction: reword the javadoc/test name to "a velocity or
+    duration pushed out of range" rather than pinning the mechanism to one field, since the actual
+    field that fires depends on which of the two thresholds the chosen numbers happen to cross first.
+    **Technique reusable beyond this PR**: when a status/javadoc claims "X is refused because value V
+    underflows/overflows", don't just confirm the test throws — construct the intermediate value by
+    hand (a five-line throwaway program against the module's own compiled classes, in `/tmp`, `:`-joined
+    classpath per the existing Git Bash note) and check which specific guard's condition it actually
+    trips. A `Set.of()`-shaped extreme-value test is not proof of *which* clause caught it.
+
+Also independently reproduced rather than trusted: the 16/16 zero-failure test count
+(`game/build/test-results/test/TEST-...SpeedMultiplierTest.xml`); the mutation-testing claim
+("`faster` mutated to a `scale`... 16 tests completed, 5 failed") by applying the exact same mutation
+(`ay × multiplier` instead of `× multiplier²`, segment `duration()` left unscaled) in an isolated `cp
+-r` scratch copy — reproduced the identical 5 failing test names; the mirror/speed composition
+arithmetic for both orders by hand; and that no current wave in `waves.json`/`level-01.json` uses one
+shape at two speeds within a wave, backing the branch's "nothing written asks for the spawn-event
+alternative" argument. The plan's own task-2 text (`docs/plan/11j-absolute-paths/plan.md:58`) already
+frames the load-vs-spawn-event choice in the same terms the PR argues it in — not a post-hoc
+rationalisation.
+
+**Technique reused deliberately, worth naming explicitly**: mutation-testing a claim by editing the
+audited repo's own file, even when planning to revert, is out of bounds for a read-only auditor — the
+auto-mode classifier itself blocked a `sed`-based in-place edit of `JsonContentSource.java` here. The
+correct move, used twice in this review, is `cp -r <repo> /tmp/<scratch>`, mutate and run entirely
+inside the copy, then `rm -rf` it — proves the same thing without ever writing to the worktree under
+review.
+
+Related: [[audit-techniques]].
+
+## PR #299 (`content/level-one-trajectories`, phase 11j task 3) — a systematic, radius-shaped error hiding in five "removed at t" numbers, everything else exact
+
+Seven trajectory entries (five authored, two `mirrorOf`), five waves, five scenario files. Kind
+classification, absolute-form usage, rule-3 compliance, `atX`/radius-offset arithmetic, and every
+mid-path/edge-crossing timestamp all reproduced exactly by independent analytic re-derivation (not
+Euler stepping — `PathTrajectoryDefinition`/`parseWaypoints` produce piecewise-constant velocity, so
+closed-form arithmetic is exact and stronger than resimulating at a fixed `dt`).
+
+66. **A whole class of claimed numbers (the final "removed at t = X s" in every one of five
+    trajectories checked) is off by a near-constant amount, and the amount is explained by one
+    missing term, not five unrelated slips.** Re-deriving `cross-left`, `dive-and-retreat`,
+    `slide-left-then-descend`, `hold-the-line-and-exit` and `sweep-the-width-and-drop` by hand against
+    `LifetimeSystem.isPastSafetyBox` (`position ± radius` crossing `playfield edge ± 128`) gave removal
+    times 0.084–0.128 s **later** than the fragment's own claimed numbers in all five cases — never
+    earlier, never zero. Solving each case for "what distance is missing" backs out 5.65–6.88 units in
+    every one, which lands almost exactly on the archetype's own collider radius (`enemy-basic` 5.5,
+    used in three; `enemy-shooter` 6.5, used in two) to within 0.4 units. Confirmed directly: recomputing
+    each case with the safety-box condition evaluated against the *centre* position instead of the edge
+    (i.e. dropping the `± radius` term `core`'s own check applies) reproduces all five claimed numbers to
+    within 0.01 s. Every other number in the same fragment — mid-path positions, edge-crossing times
+    that *do* use `± radius` (e.g. "crosses the left edge", "out of the bottom") — is exact. The bug is
+    narrow: whatever produced the "removed" line in the author's own verification program applied the
+    128-unit safety margin without the entity's radius, while everywhere else in the same program the
+    radius is applied correctly (spawn `y = playfield + radius`, edge-exit checks). Non-blocking here —
+    it never threatens the "every wave ends comfortably after its last entity is removed" claim, since
+    the true (later) removal time is still well inside every wave's `fixedDuration` — but it is exactly
+    the shape phase 11i's `sweep-wait-drop` finding names: a description that disagrees with its own
+    JSON by a small, systematic, reproducible amount. **Technique**: when a fragment claims several
+    structurally similar events (here, "removed at t" for N different shapes), don't just re-derive one
+    and generalise — re-derive all of them and check whether the residuals cluster on a suspicious
+    constant (a radius, a margin, a tick) rather than scattering randomly. A single case's 0.1 s
+    mismatch looks like noise; five cases whose implied "missing distance" all land within 1 unit of
+    each other look like a real omitted term, and this is what turned it from a suspicion into a
+    confirmed, reproducible defect without needing to run the author's own script.
+
+Also worth recording as a *smaller*, less certain sibling finding: two absolute-form arrival positions
+(`hold-the-line-and-exit`'s claimed `y = 196.4`, `sweep-the-width-and-drop`'s claimed crossing
+`y = 220.1`) are each ~0.1–0.4 units off the exact analytic value implied by the fragment's own stated
+formula ("authored `y` + radius" — 190 + 6.5 = 196.5, 214 + 6.5 = 220.5, both should end in `.5`,
+neither reported number does). Unlike finding 66, this one plausibly comes from the disclosed 1/100 s
+sampling granularity landing just past a segment-boundary crossing rather than exactly on it, and the
+per-case magnitude (0.1, 0.4) does not cleanly back out a single constant the way the removal numbers
+do. Reported as a real but lower-confidence discrepancy, not asserted as the same bug as 66.
+
+Everything else on this branch checked out cleanly and is worth recording as calibration: the
+`constant`/`path` kind boundary was applied correctly to all three shapes the task named for a second
+look (`dive-and-retreat`, `hold-the-line-and-exit`, `sweep-the-width-and-drop` all genuinely turn or
+wait and cannot be `constant`); both absolute paths' `atX` requirement (`entry.x / 208`) matches the
+wave that places it exactly (0.50 and 0.10); the `slide-left-then-descend` mirror pair's converging
+geometry and its stated `atX` window both reproduced by hand; rule 3 holds for every new entry (every
+last leg has nonzero velocity, confirmed from each waypoint list's own `dx`/`dy`); `mirrorOf` only
+negates `vx` (confirmed in `JsonContentSource.mirror`), applied here to a `constant` and to a relative
+`path`, never to either new absolute path — so the "does a mirror ever apply to an absolute path"
+question this task's own instructions raised does not arise in this content; `game`/`desktop`/`web`/
+`core` diffs are all empty; `waves.md` regenerated correctly (5 rows added, nothing else moved);
+`gh run list` showed both checks green on the tip commit, matching the PR body.
+
+Related: [[audit-techniques]].

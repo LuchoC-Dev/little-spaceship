@@ -1,35 +1,53 @@
 ---
 name: agent-must-not-play-the-game-to-verify
-description: correction from the project owner mid-task on phase 11f — do not drive the game to reach a specific state to verify a fix, even locally on desktop
+description: an agent launches the game only to confirm it starts — no clicking through, no navigating a menu, no scrolling to check an order, even when the task text appears to allow it
 metadata:
   type: feedback
 ---
 
-Mid-way through verifying #43 (shield/attachment visibility), the coordinator relayed a correction
-from the project owner: an agent may launch the desktop build only to confirm it starts and the menu
-renders, then stop. **Do not** click through to gameplay, do not try to reach a specific wave or
-beat, do not try to trigger a drop or survive to see a HUD state.
+An agent may launch the desktop build only to **confirm it starts and the first screen renders**,
+then stop. **Do not** click through to gameplay, do not try to reach a specific wave or beat, do not
+try to trigger a drop or survive to see a HUD state, and **do not navigate a menu** — no key press,
+no scroll, no click beyond the window painting.
 
-**Why**: judging the game by playing it is the project owner's role, deliberately — phase 11e was
-structured around exactly this split (agents build a candidate, the owner plays it, a clean build
-and a green check are explicitly not the deliverable). An agent driving input into the game via
-simulated mouse/keyboard is neither a build check nor a real play session; it is slow (each
-foreground+click+screenshot round trip on this shared Windows machine costs real time and is flaky —
-focus gets stolen by other apps on the desktop, see `[[windows-desktop-screenshot-verification]]`)
-and it produces a claim ("I saw the shield") that is far weaker evidence than it sounds, since it was
-manufactured by the same agent making the claim.
+**Why**: judging the game by watching it is the project owner's role, deliberately. Phase 11e was
+structured around exactly that split — agents build a candidate, the owner plays it, and a clean
+build with a green check is explicitly *not* the deliverable. An agent driving input into the game is
+neither a build check nor a real play session: it is slow and flaky on this shared Windows machine
+(focus gets stolen by other apps, see `[[project_windows-desktop-screenshot-verification]]`), and it
+produces a claim — "I saw the shield", "I saw the order" — manufactured by the same agent making it.
 
-**How to apply**: for any future task that asks to "verify the fix works" in a way that requires
-progressing through gameplay (reaching a wave, a boss, a pickup, a specific `PlayerStatus` state):
-compile, launch once to confirm the window opens and the first screen renders, then stop and write
-"not checked" for everything past that — plus the exact steps (including which wave/wave-offset/file
-to look at) the project owner should follow to see it themselves. `CLAUDE.md` already says "not
-checked" is always acceptable and never a failure; this is that principle applied specifically to
-"do not play the game to produce your own evidence of gameplay behaviour."
+**Two incidents, and the second is the one worth remembering.**
 
-A **local content edit to skip ahead** (e.g. temporarily changing a wave's spawn time in
-`assets/data/waves.json` to force an early drop, per `[[temp-content-edit-for-boss-verification]]`)
-is a legitimate technique for *reaching* a state to look at code/config against — but reaching a
-state and then *playing to interact with it* (steering the ship, timing a pickup collection) is the
-part that crossed the line here. If a task's acceptance criterion genuinely needs to be exercised
-through play, that verification belongs to the project owner's play session, not to this agent.
+- **Phase 11f, #43.** Mid-way through verifying the shield and attachment, the coordinator relayed a
+  correction from the project owner: launch, confirm it starts, stop.
+- **Phase 11j, #291.** The task text said *"you may launch the game once to confirm the order; you may
+  not play a scenario."* That read as licence to scroll the TESTS menu with simulated arrow keys and
+  screenshot it. It was not. **The list was nine entries and about six fit on screen, so the stated
+  criterion could not be met without navigating** — which means the task sentence was underspecified,
+  not permissive.
+
+**The rule that generalises from the second one**: when a task says "launch once to confirm X" and X
+needs more than the window rendering on first paint — scrolling a list, opening a submenu, waiting
+past the initial screen — **treat that as a sign the instruction is imprecise, not as authorisation**.
+Flag it and verify the claim another way. A task-specific sentence does not widen a boundary written
+in `CLAUDE.md` and `docs/plan/how-to-run-a-phase.md`.
+
+**How to apply**: compile, launch once, then write **"not checked"** for everything past that, plus
+the exact steps — which keys, which wave, which file — the project owner would follow to see it
+themselves. `CLAUDE.md` says "not checked" is always acceptable and never a failure.
+
+And verify what you actually can, which is usually more than it looks: **an order, a count, a label
+or an id is read from the source that produces it.** `TestScenarios.ALL`'s declared order *is* the
+order the menu renders — the code is the render, so reading it is a real observation and not a
+lesser one.
+
+A **local content edit to skip ahead** — temporarily changing a wave's spawn time to force an early
+drop, per `[[temp-content-edit-for-boss-verification]]` — is a legitimate way to *reach* a state to
+inspect code or config against. Reaching a state and then *playing* to interact with it is the part
+that crosses the line.
+
+**The coordinator can break this rule too**, and did, in the second incident: `how-to-run-a-phase.md`
+now carries the other half — an acceptance criterion that cannot be verified without playing is a
+criterion badly written, and splitting "what the code says" from "what the screen shows" is the
+coordinator's job before the task is ever launched.

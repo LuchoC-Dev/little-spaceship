@@ -133,14 +133,27 @@ public final class LittleSpaceshipGame extends Game {
     }
 
     /**
-     * Overrides which level {@link #levelId()} returns for the rest of this run. Only the
-     * {@code -Ptests} flavour's {@code TestMenuScreen} calls this; the ordinary build never does,
-     * so {@link #levelId()} always returns {@link #LEVEL_ID} in every build that reaches a player.
+     * Overrides which level {@link #levelId()} returns until the main menu is entered again — see
+     * {@link #clearLevelIdOverride()}. Only the {@code -Ptests} flavour's {@code TestMenuScreen}
+     * calls this; the ordinary build never does, so {@link #levelId()} always returns
+     * {@link #LEVEL_ID} in every build that reaches a player.
      *
      * @param levelId the content id of the scenario to start, an existing level file's own id
      */
     public void overrideLevelId(String levelId) {
         this.levelIdOverride = levelId;
+    }
+
+    /**
+     * Clears whatever {@link #overrideLevelId(String)} set, so {@link #levelId()} goes back to
+     * {@link #LEVEL_ID}. Called from {@link MenuScreen}'s constructor rather than from wherever
+     * PLAY is chosen: entering the main menu is the broader boundary, so it also clears a
+     * scenario left behind by defeat or victory, not only by choosing PLAY next. A no-op in every
+     * build that reaches a player, since {@link #levelIdOverride} is already always {@code null}
+     * there — see issue #305.
+     */
+    public void clearLevelIdOverride() {
+        this.levelIdOverride = null;
     }
 
     @Override

@@ -319,4 +319,44 @@ here — the absence of findings was earned by checking each claim, not assumed 
   `core.jar`, `game.jar` and a located `gdx-1.14.2.jar` from `~/.gradle/caches/modules-2`, reproducing
   PR #246's exact claimed output.
 
+## For checking CI on a PR when `gh run list --branch <branch>` looks green
+
+- **`gh run list --branch <branch>` can miss a red check that only fires on the `pull_request`
+  event.** Since 28/08/2026, `.github/workflows/pr-check.yml` runs on `pull_request: [opened,
+  reopened, synchronize, ready_for_review, edited]`, separately from `ci.yml`'s push-triggered
+  build. Both show up in `gh run list --branch <name>` (it lists by branch, not by trigger), but a
+  PR body that only quotes one run's id/conclusion — e.g. "one run, completed success, on the tip
+  commit" — can be truthfully describing `ci.yml` while `pr-check.yml` sits red right next to it in
+  the same `gh run list` output. Read every row the command prints, not just the one the author
+  pointed at; a `gh run view <id>` on any row not accounted for in the PR body is the tell. Caught
+  on PR #288: `pr-check` failed with "FAIL opened ready rather than as a draft" 3 seconds after the
+  PR's own `createdAt`, because it was opened ready instead of as a draft — a real, current,
+  unmentioned red check, not something the review triggered (timestamps confirm it predates the
+  audit). `tools/pre-pr-check` cannot catch this itself: it runs on a branch before a pull request
+  exists, so draft state is genuinely outside what it can check — that split is deliberate, per
+  `pr-check.yml`'s own header comment, and is not itself a defect.
+- **Mutating production code to falsify a named test is faster in an already-existing worktree
+  checked out to the exact branch under review** (`git worktree list` first) than re-adding one:
+  `git checkout -- <file>` restores cleanly afterward with no risk of touching the reviewer's own
+  main-checkout branch state. Confirmed on PR #288 (`little-spaceship-abs` worktree, already on
+  `feat/absolute-path-syntax`): flipped `hasSegments == hasWaypoints` to `!hasSegments &&
+  !hasWaypoints` to prove the mixed-form-refusal test alone catches it, then restored; swapped
+  `dx`/`dy` in the `PathSegment` construction to prove the equivalence test alone catches it, then
+  restored — `git status --short` empty both times before moving on.
+
 Related: [[defect-patterns]].
+
+## Update: mutating the audited worktree in place can now be blocked outright
+
+- **The auto-mode permission classifier can refuse an in-place edit of a file inside the repo under
+  audit, even when the plan is to revert it immediately.** Hit this on PR #298 (phase 11j task 2):
+  a `python3 -c` (via heredoc) that opened `game/.../JsonContentSource.java` for in-place mutation in
+  the actual reviewed worktree was denied by the classifier before it ran, independent of the earlier
+  scratchpad-backup workflow above. When this happens, don't negotiate with the classifier or try a
+  different tool to reach the same file — **`cp -r <repo-root> /tmp/<scratch-name>`, mutate and run
+  `./gradlew` entirely inside the copy, then `rm -rf` it.** Proves the identical claim (a mutation
+  reddens exactly the tests the author says) without ever writing to the worktree a reviewer is
+  supposed to leave untouched — cleaner than the scratchpad-backup approach anyway, since there is
+  nothing to restore afterward and no risk of forgetting to. Prefer this over the in-place approach
+  by default now; only fall back to editing in place if disk space or `cp -r` time (a multi-module
+  Gradle tree with a populated `build/` per module can be large) makes the copy impractical.

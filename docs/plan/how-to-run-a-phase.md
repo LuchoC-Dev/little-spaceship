@@ -166,6 +166,31 @@ rule in `CLAUDE.md`:
 This is the same boundary phase 11f's plan draws for the web target from the other direction: headless
 Chrome cannot validate the web runtime, so CI proves the build compiles and a human proves it runs.
 
+### And the half that is the coordinator's
+
+**An acceptance criterion that cannot be verified without playing is a criterion badly written.** The
+rule above talks to the agent — *do not play* — and for a long time that was all of it. It is not
+enough, because the agent is not the only one who can break it.
+
+Phase 11j broke it twice, and the second time the cause was upstream: issue
+[#291](https://github.com/LuchoC-Dev/little-spaceship/issues/291) asked that the TESTS menu "shows
+PATH: OSCILLATE first and WAVE 4 last", and the launch prompt said *"you may launch the game once to
+confirm the order"*. Nine entries, about six fit on screen. **The criterion could not be met without
+scrolling the menu**, so the agent scrolled it and took screenshots — and it had a memory file of its
+own, from the first time this happened on 01/09, saying not to. Between its own memory and an
+instruction from the coordinator, the instruction won, which is the right way round.
+
+So when you write a criterion, split it:
+
+- **What the code says** — the order of a list, the value a loader returns, the ids that exist — is
+  read from the source or asserted by a test. An agent can satisfy it, and should be told to.
+- **What the screen shows** — that it looks right, reads right, feels right — is the project owner's,
+  always. Write it as theirs, not as something to be confirmed.
+
+Mixing the two in one sentence is what puts an agent in the position of either disobeying the rule or
+failing the task. **The first instance was recorded as the agent's error. The second was the
+coordinator's, and it is recorded that way.**
+
 ## Two failures and you stop
 
 If the same thing fails twice, stop and report. Do not try a third variation.
