@@ -169,6 +169,43 @@
         { "at": 0.5, "spawn": "enemy-tank", "formation": "single", "atX": 0.50, "trajectory": "descend-and-oscillate" }
       ],
       "end": { "type": "fixedDuration", "seconds": 13.0 }
+    },
+    {
+      "id": "test-cross",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-basic", "formation": "single", "atX": 0.95, "trajectory": "cross-left" },
+        { "at": 0.5, "spawn": "enemy-basic", "formation": "single", "atX": 0.05, "trajectory": "cross-right" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 9.0 }
+    },
+    {
+      "id": "test-slide-descend",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-basic", "formation": "single", "atX": 0.80, "trajectory": "slide-left-then-descend" },
+        { "at": 0.5, "spawn": "enemy-basic", "formation": "single", "atX": 0.20, "trajectory": "slide-right-then-descend" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 10.0 }
+    },
+    {
+      "id": "test-dive-retreat",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-basic", "formation": "single", "atX": 0.50, "trajectory": "dive-and-retreat" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 12.0 }
+    },
+    {
+      "id": "test-hold-line",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-shooter", "formation": "single", "atX": 0.50, "trajectory": "hold-the-line-and-exit" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 10.0 }
+    },
+    {
+      "id": "test-sweep-width",
+      "spawns": [
+        { "at": 0.5, "spawn": "enemy-shooter", "formation": "single", "atX": 0.10, "trajectory": "sweep-the-width-and-drop" }
+      ],
+      "end": { "type": "fixedDuration", "seconds": 11.0 }
     }
   ]
 }

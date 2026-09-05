@@ -27,6 +27,11 @@ edit to it then lands on every placement below.
 | `test-path-wait` | 12.0 s | 1 | 1 | `enemy-tank` | **unplaced** |
 | `test-path-loop` | 15.0 s | 1 | 1 | `enemy-tank` | **unplaced** |
 | `test-path-oscillate` | 13.0 s | 1 | 1 | `enemy-tank` | **unplaced** |
+| `test-cross` | 9.0 s | 2 | 2 | `enemy-basic` | **unplaced** |
+| `test-slide-descend` | 10.0 s | 2 | 2 | `enemy-basic` | **unplaced** |
+| `test-dive-retreat` | 12.0 s | 1 | 1 | `enemy-basic` | **unplaced** |
+| `test-hold-line` | 10.0 s | 1 | 1 | `enemy-shooter` | **unplaced** |
+| `test-sweep-width` | 11.0 s | 1 | 1 | `enemy-shooter` | **unplaced** |
 
 **`unplaced`** is a wave no level uses. Not an error — `waves.json` is a library — but it is dead
 content until something places it, and nothing else in the repository would tell you.
