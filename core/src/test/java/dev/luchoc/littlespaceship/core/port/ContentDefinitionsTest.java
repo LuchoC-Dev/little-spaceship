@@ -175,6 +175,53 @@ class ContentDefinitionsTest {
     }
 
     @Test
+    @DisplayName("a placed pickup rejects a negative timestamp, a missing kind and a position outside [0,1]")
+    void placedPickupValidates() {
+        assertThrows(IllegalArgumentException.class,
+            () -> new PlacedPickup(-1f, "shield", 0.5f, 0.5f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new PlacedPickup(1f, "", 0.5f, 0.5f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new PlacedPickup(1f, null, 0.5f, 0.5f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new PlacedPickup(1f, "shield", 1.5f, 0.5f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new PlacedPickup(1f, "shield", 0.5f, -0.1f));
+    }
+
+    @Test
+    @DisplayName("a wave definition with no placed pickup defaults pickups() to empty")
+    void waveDefinitionDefaultsToNoPlacedPickups() {
+        List<SpawnEvent> oneSpawn = List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null));
+        WaveDefinition wave =
+            new SimpleWaveDefinition("wave-1", oneSpawn, new WaveEndCondition.FixedDuration(3f));
+
+        assertEquals(List.of(), wave.pickups());
+    }
+
+    @Test
+    @DisplayName("a wave definition rejects a null pickup list and one out of order")
+    void waveDefinitionValidatesItsPickupList() {
+        List<SpawnEvent> oneSpawn = List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null));
+        WaveEndCondition fixed = new WaveEndCondition.FixedDuration(3f);
+
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", oneSpawn, null, fixed));
+
+        List<PlacedPickup> outOfOrder = List.of(
+            new PlacedPickup(2f, "shield", 0.5f, 0.5f),
+            new PlacedPickup(1f, "shield", 0.5f, 0.5f));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SimpleWaveDefinition("wave-1", oneSpawn, outOfOrder, fixed));
+
+        List<PlacedPickup> sorted = List.of(
+            new PlacedPickup(1f, "shield", 0.5f, 0.5f),
+            new PlacedPickup(2f, "shield", 0.5f, 0.5f));
+        WaveDefinition wave = new SimpleWaveDefinition("wave-1", oneSpawn, sorted, fixed);
+        assertEquals(2, wave.pickups().size());
+    }
+
+    @Test
     @DisplayName("a wave placement needs a wave id and a finite offset, negative allowed to overlap")
     void wavePlacementValidates() {
         assertThrows(IllegalArgumentException.class, () -> new WavePlacement("", 0f));

@@ -37,6 +37,17 @@ public interface WaveDefinition {
     List<SpawnEvent> spawns();
 
     /**
+     * @return the pickups this wave places directly, with no enemy carrying them, sorted by {@link
+     *     PlacedPickup#at()}, or empty when this wave places none. Defaulted, unlike {@link
+     *     #spawns()}: a wave with no placed pickup is the common case, and defaulting this is what
+     *     keeps every {@code WaveDefinition} written before issue #318 — {@code game}'s loader and
+     *     every hand-built test wave — compiling unchanged.
+     */
+    default List<PlacedPickup> pickups() {
+        return List.of();
+    }
+
+    /**
      * @return what ends this wave, never null
      */
     WaveEndCondition endCondition();
