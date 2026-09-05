@@ -1472,4 +1472,109 @@ and `pre-pr-check`'s pasted output both reproduced verbatim.
     Not a defect in this PR — a suspicion to hand forward to whichever phase first pairs an absolute
     path with a formation other than `single`.
 
+## PR #319 (`feat/content-places-a-pickup`, phase 11k task 4 first half, issue #318) — a second cursor added next to an existing one, and the one asymmetry that mattered
+
+`SpawnSystem` gained a second per-wave cursor (`ActiveWave.pickupCursor`) for `WaveDefinition.pickups()`,
+scheduled off the same `ActiveWave` clock the existing spawn cursor uses. Diff matched the coordinator's
+claim exactly (`git diff phase/11k-level-one-rebuilt...HEAD --stat`: five `core` main files, two `core`
+test files, one status fragment). `core:test` green independently (360 tests / 0 failures, aggregated
+from `core/build/test-results/test/*.xml`), `game:compileJava` green independently, no
+`com.badlogic.gdx`/`Math.random`/thread-family import anywhere in `core/src/main`. Only one production
+`implements WaveDefinition` (`SimpleWaveDefinition`), so the new `default pickups()` cannot be silently
+hiding a second implementer that needed a real override.
+
+70. **Adding a second per-wave cursor to an existing scheduler is safe exactly to the extent every
+    `hasEnded`/end-condition branch was updated to know about it — check each branch by hand, don't
+    trust that "it uses the same clock" implies "it uses the same completeness check."**
+    `SpawnSystem.hasEnded`'s `Cleared` branch checks `wave.cursor >= wave.definition.spawns().size()`
+    but never references the new `wave.pickupCursor` at all. For `FixedDuration` this is symmetric
+    with a pre-existing hazard (confirmed by probe: a *second spawn event* scheduled past a
+    `FixedDuration` wave's own duration is *also* silently lost — `entityCount` stayed 1 after 10
+    ticks against a duration of 2s and a second spawn at local t=5s — so `core` already accepted "a
+    badly authored duration can strand a late spawn" before this PR, and pickups inherit that same,
+    pre-existing shape without making it worse). But for `Cleared` the two cursors are **not**
+    symmetric: a spawn can never be lost this way in a `Cleared` wave, because `hasEnded` cannot
+    return true until `cursor >= spawns.size()` — the wave literally cannot end with spawns still
+    pending. Pickups get no equivalent guard. Probe (`java` against `core/build/classes/java/main`
+    plus a hand-written `Probe.java`, no build, no worktree mutation): a `Cleared` wave with one
+    spawn and one `PlacedPickup` scheduled at local t=30s, whose single spawned entity is destroyed
+    on tick 2 — `hasEnded` goes true, the wave is dropped from `activeWaves`, and 40 more ticks (well
+    past t=30) still show `world.pickups().size() == 0`. The reward silently never exists, no
+    exception, no log, and no test in the PR exercises a `Cleared` wave with a still-pending pickup
+    at the moment its spawns are exhausted and its last entity dies — every `Cleared`-wave pickup
+    test in the PR (`placedPickupCarriesNoWaveOrigin`) places its pickup at `at=0f`, always already
+    due before the wave could possibly end. The fix is a one-line addition to the `Cleared` branch,
+    mirroring the existing spawn-cursor guard: `&& wave.pickupCursor >= wave.definition.pickups().size()`.
+    Generalises: whenever a scheduler gains a second, independently-advancing cursor over the same
+    clock, walk every branch of the completion/termination check by hand and ask whether it was
+    written before or after the second cursor existed — a check untouched by the PR is a check that
+    was written for one cursor's completeness, not two.
+71. **A `SystemOrder` placement decision can be correct on its own terms and still create an
+    unexamined behavioural split between two paths that "produce the same entity."** Confirmed by
+    reading `SystemOrder`'s declaration order: `SPAWN` is ordinal 5, `COLLISION` is ordinal 10,
+    `CLEANUP` is ordinal 14. A placed pickup is created inside `SpawnSystem` (`SPAWN`, before
+    `COLLISION`), so it is visible to `CollisionSystem` on the very same tick it appears — a player
+    ship already occupying that exact position could collect it the instant it spawns. A dropped
+    pickup is created inside `CleanupSystem` (`CLEANUP`, after `COLLISION`), and that class's own
+    javadoc says so explicitly: "the spawned pickup only becomes collectable from the next tick's
+    `CollisionSystem` pass." Both paths call the identical `CleanupSystem.createFallingPickup` and
+    produce byte-identical components, so "the two paths produce the same entity" is true of the
+    entity and false of when it can first be collected. Not necessarily wrong — a bomb-drop-shaped
+    reward has always had a one-tick delay baked into the pipeline's own ordering, and a designed
+    "reward waiting at a spot" arguably *should* be collectable the instant it exists — but it is a
+    rule nobody wrote down anywhere, and the PR's own author-facing doc never raises it despite the
+    task's brief explicitly asking "is that the same answer a dropped pickup gets?" Worth checking on
+    every future placement decision that creates a *second path* to an already-existing kind of
+    entity: read the exact ordinal gap between where each path creates it and where the next system
+    in the pipeline that would react to it runs, don't assume "same entity, same system" means "same
+    timing."
+
+Verdict on #319: **rejected pending a fix to `hasEnded`'s `Cleared` branch** — finding 70 is a real,
+reproducible silent-content-loss bug in `core`, not a suspicion. Finding 71 is a note to carry to
+whoever reviews the loader half or writes `waves.json` content using `Cleared` pickups.
+
 Related: [[audit-techniques]].
+
+## PR #313 (`feat/tests-menu-discovered`, phase 11k task 3, issue #311) — clean, one uncaught-exception
+gap the lenient label path does not share
+
+Two-pass branch: pass one replaced a hardcoded `TestScenarios.ALL` with alphabetical discovery from
+`assets/data/test-*.json`; the project owner then required #291's recency stack to survive, so pass
+two renamed the ten newest scenarios to `test-NNN-<name>.json` and sorts by that rank, descending.
+Verdict: accept. Independently reproduced rather than trusted: `:game:clean :game:test` (no
+`-Ptests`) compiles zero `TestScenarios*`/`TestMenuScreen*` classes
+(`find game/build/classes -iname` empty); `:game:test -Ptests --rerun` gives 13/13 green for
+`TestScenariosTest` (`tests="13" failures="0" errors="0"` in the JUnit XML, matching the fragment's
+own count); `:web:gdx_teavm_web_js_build` succeeds and `grep -c "TestMenuScreen\|TestScenarios"
+web/build/dist/js/webapp/app.js` prints `0`; `tools/pre-pr-check --base
+phase/11k-level-one-rebuilt` passes clean; the `ARC:` label on `test-wave-09`/`test-wave-12` traced
+to real content (`veer-left`/`veer-right`, both `"type": "arc"` in `trajectories.json`) rather than
+accepted from the fragment; wave ids in `waves.json` and level ids in
+`docs/planning/08-decisions-and-open-items.md`/`docs/levels/waves.md` are genuinely independent of
+the renamed level *filenames* — grepping every old filename outside `assets/data/`, the test fixture
+and gitignored `web/build/` turns up nothing that *loads* a stale id, only prose and wave-id
+coincidental substring matches.
+
+70. **A rank parsed from a filename with an unbounded-width regex group has no upper bound the
+    fallback-on-exception path covers.** `TestScenarios.NUMBERED` is `^test-(\d+)-(.+)$` — any number
+    of digits matches — and `rankOf` feeds the captured group straight to `Integer.valueOf` with no
+    try/catch. A `test-<21 nines>-name.json` file reproducibly throws `NumberFormatException` from
+    inside `compareByRecency`, called from `List.sort` inside `discover()`, confirmed in an isolated
+    scratch `.java` file (not the audited worktree) reproducing the exact regex and call shape. This
+    is uncaught by *anything*: `labelFor`'s own try/catch is a sibling code path (label derivation),
+    not rank derivation, and `TestMenuScreen`'s constructor has no guard around `TestScenarios.all()`
+    either — so one malformed filename would crash the entire TESTS menu at construction, not just
+    fail to sort that one entry the way a real "malformed number" input should. Low severity in
+    practice (self-inflicted, `-Ptests`-only, no current file remotely close — the largest real rank
+    is `100`) and not raised to a blocker, but exactly the shape the task's own review brief asked
+    about ("a malformed number, a very large one") and exactly the class of gap the class's own
+    javadoc claims *doesn't* exist ("label derivation is deliberately lenient... never throws" — true
+    for labels, not true for the rank that decides sort order). Worth checking on every future
+    filename-encoded-metadata scheme: an unbounded numeric capture group needs either a caught parse
+    or a bounded digit count, and "the cosmetic half is lenient" does not imply "the ordering half is
+    too."
+
+Everything else checked out clean and is the calibration case worth keeping: every one of this
+author's independently-checkable claims (compile isolation, test count, TeaVM grep, ARC labels,
+reference scope, commit hygiene, `pre-pr-check` output) reproduced exactly on a fresh run, not just
+matched what was pasted.
