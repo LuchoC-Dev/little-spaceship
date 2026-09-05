@@ -12,6 +12,7 @@ import dev.luchoc.littlespaceship.core.port.EnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationSlot;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
+import dev.luchoc.littlespaceship.core.port.PlacedPickup;
 import dev.luchoc.littlespaceship.core.port.SpawnEvent;
 import dev.luchoc.littlespaceship.core.port.WaveDefinition;
 import dev.luchoc.littlespaceship.core.port.WaveEndCondition;
@@ -232,6 +233,40 @@ public final class SpawnSystem implements GameSystem {
             spawnWave(world, events.get(wave.cursor), wave.definition.id());
             wave.cursor++;
         }
+        List<PlacedPickup> pickups = wave.definition.pickups();
+        while (wave.pickupCursor < pickups.size() && pickups.get(wave.pickupCursor).at() <= localTime) {
+            spawnPlacedPickup(world, pickups.get(wave.pickupCursor), wave.definition.id());
+            wave.pickupCursor++;
+        }
+    }
+
+    /**
+     * Creates the pickup a {@link PlacedPickup} describes, with no enemy involved — issue #255's "a
+     * reward the player flies to rather than one that falls out of something they shot." Built the
+     * same way {@code CleanupSystem} builds one from a defeated enemy's {@code Drop}, through {@link
+     * CleanupSystem#createFallingPickup}: same components, same falling {@code Motion}, the only
+     * difference being where the position and the kind come from. {@code atX}/{@code atY} convert
+     * from the {@code [0, 1]} fraction {@link PlacedPickup} stores to logical units the same way
+     * {@link SpawnEvent#atX()} already does for an enemy's anchor.
+     */
+    private static void spawnPlacedPickup(World world, PlacedPickup placed, String waveId) {
+        requireRecognisedPickup(waveId, placed);
+        float x = placed.atX() * MotionSystem.PLAYFIELD_WIDTH;
+        float y = placed.atY() * PLAYFIELD_HEIGHT;
+        CleanupSystem.createFallingPickup(world, x, y, placed.kind());
+    }
+
+    /**
+     * Fails the moment a wave carrying an unrecognised placed-pickup kind spawns it, instead of only
+     * when a player reaches the pickup — the same reasoning {@link #requireRecognisedDrop} applies to
+     * an enemy's designed drop, asked of the same single source of truth, {@code PickupSystem}.
+     */
+    private static void requireRecognisedPickup(String waveId, PlacedPickup placed) {
+        if (!PickupSystem.isRecognisedKind(placed.kind())) {
+            throw new IllegalArgumentException(
+                "wave '" + waveId + "' places a pickup at " + placed.at()
+                    + "s with an unrecognised kind '" + placed.kind() + "'");
+        }
     }
 
     /**
@@ -368,6 +403,7 @@ public final class SpawnSystem implements GameSystem {
         final WaveDefinition definition;
         final float startTime;
         int cursor;
+        int pickupCursor;
 
         ActiveWave(WaveDefinition definition, float startTime) {
             this.definition = definition;

@@ -72,15 +72,28 @@ public final class CleanupSystem implements GameSystem {
         if (source == null) {
             return;
         }
+        createFallingPickup(world, source.x, source.y, drop.pickupId);
+    }
+
+    /**
+     * Builds the entity a pickup always is — {@code Transform}, {@code Collider}, {@code Sprite},
+     * {@code Pickup} and the falling {@code Motion} issue #252 gave every pickup — regardless of
+     * whether an enemy's death produced it, here, or content placed it directly through {@link
+     * SpawnSystem#update}. Package-private rather than duplicated: the two call sites differ only in
+     * where {@code x}/{@code y} and {@code kind} come from, never in what a pickup entity is made of.
+     * Carries no {@code WaveOrigin}, on either path — a level's {@code Cleared} end condition must
+     * never wait on a pickup the player has no obligation to collect.
+     */
+    static void createFallingPickup(World world, float x, float y, String kind) {
         BalanceValues balance = world.content().balance();
         int pickup = world.createEntity();
-        world.transforms().set(pickup, new Transform(source.x, source.y));
+        world.transforms().set(pickup, new Transform(x, y));
         world.colliders().set(pickup, new Collider(balance.pickupRadius(), CollisionLayer.PICKUP));
-        world.sprites().set(pickup, new Sprite(new SpriteId("pickup-" + drop.pickupId)));
-        world.pickups().set(pickup, new Pickup(drop.pickupId));
+        world.sprites().set(pickup, new Sprite(new SpriteId("pickup-" + kind)));
+        world.pickups().set(pickup, new Pickup(kind));
         // A pickup falls like everything else the scroll carries past the player (issue #252) — with
-        // no Motion it hangs exactly where its carrier died, reading as pinned to the window rather
-        // than part of a moving world. Negative because Transform.y grows upward.
+        // no Motion it hangs exactly where it entered, reading as pinned to the window rather than
+        // part of a moving world. Negative because Transform.y grows upward.
         world.motions().set(pickup, new Motion(0f, -balance.pickupFallSpeed()));
     }
 
