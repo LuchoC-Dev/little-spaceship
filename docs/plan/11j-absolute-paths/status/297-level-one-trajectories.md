@@ -57,7 +57,7 @@ A wave placing an absolute entry must do two things, and **nothing enforces eith
 2. **Read every authored `y` as "plus the archetype's collider radius".** The same method places the
    slot at `y = 270 + radius`, so a waypoint written `y: 190` is flown at `y = 190 + radius`.
    Measured, not assumed: `hold-the-line-and-exit` on `enemy-shooter` (radius 6.5) holds at
-   **y = 196.4** in the integration below, and the sweep crosses at **y = 220.1**, not 214. It is a
+   **y = 196.5** in the integration below, and the sweep crosses at **y = 220.5**, not 214. It is a
    small, predictable offset — but it means the absolute form is absolute in `x` and absolute
    *modulo the radius* in `y`, and whoever authors 11k should know that before writing a coordinate
    they expect to line up with something else on screen.
@@ -93,7 +93,7 @@ reads as traffic crossing the lane rather than as something coming at the player
 ### 2. `cross-right` — `{ "mirrorOf": "cross-left" }`
 
 One line, `vx +45`. From `atX 0.05` (x = 10.4) it is the exact reflection: middle of the screen at
-**t = 2.0 s, (101, 185)**, right edge at **t = 4.51 s**, removed at **t = 7.23 s**.
+**t = 2.0 s, (101, 185)**, right edge at **t = 4.51 s**, removed at **t = 7.36 s**.
 
 `test-cross` spawns both at once, so the two lines **cross at the centre of the screen at about
 t = 2.1 s** and separate again. If they do not meet in the middle, the mirroring is wrong — that is
@@ -109,7 +109,7 @@ what the scenario is for.
 it drops, and after two and a half seconds it **snaps to vertical at a corner** and falls straight
 down the rest of the way. From `atX 0.80` (x = 166.4) it reaches **(66.4, 200)** at **t = 2.5 s** — it
 has moved 100 left and only 75 down — then holds x = 66.4 exactly, crossing the bottom edge at
-**t = 6.24 s** and removed at **t = 8.47 s**.
+**t = 6.24 s** and removed at **t = 8.57 s**.
 
 It is the reverse of `descend-and-turn-left`, and that reversal is the whole reason it exists: two
 mirrored copies **converge** into two parallel columns, where two mirrored `descend-and-turn-*` fly
@@ -132,7 +132,7 @@ pass and one only; ignore it and it takes itself away.
 
 From `atX 0.50` (x = 104, y = 275.5) it bottoms out at **y = 66.5** at **t = 2.2 s**, holds that exact
 height until **t = 3.0 s**, then climbs at 70/s: back through its spawn height at **t = 6.0 s**, past
-the top edge, removed at **t = 7.73 s**. The `x` never changes.
+the top edge, removed at **t = 7.81 s**. The `x` never changes.
 
 The wait is what makes it readable — without it the reversal looks like a rendering glitch rather
 than a decision. Note the asymmetry: it goes down at 95 and up at 70, so the retreat is visibly the
@@ -150,10 +150,10 @@ at a noticeably higher speed than it arrived at. The height is the same every ti
 is the property a relative path cannot give.
 
 On `enemy-shooter` (radius 6.5, spawn y = 276.5): straight down 80 units at 45/s, arriving at
-**y = 196.4** at **t = 1.78 s**; motionless until **t = 4.28 s**; then right at 70/s, past the right
-edge at **t = 5.85 s** and removed at **t = 7.59 s**. Total 5.8 s on screen, 2.5 of them stationary.
+**y = 196.5** at **t = 1.78 s**; motionless until **t = 4.28 s**; then right at 70/s, past the right
+edge at **t = 5.85 s** and removed at **t = 7.68 s**. Total 5.8 s on screen, 2.5 of them stationary.
 
-**The 196.4 is the radius offset, not an error** — the waypoint says 190 and the shooter is born 6.5
+**The 196.5 is the radius offset, not an error** — the waypoint says 190 and the shooter is born 6.5
 above the top edge. See "Which are absolute" above.
 
 ### 6. `sweep-the-width-and-drop` — **absolute**. Requires `atX 0.10`
@@ -168,9 +168,9 @@ side. Three legs, two right-angle corners, and the middle one is a wall the play
 around. It is the shape that most needs the absolute form: the crossing height is a number the
 designer chose, not the by-product of a duration.
 
-On `enemy-shooter` (spawn y = 276.5): down to **y = 220.1** at **t = 0.93 s**; right across at 55/s,
+On `enemy-shooter` (spawn y = 276.5): down to **y = 220.5** at **t = 0.93 s**; right across at 55/s,
 reaching x = 187.2 at **t = 3.96 s**; then straight down at 80/s, out of the bottom at **t = 6.79 s**,
-removed at **t = 8.31 s**. It is on screen 6.8 seconds, three of them spent sideways.
+removed at **t = 8.40 s**. It is on screen 6.8 seconds, three of them spent sideways.
 
 ## The scenarios, for the coordinator to wire
 
@@ -232,3 +232,41 @@ arithmetic changed, and it did.
 - **An absolute path placed at the wrong `atX` should fail loudly.** The check belongs in
   `tools/build-level-docs.js`, which already reads waves and trajectories together. Argued above.
 - **The TESTS list discovered from `assets/data/test-*.json`.** The arithmetic changed; see above.
+
+## Corrected by the coordinator after review, before merge
+
+`reviewer` accepted this branch and found seven numbers wrong in this file. The correction is the
+coordinator's because the worker was already closed. **Prose only — no JSON changed, and every claim
+about kind, rule 3, coverage and the absolute form's semantics survived unaltered.**
+
+**Five "removed at t" times were early by exactly one collider radius.** `LifetimeSystem.isPastSafetyBox`
+tests `transform.x + radius < -SAFETY_MARGIN`, so an entity is removed once its *edge* clears the box —
+`radius` further out than its centre. The integration that produced this file applied the radius
+correctly everywhere else (the spawn `y`, every edge-of-playfield crossing) and dropped it here.
+`cross-left` is the clearest case: from `atX 0.95` at 45/s the centre reaches −128 at 7.236 s and the
+edge reaches it at 7.358 s, and the difference times the speed is 5.5 — the radius, exactly.
+
+| | was | now |
+|---|---|---|
+| `cross-left` / `cross-right` | 7.23 s | **7.36 s** |
+| `slide-left-then-descend` / `-right-` | 8.47 s | **8.57 s** |
+| `dive-and-retreat` | 7.73 s | **7.81 s** |
+| `hold-the-line-and-exit` | 7.59 s | **7.68 s** |
+| `sweep-the-width-and-drop` | 8.31 s | **8.40 s** |
+
+**Two absolute arrival heights were short by a rounding artifact.** `hold-the-line-and-exit` arrives at
+`190 + 6.5 = 196.5`, not 196.4, and the sweep crosses at `214 + 6.5 = 220.5`, not 220.1 — the file's own
+stated rule ("authored `y` plus the archetype's radius") gives both, and the 1/100 s sampling landed just
+short of the segment boundary. Corrected to the exact values the rule produces.
+
+**Every corrected number is later than the one it replaces**, so the claim that each wave's
+`fixedDuration` outlasts its last entity is not weakened — it had more slack than this file said, not
+less.
+
+Verified two ways: `reviewer` by closed-form algebra, and the coordinator by integrating the real
+`trajectories.json`, `waves.json` and `enemies.json` at the game's own 1/60 step against
+`isPastSafetyBox`'s actual condition — 7.37 / 8.58 / 7.87 / 7.70 / 8.42, agreeing with the algebra to
+within a frame or two and disagreeing with every original number in the same direction.
+
+**Why this matters more than its size**: these are precisely the numbers a level author reads to decide
+how much runway a shape needs, and 11k is the phase that will read them.
