@@ -86,6 +86,18 @@ class ContentDefinitionsTest {
     }
 
     @Test
+    @DisplayName("a formation slot's two-argument constructor has no delay, and a delay must be a finite, non-negative number")
+    void formationSlotDelayValidates() {
+        FormationSlot noDelay = new FormationSlot(10f, -5f);
+        assertEquals(0f, noDelay.delaySeconds());
+
+        assertThrows(IllegalArgumentException.class, () -> new FormationSlot(0f, 0f, -0.1f));
+        assertThrows(IllegalArgumentException.class, () -> new FormationSlot(0f, 0f, Float.NaN));
+        assertThrows(IllegalArgumentException.class,
+            () -> new FormationSlot(0f, 0f, Float.POSITIVE_INFINITY));
+    }
+
+    @Test
     @DisplayName("a spawn event rejects a negative timestamp, a missing id and an anchor outside [0,1]")
     void spawnEventValidates() {
         assertThrows(IllegalArgumentException.class,

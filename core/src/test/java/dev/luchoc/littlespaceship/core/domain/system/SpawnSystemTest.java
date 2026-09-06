@@ -257,6 +257,68 @@ class SpawnSystemTest {
     }
 
     @Test
+    @DisplayName("a delayed slot holds still, then retraces the leader's own positions exactly, tick for tick, delaySeconds later")
+    void delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind() {
+        // Issue #330 — a single-file column: both slots at offsetX 0, offsetY 0, only the delay
+        // differs. The leader and the follower start at the exact same position, since a delayed
+        // slot's decision is about time (Trajectory#elapsed), never about space.
+        float step = 1f / 60f;
+        int delayTicks = 12;
+        float delay = delayTicks * step;
+        TestContent content = baseContent()
+            .withTrajectory(new ArcTrajectoryDefinition("arc-test", 20f, -80f, 40f))
+            .withFormation(new SimpleFormationDefinition("column", List.of(
+                new FormationSlot(0f, 0f),
+                new FormationSlot(0f, 0f, delay))))
+            .withSingleWave(LEVEL, List.of(
+                new SpawnEvent(0f, "enemy-basic", "column", 0.5f, null, 0, "arc-test")));
+        World world = worldOf(content);
+        SpawnSystem spawn = new SpawnSystem(LEVEL);
+        MotionSystem motion = new MotionSystem();
+
+        spawn.update(world, step, InputFrame.IDLE);
+        assertEquals(2, world.entityCount());
+
+        int leader = -1;
+        int follower = -1;
+        for (int i = 0; i < world.trajectories().size(); i++) {
+            int entity = world.trajectories().entityAt(i);
+            if (world.trajectories().valueAt(i).elapsed < 0f) {
+                follower = entity;
+            } else {
+                leader = entity;
+            }
+        }
+        assertTrue(leader >= 0 && follower >= 0, "one slot should carry the delay, the other none");
+        float spawnX = world.transforms().get(leader).x;
+        float spawnY = world.transforms().get(leader).y;
+        assertEquals(spawnX, world.transforms().get(follower).x, "both slots start at the same point");
+        assertEquals(spawnY, world.transforms().get(follower).y, "both slots start at the same point");
+
+        int ticks = delayTicks + 40;
+        List<float[]> leaderHistory = new java.util.ArrayList<>();
+        List<float[]> followerHistory = new java.util.ArrayList<>();
+        for (int t = 0; t < ticks; t++) {
+            motion.update(world, step, InputFrame.IDLE);
+            Transform lt = world.transforms().get(leader);
+            Transform ft = world.transforms().get(follower);
+            leaderHistory.add(new float[] {lt.x, lt.y});
+            followerHistory.add(new float[] {ft.x, ft.y});
+        }
+
+        for (int t = 0; t < delayTicks; t++) {
+            assertEquals(spawnX, followerHistory.get(t)[0], "held still before its own path begins");
+            assertEquals(spawnY, followerHistory.get(t)[1], "held still before its own path begins");
+        }
+        for (int t = delayTicks; t < ticks; t++) {
+            float[] expected = leaderHistory.get(t - delayTicks);
+            float[] actual = followerHistory.get(t);
+            assertEquals(expected[0], actual[0], "same x the leader had delaySeconds earlier");
+            assertEquals(expected[1], actual[1], "same y the leader had delaySeconds earlier");
+        }
+    }
+
+    @Test
     @DisplayName("the same trajectory attaches to two different archetypes from data alone")
     void sameTrajectoryReusedAcrossArchetypes() {
         ComponentSpec sharedMotion = new MapComponentSpec("motion", Map.of("trajectory", "dive"));
