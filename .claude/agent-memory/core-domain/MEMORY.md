@@ -26,3 +26,4 @@
 - [Boss front-clock cycle fraction](project_boss-front-clock-cycle-fraction.md) — N=3 chosen for a "fires in MOVING" test, then N=2 chosen by play-tuning; how the test changed to assert the narrower real property each time.
 - [Seeded Rng first-pick lookup](feedback_seeded-rng-first-pick-lookup.md) — reproduce the xorshift Rng in Python to find seeds by their first draw instead of guessing via gradle.
 - [One-sided bound is vacuous](feedback_one-sided-bound-is-vacuous.md) — a "delta > threshold" test can pass under both the wanted and the unwanted behavior; check where the failing case lands before trusting it, and falsify with a scratch mutation.
+- [Delay crossing as integer countdown](project_delay-crossing-integer-countdown.md) — replacing a float elapsed<=0f crossing with Trajectory.delayTicks, why step had to thread through SpawnSystem, and the waves.json fixture needed to drive SpawnSystem from JsonContentSource.
