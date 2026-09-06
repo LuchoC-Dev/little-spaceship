@@ -1795,4 +1795,49 @@ in the level, the "no cleared wave" and "every generator check clean except the 
 negative offsets" claims, and the beat-11/beat-12 "rest is not a rest if the carriers survive" timing
 (carrier on-screen end ~125.7 s against the rest wave's own 114.5–120.5 s window, reproduced exactly).
 
+## PR #331 (`feat/formation-slot-delay`, phase 11k, issue #330) — a floating-point boundary the shipped test never exercises
+
+`core`-only branch (`FormationSlot` gains `delaySeconds`, `SpawnSystem` backdates `Trajectory.elapsed`
+to `-delaySeconds`, `MotionSystem` holds velocity at zero while `elapsed <= 0f`). Verdict: accept.
+Every invariant held (no libGDX/clock/`Math.random`/threading in the touched files), the 2-arg
+back-compat constructor is the one `game`'s untouched loader still calls, `node
+tools/build-level-docs.js` printed `unchanged` for both documents, all five replay test files stayed
+green (367 core tests total), and `./gradlew clean build` was genuinely green (confirmed executing,
+not just cache hits, by comparing task states across two runs).
+
+44. **A javadoc's stated reason for an inclusive boundary (`<= 0f` over `< 0f`) can be real only for a
+    narrow slice of the input range the feature actually allows, and the shipped test can land
+    entirely outside that slice.** The author's own reasoning — both in `MotionSystem`'s javadoc and
+    the status fragment — is that including `elapsed == 0` in the held branch is what makes a delayed
+    slot retrace the leader's positions *exactly*, tick for tick. Exhaustively simulating
+    `elapsed = -delayTicks*step` accumulated by `+= step` for `delayTicks` 1..3600 in plain Java shows
+    `elapsed` lands on *exactly* `0.0f` only for `delayTicks` 1 and 2 — for every other tick count
+    (including the shipped test's 12), float accumulation error leaves `elapsed` a small nonzero
+    epsilon (`-2.6e-8` at delayTicks=12) that is `< 0f` regardless of which comparison is used, so the
+    two operators produce identical held/active behaviour there. Proved directly: mutating
+    `elapsed <= 0f` to `elapsed < 0f` and rerunning `./gradlew :core:test --tests "*SpawnSystemTest"
+    --rerun-tasks` left the new delay test green (33 tests, 0 failures) at the test's own
+    `delayTicks = 12`; the identical mutation with `delayTicks` changed to `1` failed it immediately.
+    The code is not wrong — `<=` is still the safe, correct choice — but the chain
+    "javadoc claims X matters" -> "status fragment repeats it" -> "test pins it" breaks at the last
+    link for the specific value shipped. Whenever a comment justifies a boundary operator by appeal to
+    an exact real-number crossing in an accumulated-float quantity, check whether the float actually
+    reaches that exact value for the test's own chosen inputs before crediting the test with proving
+    the boundary matters — accumulation error routinely skips the exact zero/exact-integer case
+    entirely except at the smallest few counts.
+45. **"Retraces exactly, delaySeconds later" is a claim scoped (correctly, in this branch's own
+    fragment) to a delay constructed as literally `N * step` in float, and silently narrower than a
+    reader would assume from the issue title.** Direct simulation of `-delay + k*step` for delays a
+    content author would plausibly type as plain decimals (`0.05`, `0.3`, `0.5`, `1f/3f` seconds, all
+    exact numbers of ticks in real arithmetic — 3, 18, 30, 20 respectively) crosses zero **one tick
+    early** for three of the four, because the float literal for the decimal does not exactly equal
+    `N * (1f/60f)` computed by repeated addition. This branch is not wrong to leave it that way — its
+    own status fragment already scopes the "exact" guarantee to "a slot delayed by exactly `N` ticks
+    (`delaySeconds = N * step`)" and never claims it for arbitrary decimal seconds — but the guarantee
+    quietly degrades to "off by up to one tick" for the values a level designer would actually write in
+    JSON once the loader lands, and neither the issue nor the "what the loader will need" section warns
+    of it. Worth handing forward: whoever builds the loader should either quantize an author-supplied
+    `delaySeconds` to the nearest tick before storing it, or the level-doc/content docs should say
+    delays must be written as an exact multiple of `1/60` to get the documented exactness.
+
 Related: [[audit-techniques]].
