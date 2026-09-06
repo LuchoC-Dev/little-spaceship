@@ -1,9 +1,10 @@
 # Phase 11k — Level 1 rebuilt on a vocabulary written for it · status
 
-**State:** **complete on the branch, open as a pull request against `dev`.** Sixteen pull requests
-merged into `phase/11k-level-one-rebuilt`, CI green, no defect of this phase left open. **The project
-owner played the level twice and the boss three times**, and every verdict this phase turned on is
-theirs.
+**State:** **done, and on `dev`.** Merged in [#341](https://github.com/LuchoC-Dev/little-spaceship/pull/341)
+on 06/09/2026, with the project owner's direct approval. Seventeen pull requests merged into
+`phase/11k-level-one-rebuilt`, CI green, no defect of this phase left open. **The project owner
+played the level and the boss across three sessions**, approved both, and every verdict this phase
+turned on is theirs.
 **Updated:** 06/09/2026
 
 This file holds the phase's `State:` line and its narrative, and the coordinator writes it — at the
