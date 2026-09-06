@@ -41,19 +41,22 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * hit against the core's existing drawn sprite actually registers. It dies with the core exactly like
  * a pod or an arm; its own death, on its own, ends nothing.
  *
- * <p><b>The pattern state machine.</b> Fixed order, no randomness: spread and sweep alternate every
- * cycle, never chosen. Each cycle is a cooldown, then a three-beat, 0.75 s tell — the timing fixed in
- * {@code docs/design/06-boss-presentation.md} — then an instantaneous fire. During the tell, the
- * charging parts' {@link Sprite#frame} steps 1, 2, 3 and drops back to 0 the instant the shot leaves,
- * exactly the class javadoc there describes; that is the whole channel presentation needs to draw the
- * charge, so no separate "which part, how far" contract exists on {@link
- * dev.luchoc.littlespaceship.core.port.BossStatus}. Spread charges both pods, sweep charges both arms —
- * pods for spread, arms for sweep, per that same design document — and at the instant a tell begins,
- * {@link #lockAim} freezes the player's current position as the volley's aim point. Each charging part
- * then fires a fan of {@link #FAN_COUNT} projectiles aimed at that frozen point, not at a fixed outward
- * or inward angle: {@link #fireAimedFan} and {@link #FAN_SPREAD_RATIOS} carry the geometry and the
- * reasoning. This is the redesign task 4 of {@code docs/plan/11e-level-one-redesigned/plan.md} asked
- * for, replacing the fixed-angle fan that always missed a player parked at screen centre.
+ * <p><b>The pattern state machine, and the rear/front split added for issue #329.</b> The pods are the
+ * rear weapon and keep exactly what shipped for #325: a cooldown, then a three-beat, 0.75 s tell — the
+ * timing fixed in {@code docs/design/06-boss-presentation.md} — then an instantaneous fire, always
+ * tied to a standstill. During the tell, the pods' {@link Sprite#frame} steps 1, 2, 3 and drops back to
+ * 0 the instant the volley leaves, exactly the class javadoc there describes; that is the whole channel
+ * presentation needs to draw the charge, so no separate "which part, how far" contract exists on
+ * {@link dev.luchoc.littlespaceship.core.port.BossStatus}. The arms are the front weapon and fire on
+ * their own clock — see {@link #updateFrontWeapons} — with no tell of their own: each shot locks the
+ * player's position at the instant it fires rather than at the start of a charge, since there is no
+ * charge to start one from. At the instant a pod tell begins, {@link #lockAim} freezes the player's
+ * current position as that volley's aim point; a front shot computes its own, fresh, aim point the same
+ * way, in {@link #computeAimPoint}, at the instant it fires. Every volley, rear or front, fans {@link
+ * #FAN_COUNT} projectiles at its own locked point, not at a fixed outward or inward angle: {@link
+ * #fireAimedFan} and {@link #FAN_SPREAD_RATIOS} carry the geometry and the reasoning. This is the
+ * redesign task 4 of {@code docs/plan/11e-level-one-redesigned/plan.md} asked for, replacing the
+ * fixed-angle fan that always missed a player parked at screen centre.
  *
  * <p><b>Defeat.</b> The core is the only part whose death ends the fight: once it is destroyed,
  * whatever keel, pods or arms remain are destroyed with it — a boss does not linger as a headless
@@ -63,14 +66,25 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * simply fires nothing and still completes its cycle, so the fight never stalls waiting on a part
  * that is gone.
  *
- * <p><b>Movement, added for issue #325.</b> Once settled at {@code combatY} and through every attack
- * cycle after that, the boss travels between the ten vertices of a five-pointed star — {@link
- * #STAR_X}/{@link #STAR_Y} — never more than three perimeter steps per move, per the project owner's
- * design. A move only ever starts at the end of {@link #fire}, after a volley has fully resolved,
- * never mid-tell, so the fan in {@link #fireAimedFan} always aims from a standstill exactly as
- * before: see {@link #beginMove} for why the two can never overlap. Position is a pure function of
- * elapsed time and the destination draws from the seeded {@link World#rng()}, so a replay reproduces
- * the same sequence of points.
+ * <p><b>Movement, added for issue #325, now a fixed duration per issue #329.</b> Once settled at
+ * {@code combatY} and through every attack cycle after that, the boss travels between the ten vertices
+ * of a five-pointed star — {@link #STAR_X}/{@link #STAR_Y} — never more than three perimeter steps per
+ * move, per the project owner's design. A move only ever starts at the end of {@link #fireRearVolley},
+ * after the rear volley has fully resolved, never mid-tell, so the fan in {@link #fireAimedFan} always
+ * aims the rear volley from a standstill exactly as before: see {@link #beginMove} for why the two can
+ * never overlap. Every move now takes exactly {@link #MOVE_DURATION}, whatever the distance — inverted
+ * from #325's constant speed on the owner's own instruction, because a variable cycle length could not
+ * hold the fixed front/rear ratio #329 asks for; see {@link #updateFrontWeapons}. Position is a pure
+ * function of elapsed time and the destination draws from the seeded {@link World#rng()}, so a replay
+ * reproduces the same sequence of points.
+ *
+ * <p><b>The front weapons deliberately break the move/attack exclusion, for themselves alone.</b> A
+ * rear volley still cannot overlap a move — {@link FightStage#MOVING} is entered from exactly one call
+ * site, {@link #fireRearVolley}'s caller, exactly as #325 built it. The front clock is not driven
+ * through {@link FightStage} at all: {@link #updateFrontWeapons} runs every tick of {@code FIGHT}
+ * regardless of {@link #fightStage}, called once per tick from {@link #updateFight} after the stage
+ * switch, so a front shot fires whether the boss is cooling down, telling or travelling. Nothing else
+ * reads or writes {@link #fightStage} from that method, so no second door into {@code MOVING} exists.
  *
  * <p><b>Damage and score need nothing new.</b> Every part is an ordinary {@code ENEMY}-layer,
  * non-fragile {@link Collider} carrying {@link Health} and {@link ScoreValue}, so {@code
@@ -215,6 +229,15 @@ public final class BossSystem implements GameSystem {
     static final int STAR_POINT_COUNT = 10;
 
     /**
+     * {@code true} while the boss is travelling between star points. Package-visible for exactly the
+     * reason {@link #STAR_X} is: so {@code BossSystemTest} can check it by name at the instant a front
+     * shot fires, rather than inferring it from position deltas. No accessor was added to any port.
+     */
+    boolean isMoving() {
+        return fightStage == FightStage.MOVING;
+    }
+
+    /**
      * The legal offsets from the boss's current star index to its next one: within three perimeter
      * steps in either direction, per the owner's rule — never the fourth or fifth step, which would
      * let the boss cross the screen from one side to the other in a single move. Six offsets, six
@@ -223,21 +246,68 @@ public final class BossSystem implements GameSystem {
     private static final int[] STAR_STEP_OFFSETS = {-3, -2, -1, 1, 2, 3};
 
     /**
-     * How fast the boss travels the straight line between two chosen star points, in logical units
-     * per second. A footprint/movement constant hardcoded here, the same treatment {@link #FAN_COUNT}
-     * and the part radii above already get: the plan leaves size and exact placement to this agent,
-     * and this is not a number {@link BossDefinition} varies with balancing. At this speed, the
-     * longest legal (three-step) hop of the ten points, about 37.6 units, takes under a second; the
-     * longest possible hop of any kind, the one the very first, unrestricted pick can produce (about
-     * 60.9 units, see {@link #beginMove}), takes under a second and a half.
+     * How long a move takes, whatever the distance — issue #329's inversion of #325's constant speed.
+     * A footprint/movement constant hardcoded here, the same treatment {@link #FAN_COUNT} and the part
+     * radii above already get: not a number {@link BossDefinition} varies with balancing.
+     *
+     * <p>Chosen to keep #325's own feel: at the old constant speed of 45 units/second, the longest
+     * <i>legal</i> (three-step) hop of the ten star points — about 37.6 units — took about 0.84 s,
+     * the slowest a player had actually seen a hop take. This value reproduces that number exactly,
+     * so a short hop now visibly crawls and a long one visibly accelerates (the point of the
+     * inversion) without changing how long the slowest hop used to feel.
+     *
+     * <p>One line to change, per the plan's own instruction — the project owner tunes this by playing.
      */
-    private static final float MOVE_SPEED = 45.0f;
+    static final float MOVE_DURATION = 0.84f;
+
+    /**
+     * How many times the front weapon (the arms, the sweep pattern) fires within one full rear cycle —
+     * {@link #rearCycleDuration}, one move plus cooldown plus tell, <b>in that order in steady
+     * state</b> — including the shot it fires together with the rear volley at the cycle's own
+     * boundary. Issue #329's synchronisation rule: "they fire together, then the front fires more
+     * often, then they coincide again," which is arithmetic once the cycle is a constant (see {@link
+     * #MOVE_DURATION}'s javadoc) — the front period is simply {@code rearCycleDuration /
+     * FRONT_SHOTS_PER_CYCLE}, so the Nth front shot always lands exactly on the next rear volley, and
+     * {@code FRONT_SHOTS_PER_CYCLE − 1} front shots fall strictly between two rear volleys.
+     *
+     * <p><b>The cycle runs {@code MOVING} first, not last, in every cycle but the very first one.</b>
+     * {@link #updateTelling} resets {@link #frontElapsed}/{@link #frontShotsThisCycle} to zero and
+     * calls {@link #beginMove} back to back, in the same tick a rear volley fires — so the instant a
+     * cycle's own clock starts at zero, the boss is already entering {@code MOVING}. Only the very
+     * first cycle, from the entrance settling to the first rear volley, is different: it has no move
+     * to lead with, since none has happened yet, and runs {@code COOLDOWN} then {@code TELLING} alone.
+     * Every cycle after that runs {@code MOVING} ({@link #MOVE_DURATION}), then {@code COOLDOWN}
+     * ({@code patternCooldown}), then {@code TELLING} ({@code TELL_DURATION}), then the next fire.
+     *
+     * <p><b>Why 3, not the numerically closer 2.</b> The owner's starting suggestion was a front period
+     * near 1.2 s. Against this boss's real content ({@code patternCooldown} 0.7 s in
+     * {@code level-01.json}), the cycle is 0.84 + 0.7 + 0.75 = 2.29 s, and the numerically closest
+     * choice is {@code N = 2} (a period of 1.145 s, 0.055 s off the suggestion) — but {@code N = 2}'s
+     * one independent shot always lands at exactly half the cycle, and {@code MOVING} — now the
+     * <i>first</i> segment of a steady-state cycle — only covers its first 36.7%
+     * ({@code MOVE_DURATION} / cycle = 0.84 / 2.29). Half the cycle falls past that, inside
+     * {@code COOLDOWN}, so that lone shot fires during {@code COOLDOWN} on every single cycle, never
+     * during {@code MOVING} — failing the plan's own requirement that a front shot be provably fired
+     * while the boss travels; a scratch mutation to {@code N = 2} and a reflection probe against the
+     * real compiled classes and {@code level-01.json} both confirmed exactly this. {@code N = 3}
+     * places its <i>first</i> independent shot at one-third of the cycle (0.333), still inside the
+     * 0.367 {@code MOVING} window — a margin of about 0.077 s (roughly 4.6 ticks) at these real
+     * content values — so it lands inside {@code MOVING} on every cycle instead. (Its second
+     * independent shot, at two-thirds, lands in {@code COOLDOWN} at these values; which segment
+     * catches it does not matter to the requirement, only the first one does.) This is the smallest
+     * {@code N} for which the {@code MOVING} requirement holds at {@link #MOVE_DURATION}'s chosen
+     * value: it needs {@code patternCooldown + TELL_DURATION < 2 * MOVE_DURATION}, true here
+     * (1.45 s &lt; 1.68 s) but not true for {@code N = 2}, which would need
+     * {@code patternCooldown + TELL_DURATION < MOVE_DURATION} — false by a wide margin. {@code N = 3}'s
+     * period, 0.763 s, is further from the 1.2 s suggestion than {@code N = 2}'s would have been, but
+     * the suggestion is explicitly the owner's to tune, while firing during a move is not. One line to
+     * change regardless — the project owner tunes this by playing.
+     */
+    static final int FRONT_SHOTS_PER_CYCLE = 3;
 
     private enum Phase { AWAITING, ENTRANCE, FIGHT, DEFEATED }
 
     private enum FightStage { COOLDOWN, TELLING, MOVING }
-
-    private enum BossPattern { SPREAD, SWEEP }
 
     private final String levelId;
 
@@ -257,8 +327,27 @@ public final class BossSystem implements GameSystem {
 
     private FightStage fightStage = FightStage.COOLDOWN;
     private float stageTimer;
-    private BossPattern currentPattern = BossPattern.SPREAD;
-    private BossPattern nextPattern = BossPattern.SPREAD;
+
+    /**
+     * The rear cycle's own length — {@code patternCooldown + TELL_DURATION + MOVE_DURATION} — cached
+     * once {@link #definition} is known, since {@link BossDefinition#patternCooldown()} is fixed for a
+     * level and never changes mid-run. What {@link #frontPeriod} divides.
+     */
+    private float rearCycleDuration;
+
+    /** {@link #rearCycleDuration} divided by {@link #FRONT_SHOTS_PER_CYCLE}. See {@link #updateFrontWeapons}. */
+    private float frontPeriod;
+
+    /** Time since the front weapon last fired — either independently or together with a rear volley. */
+    private float frontElapsed;
+
+    /**
+     * How many front shots have already fired within the current rear cycle, capped at {@link
+     * #FRONT_SHOTS_PER_CYCLE} − 1 by {@link #updateFrontWeapons} itself: the last shot of every cycle
+     * is always the one fired together with the rear volley, from {@link #fireRearVolley}, never from
+     * the independent clock — see {@link #updateFrontWeapons}.
+     */
+    private int frontShotsThisCycle;
 
     /**
      * The star index the boss currently stands on, or {@code -1} while it has not yet made its first
@@ -299,6 +388,8 @@ public final class BossSystem implements GameSystem {
                 return;
             }
             definition = world.content().boss(levelId);
+            rearCycleDuration = definition.patternCooldown() + TELL_DURATION + MOVE_DURATION;
+            frontPeriod = rearCycleDuration / FRONT_SHOTS_PER_CYCLE;
         }
         world.markBossLevel();
 
@@ -382,7 +473,10 @@ public final class BossSystem implements GameSystem {
             phase = Phase.FIGHT;
             fightStage = FightStage.COOLDOWN;
             stageTimer = def.patternCooldown();
-            nextPattern = BossPattern.SPREAD;
+            // The front weapon's own clock starts here too, so it is already running through the very
+            // first rear cooldown and tell — it does not wait for the first rear volley to begin.
+            frontElapsed = 0f;
+            frontShotsThisCycle = 0;
         }
         reportStatus(world, def);
     }
@@ -413,6 +507,9 @@ public final class BossSystem implements GameSystem {
             case TELLING -> updateTelling(world, def, step);
             case MOVING -> updateMoving(world, def, step);
         }
+        // Independent of fightStage on purpose: the front weapon fires whether the boss is cooling
+        // down, telling or travelling. See the class javadoc paragraph on the rear/front split.
+        updateFrontWeapons(world, def, step);
         reportStatus(world, def);
     }
 
@@ -421,56 +518,74 @@ public final class BossSystem implements GameSystem {
         if (stageTimer <= 0f) {
             fightStage = FightStage.TELLING;
             stageTimer = 0f;
-            currentPattern = nextPattern;
             lockAim(world);
         }
     }
 
     /**
      * Reads the player's current position, through the same fixed step every other system reads the
-     * world under, and holds it in {@link #aimX}/{@link #aimY} for the whole tell and the volley it
-     * resolves into. Called exactly once per pattern cycle, at the instant the tell begins — see the
+     * world under, and holds it in {@link #aimX}/{@link #aimY} for the whole tell and the rear volley
+     * it resolves into. Called exactly once per rear cycle, at the instant the tell begins — see the
      * class javadoc on {@link #FAN_SPREAD_RATIOS} for why locking here rather than at fire time is
-     * what keeps the tell honest.
+     * what keeps the tell honest. The front weapon does not use this: it has no tell to lock at the
+     * start of, so it computes its own aim point fresh, at fire time — see {@link #computeAimPoint}.
+     */
+    private void lockAim(World world) {
+        AimPoint aim = computeAimPoint(world);
+        aimX = aim.x();
+        aimY = aim.y();
+    }
+
+    /**
+     * Reads the player's current position, the same way {@link #lockAim} does, but returns it instead
+     * of freezing it in a field — what the front weapon needs, since each of its shots aims at the
+     * position current at the instant it fires rather than one frozen at the start of a charge it
+     * never has.
      *
      * <p>No player entity — the boss level's own test fixtures routinely omit one — falls back to the
      * playfield's horizontal centre at {@code playerStartY}, {@link BalanceValues}' own content value
-     * rather than a hardcoded one, so the fan still points somewhere plausible instead of at (0, 0).
+     * rather than a hardcoded one, so a shot still points somewhere plausible instead of at (0, 0).
      */
-    private void lockAim(World world) {
+    private AimPoint computeAimPoint(World world) {
         int player = world.playerEntity();
         Transform transform = player == EntityId.NONE ? null : world.transforms().get(player);
         if (transform != null) {
-            aimX = transform.x;
-            aimY = transform.y;
-        } else {
-            aimX = MotionSystem.PLAYFIELD_WIDTH / 2f;
-            aimY = world.content().balance().playerStartY();
+            return new AimPoint(transform.x, transform.y);
         }
+        return new AimPoint(MotionSystem.PLAYFIELD_WIDTH / 2f, world.content().balance().playerStartY());
     }
+
+    private record AimPoint(float x, float y) { }
 
     private void updateTelling(World world, BossDefinition def, float step) {
         stageTimer += step;
         int beat = Math.min(BEATS - 1, (int) (stageTimer / BEAT_DURATION));
-        applyTellFrame(world, currentPattern, beat + 1);
+        applyPodTellFrame(world, beat + 1);
         if (stageTimer < TELL_DURATION) {
             return;
         }
-        fire(world, def, currentPattern);
-        applyTellFrame(world, currentPattern, 0);
-        nextPattern = currentPattern == BossPattern.SPREAD ? BossPattern.SWEEP : BossPattern.SPREAD;
+        fireRearVolley(world, def);
+        applyPodTellFrame(world, 0);
+        // The synchronisation point: the front weapon fires together with every rear volley, whether
+        // or not its own independent clock (below) had already reached FRONT_SHOTS_PER_CYCLE - 1 shots
+        // this cycle, and the cycle restarts from here regardless.
+        fireFrontVolley(world, def);
+        frontElapsed = 0f;
+        frontShotsThisCycle = 0;
         beginMove(world);
     }
 
     /**
-     * Starts the boss travelling, at {@link #MOVE_SPEED}, from wherever it is to the next star point
-     * — called only once a volley has fully resolved, never while a tell is charging or a shot is in
-     * flight. This is what answers the plan's question of what happens if an attack is still
-     * resolving when a move would begin: it cannot happen, because {@link FightStage#MOVING} is only
-     * ever entered from the end of {@link #updateTelling}, after {@link #fire} has already run, and
-     * {@link #updateCooldown} and {@link #updateTelling} — the only places a tell advances or a
-     * volley fires — never run while {@link #fightStage} is {@code MOVING}. Firing and moving are
-     * strictly serialised by this state machine, not merely by convention.
+     * Starts the boss travelling, for exactly {@link #MOVE_DURATION} regardless of distance, from
+     * wherever it is to the next star point — called only once the rear volley has fully resolved,
+     * never while a tell is charging or a shot is in flight. This is what answers the plan's question
+     * of what happens if an attack is still resolving when a move would begin: it cannot happen for the
+     * rear weapon, because {@link FightStage#MOVING} is only ever entered from the end of {@link
+     * #updateTelling}, after {@link #fireRearVolley} has already run, and {@link #updateCooldown} and
+     * {@link #updateTelling} — the only places a tell advances or a rear volley fires — never run while
+     * {@link #fightStage} is {@code MOVING}. Firing and moving are strictly serialised by this state
+     * machine, not merely by convention. The front weapon is exempt from this exclusion entirely — see
+     * {@link #updateFrontWeapons}, which never reads or writes {@link #fightStage}.
      *
      * <p>The destination is drawn from the seeded {@link World#rng()}: uniformly over all ten points
      * for the very first move, since the boss is not yet standing on any of them — it is still at the
@@ -485,10 +600,7 @@ public final class BossSystem implements GameSystem {
         moveFromX = coreX;
         moveFromY = coreY;
         targetStarIndex = next;
-        float dx = STAR_X[next] - coreX;
-        float dy = STAR_Y[next] - coreY;
-        float distance = (float) Math.sqrt(dx * dx + dy * dy);
-        moveDuration = distance / MOVE_SPEED;
+        moveDuration = MOVE_DURATION;
         moveElapsed = 0f;
         fightStage = FightStage.MOVING;
     }
@@ -501,10 +613,11 @@ public final class BossSystem implements GameSystem {
 
     /**
      * Advances the boss along the straight line from where the move began to {@link
-     * #targetStarIndex}, linearly in time so a degenerate zero-distance move (never observed, since
-     * every star point differs from every other and from the entrance's landing spot in practice, but
-     * not provably impossible) still resolves in one tick rather than dividing by zero. No attack
-     * timer advances while this runs — see {@link #beginMove}.
+     * #targetStarIndex}, linearly in time over the fixed {@link #MOVE_DURATION} so a degenerate
+     * zero-duration move (never configured, {@code MOVE_DURATION} being a positive literal, but not
+     * provably impossible if it were ever changed to zero) still resolves in one tick rather than
+     * dividing by zero. No rear attack timer advances while this runs — see {@link #beginMove} — but
+     * the front weapon's own clock keeps running, per {@link #updateFrontWeapons}.
      */
     private void updateMoving(World world, BossDefinition def, float step) {
         moveElapsed += step;
@@ -520,14 +633,32 @@ public final class BossSystem implements GameSystem {
     }
 
     /**
-     * Sets the charging parts' {@link Sprite#frame} to the tell's current beat, 1 through 3, or back
-     * to 0 once the shot leaves — the whole contract presentation needs, per the class javadoc.
+     * The front weapon's own clock, run every tick of {@code FIGHT} regardless of {@link #fightStage}
+     * — the deliberate break of the move/attack exclusion the rear weapon still holds to. Fires at most
+     * {@link #FRONT_SHOTS_PER_CYCLE} − 1 shots independently per rear cycle, evenly spaced at {@link
+     * #frontPeriod}; the cycle's own last shot always comes from {@link #updateTelling}, fired together
+     * with the rear volley, never from here — that split is what turns "coincide every N shots" from a
+     * runtime correction into arithmetic: {@link #frontPeriod} is exactly {@link #rearCycleDuration}
+     * divided by {@link #FRONT_SHOTS_PER_CYCLE}, so {@code FRONT_SHOTS_PER_CYCLE} shots, evenly spaced,
+     * always span exactly one rear cycle.
      */
-    private void applyTellFrame(World world, BossPattern pattern, int frame) {
-        int left = pattern == BossPattern.SPREAD ? podLeft : armLeft;
-        int right = pattern == BossPattern.SPREAD ? podRight : armRight;
-        setFrame(world, left, frame);
-        setFrame(world, right, frame);
+    private void updateFrontWeapons(World world, BossDefinition def, float step) {
+        frontElapsed += step;
+        if (frontShotsThisCycle < FRONT_SHOTS_PER_CYCLE - 1
+            && frontElapsed >= frontPeriod * (frontShotsThisCycle + 1)) {
+            frontShotsThisCycle++;
+            fireFrontVolley(world, def);
+        }
+    }
+
+    /**
+     * Sets the pods' {@link Sprite#frame} to the tell's current beat, 1 through 3, or back to 0 once
+     * the rear volley leaves — the whole contract presentation needs, per the class javadoc. The arms
+     * have no tell and no charge frame of their own: a front shot is instantaneous.
+     */
+    private void applyPodTellFrame(World world, int frame) {
+        setFrame(world, podLeft, frame);
+        setFrame(world, podRight, frame);
     }
 
     private static void setFrame(World world, int entity, int frame) {
@@ -540,45 +671,53 @@ public final class BossSystem implements GameSystem {
         }
     }
 
-    private void fire(World world, BossDefinition def, BossPattern pattern) {
-        if (pattern == BossPattern.SPREAD) {
-            fireAimedFan(world, podLeft, def.spreadProjectileSpeed());
-            fireAimedFan(world, podRight, def.spreadProjectileSpeed());
-        } else {
-            fireAimedFan(world, armLeft, def.sweepProjectileSpeed());
-            fireAimedFan(world, armRight, def.sweepProjectileSpeed());
-        }
+    private void fireRearVolley(World world, BossDefinition def) {
+        fireAimedFan(world, podLeft, def.spreadProjectileSpeed(), aimX, aimY);
+        fireAimedFan(world, podRight, def.spreadProjectileSpeed(), aimX, aimY);
+    }
+
+    /**
+     * Fires the front weapon: a fresh aim point, computed now rather than read from a field frozen
+     * earlier, since the front weapon has no tell to freeze one at the start of. Called both from
+     * {@link #updateFrontWeapons}, on its own independent clock, and from {@link #updateTelling}, at
+     * the instant a rear volley fires — see the class javadoc on the synchronisation rule.
+     */
+    private void fireFrontVolley(World world, BossDefinition def) {
+        AimPoint aim = computeAimPoint(world);
+        fireAimedFan(world, armLeft, def.sweepProjectileSpeed(), aim.x(), aim.y());
+        fireAimedFan(world, armRight, def.sweepProjectileSpeed(), aim.x(), aim.y());
     }
 
     /**
      * Fires {@link #FAN_COUNT} projectiles from {@code part} in the same tick, fanned around the
-     * straight line from {@code part}'s own current position to the aim point {@link #lockAim} froze
-     * for this volley — not around a fixed outward or inward angle, which is exactly the change this
-     * method exists for. Both a spread pod and a sweep arm call this the same way; the two patterns
-     * differ only in which parts fire and at what speed, not in how a volley is shaped.
+     * straight line from {@code part}'s own current position to {@code (targetX, targetY)} — not
+     * around a fixed outward or inward angle, which is exactly the change this method exists for. Both
+     * a rear pod and a front arm call this the same way; they differ only in which parts fire, at what
+     * speed and how the target is computed (frozen at tell start for the rear, fresh at fire time for
+     * the front — see {@link #lockAim} and {@link #computeAimPoint}), not in how a volley is shaped.
      *
      * <p>Each ray takes the unit aim direction, adds a multiple of its perpendicular — {@link
      * #FAN_SPREAD_RATIOS}, narrowest to widest — and renormalises, so every ray still travels at
      * exactly {@code speed} regardless of how far it strays from dead-on. The centre ratio, {@code 0f},
      * reproduces the un-fanned aim direction exactly.
      */
-    private void fireAimedFan(World world, int part, float speed) {
+    private void fireAimedFan(World world, int part, float speed, float targetX, float targetY) {
         if (part == EntityId.NONE || !world.isAlive(part)) {
-            // The charging part died mid-tell: that side of the attack simply does not fire. The
-            // cycle still completes and alternates normally.
+            // The firing part is dead: that side of the attack simply does not fire. The cycle still
+            // completes normally.
             return;
         }
         Transform origin = world.transforms().get(part);
         if (origin == null) {
             return;
         }
-        float dx = aimX - origin.x;
-        float dy = aimY - origin.y;
+        float dx = targetX - origin.x;
+        float dy = targetY - origin.y;
         float lengthSquared = dx * dx + dy * dy;
         if (lengthSquared < 1e-6f) {
-            // The locked aim point sits (almost) on top of the firing part — degenerate only, never
-            // observed in play at this boss's footprint, but a direction must still be well defined.
-            // Straight down, toward where the player always is relative to the boss.
+            // The aim point sits (almost) on top of the firing part — degenerate only, never observed
+            // in play at this boss's footprint, but a direction must still be well defined. Straight
+            // down, toward where the player always is relative to the boss.
             dx = 0f;
             dy = -1f;
             lengthSquared = 1f;
