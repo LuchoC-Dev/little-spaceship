@@ -23,3 +23,5 @@
 - [Placed pickup design](project_placed-pickup-design.md) — pickups() lives on WaveDefinition not a level list, no-WaveOrigin avoids stalling a Cleared wave, package-private reuse across SpawnSystem/CleanupSystem, "at load" usually means spawn-time in this codebase.
 - [Boss star movement](project_boss-star-movement.md) — serializing fire/move via state-machine dispatch, fixing a stale immobility test by shrinking its tick budget, package-private literals for test visibility, reusing an existing timer as the "pause."
 - [Formation slot delay](project_formation-slot-delay.md) — backdating Trajectory.elapsed as the whole mechanism, why the held branch needs `<= 0` not `< 0`, deriving an exact (delta-free) tick-alignment test, existence-vs-deferred decided by invariant 6.
+- [Boss front-clock cycle fraction](project_boss-front-clock-cycle-fraction.md) — why the numerically closest N failed a "must fire during MOVING" requirement and N=3 was needed.
+- [Seeded Rng first-pick lookup](feedback_seeded-rng-first-pick-lookup.md) — reproduce the xorshift Rng in Python to find seeds by their first draw instead of guessing via gradle.
