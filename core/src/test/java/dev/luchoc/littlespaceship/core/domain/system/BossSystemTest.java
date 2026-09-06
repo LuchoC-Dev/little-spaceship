@@ -366,9 +366,37 @@ class BossSystemTest {
             "the front weapon did not fire independently often enough");
     }
 
+    /**
+     * Replaces the #329 test {@code frontFiresWhileMoving}, deleted for #333 rather than weakened:
+     * at {@code FRONT_SHOTS_PER_CYCLE = 2} the front's one independent shot per cycle lands at exactly
+     * half the cycle, which for this fixture's {@code boss()} (cooldown 0.2 s, tell 0.75 s, move
+     * 0.84 s, cycle 1.79 s) falls inside {@code COOLDOWN} (36.7%–63.3% of the cycle) — never inside
+     * {@code MOVING} (its first 36.7%). A test asserting a shot fires during {@code MOVING} would now
+     * be false, and asserting the opposite ("never during {@code MOVING}") would be a fact about this
+     * one ratio, not about the design — it would pass again the moment {@code
+     * FRONT_SHOTS_PER_CYCLE} is retuned back toward 3, telling a future reader nothing about what
+     * actually still holds.
+     *
+     * <p>What survives issue #329's actual point, and what this test asserts instead, is that {@link
+     * BossSystem#updateFrontWeapons} is never gated by {@code fightStage}: its clock keeps advancing
+     * every tick, {@code MOVING} included, rather than pausing for it and resuming afterward.
+     *
+     * <p><b>A one-sided bound does not prove this, and an earlier version of this test asserted one.</b>
+     * It checked only {@code deltaSeconds > MOVE_DURATION} (0.84 s), reasoning that a clock paused
+     * through {@code MOVING} would arrive later and so fail that bound. It would not have: arriving
+     * later makes the delta <i>larger</i>, and a larger value still satisfies {@code >}. A clock that
+     * runs normally lands at the front period, {@code frontPeriod} ≈ 0.895 s for this fixture (see
+     * below); a clock paused for the whole {@code MOVE_DURATION} (0.84 s) window would land at
+     * {@code frontPeriod + MOVE_DURATION} ≈ 1.735 s — and both numbers are greater than 0.84 s, so the
+     * one-sided bound cannot tell the two behaviours apart. **The bound must be two-sided**: the delta
+     * has to sit within a tick or so of {@code frontPeriod} itself, not merely exceed
+     * {@code MOVE_DURATION}. A paused clock lands roughly {@code MOVE_DURATION} outside that narrow
+     * window and the test catches it. Falsified by a scratch copy of {@code updateFrontWeapons} with
+     * an early {@code return} when {@code isMoving()}, confirmed red under the two-sided bound.
+     */
     @Test
-    @DisplayName("a front shot fires while fightStage == MOVING")
-    void frontFiresWhileMoving() {
+    @DisplayName("the front clock keeps advancing through the whole MOVING window, unpaused by fightStage")
+    void frontClockAdvancesThroughTheWholeMovingWindowRegardlessOfFightStage() {
         TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
         World world = new World(content, new Rng(1), new GameEventQueue());
         BossSystem system = new BossSystem(LEVEL);
@@ -377,10 +405,38 @@ class BossSystemTest {
         system.update(world, 1f, InputFrame.IDLE);
 
         java.util.List<FireEvent> events = traceFireEvents(world, system, 320);
+        int coincidenceIndex = -1;
+        for (int i = 0; i < events.size(); i++) {
+            if (events.get(i).speeds().size() == 20) {
+                coincidenceIndex = i;
+                break;
+            }
+        }
+        assertTrue(coincidenceIndex >= 0 && coincidenceIndex + 1 < events.size(),
+            "expected a rear/front coincidence followed by an independent front shot");
+        FireEvent coincidence = events.get(coincidenceIndex);
+        FireEvent independentShot = events.get(coincidenceIndex + 1);
+        assertEquals(10, independentShot.speeds().size(), "expected a pure front-only shot next");
+        assertTrue(allNear(independentShot.speeds(), 160f), "expected the front's own sweep speed");
 
-        boolean frontFiredWhileMoving = events.stream()
-            .anyMatch(event -> event.speeds().size() == 10 && allNear(event.speeds(), 160f) && event.moving());
-        assertTrue(frontFiredWhileMoving, "no pure front shot was observed while fightStage == MOVING");
+        float deltaSeconds = (independentShot.tick() - coincidence.tick()) * STEP;
+        // The front period, this fixture's own numbers (patternCooldown 0.2s, TELL_DURATION 0.75s,
+        // MOVE_DURATION 0.84s): (0.2 + 0.75 + 0.84) / FRONT_SHOTS_PER_CYCLE = 1.79 / 2 = 0.895s. A
+        // two-sided bound, not a one-sided "> MOVE_DURATION" one: a clock paused for the whole MOVING
+        // window would land at frontPeriod + MOVE_DURATION (~1.735s) instead, well outside this window,
+        // where a one-sided ">" bound would have missed it — both 0.895s and 1.735s exceed 0.84s.
+        float expectedFrontPeriod = (0.2f + 0.75f + BossSystem.MOVE_DURATION) / BossSystem.FRONT_SHOTS_PER_CYCLE;
+        float tolerance = 2 * STEP;
+        assertEquals(expectedFrontPeriod, deltaSeconds, tolerance,
+            "the independent front shot must land at the front period (" + expectedFrontPeriod
+                + "s), not merely after MOVE_DURATION has elapsed — a front clock paused during MOVING "
+                + "would land about MOVE_DURATION (" + BossSystem.MOVE_DURATION + "s) later than this; "
+                + "observed delta was " + deltaSeconds + "s");
+
+        // At N=2 this lands inside COOLDOWN for this fixture (documented in the fragment), not MOVING —
+        // recorded here as a fact about this ratio, not asserted as a requirement of the design.
+        assertFalse(independentShot.moving(),
+            "at FRONT_SHOTS_PER_CYCLE=2 this fixture's independent shot is expected in COOLDOWN, not MOVING");
     }
 
     private static boolean allNear(java.util.List<Float> speeds, float target) {
@@ -393,11 +449,12 @@ class BossSystemTest {
     }
 
     /**
-     * One tick's worth of newly spawned {@code ENEMY_PROJECTILE} colliders, and whether {@code
-     * fightStage == MOVING} at the instant they were fired — read through {@link BossSystem#isMoving()},
-     * package-visible for exactly this.
+     * One tick's worth of newly spawned {@code ENEMY_PROJECTILE} colliders, which tick it was ({@code
+     * tick}, 1-based, counted from the start of the trace) and whether {@code fightStage == MOVING} at
+     * the instant they were fired — read through {@link BossSystem#isMoving()}, package-visible for
+     * exactly this.
      */
-    private record FireEvent(java.util.List<Float> speeds, boolean moving) { }
+    private record FireEvent(int tick, java.util.List<Float> speeds, boolean moving) { }
 
     /**
      * Drives {@code system} for {@code ticks} ticks and returns one {@link FireEvent} per tick that
@@ -422,7 +479,7 @@ class BossSystemTest {
                 }
             }
             if (!speeds.isEmpty()) {
-                events.add(new FireEvent(speeds, system.isMoving()));
+                events.add(new FireEvent(i + 1, speeds, system.isMoving()));
             }
         }
         return events;
