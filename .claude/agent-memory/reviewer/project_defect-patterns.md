@@ -1535,6 +1535,66 @@ whoever reviews the loader half or writes `waves.json` content using `Cleared` p
 
 Related: [[audit-techniques]].
 
+## PR #321 (`content/level-one-vocabulary`, phase 11k task 5, issue #320) — twenty trajectory entries, every claim re-derived, one small division slip found
+
+`assets/data/trajectories.json` (20 new entries: 13 authored, 6 `mirrorOf`, 1 `speedOf`), `waves.json`
+(6 new `unplaced` waves), 6 new `test-110`..`test-160` scenario files, `docs/levels/waves.md`
+regenerated. Verdict: accept, with one minor numeric correction to hand forward to task 6.
+Independently reproduced rather than trusted: `node tools/build-level-docs.js` (`unchanged` both docs,
+tree clean); all four commit subjects under 72 chars, no `Co-Authored-By`; `gh run list` both checks
+green on tip commit, matching the PR's pasted `pre-pr-check` output; enemy radii/spawner/weapon values
+in `enemies.json` and formation offsets in `formations.json` match the fragment's own numbers exactly;
+a `LoadCheck` probe (`javac`/`java` against `core.jar`+`game.jar`+`gdx-1.14.2.jar` from the Gradle
+cache, real `JsonContentSource` over `assets/data`) loaded all 7 relevant ids and resolved all 20
+trajectories to the exact same `PathSegment`/`vx`/`vy`/`ay` values used by hand below.
+
+72. **Hand-deriving every required entry class independently reproduced the fragment's numbers to the
+    hundredth almost everywhere** — `settle-descent` (`constant`): entry/exit times against
+    `LifetimeSystem.isFullyOffPlayfield`'s any-part-visible edge and `isPastSafetyBox`'s 128-unit
+    margin, both exact (14.05s on screen, 20.45s removed); `dive-across-left` (`arc`, negative `ay`):
+    closed-form quadratic root for the safety-box crossing, exact to the millisecond (3.12s / 4.08s);
+    `descend-and-step-left` (`path` with a mid-drop lane change) and `advance-the-firing-line`
+    (`path`, absolute `waypoints`, holds at two authored heights): every segment boundary, hold
+    window and exit time exact, including the "authored y + radius" claim for the absolute form; the
+    carrier spawner math (`Spawner.timer` starts at `interval`, ticks at 3,6,9,...) reproduces both
+    "7 children" (`descend-and-anchor`) and "8 children" (`anchor-and-traverse-left`) exactly, **but
+    only under the convention that the count stops at the entity's own on-screen departure, not at
+    its later safety-box removal** — counting to removal instead gives 9 and more respectively. The
+    fragment's own "on screen" definition (any part inside the playfield) is what the count silently
+    uses; worth being explicit about next time this shape of claim appears, since the two conventions
+    differ by 2+ children and both are defensible.
+73. **A window bound stated as `(measured value + radius) / width` can be arithmetically wrong even
+    when every input number it quotes is right — division is worth checking independently of the
+    physics.** `dive-across-left`'s claimed minimum `atX` is 0.54, computed from its own stated drift
+    of 106.1 units and the entity's 4.5-unit radius: `(106.1 + 4.5) / 208 = 0.532`, which rounds to
+    **0.53**, not 0.54 — confirmed both from the fragment's own quoted numbers and from an independent
+    Python closed-form re-derivation of the exit point (`atX_min = 0.5321`). The mirror's claimed
+    "0.46 or less" should be "0.47 or less" for the same reason (`1 - 0.532 = 0.468`). Every other
+    `atX` window in the same fragment (`descend-and-step-left`'s 0.25/0.34, `grind-and-wheel-left`'s
+    0.75, `anchor-and-traverse-left`'s 0.61/0.39) reproduced exactly by hand, so this is an isolated
+    slip, not a systemic one — but it is exactly the shape phase 11j's finding 66 and phase 11k task
+    1's finding 68 both name: a number that looks derived and is off by a small, checkable amount.
+    Non-blocking (task 6, which actually places these in a level, is what will feel a wrong bound, and
+    the true minimum being *higher* than claimed by ~2 pixels is the safe direction to be wrong in —
+    a level built right at the claimed 0.54 boundary would still work), but worth re-deriving every
+    `(drift + radius) / width` style bound in a content fragment independently, not just checking that
+    the physics reasoning behind it is sound.
+
+Everything else checked out clean: no entry named after an archetype; `enemy-basic`/`enemy-shooter`
+and `enemy-tank`/`enemy-carrier` share no shape (verified from the JSON directly, not the fragment's
+own table); the "13 authored is the floor" arithmetic (6 archetypes x 2 + 1 for `enemy-rush`'s third)
+is internally consistent and matches the actual JSON count; the seven 11c-era entries are genuinely
+still load-bearing (`enemies.json` names four of them as archetype defaults, `waves.json` names three
+more as overrides — grepped independently), so keeping them this task and deleting them in task 6 is
+correctly reasoned, not deferred without cause; all six new `test-NNN-` scenario files sort above
+every pre-existing one; `WorldView.outcome()` requires `noEnemyLeft()` in addition to
+`waveTimelineExhausted`, so a `fixedDuration` scenario ending before its spawned entity's own on-screen
+life is over (task-150-tank-family, 20s vs `grind-down`'s 26.45s) is not a bug — the level genuinely
+does not report complete while the tank is still alive, confirmed by reading `World.java` directly
+rather than assuming a wave's own end tears down what it spawned.
+
+Related: [[audit-techniques]].
+
 ## PR #313 (`feat/tests-menu-discovered`, phase 11k task 3, issue #311) — clean, one uncaught-exception
 gap the lenient label path does not share
 
