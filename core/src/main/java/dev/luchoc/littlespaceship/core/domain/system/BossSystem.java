@@ -279,31 +279,32 @@ public final class BossSystem implements GameSystem {
      * Every cycle after that runs {@code MOVING} ({@link #MOVE_DURATION}), then {@code COOLDOWN}
      * ({@code patternCooldown}), then {@code TELLING} ({@code TELL_DURATION}), then the next fire.
      *
-     * <p><b>Why 3, not the numerically closer 2.</b> The owner's starting suggestion was a front period
-     * near 1.2 s. Against this boss's real content ({@code patternCooldown} 0.7 s in
-     * {@code level-01.json}), the cycle is 0.84 + 0.7 + 0.75 = 2.29 s, and the numerically closest
-     * choice is {@code N = 2} (a period of 1.145 s, 0.055 s off the suggestion) — but {@code N = 2}'s
-     * one independent shot always lands at exactly half the cycle, and {@code MOVING} — now the
-     * <i>first</i> segment of a steady-state cycle — only covers its first 36.7%
-     * ({@code MOVE_DURATION} / cycle = 0.84 / 2.29). Half the cycle falls past that, inside
-     * {@code COOLDOWN}, so that lone shot fires during {@code COOLDOWN} on every single cycle, never
-     * during {@code MOVING} — failing the plan's own requirement that a front shot be provably fired
-     * while the boss travels; a scratch mutation to {@code N = 2} and a reflection probe against the
-     * real compiled classes and {@code level-01.json} both confirmed exactly this. {@code N = 3}
-     * places its <i>first</i> independent shot at one-third of the cycle (0.333), still inside the
-     * 0.367 {@code MOVING} window — a margin of about 0.077 s (roughly 4.6 ticks) at these real
-     * content values — so it lands inside {@code MOVING} on every cycle instead. (Its second
-     * independent shot, at two-thirds, lands in {@code COOLDOWN} at these values; which segment
-     * catches it does not matter to the requirement, only the first one does.) This is the smallest
-     * {@code N} for which the {@code MOVING} requirement holds at {@link #MOVE_DURATION}'s chosen
-     * value: it needs {@code patternCooldown + TELL_DURATION < 2 * MOVE_DURATION}, true here
-     * (1.45 s &lt; 1.68 s) but not true for {@code N = 2}, which would need
-     * {@code patternCooldown + TELL_DURATION < MOVE_DURATION} — false by a wide margin. {@code N = 3}'s
-     * period, 0.763 s, is further from the 1.2 s suggestion than {@code N = 2}'s would have been, but
-     * the suggestion is explicitly the owner's to tune, while firing during a move is not. One line to
-     * change regardless — the project owner tunes this by playing.
+     * <p><b>2, not 3 — lowered for issue #333, from the project owner's second play session.</b> #329
+     * chose 3 over 2 specifically so that an independent front shot could be proven to land inside
+     * {@code MOVING} — at {@code N = 2}, the single independent shot sits at exactly half the cycle,
+     * which at this boss's real content ({@code patternCooldown} 0.7 s, cycle 2.29 s) falls inside
+     * {@code COOLDOWN} (36.7%–63.3% of the cycle), never inside the first 36.7% that {@code MOVING}
+     * occupies. The owner played {@code N = 3} and found the fight too hard; their instruction was to
+     * lower the cadence, which only {@code N = 2} does at this {@link #MOVE_DURATION}. <b>A front shot
+     * coinciding with a move is given up on purpose, and it does not undo the point of the front
+     * weapon</b>: {@link #updateFrontWeapons} is still called unconditionally every tick of
+     * {@code FIGHT}, still reads and writes nothing of {@link #fightStage}, and still fires whether the
+     * boss is cooling down, telling or travelling — the front clock was never gated by movement, only
+     * one particular ratio of it once happened to land a shot inside a move. What #329 proved
+     * (independence from {@code fightStage}) survives; what it also proved (a shot demonstrably falls
+     * inside {@code MOVING}) does not, and is no longer a requirement — the owner's own tuning outranks
+     * the coordinator's hardening of the original request. The front period is now
+     * {@code rearCycleDuration / 2} ≈ 1.145 s against real content, close to the owner's original 1.2 s
+     * suggestion from #329 — closer, in fact, than {@code N = 3}'s 0.763 s ever was.
+     *
+     * <p><b>The lever not taken: fewer rays per front volley.</b> Lowering {@link #FAN_COUNT} for the
+     * front weapon alone (fewer than five rays) would cut front damage while keeping {@code N = 3}'s
+     * faster rhythm and keeping a shot provably inside {@code MOVING}. The coordinator raised both
+     * levers with the owner; the owner chose the cadence. Left here as a one-line option for the next
+     * tuning pass, not attempted: {@code FAN_COUNT} is currently shared by both weapons, so splitting it
+     * would need its own constant, not a value change.
      */
-    static final int FRONT_SHOTS_PER_CYCLE = 3;
+    static final int FRONT_SHOTS_PER_CYCLE = 2;
 
     private enum Phase { AWAITING, ENTRANCE, FIGHT, DEFEATED }
 
