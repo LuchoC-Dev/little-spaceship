@@ -32,6 +32,12 @@ edit to it then lands on every placement below.
 | `test-dive-retreat` | 12.0 s | 1 | 1 | `enemy-basic` | **unplaced** |
 | `test-hold-line` | 10.0 s | 1 | 1 | `enemy-shooter` | **unplaced** |
 | `test-sweep-width` | 11.0 s | 1 | 1 | `enemy-shooter` | **unplaced** |
+| `test-basic-family` | 16.0 s | 3 | 3 | `enemy-basic` | **unplaced** |
+| `test-light-family` | 12.0 s | 4 | 4 | `enemy-light` | **unplaced** |
+| `test-shooter-family` | 16.0 s | 2 | 2 | `enemy-shooter` | **unplaced** |
+| `test-rush-family` | 17.0 s | 5 | 5 | `enemy-rush` | **unplaced** |
+| `test-tank-family` | 20.0 s | 3 | 3 | `enemy-tank` | **unplaced** |
+| `test-carrier-family` | 30.0 s | 3 | 3 | `enemy-carrier` | **unplaced** |
 
 **`unplaced`** is a wave no level uses. Not an error — `waves.json` is a library — but it is dead
 content until something places it, and nothing else in the repository would tell you.
