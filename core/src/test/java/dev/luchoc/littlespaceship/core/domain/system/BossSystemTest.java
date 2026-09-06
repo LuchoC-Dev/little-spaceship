@@ -151,8 +151,12 @@ class BossSystemTest {
         float spawnY = world.transforms().get(core).y;
         assertTrue(spawnY > SpawnSystem.PLAYFIELD_HEIGHT);
 
-        // A generous number of ticks at a fast entrance speed is enough to reach combatY.
-        for (int i = 0; i < 600; i++) {
+        // A generous number of ticks at a fast entrance speed is enough to reach combatY, but not so
+        // many that the fight's first cooldown-then-tell (0.2s + 0.75s = 0.95s, this fixture's own
+        // boss()) elapses and the boss starts its first move away from combatY: since #325, the boss
+        // travels to a star point once a volley resolves, so this test now needs to observe the
+        // settle before that happens rather than well after it, unlike before movement existed.
+        for (int i = 0; i < 20; i++) {
             system.update(world, STEP, InputFrame.IDLE);
         }
 
@@ -328,6 +332,180 @@ class BossSystemTest {
             }
         }
         throw new IllegalStateException("no pod entity found");
+    }
+
+    @Test
+    @DisplayName("the star points and the boss's whole six-collider extent stay inside the playfield, "
+        + "clear of the bottom of the screen")
+    void starPointsKeepTheWholeBossOnScreen() {
+        // Mirrors the offsets and radii BossSystem hardcodes for its six parts, to check the extent
+        // rather than the centre — the arm is the widest part, the keel the lowest, the core/pod the
+        // highest, per the class javadoc on STAR_X/STAR_Y.
+        float armHalfWidth = 44f + 14f;
+        float keelBelowCore = 27f + 13f;
+        float coreOrPodAboveCore = 18f;
+
+        for (int i = 0; i < BossSystem.STAR_POINT_COUNT; i++) {
+            float x = BossSystem.STAR_X[i];
+            float y = BossSystem.STAR_Y[i];
+            assertTrue(x - armHalfWidth >= 0f, "point " + (i + 1) + " lets an arm cross the left edge");
+            assertTrue(x + armHalfWidth <= MotionSystem.PLAYFIELD_WIDTH,
+                "point " + (i + 1) + " lets an arm cross the right edge");
+            assertTrue(y - keelBelowCore >= 0f,
+                "point " + (i + 1) + " lets the keel reach the bottom of the screen");
+            assertTrue(y + coreOrPodAboveCore <= SpawnSystem.PLAYFIELD_HEIGHT,
+                "point " + (i + 1) + " lets the core or a pod cross the top edge");
+        }
+    }
+
+    @Test
+    @DisplayName("the boss travels only between the ten star points, "
+        + "never more than three perimeter steps per move")
+    void bossVisitsOnlyStarPointsWithinThreeSteps() {
+        TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
+        World world = new World(content, new Rng(7), new GameEventQueue());
+        BossSystem system = new BossSystem(LEVEL);
+
+        java.util.List<Integer> starIndices = driveAndCollectStarIndices(world, system, 12);
+
+        assertTrue(starIndices.size() >= 8, "not enough star points visited to check the rule");
+        for (int i = 1; i < starIndices.size(); i++) {
+            int previous = starIndices.get(i - 1);
+            int current = starIndices.get(i);
+            int forward = Math.floorMod(current - previous, BossSystem.STAR_POINT_COUNT);
+            int backward = BossSystem.STAR_POINT_COUNT - forward;
+            int steps = Math.min(forward, backward);
+            assertTrue(steps >= 1 && steps <= 3,
+                "move from point " + (previous + 1) + " to point " + (current + 1)
+                    + " is " + steps + " perimeter steps, outside the legal 1-3 range");
+        }
+    }
+
+    @Test
+    @DisplayName("the same seed produces the same sequence of star points")
+    void samePatternForTheSameSeed() {
+        java.util.List<Integer> first = driveAndCollectStarIndices(
+            new World(new TestContent(balance).withBoss(LEVEL, boss(0f)), new Rng(42), new GameEventQueue()),
+            new BossSystem(LEVEL), 6);
+        java.util.List<Integer> second = driveAndCollectStarIndices(
+            new World(new TestContent(balance).withBoss(LEVEL, boss(0f)), new Rng(42), new GameEventQueue()),
+            new BossSystem(LEVEL), 6);
+
+        assertEquals(first, second);
+    }
+
+    @Test
+    @DisplayName("after moving to a star point, the next attack still fires from a standstill, "
+        + "aimed at the player position locked at that tell's start")
+    void firesFromStandstillAfterMoving() {
+        TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
+        World world = new World(content, new Rng(3), new GameEventQueue());
+        int player = world.createEntity();
+        world.players().set(player, new dev.luchoc.littlespaceship.core.domain.component.Player(3, 2, 1));
+        world.transforms().set(
+            player, new dev.luchoc.littlespaceship.core.domain.component.Transform(50f, 40f));
+        BossSystem system = new BossSystem(LEVEL);
+
+        // Reach the fight and let the first volley fire, then wait through the move to the first
+        // star point.
+        system.update(world, STEP, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        runToNextVolley(world, system, seen);
+
+        int core = coreEntity(world);
+        // Drive until the core stops changing position for two consecutive ticks: the move to the
+        // first star point has completed.
+        float lastX = world.transforms().get(core).x;
+        float lastY = world.transforms().get(core).y;
+        boolean settled = false;
+        for (int i = 0; i < 300 && !settled; i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+            float x = world.transforms().get(core).x;
+            float y = world.transforms().get(core).y;
+            settled = x == lastX && y == lastY;
+            lastX = x;
+            lastY = y;
+        }
+        assertTrue(settled, "the boss never settled after its first move");
+        float settledX = lastX;
+        float settledY = lastY;
+
+        // The player moves away right after the boss has settled, before the next tell locks aim.
+        world.transforms().get(player).x = 10f;
+        world.transforms().get(player).y = 200f;
+
+        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> secondVolley =
+            runToNextVolley(world, system, seen);
+
+        // The boss fired without having moved again: its position at fire time is exactly where it
+        // settled.
+        assertEquals(settledX, world.transforms().get(core).x, 0.001f);
+        assertEquals(settledY, world.transforms().get(core).y, 0.001f);
+
+        int pod = podEntity(world);
+        Transform podOrigin = world.transforms().get(pod);
+        float expectedDx = 10f - podOrigin.x;
+        float expectedDy = 200f - podOrigin.y;
+        float expectedLength = (float) Math.sqrt(expectedDx * expectedDx + expectedDy * expectedDy);
+        float bestAlignment = -2f;
+        for (dev.luchoc.littlespaceship.core.domain.component.Motion motion : secondVolley) {
+            float speed = (float) Math.sqrt(motion.vx * motion.vx + motion.vy * motion.vy);
+            float alignment = (motion.vx * expectedDx + motion.vy * expectedDy) / (speed * expectedLength);
+            bestAlignment = Math.max(bestAlignment, alignment);
+        }
+        assertTrue(bestAlignment > 0.99f, "the post-move volley does not aim at the locked player position");
+    }
+
+    /**
+     * Drives {@code system} through the fight and returns the sequence of star-point indices it
+     * settles on — every position held for more than one consecutive tick once matched against {@link
+     * BossSystem#STAR_X}/{@link BossSystem#STAR_Y} within a small tolerance. The very first hold is
+     * the entrance's own landing spot at {@code combatY}, which the star does not claim as one of its
+     * own, so it is dropped: only positions that actually match a star point are returned.
+     */
+    private static java.util.List<Integer> driveAndCollectStarIndices(
+        World world, BossSystem system, int minStarStops) {
+        java.util.List<Integer> indices = new java.util.ArrayList<>();
+        Float previousX = null;
+        Float previousY = null;
+        boolean previousWasHold = false;
+        int core = -1;
+        for (int i = 0; i < 20000 && indices.size() < minStarStops; i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+            if (core == -1 || !world.isAlive(core)) {
+                try {
+                    core = coreEntity(world);
+                } catch (IllegalStateException notYetSpawned) {
+                    continue;
+                }
+            }
+            Transform transform = world.transforms().get(core);
+            float x = transform.x;
+            float y = transform.y;
+            boolean sameAsPrevious = previousX != null && x == previousX && y == previousY;
+            if (sameAsPrevious && !previousWasHold) {
+                int index = findStarIndex(x, y);
+                if (index >= 0) {
+                    indices.add(index);
+                }
+                previousWasHold = true;
+            } else if (!sameAsPrevious) {
+                previousWasHold = false;
+            }
+            previousX = x;
+            previousY = y;
+        }
+        return indices;
+    }
+
+    private static int findStarIndex(float x, float y) {
+        for (int i = 0; i < BossSystem.STAR_POINT_COUNT; i++) {
+            if (Math.abs(BossSystem.STAR_X[i] - x) < 0.01f && Math.abs(BossSystem.STAR_Y[i] - y) < 0.01f) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private static SimpleBossDefinition boss(float entersAt) {
