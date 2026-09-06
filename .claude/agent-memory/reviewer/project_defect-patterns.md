@@ -1638,3 +1638,60 @@ Everything else checked out clean and is the calibration case worth keeping: eve
 author's independently-checkable claims (compile isolation, test count, TeaVM grep, ARC labels,
 reference scope, commit hygiene, `pre-pr-check` output) reproduced exactly on a fresh run, not just
 matched what was pasted.
+
+## PR #327 (`feat/boss-star-movement`, phase 11k task 7, issue #325) — clean, and a "replay still
+passes" claim that is true but exercises none of the new code
+
+`core`-only branch (`BossSystem.java` + its own test + the status fragment, confirmed by `git diff
+--stat`). Verdict: accept. Every checkable claim held on independent re-derivation: the star geometry
+(Python re-run of the cited script reproduced `STAR_X`/`STAR_Y` to the same three decimals), the
+extent arithmetic (arm reach 15.566–192.434, keel's lowest reach 134.111, both against `playerStartY
+30.0` from `balance.json` — the boss's lowest y, 174.111 at the star's centre, sits nowhere near it),
+the hop-distance bounds (max legal-hop distance 37.619, max unrestricted-first-move distance
+60.868 — both re-derived in Python from the same ten points, matching "about 37.6"/"about 60.9"
+exactly), the ±3-step structural claim (grepped every assignment to `fightStage`/every call to
+`beginMove`: `MOVING` is set in exactly one place, reached from exactly one call site, the tail of
+`updateTelling` after `fire()` — no guard, a real structural exclusion), the pause arithmetic
+(`patternCooldown` 0.7 in `level-01.json` + 0.75 s tell = 1.45 s, matching the fragment's figure
+exactly), and the `entranceDescendsToCombatY` rewrite (spawn y 310, entrance speed 1000/s, combatY
+120 → settles at tick ~12, well inside the new 20-tick assertion and well short of the first cycle's
+57-tick cooldown-then-tell, so the narrowed test still checks exactly its own name). Full clean build
+(`./gradlew build --rerun-tasks`) green across five modules, 365 `core` tests / 0 failures, `tools/
+pre-pr-check --base phase/11k-level-one-rebuilt` PASS reproduced verbatim.
+
+71. **Falsifying a rule-named test worked exactly as claimed, and is worth doing even when the
+    reasoning already sounds airtight.** Widened `STAR_STEP_OFFSETS` to include ±4 in a scratch copy
+    (`cp -r` to the scratchpad, per the auto-mode block on in-worktree mutation — see
+    [[audit-techniques]]'s last section) and reran with `--rerun-tasks`:
+    `bossVisitsOnlyStarPointsWithinThreeSteps` went red on the very next seeded run. One data point,
+    not a pattern, but it is the calibration case for "the author's own falsification claim, checked."
+72. **"All five replay tests still pass" can be a true, fully-verified claim that establishes nothing
+    about the very code path it is cited for, because none of the five scenarios ever reaches it.**
+    Every `BossReplayTest` fixture sets `patternCooldown` to `1000f` ("the boss never attacks back") or
+    has no boss at all (`defeatContent`); `LevelScoreReplayTest`'s `TestContent` never calls
+    `.withBoss(...)` at all. A `patternCooldown` of 1000 s against a 400-tick (6.67 s) run never lets
+    `stageTimer` reach zero, so `TELLING` is never entered, `fire()` is never called, and `beginMove` —
+    the method that calls `world.rng()` — never runs. All three `BossReplayTest` scenarios and both
+    `LevelScoreReplayTest` scenarios are therefore silent on whether the new `Rng` draw breaks
+    full-pipeline replay determinism; the actual proof of that lives entirely in `BossSystemTest`'s
+    unit-level `samePatternForTheSameSeed`/`bossVisitsOnlyStarPointsWithinThreeSteps`, run with a real
+    `0.2f` `patternCooldown` fixture that does reach `beginMove` repeatedly. Not a defect — the
+    fragment never claims the replays exercise the new code, only that they still pass, which is true
+    and harmless since (see next point) nothing else currently shares the stream — but it is
+    pattern 34 (a criterion's replay citation and its unit-test citation pointing at different
+    scenarios) in a new shape: this time the *gap itself* is truthfully reported, just not spelled out
+    as a gap. Worth naming explicitly on the next PR that adds a `world.rng()` consumer: check whether
+    any full-pipeline replay's fixture parameters actually let the new code run, the same way
+    `patternCooldown`/`entersAt`/tick-budget arithmetic settles every other "does this scenario reach
+    the changed code" question in this project.
+73. **A first production consumer of a long-idle shared-state accessor is not yet a real "shifts
+    everything downstream" risk, and greppable as such.** `BossSystem` is confirmed (`grep -rn "rng()"
+    core/src/main`) to be the *only* production caller of `World.rng()` anywhere in `core` — nothing
+    else currently draws from the seeded stream, so there is no existing downstream consumer whose
+    output this PR could have shifted. The concern the task brief raised is real for the *next* system
+    that draws from `Rng` after the boss does (draw order becomes part of the contract the moment a
+    second consumer exists), but it is a forward-looking risk to flag, not a defect in this branch —
+    confirm the "only consumer" fact by grep before treating a new `Rng` draw as automatically
+    dangerous.
+
+Related: [[audit-techniques]].
