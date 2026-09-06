@@ -204,9 +204,9 @@ class BossSystemTest {
 
     @Test
     @DisplayName(
-        "a spread volley fans five rays per pod, a sweep volley fans five per arm, "
-            + "alternating, every ray at the pattern's fixed speed")
-    void volleyFansFiveRaysPerSideAndAlternatesPattern() {
+        "a rear volley fans five rays per pod at the spread speed, and fires together with a front "
+            + "volley fanning five rays per arm at the sweep speed")
+    void rearVolleyFansFiveRaysPerPodAndFiresTogetherWithTheFront() {
         TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
         World world = new World(content, new Rng(1), new GameEventQueue());
         BossSystem system = new BossSystem(LEVEL);
@@ -215,14 +215,217 @@ class BossSystemTest {
         system.update(world, STEP, InputFrame.IDLE);
         system.update(world, 1f, InputFrame.IDLE);
 
-        java.util.Set<Integer> seen = new java.util.HashSet<>();
-        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> firstVolley =
-            runToNextVolley(world, system, seen);
-        assertVolleySpeeds(firstVolley, 180f);
+        // The front weapon's own independent clock (FRONT_SHOTS_PER_CYCLE = 3) fires a pure shot
+        // before the first rear volley ever resolves, so the chronologically first fire event is not
+        // the one this test is about — the rear volley, wherever it falls, is: it is the first event
+        // that contains a spread-speed (180) projectile, and issue #329's synchronisation rule fires
+        // the front weapon together with it, in the very same tick.
+        java.util.List<FireEvent> events = traceFireEvents(world, system, 200);
+        FireEvent rearEvent = events.stream()
+            .filter(event -> event.speeds().stream().anyMatch(speed -> Math.abs(speed - 180f) < 0.05f))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("no rear volley fired within the tick budget"));
+        assertEquals(20, rearEvent.speeds().size(), "the rear volley and the coincident front shot together");
+        assertSpeedCount(rearEvent.speeds(), 180f, 10);
+        assertSpeedCount(rearEvent.speeds(), 160f, 10);
+    }
 
-        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> secondVolley =
-            runToNextVolley(world, system, seen);
-        assertVolleySpeeds(secondVolley, 160f);
+    @Test
+    @DisplayName("a move takes MOVE_DURATION whatever the distance, a short hop and a long one alike")
+    void movesTakeTheSameFixedDurationRegardlessOfDistance() {
+        // Two seeds, observed to send the very first move (an unrestricted pick over all ten points,
+        // since the boss is not yet standing on any of them) to two star points at very different
+        // distances from the entrance's own landing spot, (PLAYFIELD_WIDTH / 2, combatY) = (104, 120)
+        // for this fixture's boss(). Both moves must still take the same number of ticks.
+        MoveResult shortHop = firstMoveResult(new Rng(1));
+        MoveResult longHop = firstMoveResult(new Rng(6));
+
+        float fromX = MotionSystem.PLAYFIELD_WIDTH / 2f;
+        float fromY = 120f;
+        float shortDistance = distanceFrom(fromX, fromY, shortHop.starIndex());
+        float longDistance = distanceFrom(fromX, fromY, longHop.starIndex());
+        assertTrue(longDistance > shortDistance * 1.5f,
+            "the two seeds picked for this test do not land on hops different enough to prove the rule: "
+                + "short=" + shortDistance + " long=" + longDistance);
+
+        int expectedTicks = Math.round(BossSystem.MOVE_DURATION / STEP);
+        assertEquals(expectedTicks, shortHop.ticks(), 1, "a move's duration must not depend on distance");
+        assertEquals(expectedTicks, longHop.ticks(), 1, "a move's duration must not depend on distance");
+    }
+
+    private static float distanceFrom(float fromX, float fromY, int starIndex) {
+        float dx = BossSystem.STAR_X[starIndex] - fromX;
+        float dy = BossSystem.STAR_Y[starIndex] - fromY;
+        return (float) Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /** How many ticks the very first move took, and which star point it settled on. */
+    private record MoveResult(int ticks, int starIndex) { }
+
+    /**
+     * Drives a fresh boss from the fight's start through its very first move and returns how long the
+     * move itself took — from the tick the rear volley fires (entering {@code MOVING}) to the tick the
+     * core stops changing position — and which star point it settled on.
+     */
+    private static MoveResult firstMoveResult(Rng rng) {
+        TestContent content = new TestContent(new TestBalance()).withBoss(LEVEL, boss(0f));
+        World world = new World(content, rng, new GameEventQueue());
+        BossSystem system = new BossSystem(LEVEL);
+
+        system.update(world, STEP, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
+        // Wait specifically for the rear (spread, 180) volley, not just any fire event: the front
+        // weapon's own independent clock fires a pure shot before the rear volley ever resolves (see
+        // frontFiresMoreOftenAndCoincidesWithEveryRearVolley), and that shot moves nothing.
+        waitForRearVolley(world, system);
+
+        int core = coreEntity(world);
+        int ticks = 0;
+        float lastX = world.transforms().get(core).x;
+        float lastY = world.transforms().get(core).y;
+        boolean moved = false;
+        for (int i = 0; i < 300; i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+            ticks++;
+            float x = world.transforms().get(core).x;
+            float y = world.transforms().get(core).y;
+            boolean stillMoving = x != lastX || y != lastY;
+            if (stillMoving) {
+                moved = true;
+            } else if (moved) {
+                int starIndex = findStarIndex(lastX, lastY);
+                assertTrue(starIndex >= 0, "the boss settled somewhere that is not a star point");
+                return new MoveResult(ticks - 1, starIndex);
+            }
+            lastX = x;
+            lastY = y;
+        }
+        throw new IllegalStateException("the boss never settled after its first move");
+    }
+
+    /**
+     * Drives {@code system} until a projectile at the rear's own spread speed (180, this fixture's
+     * {@code boss()}) appears — the front weapon's independent clock can fire a pure shot first, and
+     * this must not be mistaken for it.
+     */
+    private static void waitForRearVolley(World world, BossSystem system) {
+        for (int i = 0; i < 200; i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+            for (int j = 0; j < world.colliders().size(); j++) {
+                if (world.colliders().valueAt(j).layer != CollisionLayer.ENEMY_PROJECTILE) {
+                    continue;
+                }
+                dev.luchoc.littlespaceship.core.domain.component.Motion motion =
+                    world.motions().get(world.colliders().entityAt(j));
+                float speed = (float) Math.sqrt(motion.vx * motion.vx + motion.vy * motion.vy);
+                if (Math.abs(speed - 180f) < 0.05f) {
+                    return;
+                }
+            }
+        }
+        throw new IllegalStateException("no rear volley fired within the tick budget");
+    }
+
+    @Test
+    @DisplayName("the front weapon fires FRONT_SHOTS_PER_CYCLE times as often as the rear, coinciding "
+        + "with every rear volley and firing exactly N-1 times independently between two of them")
+    void frontFiresMoreOftenAndCoincidesWithEveryRearVolley() {
+        TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
+        World world = new World(content, new Rng(1), new GameEventQueue());
+        BossSystem system = new BossSystem(LEVEL);
+
+        system.update(world, STEP, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
+
+        java.util.List<FireEvent> events = traceFireEvents(world, system, 320);
+        assertTrue(events.size() >= 6, "not enough fire events traced to check the ratio");
+
+        int coincidences = 0;
+        int frontOnlyTotal = 0;
+        int sinceLastCoincidence = 0;
+        for (FireEvent event : events) {
+            boolean isCoincidence = event.speeds().size() == 20;
+            boolean isFrontOnly = event.speeds().size() == 10 && allNear(event.speeds(), 160f);
+            assertTrue(isCoincidence || isFrontOnly,
+                "an event is neither the rear/front coincidence nor a pure front shot: " + event.speeds());
+            if (isCoincidence) {
+                if (coincidences > 0) {
+                    assertEquals(BossSystem.FRONT_SHOTS_PER_CYCLE - 1, sinceLastCoincidence,
+                        "expected exactly FRONT_SHOTS_PER_CYCLE - 1 independent front shots "
+                            + "between two rear volleys");
+                }
+                coincidences++;
+                sinceLastCoincidence = 0;
+            } else {
+                frontOnlyTotal++;
+                sinceLastCoincidence++;
+            }
+        }
+        assertTrue(coincidences >= 3, "not enough rear volleys traced to check the ratio");
+        assertTrue(frontOnlyTotal >= 2 * (BossSystem.FRONT_SHOTS_PER_CYCLE - 1),
+            "the front weapon did not fire independently often enough");
+    }
+
+    @Test
+    @DisplayName("a front shot fires while fightStage == MOVING")
+    void frontFiresWhileMoving() {
+        TestContent content = new TestContent(balance).withBoss(LEVEL, boss(0f));
+        World world = new World(content, new Rng(1), new GameEventQueue());
+        BossSystem system = new BossSystem(LEVEL);
+
+        system.update(world, STEP, InputFrame.IDLE);
+        system.update(world, 1f, InputFrame.IDLE);
+
+        java.util.List<FireEvent> events = traceFireEvents(world, system, 320);
+
+        boolean frontFiredWhileMoving = events.stream()
+            .anyMatch(event -> event.speeds().size() == 10 && allNear(event.speeds(), 160f) && event.moving());
+        assertTrue(frontFiredWhileMoving, "no pure front shot was observed while fightStage == MOVING");
+    }
+
+    private static boolean allNear(java.util.List<Float> speeds, float target) {
+        for (float speed : speeds) {
+            if (Math.abs(speed - target) >= 0.05f) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * One tick's worth of newly spawned {@code ENEMY_PROJECTILE} colliders, and whether {@code
+     * fightStage == MOVING} at the instant they were fired — read through {@link BossSystem#isMoving()},
+     * package-visible for exactly this.
+     */
+    private record FireEvent(java.util.List<Float> speeds, boolean moving) { }
+
+    /**
+     * Drives {@code system} for {@code ticks} ticks and returns one {@link FireEvent} per tick that
+     * produced at least one new {@code ENEMY_PROJECTILE} collider — the whole fire history of the run,
+     * in order, which is what tracing the synchronisation rule needs rather than stopping at the next
+     * volley the way {@link #runToNextVolley} does.
+     */
+    private static java.util.List<FireEvent> traceFireEvents(World world, BossSystem system, int ticks) {
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        java.util.List<FireEvent> events = new java.util.ArrayList<>();
+        for (int i = 0; i < ticks; i++) {
+            system.update(world, STEP, InputFrame.IDLE);
+            java.util.List<Float> speeds = new java.util.ArrayList<>();
+            for (int j = 0; j < world.colliders().size(); j++) {
+                if (world.colliders().valueAt(j).layer != CollisionLayer.ENEMY_PROJECTILE) {
+                    continue;
+                }
+                int entity = world.colliders().entityAt(j);
+                if (seen.add(entity)) {
+                    dev.luchoc.littlespaceship.core.domain.component.Motion motion = world.motions().get(entity);
+                    speeds.add((float) Math.sqrt(motion.vx * motion.vx + motion.vy * motion.vy));
+                }
+            }
+            if (!speeds.isEmpty()) {
+                events.add(new FireEvent(speeds, system.isMoving()));
+            }
+        }
+        return events;
     }
 
     @Test
@@ -301,18 +504,18 @@ class BossSystemTest {
     }
 
     /**
-     * A volley must be exactly ten projectiles — {@code FAN_COUNT} (five) rays from each of the two
-     * firing parts — every one travelling at exactly {@code speed}, since the aimed fan spreads
-     * direction, never magnitude. The rays' directions are covered separately by {@code
-     * volleyAimsAtThePlayerLockedAtTellStart}.
+     * Asserts that exactly {@code expectedCount} of {@code speeds} are {@code speed} — the aimed fan
+     * spreads direction, never magnitude, so every ray of one pattern's volley shares exactly its own
+     * speed. The rays' directions are covered separately by {@code volleyAimsAtThePlayerLockedAtTellStart}.
      */
-    private static void assertVolleySpeeds(
-        java.util.List<dev.luchoc.littlespaceship.core.domain.component.Motion> volley, float speed) {
-        assertEquals(10, volley.size(), "a volley must fan five rays from each of two firing parts");
-        for (dev.luchoc.littlespaceship.core.domain.component.Motion motion : volley) {
-            float magnitude = (float) Math.sqrt(motion.vx * motion.vx + motion.vy * motion.vy);
-            assertEquals(speed, magnitude, 0.05f, "every ray of an aimed volley travels at the pattern's own speed");
+    private static void assertSpeedCount(java.util.List<Float> speeds, float speed, int expectedCount) {
+        int count = 0;
+        for (float magnitude : speeds) {
+            if (Math.abs(magnitude - speed) < 0.05f) {
+                count++;
+            }
         }
+        assertEquals(expectedCount, count, "expected " + expectedCount + " projectiles at speed " + speed);
     }
 
     private static int coreEntity(World world) {
