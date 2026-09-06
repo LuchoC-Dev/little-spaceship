@@ -4,6 +4,19 @@
 `core-domain`, `core/` only. The loader (`game/adapter/content/JsonContentSource.java`) and any
 content that uses this are separate branches, not touched here.
 
+**Correction (2026-09-06, issue [#337](https://github.com/LuchoC-Dev/little-spaceship/issues/337)):
+this fragment's central claim — that a delayed slot traces the leader exactly `N` ticks behind — was
+false as written, for roughly a fifth of all tick counts.** The mechanism below backdated
+`Trajectory.elapsed` to `-delaySeconds` and held the entity still while that float stayed at or below
+zero. That crossing compared two different float arithmetic paths to the same target — the delay
+itself, formed by a single multiplication, against `elapsed`'s own repeated addition of `step` — which
+do not generally agree bit-for-bit. Swept over delays of 1..300 ticks, the bands **18–40 and 258–300**
+crossed zero one tick early, permanently. `#337` replaced the float crossing with an integer tick
+countdown (`Trajectory.delayTicks`) and corrected `SpawnSystemTest` to sweep the full 1..300 range
+instead of the two values (1 and 12) that happened to sit outside both failing bands. Everything below
+this notice describes the design **as it stood before that fix** except where marked otherwise; read
+`docs/plan/11k-level-one-rebuilt/status/337-delay-crossing-in-ticks.md` for what changed.
+
 ## What was built
 
 `FormationSlot` gained a third field, `delaySeconds` (`float`, must be finite and `>= 0`), plus a
@@ -207,7 +220,10 @@ for delaySeconds in [0.05, 0.1, 0.3, 0.5, 1.0/3.0]:
   (`delayTicks = 12`) and `delayedSlotWithOneTickDelayTracesLeaderExactly` (`delayTicks = 1`, the
   count that actually pins the `<= 0f` boundary, added after `reviewer`'s finding on PR #331) in
   `SpawnSystemTest`, both comparing positions at `t` and `t − delay` (see above), not by watching
-  motion.
+  motion. **Superseded by #337 (2026-09-06): both counts happened to fall outside the two bands
+  (18–40 and 258–300) where this guarantee actually failed; #337 replaced them with a swept test over
+  the full 1..300 range and replaced the float crossing itself with an integer countdown. See the
+  correction notice at the top of this fragment.**
 - [x] Its place in `SystemOrder` is stated and justified above; pinned by every existing
   `SystemPipelineTest`/`SimulationTest` assertion on stage order, which needed no change since
   neither stage moved.

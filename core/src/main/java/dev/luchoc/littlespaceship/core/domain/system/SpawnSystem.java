@@ -135,7 +135,7 @@ public final class SpawnSystem implements GameSystem {
         boolean progressed;
         do {
             for (ActiveWave wave : activeWaves) {
-                spawnDue(world, wave);
+                spawnDue(world, wave, step);
             }
             progressed = resolveEnded(world);
         } while (progressed);
@@ -227,11 +227,11 @@ public final class SpawnSystem implements GameSystem {
         }
     }
 
-    private void spawnDue(World world, ActiveWave wave) {
+    private void spawnDue(World world, ActiveWave wave, float step) {
         List<SpawnEvent> events = wave.definition.spawns();
         float localTime = levelTime - wave.startTime;
         while (wave.cursor < events.size() && events.get(wave.cursor).at() <= localTime) {
-            spawnWave(world, events.get(wave.cursor), wave.definition.id());
+            spawnWave(world, events.get(wave.cursor), wave.definition.id(), step);
             wave.cursor++;
         }
         List<PlacedPickup> pickups = wave.definition.pickups();
@@ -302,7 +302,7 @@ public final class SpawnSystem implements GameSystem {
         return true;
     }
 
-    private static void spawnWave(World world, SpawnEvent event, String waveId) {
+    private static void spawnWave(World world, SpawnEvent event, String waveId, float step) {
         EnemyDefinition enemy = world.content().enemy(event.enemyId());
         FormationDefinition formation = world.content().formation(event.formationId());
         if (event.hasDrop()) {
@@ -320,7 +320,7 @@ public final class SpawnSystem implements GameSystem {
             if (event.hasTrajectoryOverride()) {
                 ComponentFactoryRegistry.attachTrajectory(world, entity, event.trajectoryId());
             }
-            applySlotDelay(world, entity, slot);
+            applySlotDelay(world, entity, slot, step);
             positionSpawned(world, entity, anchorX, lowestOffsetY, slot);
             world.waveOrigins().set(entity, new WaveOrigin(waveId));
             if (event.hasDrop() && i == event.dropSlot()) {
@@ -386,20 +386,31 @@ public final class SpawnSystem implements GameSystem {
     }
 
     /**
-     * Backdates a delayed slot's {@link Trajectory#elapsed} into negative territory, issue #330's
-     * "single-file column" — {@code -delaySeconds} rather than {@code 0}. {@code MotionSystem} holds
-     * an entity still for as long as its trajectory's elapsed time is at or below zero, so this is
-     * the whole mechanism: no new component, no scheduler, just the one field {@link Trajectory}
-     * already carries, started earlier than usual. A slot with no delay is untouched — its {@link
-     * Trajectory}, if it has one, keeps the {@code 0} {@link ComponentFactoryRegistry#attachTrajectory}
-     * gave it — which is what keeps every formation that predates this issue byte-for-byte identical.
+     * Sets a delayed slot's {@link Trajectory#delayTicks} to the number of ticks it should hold still
+     * before its {@link Trajectory#elapsed} starts accumulating — issue #330's "single-file column".
+     * {@code MotionSystem} holds an entity still and counts this down for as long as it is positive,
+     * so this is the whole mechanism: no new component, no scheduler, just the one integer field
+     * {@link Trajectory} carries for it. A slot with no delay is untouched — its {@link Trajectory},
+     * if it has one, keeps the {@code 0} {@link ComponentFactoryRegistry#attachTrajectory} gave it —
+     * which is what keeps every formation that predates this issue byte-for-byte identical.
+     *
+     * <p><b>Issue #337 correction.</b> This used to backdate {@link Trajectory#elapsed} to {@code
+     * -slot.delaySeconds()} and let {@code MotionSystem} hold the entity still while that float stayed
+     * at or below zero. That crossing depended on two different float arithmetic paths — this single
+     * multiplication versus {@code MotionSystem}'s repeated addition of {@code step} — agreeing
+     * bit-for-bit, which they did not for roughly a fifth of all delays. Converting the delay to a
+     * whole tick count once, here, with {@link Math#round}, and handing {@code MotionSystem} an
+     * integer to count down removes that disagreement entirely: {@code delaySeconds} is already, by
+     * the time it reaches a slot, an exact multiple of {@code step} (the loader quantises it on parse,
+     * and every {@code core} fixture constructs it as {@code delayTicks * step}), so the rounding here
+     * only ever undoes the single rounding step that produced it, never introduces a new one.
      *
      * <p>An entity with no {@link Trajectory} — an archetype whose {@code "motion"} spec was never
      * given, or a formation slot with a delay but a formation nobody attached a trajectory to — has
-     * nothing to backdate; the delay is simply inert for it, the same way {@code MotionSystem} already
+     * nothing to hold; the delay is simply inert for it, the same way {@code MotionSystem} already
      * leaves a {@code Trajectory} with no {@code Motion} alone.
      */
-    private static void applySlotDelay(World world, int entity, FormationSlot slot) {
+    private static void applySlotDelay(World world, int entity, FormationSlot slot, float step) {
         if (slot.delaySeconds() <= 0f) {
             return;
         }
@@ -407,7 +418,7 @@ public final class SpawnSystem implements GameSystem {
         if (trajectory == null) {
             return;
         }
-        trajectory.elapsed = -slot.delaySeconds();
+        trajectory.delayTicks = Math.round(slot.delaySeconds() / step);
     }
 
     private static void positionSpawned(
