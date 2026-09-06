@@ -42,28 +42,36 @@ that already knows about it — the loader, not the person writing the JSON.
 
 **What this means for what a designer actually gets:** the seconds typed in `formations.json` are, in
 effect, a label for a tick count from the moment they are parsed — `0.3` and `0.31` both mean
-"18 ticks", `0.283` and `0.3` mean different things only if they round to different tick counts. This
-is deliberate: it is exactly what closes the drift the `core` fragment measured. It is not currently
-surfaced anywhere content authors read besides this fragment and the loader's own javadoc; if a
-future task adds authored delays to a shipped level, that javadoc is the one place documenting the
-rounding, and a generated doc for formations (there is none yet) would be the natural place to state
-it explicitly once one exists.
+"18 ticks", `0.283` and `0.3` mean different things only if they round to different tick counts. It is
+not currently surfaced anywhere content authors read besides this fragment and the loader's own
+javadoc; if a future task adds authored delays to a shipped level, that javadoc is the one place
+documenting the rounding, and a generated doc for formations (there is none yet) would be the natural
+place to state it explicitly once one exists. **Correction (`reviewer`, PR #336): a designer currently
+gets the nearest tick, or the one before it — see below. This is not yet fixed.**
 
-**The drift this closes, quoting the `core` fragment's own reproduction:** for the raw literal `0.3`,
-its table reports `active_pass=18` against `ideal_active_pass=19` — the slot turns active one tick
-earlier than a whole-tick reading of "0.3 seconds = 18 ticks" would predict. I did not re-derive that
-number; I re-ran the same reproduction to confirm what the loader now produces instead of it. What
-the loader passes to `FormationSlot` after quantising `0.3` is `18 * TICK_SECONDS`, computed as
-`Math.round(18) * (1f/60f)` — a single multiplication, the same expression `core`'s own test fixtures
-use to construct an exact `N`-tick delay directly. This is the value `SpawnSystemTest`'s
-`delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind` and
-`delayedSlotWithOneTickDelayTracesLeaderExactly` already exercise and prove exact against a leader's
-own recorded positions — so quantising here is what lets an authored `0.3`, `0.29` or `0.305` (all
-three round to `18`) reach `core` as precisely the value those tests already cover, rather than as an
-untested literal. I did not independently re-verify the tick-for-tick position match for a
-non-quantised delay; that is `core`'s claim and `core`'s test, not this branch's.
-`aDecimalDelayIsQuantisedToTheNearestWholeTick` pins the loader's own half: an authored `0.3` loads to
-`18 * TICK_SECONDS`, not to the raw `0.3f` literal.
+**The exactness guarantee does not hold in general, and `0.3` — this fragment's own flagship
+example — is one of the values where it fails.** The paragraph originally here claimed that quantising
+`0.3` to `18 * TICK_SECONDS` reaches `core` as "precisely the value" `SpawnSystemTest`'s exactness
+tests already cover. That is wrong. `reviewer` built the check neither this branch nor #330's actually
+ran — a scratch fixture driving a real `SpawnSystem`/`MotionSystem` pipeline from a quantised delay —
+and found that for `18 * TICK_SECONDS` (`0.3` quantised, this fragment's own example) **the delayed
+slot activates a full tick early, permanently**, with both a `constant` and an `arc` trajectory. Swept
+over `N = 1..300` ticks, roughly **22% of tick counts fail — the bands 18–40 and 258–300** — because
+`MotionSystem` reaches the crossing by *repeated addition* of `TICK_SECONDS` while the delay this
+loader constructs (and `core`'s own `SpawnSystemTest` fixtures construct, identically) is a *single
+multiplication*, and the two do not generally agree bit-for-bit. This loader's quantisation matches
+`core`'s own tested construction exactly — the mismatch is between that construction and
+`MotionSystem`'s accumulation, entirely inside `core`, and is **not this branch's to fix**. Filed as
+[#337](https://github.com/LuchoC-Dev/little-spaceship/issues/337).
+
+**`SpawnSystemTest.delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind` (`N = 12`) and
+`delayedSlotWithOneTickDelayTracesLeaderExactly` (`N = 1`) are not evidence the guarantee holds in
+general — do not cite them as such.** Both `N` values happen to fall outside the 18–40 and 258–300
+failing bands, which is exactly why the earlier version of this fragment could state the guarantee
+confidently and be wrong: nothing in either half of this feature had swept a wider range of `N` before
+`reviewer` did. `aDecimalDelayIsQuantisedToTheNearestWholeTick` still correctly pins this loader's own
+half — an authored `0.3` loads to `18 * TICK_SECONDS`, not the raw `0.3f` literal — but that is a claim
+about what the loader constructs, not about what `MotionSystem` does with it once it is constructed.
 
 ## Tests
 
