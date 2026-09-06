@@ -5,6 +5,19 @@
 `core/`, `assets/data/` or `tools/` touched — the content that uses this (a single-file column in
 level 1) is a separate branch, per the issue.
 
+**Update (2026-09-06): [#337](https://github.com/LuchoC-Dev/little-spaceship/issues/337) is fixed.**
+The "not yet fixed" note below, and the correction it points at, describe the state between PR #336's
+review and #337's fix. `core`'s crossing no longer compares `Trajectory.elapsed` against zero as a
+float; it counts down an integer `Trajectory.delayTicks` instead, set from `Math.round(delaySeconds /
+step)` in `SpawnSystem.applySlotDelay`. This loader's own quantisation (`Math.round(rawDelaySeconds *
+60f) * TICK_SECONDS`, below) needed no change — it already produced the same exact-multiple-of-`step`
+value `core`'s fix consumes; the mismatch was entirely inside `core`'s use of that value, never in how
+this loader constructed it. `JsonContentSourceFormationDelayTest` gained
+`aQuantisedDelayTracesTheLeaderExactlyThroughARealSpawnAndMotionPipeline`, which drives a real
+`SpawnSystem`/`MotionSystem` from this loader's own quantisation for a delay in each of the two
+previously-failing bands (18 ticks and 280 ticks) and confirms the follower now traces the leader
+exactly that many ticks behind.
+
 ## What was built
 
 `JsonContentSource.loadFormations` now reads an optional `"delaySeconds"` on each slot in
