@@ -35,6 +35,7 @@
   oscillation; and the stale scratchpad class that ran instead of the fresh one.
 - [Absolute waypoint authoring](project_absolute-waypoint-authoring.md) — absolute in x only if the
   wave's atX matches the entry point, in y only modulo the collider radius, and unchecked by anything.
+- [Vocabulary budget arithmetic](project_vocabulary-budget-arithmetic.md) — thirteen authored shapes is the floor two-or-three-per-archetype produces; absolute paths cannot ride a multi-slot formation; `arc` with a negative `ay`.
 - [Wave migration mechanics](project_wave-migration-mechanics.md) — a wave's `FixedDuration` is shared
   across every placement that reuses it, negative offsets overlap two `FixedDuration` waves since 11b, no
   test touches the real `assets/data/level-01.json`, and how to live-run it without a full app context.
