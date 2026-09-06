@@ -55,7 +55,7 @@ The intent the generated document cannot carry. Times are absolute level time.
 | 7 | super-fast | `l1-super-fast` | 57.0 | `plunge` three times, then **`plunge-and-cut-left`/`-right`** as a pair and **`strike-and-withdraw`** last. The withdraw is the one shape in the level that leaves through the top; it is placed alone, at 7.5 s, so the reversal is the only thing happening. |
 | 8 | one or two heavy carriers | `l1-heavy-carrier` | 66.0 | One carrier on `descend-and-anchor`: parked from 68.2 s to 82.2 s, **five children while parked** and two more before it leaves. Density 0.40/s and the lowest-pressure stretch before the rest — the pressure here is the 700-point wall and the stream out of it, not the count. Two lights and a `line-3` cross it so the beat is not a shooting gallery. |
 | 9 | evolved basics/shooters | `l1-evolved-shooters` | 81.0 | `descend-hold-descend` three times — the shooter's stationary hold, which is the one thing no basic shape does — then **`advance-the-firing-line`** at 9.0 s, `atX 0.50`, `single`. It holds two firing lines fifty units apart and only then leaves sideways. It is the level's only absolute path and the only place it can be: the entry waypoint is x 104, so `atX 0.50` and `single` are forced. |
-| 10 | high-pressure combinations | `l1-high-pressure` | 91.0, **offset -2.0** | Overlapped into the shooters by two seconds on purpose: `advance-the-firing-line` is still standing on its second line when the `line-5` of basics arrives. Then `dive-across-*` from both sides, a shooter line with the `extra-life`, `plunge-and-cut-*` from both sides, and a `vee-5` of diving lights to close. Density 1.82/s, the second crest. |
+| 10 | high-pressure combinations | `l1-high-pressure` | 91.0, **offset -2.0** | Overlapped into the shooters by two seconds on purpose: the `line-5` of basics arrives at 91.0, while `advance-the-firing-line` (spawned 90.0) is still descending towards its first hold at 91.2. Then `dive-across-*` from both sides, a shooter line with the `extra-life`, `plunge-and-cut-*` from both sides, and a `vee-5` of diving lights to close. Density 1.82/s, the second crest. |
 | 11 | difficult encounter → attachment | `l1-twin-carriers-attachment` | 100.5, **offset -1.5** | **`anchor-and-traverse-left`/`-right`**, one from each side, half a second apart. They park, then slide toward each other from 108.9 s, then park again — the column the children fall into changes halfway through, and the two of them cross. This is the level's one encounter about position rather than volume. The `attachment` is on the left carrier, and it is only delivered if that carrier dies. |
 | 12 | brief rest | `l1-brief-rest` | 114.5 | One basic, one `bomb-recharge`, six seconds. It is a rest **only if the carriers are dead** — they are on screen until ~125.7 s otherwise. That is deliberate and it is the sharpest thing in the level for the play session to judge. |
 | 13 | final escalation | `l1-final-escalation` | 120.5 | Every archetype, every complex shape, nothing simple except the two `line-5`s that bracket it. Both `grind-and-wheel`s at 3.0/3.5 s take both top corners; `plunge-harder` at 10.0 s raises rush pressure without adding a shape to learn. Density 2.22/s. |
@@ -102,7 +102,7 @@ by construction — it reports *what* an overlap is, it does not judge it — an
 printed the same two. **That is what "checks clean" means here**: the list contains only the two
 overlaps this task chose.
 
-**26 `**leaves**` markers, and not one was tuned away.** Every one is a shape built to exit sideways:
+**25 `**leaves**` markers, and not one was tuned away.** Every one is a shape built to exit sideways:
 `cut-across-*` crosses the whole width by definition, `plunge-and-cut-*` turns at the player's height
 and goes out the side, `grind-and-wheel-*` sweeps across the top, `dive-across-*` bends out of the
 bottom corner, and `advance-the-firing-line`'s last leg is written `{x: 0, y: 160}` — leaving through
@@ -156,3 +156,31 @@ Both are outside `assets/data/` and therefore outside this task's scope.
    moment on paper.
 4. **Beat 7's `strike-and-withdraw` at 64.5 s** — does leaving through the top read as a decision?
 5. **Whether the level is 2.5 minutes of the right shape**: it is 134.5 s to the boss, as asked.
+
+## Corrected by the coordinator after review, before merge
+
+`reviewer` accepted this branch and found two prose slips and one omission. The corrections are the
+coordinator's because the worker was already closed. **Prose only — no JSON changed, and the family
+rule, the timeline, the carrier arithmetic, the `atX` windows and the beat map all reproduced
+exactly.**
+
+**Beat 10's overlap was described with the wrong entity state.** The wave-level `-2.0 s` overlap is
+real and correctly reasoned; what was wrong was the claim about where the shooter is when the basics
+arrive. Reconstructed absolutely: `advance-the-firing-line` spawns at 90.0 and holds its first line
+from 91.2 to 93.7 and its second from 94.95 to 97.45, while the `line-5` spawns at **91.0** — before
+the first hold begins, not during the second. The beat is still the level's second crest and the
+overlap still does what it was written to do; only the sentence was wrong.
+
+**The `**leaves**` count was 26 and is 25.** `grep -o '\*\*leaves\*\*' docs/levels/level-01.md | wc -l`
+on the regenerated, tree-clean document returns 25. The category description was also imprecise: only
+the `vee-5`-widened `dive-across-*` placements earn the marker, and the two plain `single` ones do
+not, because their swept extents sit entirely inside `0 .. 208`.
+
+**Phase 11e's open carrier finding survives this rebuild and is not mentioned above.** It is recorded
+here rather than left to be rediscovered. `enemy-carrier`'s health is still 700 and its
+`spawner.interval` still 3.0 — both outside this task's mandate — and the weapon-upgrade schedule that
+sets the player's shot level by the twin-carrier beat is essentially unchanged (9.0 / 47.0 / 87.0 here
+against 11e's 11.0 / 48.0 / 86.0). So 11e's arithmetic still holds: **under ideal fire at shot level
+4 a carrier dies in about 2.1 s against a 3.0 s spawner interval**, and beat 11's carriers can still
+die before producing a first child. The rebuild neither fixes nor worsens it. **It is a thing to watch
+in the play session**, and it is the second time this specific gap has had to be written down.
