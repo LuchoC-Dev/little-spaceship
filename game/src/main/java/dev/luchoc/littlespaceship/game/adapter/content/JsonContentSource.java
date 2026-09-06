@@ -66,6 +66,15 @@ public final class JsonContentSource implements ContentSource {
      */
     private static final float PLAYFIELD_HEIGHT = 270f;
 
+    /**
+     * The fixed step, in seconds — duplicated from {@code core.application.GameLoop#STEP} for the
+     * same reason {@link #PLAYFIELD_WIDTH} is. Used only to quantise a formation slot's authored
+     * {@code delaySeconds} to the nearest whole tick before it reaches {@link FormationSlot} — see
+     * {@link #loadFormations} for why an un-quantised decimal cannot be trusted to reproduce the tick
+     * count a designer actually typed, once {@code core} accumulates this same step onto it.
+     */
+    private static final float TICK_SECONDS = 1f / 60f;
+
     private final BalanceValues balance;
     private final Map<String, EnemyDefinition> enemies = new HashMap<>();
     private final Map<String, TrajectoryDefinition> trajectories = new HashMap<>();
@@ -579,15 +588,45 @@ public final class JsonContentSource implements ContentSource {
         }
     }
 
+    /**
+     * Reads {@code formations.json}. A slot's {@code "delaySeconds"} (issue #330/#334) is optional
+     * and defaults to {@code 0} — every formation shipped before this issue has none, and must load
+     * to the identical {@link FormationSlot} it always did.
+     *
+     * <p>A present value is quantised to the nearest whole tick, {@code Math.round(delaySeconds *
+     * 60f) * TICK_SECONDS}, before it reaches {@link FormationSlot}. This is deliberate, not
+     * incidental: {@code SpawnSystem} backdates {@code Trajectory.elapsed} to {@code -delaySeconds} in
+     * one assignment, and {@code MotionSystem} then reaches zero by adding the fixed step {@code
+     * TICK_SECONDS} once per tick — two different paths to the same target float, which do not
+     * generally agree bit-for-bit. Measured on the {@code core} branch that built this feature: of
+     * five plausible author-typed values (0.05, 0.1, 0.3, 0.5, 1/3 s), four turned the slot active one
+     * tick earlier than a whole-tick reading of the same number would predict. Quantising here means
+     * the seconds a designer types are only ever a label for a tick count — the value {@code core}
+     * actually receives is always an exact multiple of the step, reached the same way {@code
+     * MotionSystem} reaches it, so "traces the leader exactly N ticks behind" holds for what gets
+     * authored, not only for a hand-picked exact multiple. Kept in seconds rather than requiring a
+     * {@code "delayTicks"} count so this stays consistent with every other timestamp this content
+     * authors in seconds ({@code SpawnEvent.at}, a pickup's {@code at}).
+     */
     private void loadFormations(JsonReader reader, FileHandle file) {
         inFile(file, () -> {
             for (JsonValue entry : reader.parse(file).get("formations")) {
+                String id = entry.getString("id");
                 List<FormationSlot> slots = new ArrayList<>();
                 for (JsonValue slot : entry.get("slots")) {
-                    slots.add(new FormationSlot(slot.getFloat("offsetX"), slot.getFloat("offsetY")));
+                    requireOnlyKeys(slot, "formation '" + id + "' slot", "offsetX", "offsetY",
+                        "delaySeconds");
+                    float rawDelaySeconds = slot.getFloat("delaySeconds", 0f);
+                    float delaySeconds = Math.round(rawDelaySeconds * 60f) * TICK_SECONDS;
+                    try {
+                        slots.add(new FormationSlot(
+                            slot.getFloat("offsetX"), slot.getFloat("offsetY"), delaySeconds));
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalArgumentException(
+                            "formation '" + id + "': " + e.getMessage(), e);
+                    }
                 }
-                FormationDefinition formation = new SimpleFormationDefinition(
-                    entry.getString("id"), slots);
+                FormationDefinition formation = new SimpleFormationDefinition(id, slots);
                 formations.put(formation.id(), formation);
             }
             return null;
