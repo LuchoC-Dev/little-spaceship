@@ -262,27 +262,45 @@ public final class BossSystem implements GameSystem {
 
     /**
      * How many times the front weapon (the arms, the sweep pattern) fires within one full rear cycle —
-     * {@link #rearCycleDuration}, cooldown plus tell plus one move — including the shot it fires
-     * together with the rear volley at the cycle's own boundary. Issue #329's synchronisation rule:
-     * "they fire together, then the front fires more often, then they coincide again," which is
-     * arithmetic once the cycle is a constant (see {@link #MOVE_DURATION}'s javadoc) — the front period
-     * is simply {@code rearCycleDuration / FRONT_SHOTS_PER_CYCLE}, so the Nth front shot always lands
-     * exactly on the next rear volley, and {@code FRONT_SHOTS_PER_CYCLE − 1} front shots fall strictly
-     * between two rear volleys.
+     * {@link #rearCycleDuration}, one move plus cooldown plus tell, <b>in that order in steady
+     * state</b> — including the shot it fires together with the rear volley at the cycle's own
+     * boundary. Issue #329's synchronisation rule: "they fire together, then the front fires more
+     * often, then they coincide again," which is arithmetic once the cycle is a constant (see {@link
+     * #MOVE_DURATION}'s javadoc) — the front period is simply {@code rearCycleDuration /
+     * FRONT_SHOTS_PER_CYCLE}, so the Nth front shot always lands exactly on the next rear volley, and
+     * {@code FRONT_SHOTS_PER_CYCLE − 1} front shots fall strictly between two rear volleys.
+     *
+     * <p><b>The cycle runs {@code MOVING} first, not last, in every cycle but the very first one.</b>
+     * {@link #updateTelling} resets {@link #frontElapsed}/{@link #frontShotsThisCycle} to zero and
+     * calls {@link #beginMove} back to back, in the same tick a rear volley fires — so the instant a
+     * cycle's own clock starts at zero, the boss is already entering {@code MOVING}. Only the very
+     * first cycle, from the entrance settling to the first rear volley, is different: it has no move
+     * to lead with, since none has happened yet, and runs {@code COOLDOWN} then {@code TELLING} alone.
+     * Every cycle after that runs {@code MOVING} ({@link #MOVE_DURATION}), then {@code COOLDOWN}
+     * ({@code patternCooldown}), then {@code TELLING} ({@code TELL_DURATION}), then the next fire.
      *
      * <p><b>Why 3, not the numerically closer 2.</b> The owner's starting suggestion was a front period
      * near 1.2 s. Against this boss's real content ({@code patternCooldown} 0.7 s in
-     * {@code level-01.json}), the cycle is 0.7 + 0.75 + 0.84 = 2.29 s, and the numerically closest
+     * {@code level-01.json}), the cycle is 0.84 + 0.7 + 0.75 = 2.29 s, and the numerically closest
      * choice is {@code N = 2} (a period of 1.145 s, 0.055 s off the suggestion) — but {@code N = 2}'s
-     * one independent shot always lands at exactly half the cycle, and the tell alone already covers
-     * 63.3% of it (({@code patternCooldown} + {@code TELL_DURATION}) / cycle = 1.45 / 2.29), so that
-     * shot would fire during {@code TELLING} on every single cycle, never during {@code MOVING} —
-     * failing the plan's own requirement that a front shot be provably fired while the boss travels.
-     * {@code N = 3} places its second independent shot at two-thirds of the cycle (0.667), past the
-     * 0.633 mark where the tell ends, so it lands inside {@code MOVING} on every cycle instead — the
-     * smallest {@code N} for which that is true at {@link #MOVE_DURATION}'s chosen value. Its period,
-     * 0.763 s, is further from the 1.2 s suggestion than {@code N = 2}'s would have been, but the
-     * suggestion is explicitly the owner's to tune, while firing during a move is not. One line to
+     * one independent shot always lands at exactly half the cycle, and {@code MOVING} — now the
+     * <i>first</i> segment of a steady-state cycle — only covers its first 36.7%
+     * ({@code MOVE_DURATION} / cycle = 0.84 / 2.29). Half the cycle falls past that, inside
+     * {@code COOLDOWN}, so that lone shot fires during {@code COOLDOWN} on every single cycle, never
+     * during {@code MOVING} — failing the plan's own requirement that a front shot be provably fired
+     * while the boss travels; a scratch mutation to {@code N = 2} and a reflection probe against the
+     * real compiled classes and {@code level-01.json} both confirmed exactly this. {@code N = 3}
+     * places its <i>first</i> independent shot at one-third of the cycle (0.333), still inside the
+     * 0.367 {@code MOVING} window — a margin of about 0.077 s (roughly 4.6 ticks) at these real
+     * content values — so it lands inside {@code MOVING} on every cycle instead. (Its second
+     * independent shot, at two-thirds, lands in {@code COOLDOWN} at these values; which segment
+     * catches it does not matter to the requirement, only the first one does.) This is the smallest
+     * {@code N} for which the {@code MOVING} requirement holds at {@link #MOVE_DURATION}'s chosen
+     * value: it needs {@code patternCooldown + TELL_DURATION < 2 * MOVE_DURATION}, true here
+     * (1.45 s &lt; 1.68 s) but not true for {@code N = 2}, which would need
+     * {@code patternCooldown + TELL_DURATION < MOVE_DURATION} — false by a wide margin. {@code N = 3}'s
+     * period, 0.763 s, is further from the 1.2 s suggestion than {@code N = 2}'s would have been, but
+     * the suggestion is explicitly the owner's to tune, while firing during a move is not. One line to
      * change regardless — the project owner tunes this by playing.
      */
     static final int FRONT_SHOTS_PER_CYCLE = 3;

@@ -46,21 +46,40 @@ was added, and `updateFrontWeapons` is the only new caller of anything, and it c
 
 ## `FRONT_SHOTS_PER_CYCLE = 3`, and why not the numerically closer 2
 
+**Correction (post-review): the cycle order below was originally documented backwards.** `reviewer`
+traced it with a reflection probe against the real compiled classes and `level-01.json` and found the
+steady-state order is **`MOVING`, then `COOLDOWN`, then `TELLING`** — not `COOLDOWN`/`TELLING`/`MOVING`
+as first written here. `updateTelling` resets `frontElapsed`/`frontShotsThisCycle` to zero and calls
+`beginMove` back to back, in the same tick the rear volley fires, so the instant a cycle's clock starts
+at zero, the boss is already entering `MOVING`. **The one exception is the very first cycle**, from the
+entrance settling to the first rear volley: it has no move to lead with (none has happened yet), so it
+runs `COOLDOWN` then `TELLING` alone. Every cycle after that runs `MOVING` (`MOVE_DURATION`), then
+`COOLDOWN` (`patternCooldown`), then `TELLING` (`TELL_DURATION`), then the next fire. The conclusion
+below (`N = 3`, not `N = 2`) is unchanged — only which shot lands where is corrected.
+
 Against real content (`patternCooldown` 0.7 s in `level-01.json`), the cycle is
-0.7 + 0.75 + 0.84 = **2.29 s**. The owner's suggestion was a front period near 1.2 s.
+0.84 + 0.7 + 0.75 = **2.29 s**. The owner's suggestion was a front period near 1.2 s.
 
 - `N = 2` → period 1.145 s, only 0.055 s off the suggestion — numerically the best fit.
 - `N = 3` → period 0.763 s, 0.437 s off — a worse fit on paper.
 
-But `N = 2`'s one independent shot always lands at exactly half the cycle, and the tell alone
-(`patternCooldown + TELL_DURATION = 1.45 s`) already covers 63.3% of it — so that shot would fire
-during `TELLING` on *every* cycle, never during `MOVING`, failing the plan's own hard requirement that
-a front shot be provably fired while the boss travels. Reaching that requirement with `N = 2` would
-need `MOVE_DURATION > patternCooldown + TELL_DURATION = 1.45 s`, which is not "near 0.84 s" by any
-reading. `N = 3` places its second independent shot at two-thirds of the cycle (0.667), past the 0.633
-mark where the tell ends, so it lands inside `MOVING` on every single cycle — the smallest `N` for
-which that holds at this `MOVE_DURATION`. `FRONT_SHOTS_PER_CYCLE` is a one-line constant, named and
-commented with this reasoning in place, for the owner to retune by playing.
+`N = 2`'s one independent shot always lands at exactly half the cycle. In steady state, `MOVING` is
+the cycle's *first* segment and covers only its first 36.7% (`MOVE_DURATION / cycle` = 0.84 / 2.29);
+half the cycle falls well past that, inside `COOLDOWN`. So that lone shot fires during `COOLDOWN` on
+*every* cycle, never during `MOVING`, failing the plan's own hard requirement that a front shot be
+provably fired while the boss travels — confirmed independently by `reviewer`, who mutated
+`FRONT_SHOTS_PER_CYCLE` to 2 in a scratch copy and watched the single shot land in `COOLDOWN` every
+time. Reaching the requirement with `N = 2` would need `patternCooldown + TELL_DURATION <
+MOVE_DURATION` (1.45 s < 0.84 s) — false by a wide margin, so no reasonable `MOVE_DURATION` near the
+plan's "near 0.84 s" guidance fixes it. `N = 3` places its **first** independent shot at one-third of
+the cycle (0.333), still inside the 0.367 `MOVING` window — a margin of about 0.077 s (~4.6 ticks) at
+these real content values — so it lands inside `MOVING` on every single cycle instead. (Its *second*
+independent shot, at two-thirds, lands in `COOLDOWN` at these values — which segment catches it does
+not matter to the requirement, only the first one does.) The general condition for `N = 3` to work is
+`patternCooldown + TELL_DURATION < 2 * MOVE_DURATION` (1.45 s < 1.68 s here — true), against `N = 2`'s
+`patternCooldown + TELL_DURATION < MOVE_DURATION` (false) — the smallest `N` for which the `MOVING`
+requirement holds at this `MOVE_DURATION`. `FRONT_SHOTS_PER_CYCLE` is a one-line constant, named and
+commented with this corrected reasoning in place, for the owner to retune by playing.
 
 ## Fire rate, measured rather than impressed
 
@@ -138,3 +157,17 @@ this change; the proof lives entirely in `BossSystemTest`.
 - `./gradlew :core:test --tests "*ReplayTest"` — green, all five replay tests.
 - `./gradlew build` — green across every module.
 - `grep -rn "com.badlogic.gdx\|Math.random\|System.currentTimeMillis\|new Thread\|ExecutorService\|CompletableFuture" core/src/main/java/.../BossSystem.java` — no matches.
+
+## Correction after review
+
+`reviewer` accepted the diff (scope, the single `FightStage.MOVING` call site, correct routing of a
+core death mid-`MOVING`, the front weapon's independent fresh aim, no replay reaching this code, and
+the fire-rate numbers above all reproduced exactly) but rejected the explanation: the class javadoc,
+this file and the pull request body all originally described the cycle as running
+`COOLDOWN → TELLING → MOVING`, generalising the shape of the very first cycle (which genuinely has no
+leading move) onto every cycle after it. In steady state the order is `MOVING → COOLDOWN → TELLING`,
+per `updateTelling`'s own `beginMove` call sitting right next to the front-clock reset. The corrected
+reasoning is in the `FRONT_SHOTS_PER_CYCLE` section above and in `BossSystem`'s own javadoc on that
+constant. **The conclusion (`N = 3`) did not change** — only which independent shot (the first, not
+the second) lands in `MOVING`, and which segment (`COOLDOWN`, not `TELLING`) catches `N = 2`'s single
+shot instead.
