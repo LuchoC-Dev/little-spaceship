@@ -5,13 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.badlogic.gdx.files.FileHandle;
+import dev.luchoc.littlespaceship.core.domain.World;
+import dev.luchoc.littlespaceship.core.domain.component.Transform;
+import dev.luchoc.littlespaceship.core.domain.event.GameEventQueue;
+import dev.luchoc.littlespaceship.core.domain.rng.Rng;
+import dev.luchoc.littlespaceship.core.domain.system.MotionSystem;
+import dev.luchoc.littlespaceship.core.domain.system.SpawnSystem;
 import dev.luchoc.littlespaceship.core.port.ContentSource;
 import dev.luchoc.littlespaceship.core.port.FormationDefinition;
 import dev.luchoc.littlespaceship.core.port.FormationSlot;
+import dev.luchoc.littlespaceship.core.port.InputFrame;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -130,6 +138,104 @@ final class JsonContentSourceFormationDelayTest {
             """);
         FormationSlot slot = source.formation("single").slots().get(0);
         assertEquals(12 * TICK_SECONDS, slot.delaySeconds());
+    }
+
+    /**
+     * Issue #337: neither #330 nor #334 ever ran a delay quantised by this loader through a real
+     * {@code SpawnSystem}/{@code MotionSystem} pipeline — each half was verified alone, and the defect
+     * only showed up where the two meet. This drives that seam directly: an authored {@code
+     * delaySeconds} goes through {@code JsonContentSource}'s own quantisation, into a {@link
+     * FormationSlot} exactly as a shipped level would produce, then through a real {@code SpawnSystem}
+     * spawn and forty-plus real {@code MotionSystem} ticks — no {@code TestContent} fixture standing
+     * in for any of it. Covers the flagship {@code 0.3s} example (quantises to 18 ticks, inside the
+     * 18-40 failing band) and a delay landing at 280 ticks (inside the 258-300 failing band), the two
+     * bands #337 names explicitly.
+     */
+    @Test
+    void aQuantisedDelayTracesTheLeaderExactlyThroughARealSpawnAndMotionPipeline() throws IOException {
+        assertLoadedDelayTracesLeaderExactly(0.3f, 18);
+        assertLoadedDelayTracesLeaderExactly(280f * TICK_SECONDS, 280);
+    }
+
+    /**
+     * {@link #load} writes {@code level-test.json} with the legacy flat {@code "events"} list, which
+     * only {@link ContentSource#timeline(String)} reads — {@code SpawnSystem} reads {@link
+     * ContentSource#placements(String)} instead, per {@code JsonContentSource.loadLevel}'s own
+     * javadoc. Driving a real {@code SpawnSystem} through this loader therefore needs the {@code
+     * "waves"} shape instead: a {@code waves.json} with one {@code cleared} wave, and a level file
+     * that places it. Everything else — {@code balance.json}, {@code trajectories.json}, {@code
+     * enemies.json}, {@code attachments.json} — is the same fixture {@link #load} already writes.
+     */
+    private ContentSource loadForPipeline(String formationsJson) throws IOException {
+        File dir = tempDir.toFile();
+        writeFixedFixtures(dir);
+        Files.writeString(tempDir.resolve("formations.json"), formationsJson);
+        Files.writeString(tempDir.resolve("waves.json"), """
+            {
+              "waves": [
+                {
+                  "id": "wave-test",
+                  "end": { "type": "cleared" },
+                  "spawns": [ { "at": 0, "spawn": "enemy-test", "formation": "single", "atX": 0.5 } ]
+                }
+              ]
+            }
+            """);
+        Files.writeString(tempDir.resolve("level-test.json"), """
+            { "waves": [ { "wave": "wave-test", "offset": 0 } ] }
+            """);
+        return new JsonContentSource(new FileHandle(dir), "level-test");
+    }
+
+    private void assertLoadedDelayTracesLeaderExactly(float rawDelaySeconds, int expectedDelayTicks)
+        throws IOException {
+        ContentSource content = loadForPipeline("""
+            {
+              "formations": [
+                {
+                  "id": "single",
+                  "slots": [
+                    { "offsetX": 0, "offsetY": 0 },
+                    { "offsetX": 0, "offsetY": 0, "delaySeconds": %s }
+                  ]
+                }
+              ]
+            }
+            """.formatted(rawDelaySeconds));
+        FormationSlot followerSlot = content.formation("single").slots().get(1);
+        assertEquals(expectedDelayTicks * TICK_SECONDS, followerSlot.delaySeconds(),
+            "loader's own quantisation should already agree with the expected tick count");
+
+        World world = new World(content, new Rng(1), new GameEventQueue());
+        SpawnSystem spawn = new SpawnSystem("level-test");
+        MotionSystem motion = new MotionSystem();
+        spawn.update(world, TICK_SECONDS, InputFrame.IDLE);
+        assertEquals(2, world.entityCount());
+
+        int leader = world.trajectories().entityAt(0);
+        int follower = world.trajectories().entityAt(1);
+
+        int ticks = expectedDelayTicks + 20;
+        List<float[]> leaderHistory = new ArrayList<>();
+        List<float[]> followerHistory = new ArrayList<>();
+        for (int t = 0; t < ticks; t++) {
+            motion.update(world, TICK_SECONDS, InputFrame.IDLE);
+            Transform lt = world.transforms().get(leader);
+            Transform ft = world.transforms().get(follower);
+            leaderHistory.add(new float[] {lt.x, lt.y});
+            followerHistory.add(new float[] {ft.x, ft.y});
+        }
+
+        for (int t = expectedDelayTicks; t < ticks; t++) {
+            float[] expected = leaderHistory.get(t - expectedDelayTicks);
+            float[] actual = followerHistory.get(t);
+            assertEquals(expected[0], actual[0],
+                "delayTicks=" + expectedDelayTicks + " t=" + t + ": follower should trace the leader"
+                    + " exactly N ticks behind, through the real loader and pipeline");
+            assertEquals(expected[1], actual[1],
+                "delayTicks=" + expectedDelayTicks + " t=" + t + ": follower should trace the leader"
+                    + " exactly N ticks behind, through the real loader and pipeline");
+        }
     }
 
     @Test
