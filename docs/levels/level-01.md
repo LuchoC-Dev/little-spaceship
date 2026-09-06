@@ -376,9 +376,10 @@ placement of it, and nothing in `assets/data/waves.json` says so.
 whose extent leaves `0 .. 208` spawns partly off screen and nobody is told at runtime.
 
 **`x swept` is where it goes**, and for any shape with a `vx` it is the column that matters. A
-spawn-instant extent is a snapshot: `swoop` carries `vx -10` for 6.9 s, so a formation on it ends
-69 units left of where it started, and a `veer-right` placed on the right edge spends its whole
-arc past it. `same` means the shape has no horizontal velocity and the two are identical.
+spawn-instant extent is a snapshot: any shape that drifts horizontally ends up somewhere else, and
+one placed on the side it drifts towards can spend its whole flight off screen while still
+reading in range at the spawn instant. `same` means the shape has no horizontal velocity and the
+two are identical.
 
 **`shape` is resolved, not copied.** A spawn's own `trajectory` key overrides the archetype's
 `motion.trajectory` and is marked *(override)*; every other row is the archetype default.
@@ -449,9 +450,6 @@ An `arc` turns at `-vy / ay` and bottoms out `vy² / (2·ay)` below where it spa
 closed form from the entity's own elapsed time (`core/port/ArcTrajectoryDefinition.java`).
 The player flies at `playerStartY 30.0` in a 270-tall playfield, so a shape whose apex sits
 far above that band is scenery.
-
-**The veers spawn on the side they veer away from** — `veer-left` at `atX >= 0.75`, `veer-right`
-at `atX <= 0.25` — or the shape happens off screen. That constraint is the catalogue's.
 
 **A `path` has no single `vx`/`vy`/`ay`** — its legs are in the last column, in order, a leg in
 brackets meaning it is inside the repeated range. `vx, vy for Ns` is a segment; `wait Ns` is the
@@ -630,7 +628,7 @@ this document a generator can do and a human reliably will not.
 
 - a spawn whose `at` is past its wave’s duration, which never fires
 - a formation whose extent at the spawn instant leaves `0 .. 208`
-- **a spawn whose swept extent is mostly outside `0 .. 208`**, which the spawn-instant extent cannot see, and the veer-side rule when a veer is the cause
+- **a spawn whose swept extent is mostly outside `0 .. 208`**, which the spawn-instant extent cannot see
 - **an absolutely-authored path (`waypoints`) placed at an `atX` that does not reproduce its entry waypoint**, within the rounding a two-decimal `atX` can introduce
 - a `dropSlot` past its formation’s slot count
 - a drop kind outside the six
