@@ -23,6 +23,12 @@ package dev.luchoc.littlespaceship.core.domain.component;
  * identical to the one-time snapshot that shipped before this component was wired in. Issue #164
  * wires this evaluation into {@code MotionSystem.advanceTrajectories}; before that, this component
  * only accumulated {@link #elapsed} and nothing read {@link #trajectoryId}.
+ *
+ * <p>Issue #330 reuses {@link #elapsed} rather than adding a field for it: a delayed formation slot
+ * simply starts with a negative {@link #elapsed}, set by {@code SpawnSystem} right after this
+ * component is attached. {@code MotionSystem.advanceTrajectories} holds an entity's velocity at zero
+ * for as long as {@link #elapsed} is at or below zero, so a negative start is a delay and nothing
+ * else needs to know about it — the shape functions above are never evaluated at a negative time.
  */
 public final class Trajectory {
 

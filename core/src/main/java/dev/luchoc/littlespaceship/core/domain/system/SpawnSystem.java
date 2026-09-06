@@ -4,6 +4,7 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.ComponentStore;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
+import dev.luchoc.littlespaceship.core.domain.component.Trajectory;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.component.WaveOrigin;
 import dev.luchoc.littlespaceship.core.domain.content.ComponentFactoryRegistry;
@@ -319,6 +320,7 @@ public final class SpawnSystem implements GameSystem {
             if (event.hasTrajectoryOverride()) {
                 ComponentFactoryRegistry.attachTrajectory(world, entity, event.trajectoryId());
             }
+            applySlotDelay(world, entity, slot);
             positionSpawned(world, entity, anchorX, lowestOffsetY, slot);
             world.waveOrigins().set(entity, new WaveOrigin(waveId));
             if (event.hasDrop() && i == event.dropSlot()) {
@@ -381,6 +383,31 @@ public final class SpawnSystem implements GameSystem {
                     "enemy '" + enemy.id() + "': " + e.getMessage(), e);
             }
         }
+    }
+
+    /**
+     * Backdates a delayed slot's {@link Trajectory#elapsed} into negative territory, issue #330's
+     * "single-file column" — {@code -delaySeconds} rather than {@code 0}. {@code MotionSystem} holds
+     * an entity still for as long as its trajectory's elapsed time is at or below zero, so this is
+     * the whole mechanism: no new component, no scheduler, just the one field {@link Trajectory}
+     * already carries, started earlier than usual. A slot with no delay is untouched — its {@link
+     * Trajectory}, if it has one, keeps the {@code 0} {@link ComponentFactoryRegistry#attachTrajectory}
+     * gave it — which is what keeps every formation that predates this issue byte-for-byte identical.
+     *
+     * <p>An entity with no {@link Trajectory} — an archetype whose {@code "motion"} spec was never
+     * given, or a formation slot with a delay but a formation nobody attached a trajectory to — has
+     * nothing to backdate; the delay is simply inert for it, the same way {@code MotionSystem} already
+     * leaves a {@code Trajectory} with no {@code Motion} alone.
+     */
+    private static void applySlotDelay(World world, int entity, FormationSlot slot) {
+        if (slot.delaySeconds() <= 0f) {
+            return;
+        }
+        Trajectory trajectory = world.trajectories().get(entity);
+        if (trajectory == null) {
+            return;
+        }
+        trajectory.elapsed = -slot.delaySeconds();
     }
 
     private static void positionSpawned(

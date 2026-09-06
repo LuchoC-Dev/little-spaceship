@@ -77,6 +77,29 @@ public final class MotionSystem implements GameSystem {
      * tick's integration already uses this tick's velocity. An entity with a {@link Trajectory} but
      * no {@link Motion} is left alone: nothing to write the evaluated velocity into, and nothing in
      * the catalogue attaches one without the other.
+     *
+     * <p><b>Issue #330 — a formation slot delayed in time.</b> {@code SpawnSystem} backdates a
+     * delayed slot's {@link Trajectory#elapsed} to {@code -delaySeconds} at spawn. While {@code
+     * elapsed} is still at or below zero — the {@code <= 0f} check below, deliberately including
+     * zero itself — the entity is <em>present</em> (it has a {@code Transform}, a {@code Collider},
+     * a {@code WaveOrigin}: it can be hit, it counts against a {@code cleared} wave, the safety box
+     * can see it) but holds perfectly still, {@link Motion#vx} and {@link Motion#vy} pinned to zero
+     * rather than evaluated against the shape at a meaningless negative time. That is the decision
+     * this issue asked to be made and pinned: a delayed slot exists from tick zero, it simply does
+     * not move yet. The alternative — not existing until the delay elapses — would need a second
+     * spawn-scheduling mechanism alongside {@code SpawnSystem}'s own wave timeline, and invariant 6's
+     * "no abstraction without a case" refuses exactly that for the one column this issue asks for.
+     *
+     * <p>Including {@code elapsed == 0} in the held branch, rather than only {@code elapsed < 0}, is
+     * what makes a delayed slot retrace the undelayed slot's own positions <em>exactly</em>, tick for
+     * tick, {@code delaySeconds} later — not merely approximately. Both entities' first active
+     * evaluation happens on the tick where their own {@code elapsed} first becomes strictly positive,
+     * so a slot delayed by exactly {@code N} ticks reproduces, from tick {@code N} onward, the
+     * identical sequence of velocity evaluations — and therefore the identical sequence of Euler
+     * integration steps in {@link #integrate} — that the undelayed slot produced from tick zero. A
+     * slot with no delay is entirely unaffected: its {@code elapsed} starts at {@code 0} and the very
+     * first increment already makes it {@code > 0}, so this branch never fires for it — which is what
+     * keeps every formation that predates this issue byte-for-byte identical.
      */
     private static void advanceTrajectories(World world, float step) {
         ComponentStore<Trajectory> trajectories = world.trajectories();
@@ -88,6 +111,11 @@ public final class MotionSystem implements GameSystem {
             trajectory.elapsed += step;
             Motion motion = motions.get(entity);
             if (motion == null) {
+                continue;
+            }
+            if (trajectory.elapsed <= 0f) {
+                motion.vx = 0f;
+                motion.vy = 0f;
                 continue;
             }
             TrajectoryDefinition definition = content.trajectory(trajectory.trajectoryId);
