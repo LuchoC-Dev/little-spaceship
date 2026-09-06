@@ -63,6 +63,15 @@ import dev.luchoc.littlespaceship.core.port.SpriteId;
  * simply fires nothing and still completes its cycle, so the fight never stalls waiting on a part
  * that is gone.
  *
+ * <p><b>Movement, added for issue #325.</b> Once settled at {@code combatY} and through every attack
+ * cycle after that, the boss travels between the ten vertices of a five-pointed star — {@link
+ * #STAR_X}/{@link #STAR_Y} — never more than three perimeter steps per move, per the project owner's
+ * design. A move only ever starts at the end of {@link #fire}, after a volley has fully resolved,
+ * never mid-tell, so the fan in {@link #fireAimedFan} always aims from a standstill exactly as
+ * before: see {@link #beginMove} for why the two can never overlap. Position is a pure function of
+ * elapsed time and the destination draws from the seeded {@link World#rng()}, so a replay reproduces
+ * the same sequence of points.
+ *
  * <p><b>Damage and score need nothing new.</b> Every part is an ordinary {@code ENEMY}-layer,
  * non-fragile {@link Collider} carrying {@link Health} and {@link ScoreValue}, so {@code
  * DamageSystem}, {@code BombSystem} and {@code ScoreSystem} already resolve a hit against it, a bomb
@@ -163,9 +172,70 @@ public final class BossSystem implements GameSystem {
     private static final float CORE_SPAWN_Y =
         SpawnSystem.PLAYFIELD_HEIGHT + (CORE_KEEL_RADIUS - CORE_KEEL_OFFSET_Y);
 
+    /**
+     * The ten vertices of a five-pointed star the boss patrols between during {@code FIGHT}, per the
+     * movement the project owner designed for issue #325. Index {@code i} is the ({@code i} + 1)-th
+     * point in the owner's own 1-to-10 numbering; odd-numbered points (1, 3, 5, 7, 9 — indices 0, 2,
+     * 4, 6, 8) are the star's five outer points, even-numbered ones (2, 4, 6, 8, 10 — indices 1, 3, 5,
+     * 7, 9) are the inner valleys between them, alternating around the perimeter as the owner
+     * specified.
+     *
+     * <p><b>Computed once, offline, never with {@code sin}/{@code cos} at runtime</b> — the same
+     * determinism constraint phase 11j measured and refused curved motion against, and the plan for
+     * this task repeats explicitly. The derivation: a circle of outer radius 32 and inner radius
+     * {@code 32 * sin(18°) / sin(54°) ≈ 12.223} (the classic pentagram ratio, the inner-to-outer
+     * radius a five-pointed star traces when both kinds of vertex sit 36° apart on the perimeter),
+     * ten vertices 36° apart starting from the top (90°) and proceeding clockwise, centred at (104,
+     * 200) in logical units — the playfield's own horizontal centre ({@code
+     * MotionSystem.PLAYFIELD_WIDTH / 2}) and a height chosen, together with the radius, so the boss's
+     * whole six-collider extent clears both edges of the 208×270 playfield with margin, not merely
+     * its centre:
+     *
+     * <ul>
+     *   <li>horizontally, the widest part is an arm ({@code ARM_OFFSET_X + ARM_RADIUS} = 58 either
+     *       side of {@code coreX}); the ten points span core-x from 73.566 to 134.434, so the arms'
+     *       extent spans 15.566 to 192.434 — inside [0, 208] with about 15.6 units clear on each
+     *       side;
+     *   <li>vertically, the lowest part is {@code core-keel} ({@code CORE_KEEL_OFFSET_Y −
+     *       CORE_KEEL_RADIUS} = 40 below {@code coreY}) and the highest is the core or a pod (18
+     *       above); the ten points span core-y from 174.111 to 232.0, so the keel's lowest reach is
+     *       134.111 — comfortably clear of the bottom of the screen, which is the owner's one hard
+     *       constraint — and the core/pod's highest reach is 250.0, inside the 270-tall playfield.
+     * </ul>
+     */
+    static final float[] STAR_X = {
+        104.0f, 111.184f, 134.434f, 115.625f, 122.809f, 104.0f, 85.191f, 92.375f, 73.566f, 96.816f
+    };
+
+    static final float[] STAR_Y = {
+        232.0f, 209.889f, 209.889f, 196.223f, 174.111f, 187.777f, 174.111f, 196.223f, 209.889f,
+        209.889f
+    };
+
+    static final int STAR_POINT_COUNT = 10;
+
+    /**
+     * The legal offsets from the boss's current star index to its next one: within three perimeter
+     * steps in either direction, per the owner's rule — never the fourth or fifth step, which would
+     * let the boss cross the screen from one side to the other in a single move. Six offsets, six
+     * legal destinations from any point, exactly as the plan states.
+     */
+    private static final int[] STAR_STEP_OFFSETS = {-3, -2, -1, 1, 2, 3};
+
+    /**
+     * How fast the boss travels the straight line between two chosen star points, in logical units
+     * per second. A footprint/movement constant hardcoded here, the same treatment {@link #FAN_COUNT}
+     * and the part radii above already get: the plan leaves size and exact placement to this agent,
+     * and this is not a number {@link BossDefinition} varies with balancing. At this speed, the
+     * longest legal (three-step) hop of the ten points, about 37.6 units, takes under a second; the
+     * longest possible hop of any kind, the one the very first, unrestricted pick can produce (about
+     * 60.9 units, see {@link #beginMove}), takes under a second and a half.
+     */
+    private static final float MOVE_SPEED = 45.0f;
+
     private enum Phase { AWAITING, ENTRANCE, FIGHT, DEFEATED }
 
-    private enum FightStage { COOLDOWN, TELLING }
+    private enum FightStage { COOLDOWN, TELLING, MOVING }
 
     private enum BossPattern { SPREAD, SWEEP }
 
@@ -189,6 +259,19 @@ public final class BossSystem implements GameSystem {
     private float stageTimer;
     private BossPattern currentPattern = BossPattern.SPREAD;
     private BossPattern nextPattern = BossPattern.SPREAD;
+
+    /**
+     * The star index the boss currently stands on, or {@code -1} while it has not yet made its first
+     * move — meaning it is still exactly where the entrance left it, at {@code (PLAYFIELD_WIDTH / 2,
+     * combatY)}, a position the star does not otherwise claim. See {@link #beginMove}.
+     */
+    private int currentStarIndex = -1;
+
+    private int targetStarIndex;
+    private float moveFromX;
+    private float moveFromY;
+    private float moveDuration;
+    private float moveElapsed;
 
     /**
      * @param levelId the content id of the level this system fights the boss for
@@ -328,6 +411,7 @@ public final class BossSystem implements GameSystem {
         switch (fightStage) {
             case COOLDOWN -> updateCooldown(world, def, step);
             case TELLING -> updateTelling(world, def, step);
+            case MOVING -> updateMoving(world, def, step);
         }
         reportStatus(world, def);
     }
@@ -375,8 +459,64 @@ public final class BossSystem implements GameSystem {
         fire(world, def, currentPattern);
         applyTellFrame(world, currentPattern, 0);
         nextPattern = currentPattern == BossPattern.SPREAD ? BossPattern.SWEEP : BossPattern.SPREAD;
-        fightStage = FightStage.COOLDOWN;
-        stageTimer = def.patternCooldown();
+        beginMove(world);
+    }
+
+    /**
+     * Starts the boss travelling, at {@link #MOVE_SPEED}, from wherever it is to the next star point
+     * — called only once a volley has fully resolved, never while a tell is charging or a shot is in
+     * flight. This is what answers the plan's question of what happens if an attack is still
+     * resolving when a move would begin: it cannot happen, because {@link FightStage#MOVING} is only
+     * ever entered from the end of {@link #updateTelling}, after {@link #fire} has already run, and
+     * {@link #updateCooldown} and {@link #updateTelling} — the only places a tell advances or a
+     * volley fires — never run while {@link #fightStage} is {@code MOVING}. Firing and moving are
+     * strictly serialised by this state machine, not merely by convention.
+     *
+     * <p>The destination is drawn from the seeded {@link World#rng()}: uniformly over all ten points
+     * for the very first move, since the boss is not yet standing on any of them — it is still at the
+     * entrance's own landing spot, {@code (PLAYFIELD_WIDTH / 2, combatY)}, which the star does not
+     * claim as one of its own — and otherwise restricted to {@link #STAR_STEP_OFFSETS} from {@link
+     * #currentStarIndex}, per the owner's three-step rule.
+     */
+    private void beginMove(World world) {
+        int next = currentStarIndex < 0
+            ? world.rng().nextInt(STAR_POINT_COUNT)
+            : pickNextStarIndex(world, currentStarIndex);
+        moveFromX = coreX;
+        moveFromY = coreY;
+        targetStarIndex = next;
+        float dx = STAR_X[next] - coreX;
+        float dy = STAR_Y[next] - coreY;
+        float distance = (float) Math.sqrt(dx * dx + dy * dy);
+        moveDuration = distance / MOVE_SPEED;
+        moveElapsed = 0f;
+        fightStage = FightStage.MOVING;
+    }
+
+    private static int pickNextStarIndex(World world, int current) {
+        int offset = STAR_STEP_OFFSETS[world.rng().nextInt(STAR_STEP_OFFSETS.length)];
+        int next = (current + offset) % STAR_POINT_COUNT;
+        return next < 0 ? next + STAR_POINT_COUNT : next;
+    }
+
+    /**
+     * Advances the boss along the straight line from where the move began to {@link
+     * #targetStarIndex}, linearly in time so a degenerate zero-distance move (never observed, since
+     * every star point differs from every other and from the entrance's landing spot in practice, but
+     * not provably impossible) still resolves in one tick rather than dividing by zero. No attack
+     * timer advances while this runs — see {@link #beginMove}.
+     */
+    private void updateMoving(World world, BossDefinition def, float step) {
+        moveElapsed += step;
+        float t = moveDuration <= 0f ? 1f : Math.min(1f, moveElapsed / moveDuration);
+        coreX = moveFromX + (STAR_X[targetStarIndex] - moveFromX) * t;
+        coreY = moveFromY + (STAR_Y[targetStarIndex] - moveFromY) * t;
+        positionParts(world);
+        if (t >= 1f) {
+            currentStarIndex = targetStarIndex;
+            fightStage = FightStage.COOLDOWN;
+            stageTimer = def.patternCooldown();
+        }
     }
 
     /**
