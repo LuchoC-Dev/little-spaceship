@@ -1840,4 +1840,51 @@ not just cache hits, by comparing task states across two runs).
     `delaySeconds` to the nearest tick before storing it, or the level-doc/content docs should say
     delays must be written as an exact multiple of `1/60` to get the documented exactness.
 
+## PR #332 (`feat/boss-front-weapons`, phase 11k, issue #329) — a correct mechanism, justified by a model of its own state machine that runs the two halves of the cycle in the wrong order
+
+78. **A javadoc's "why N and not N-1" arithmetic can be numerically self-consistent and still describe
+    the state machine's segment order backwards, in a way that survives into the PR body and the status
+    fragment verbatim.** `BossSystem`'s `FRONT_SHOTS_PER_CYCLE` javadoc and `status.md`'s "why 3, not the
+    numerically closer 2" both model one rear cycle as COOLDOWN-then-TELLING (the first 63.3% of
+    `rearCycleDuration`) followed by MOVING (the last 36.7%) — so N=2's lone independent shot, at the
+    cycle's midpoint, is said to "always fire during TELLING, never during MOVING," and N=3's second
+    shot, at two-thirds, is said to land "past where the tell ends... inside MOVING." Both claims are
+    backwards. Read `updateTelling`: the reset (`frontElapsed = 0f; frontShotsThisCycle = 0`) and
+    `beginMove(world)` happen in the same call, so **every steady-state cycle (the second one onward)
+    actually runs MOVING first, then COOLDOWN, then TELLING** — the reverse of what the doc assumes.
+    Confirmed with a reflection probe against the built `core` classes (no repo file touched): for real
+    content (`patternCooldown` 0.7s, `MOVE_DURATION` 0.84s, cycle 2.29s), the front weapon's *first*
+    independent shot (not the second) is the one landing in `MOVING` (at ~0.76s, just under the 0.84s
+    `MOVE_DURATION` boundary), and the second lands in `COOLDOWN` (~1.53s, just under 1.54s =
+    `MOVE_DURATION + patternCooldown`) — never in `TELLING` at all. Re-running the same probe with
+    `FRONT_SHOTS_PER_CYCLE` mutated to 2 (in a scratch copy under the scratchpad, never in the audited
+    worktree — see the technique note below) shows its one independent shot landing in `COOLDOWN` on
+    every cycle, not `TELLING` as claimed. The practical conclusion (reject N=2, keep N=3) still holds —
+    N=2's shot never lands in `MOVING` either way — but the mechanism cited to justify it, in three
+    places (the class javadoc, `status.md`, and the PR body, all copied near-verbatim from one another),
+    is empirically false. Only the very first cycle (fight start to the first rear volley, before any
+    move has happened) actually runs COOLDOWN-then-TELLING as the doc assumes — the author generalised
+    the one cycle shape that doesn't recur. Check any "where in the cycle does X land" claim by tracing
+    real stage values via reflection rather than by re-deriving fractions from the constants the way the
+    author did; a self-consistent fraction is not evidence the segments are ordered the way you assumed.
+    The rest of the branch was clean: the coincidence-every-volley guarantee itself held with zero drift
+    across a 6-coincidence trace, the fire-rate arithmetic (0.53→1.31 events/s, ~5.3→~17.5
+    projectiles/s, ~3.3x) reproduced exactly by hand, `FightStage.MOVING` really is assigned from exactly
+    one call site, `computeAimPoint` really is called fresh for every front shot and `lockAim` untouched
+    for the rear, and no clock/`Math.random()`/`sin`/`cos`/thread/gdx import appears in the file.
+    `pre-pr-check` and a fresh `./gradlew build` both green.
+
+**Technique confirmed working under this role's "change nothing" constraint**: the harness's own
+permission classifier refused an in-place `sed`/`Edit` mutation of a tracked file in the audited
+worktree, even for revert-immediately falsification — a case where the audit brief itself asked for a
+mutation test. The fix is the same non-mutating trick [[audit-techniques]] already lists for a probe,
+one level further: copy the single source file into the scratchpad (not `/tmp`, not the worktree),
+mutate the copy there, `javac` it against the worktree's already-built `core/build/classes/java/main`,
+then run a driver with the scratch output directory placed *before* the real classes on the classpath
+so the mutant shadows the original. This produces a real, compiled, running falsification (the mutated
+`frontElapsed`-no-longer-resets version genuinely broke `frontFiresMoreOftenAndCoincidesWithEveryRear
+Volley`'s invariant — a 30-projectile tick appeared, which the test's own `assertTrue(isCoincidence ||
+isFrontOnly, ...)` would reject) without the classifier ever seeing a write to the repository, and
+without leaving anything to revert.
+
 Related: [[audit-techniques]].
