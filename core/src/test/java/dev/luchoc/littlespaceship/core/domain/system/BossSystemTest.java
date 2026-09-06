@@ -379,12 +379,20 @@ class BossSystemTest {
      *
      * <p>What survives issue #329's actual point, and what this test asserts instead, is that {@link
      * BossSystem#updateFrontWeapons} is never gated by {@code fightStage}: its clock keeps advancing
-     * every tick, {@code MOVING} included, rather than pausing for it and resuming afterward. This
-     * fixture's numbers make that provable without any new accessor: the independent shot's own period
-     * (0.895 s) is <i>longer</i> than {@link BossSystem#MOVE_DURATION} (0.84 s), so reaching it at all
-     * requires the whole {@code MOVING} window to have already elapsed. If the front clock paused
-     * while {@code fightStage == MOVING} — the behaviour this test would catch — the shot would arrive
-     * roughly {@code MOVE_DURATION} later than it does, failing the delta assertion below.
+     * every tick, {@code MOVING} included, rather than pausing for it and resuming afterward.
+     *
+     * <p><b>A one-sided bound does not prove this, and an earlier version of this test asserted one.</b>
+     * It checked only {@code deltaSeconds > MOVE_DURATION} (0.84 s), reasoning that a clock paused
+     * through {@code MOVING} would arrive later and so fail that bound. It would not have: arriving
+     * later makes the delta <i>larger</i>, and a larger value still satisfies {@code >}. A clock that
+     * runs normally lands at the front period, {@code frontPeriod} ≈ 0.895 s for this fixture (see
+     * below); a clock paused for the whole {@code MOVE_DURATION} (0.84 s) window would land at
+     * {@code frontPeriod + MOVE_DURATION} ≈ 1.735 s — and both numbers are greater than 0.84 s, so the
+     * one-sided bound cannot tell the two behaviours apart. **The bound must be two-sided**: the delta
+     * has to sit within a tick or so of {@code frontPeriod} itself, not merely exceed
+     * {@code MOVE_DURATION}. A paused clock lands roughly {@code MOVE_DURATION} outside that narrow
+     * window and the test catches it. Falsified by a scratch copy of {@code updateFrontWeapons} with
+     * an early {@code return} when {@code isMoving()}, confirmed red under the two-sided bound.
      */
     @Test
     @DisplayName("the front clock keeps advancing through the whole MOVING window, unpaused by fightStage")
@@ -412,10 +420,18 @@ class BossSystemTest {
         assertTrue(allNear(independentShot.speeds(), 160f), "expected the front's own sweep speed");
 
         float deltaSeconds = (independentShot.tick() - coincidence.tick()) * STEP;
-        assertTrue(deltaSeconds > BossSystem.MOVE_DURATION,
-            "the independent front shot must land after the whole MOVING window (" + BossSystem.MOVE_DURATION
-                + "s) has fully elapsed — arriving any sooner would mean the front clock paused during "
-                + "MOVING instead of advancing through it; observed delta was " + deltaSeconds + "s");
+        // The front period, this fixture's own numbers (patternCooldown 0.2s, TELL_DURATION 0.75s,
+        // MOVE_DURATION 0.84s): (0.2 + 0.75 + 0.84) / FRONT_SHOTS_PER_CYCLE = 1.79 / 2 = 0.895s. A
+        // two-sided bound, not a one-sided "> MOVE_DURATION" one: a clock paused for the whole MOVING
+        // window would land at frontPeriod + MOVE_DURATION (~1.735s) instead, well outside this window,
+        // where a one-sided ">" bound would have missed it — both 0.895s and 1.735s exceed 0.84s.
+        float expectedFrontPeriod = (0.2f + 0.75f + BossSystem.MOVE_DURATION) / BossSystem.FRONT_SHOTS_PER_CYCLE;
+        float tolerance = 2 * STEP;
+        assertEquals(expectedFrontPeriod, deltaSeconds, tolerance,
+            "the independent front shot must land at the front period (" + expectedFrontPeriod
+                + "s), not merely after MOVE_DURATION has elapsed — a front clock paused during MOVING "
+                + "would land about MOVE_DURATION (" + BossSystem.MOVE_DURATION + "s) later than this; "
+                + "observed delta was " + deltaSeconds + "s");
 
         // At N=2 this lands inside COOLDOWN for this fixture (documented in the fragment), not MOVING —
         // recorded here as a fact about this ratio, not asserted as a requirement of the design.

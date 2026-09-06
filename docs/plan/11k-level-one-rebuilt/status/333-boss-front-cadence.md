@@ -49,16 +49,20 @@ what the design actually guarantees either way.
 
 **What replaces it:** `frontClockAdvancesThroughTheWholeMovingWindowRegardlessOfFightStage`, which
 asserts the property that survives — the front clock is never paused by `fightStage`, `MOVING`
-included — without needing a shot to actually land inside `MOVING`. The trick: at this fixture's
-numbers (cooldown 0.2 s, tell 0.75 s, move 0.84 s, cycle 1.79 s), the independent shot's own period
-(0.895 s) is *longer* than `MOVE_DURATION` (0.84 s). So reaching that shot at all requires the entire
-`MOVING` window to have already elapsed, tick by tick, with the front clock still counting. If
-`updateFrontWeapons` were gated by `fightStage` — paused during `MOVING` and resumed after — the
-independent shot would arrive roughly `MOVE_DURATION` later than it does. The test finds the first
-rear/front coincidence, finds the very next fire event (the independent shot, confirmed to be a pure
-ten-projectile, 160-speed volley), and asserts the tick delta between them exceeds `MOVE_DURATION` —
-which would be false if the clock had paused. It also records, as a fact rather than a requirement,
-that this shot lands in `COOLDOWN` rather than `MOVING` at this ratio.
+included — without needing a shot to actually land inside `MOVING`. **This fixture's own numbers**
+(`boss()`'s `patternCooldown` 0.2 s, `TELL_DURATION` 0.75 s, `MOVE_DURATION` 0.84 s, cycle 1.79 s) give
+a front period of 1.79 / 2 = **0.895 s** — a number that belongs to the *test fixture*, not to real
+content, which gives ≈**1.145 s** instead (`patternCooldown` 0.7 s, cycle 2.29 s; see "Fire rate"
+below). The two are both correct — one per `patternCooldown` — and are named as such here so neither
+looks like a mistake next to the other.
+
+The test finds the first rear/front coincidence, finds the very next fire event (the independent shot,
+confirmed to be a pure ten-projectile, 160-speed volley), and asserts the tick delta between the two is
+the fixture's own front period, 0.895 s, **within two ticks (≈0.033 s)** — not merely that it exceeds
+`MOVE_DURATION`. See "Correction after coordinator review" below for why the bound has to be two-sided.
+
+It also records, as a fact rather than a requirement, that this shot lands in `COOLDOWN` rather than
+`MOVING` at this ratio.
 
 ## Fire rate, measured
 
@@ -119,9 +123,46 @@ value change — worth knowing before the next tuning pass reaches for it.
 - [x] `./gradlew build` green; no replay cites this code as evidence.
 - [ ] Whether the fight is now right — the project owner's, not attempted here.
 
+## Correction after coordinator review
+
+The first version of `frontClockAdvancesThroughTheWholeMovingWindowRegardlessOfFightStage` asserted
+only `deltaSeconds > MOVE_DURATION` (0.84 s), reasoning that a front clock paused through `MOVING`
+would arrive later and so fail that bound. **It would not have.** Arriving later makes the delta
+*larger*, and a larger value still satisfies `>` — the bound was one-sided where the property needed
+two. A normally-running clock lands at the fixture's front period, ≈0.895 s; a clock paused for the
+whole `MOVE_DURATION` window would land at ≈0.895 + 0.84 = **1.735 s** instead — and both numbers are
+greater than 0.84 s, so the one-sided bound could not tell the two behaviours apart. This is exactly
+the vacuous-test shape phase 11a measured across this codebase, reproduced here despite the explicit
+instruction not to when replacing `frontFiresWhileMoving`.
+
+**Fixed** by bounding the delta on both sides: it must equal the fixture's own front period (0.895 s)
+within two ticks, not merely exceed `MOVE_DURATION`. **Falsified before keeping it**, per the
+coordinator's instruction: in a scratch copy of the repository outside this worktree (never the tracked
+source), `updateFrontWeapons` was given an early `return` when `isMoving()` — the front clock paused
+exactly through `MOVING`. Under the original one-sided bound this passes (both 0.895 s and 1.735 s
+exceed 0.84 s); under the corrected two-sided bound it fails as expected:
+
+```
+org.opentest4j.AssertionFailedError: the independent front shot must land at the front period (0.895s),
+not merely after MOVE_DURATION has elapsed — a front clock paused during MOVING would land about
+MOVE_DURATION (0.84s) later than this; observed delta was 1.7333335s ==> expected: <0.895> but was:
+<1.7333335>
+```
+
+The observed delta, 1.7333335 s, matches the predicted 0.895 + 0.84 = 1.735 s to within float
+rounding — confirming the test now distinguishes the two behaviours it claims to. The scratch copy was
+deleted after the run; nothing in the tracked worktree was mutated to produce or revert this result.
+`BossSystem`'s own javadoc on `FRONT_SHOTS_PER_CYCLE` and `frontClockAdvances…`'s own javadoc are both
+corrected to state the two-sided argument rather than the false one-sided implication.
+
 ## Commands run
 
 - `./gradlew :core:compileJava` — green.
 - `./gradlew :core:test --tests "dev.luchoc.littlespaceship.core.domain.system.BossSystemTest"` —
-  green, 18 tests (17 pre-existing unmodified, 1 deleted, 1 new).
+  green, 18 tests (17 pre-existing unmodified, 1 deleted, 1 new — later corrected in place, still 18
+  total, all green).
 - `./gradlew build` — green across every module (`core`, `game`, `web`, `desktop`, `rngparity`).
+- Falsification: scratch copy at a temp path outside the worktree, `updateFrontWeapons` given an early
+  `return` on `isMoving()`, ran
+  `./gradlew :core:test --tests "...BossSystemTest.frontClockAdvancesThroughTheWholeMovingWindowRegardlessOfFightStage"`
+  — red, with the exact failure message quoted above. Scratch copy deleted afterward.
