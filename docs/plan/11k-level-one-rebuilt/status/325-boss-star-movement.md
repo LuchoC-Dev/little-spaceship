@@ -146,3 +146,26 @@ in `BossDefinition` or any JSON was touched to compensate; the plan says explici
 - `./gradlew :core:test --tests "*ReplayTest"` — green, all five replay tests including
   `BossReplayTest`'s three.
 - `./gradlew build` — green across every module (`core`, `game`, `web`, `desktop`, `rngparity`).
+
+## Added by the coordinator after review, before merge
+
+`reviewer` accepted this branch with no blocking finding. One thing is recorded here because the next
+reader would otherwise assume it, and this file does not claim it either way.
+
+**The five replay tests pass, and none of them reaches the new code.** All three `BossReplayTest`
+fixtures set `patternCooldown: 1000f` — "the boss never attacks back" — or configure no boss at all,
+and `LevelScoreReplayTest`'s content never calls `.withBoss(...)`. A 1000-second cooldown against a
+400-tick run never lets the boss enter `TELLING`, so `fire()` and `beginMove()` never execute in any
+full-pipeline replay. **Their green is true and it is not evidence about this change.**
+
+The determinism proof lives entirely in `BossSystemTest`, whose fixture uses a real
+`patternCooldown` of 0.2 s and reaches `beginMove` repeatedly — `samePatternForTheSameSeed` and
+`bossVisitsOnlyStarPointsWithinThreeSteps`. `reviewer` falsified the second by widening
+`STAR_STEP_OFFSETS` to include ±4 and watching it go red, so it asserts its rule rather than
+observing the boss move.
+
+**And the reason the shared `Rng` did not shift anything downstream: `BossSystem` is currently the
+only production caller of `World.rng()` in `core`**, confirmed by grep. That is what makes this
+branch safe, and it is also the thing that stops being true the moment a second system draws from the
+stream. Whoever adds that second caller inherits this, and the replays as they stand will not catch
+it.
