@@ -88,11 +88,26 @@ happens on the tick where their own `elapsed` first becomes **strictly positive*
 by `N` ticks reproduces, from tick `N` onward, the *identical* sequence of velocity evaluations — and
 therefore the identical sequence of Euler integration steps in `integrate` — that the undelayed slot
 produced from tick `0`. The positions are then not merely close, they are bit-for-bit identical,
-`delaySeconds` later. `SpawnSystemTest.delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind` pins
-this with exact (delta-free) `assertEquals` calls on the traced `Transform.x`/`y`, comparing the
-delayed slot's position at tick `t` against the undelayed slot's own recorded position at tick
-`t - delayTicks`, using an `ArcTrajectoryDefinition` (a shape whose velocity actually varies with
-elapsed time, so a wrong tick alignment could not hide behind a constant velocity).
+`delaySeconds` later. `SpawnSystemTest.delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind`
+(`delayTicks = 12`) pins the resulting position match with exact (delta-free) `assertEquals` calls on
+the traced `Transform.x`/`y`, comparing the delayed slot's position at tick `t` against the undelayed
+slot's own recorded position at tick `t - delayTicks`, using an `ArcTrajectoryDefinition` (a shape
+whose velocity actually varies with elapsed time, so a wrong tick alignment could not hide behind a
+constant velocity).
+
+**Correction, from `reviewer`'s review of PR #331: that test does not actually exercise the `== 0`
+boundary this section argues for.** Float accumulation of `-delaySeconds` by repeated `+= step` does
+not, in general, land on exactly `0.0f` at the crossing pass — at `delayTicks = 12` it lands on
+`-2.6e-8`, already negative, so `elapsed <= 0f` and `elapsed < 0f` behave identically there and the
+test above stays green under either. `delayTicks = 1` and `delayTicks = 2` are the only two counts
+where `-N*step + N*step` is an exact float `0.0f` (`-1*step + step` and `-2*step + 2*step` both
+round-trip to bit-identical values), so
+`SpawnSystemTest.delayedSlotWithOneTickDelayTracesLeaderExactly` (`delayTicks = 1`) is the test that
+actually pins the boundary: confirmed by hand that mutating `elapsed <= 0f` to `elapsed < 0f` in
+`MotionSystem.advanceTrajectories` turns it red immediately, while leaving the `delayTicks = 12` test
+green. The general correctness argument two paragraphs up still holds for every `delayTicks`, exact
+float crossing or not — the boundary only becomes *observable* at the two counts where the crossing
+happens to land on exactly zero.
 
 ## Where it sits in `SystemOrder`
 
@@ -118,11 +133,81 @@ not; nothing about this issue changes that ordering or needs to.
 - No change needed to `WaveDefinition`, `SpawnEvent`, or anything else a formation's slot did not
   already touch — `delaySeconds` is entirely local to `FormationSlot`.
 
+### A decimal `delaySeconds` a content author actually types will drift by one tick — read this before authoring one
+
+`reviewer` found this on PR #331 and it belongs here because the loader is where it gets decided and
+nobody would otherwise think to look for it. **"Traces exactly" (the claim this fragment and
+`SpawnSystemTest` make) only holds when `delaySeconds` is precisely `N * (1/60f)` for some integer
+`N`, reached by float addition the same way `MotionSystem` reaches it — not for the decimal a person
+would naturally type in JSON.**
+
+`Trajectory.elapsed` is an `IEEE-754 float`. `SpawnSystem` sets it once to `-delaySeconds` (the exact
+float bit pattern of whatever literal the loader parsed); `MotionSystem` then reaches zero by adding
+`step` (`1f/60f`) to it, once per tick. Those are two different paths to the same target value, and
+float rounding does not generally make them agree bit-for-bit. I simulated the five decimal values a
+person would plausibly write for a delay — `0.05`, `0.1`, `0.3`, `0.5`, `1/3` — accumulating `step` in
+32-bit float exactly the way `MotionSystem` does, and compared the tick on which each one actually
+turns active against the tick a whole-number-of-ticks reading of the same value would predict:
+
+```
+delaySeconds=                0.05 delay(f32)=0.05000000074505806    active_pass=3    ideal_active_pass=4    drift(ticks)=-1
+delaySeconds=                 0.1 delay(f32)=0.10000000149011612    active_pass=7    ideal_active_pass=7    drift(ticks)=0
+delaySeconds=                 0.3 delay(f32)=0.30000001192092896    active_pass=18   ideal_active_pass=19   drift(ticks)=-1
+delaySeconds=                 0.5 delay(f32)=0.5                    active_pass=30   ideal_active_pass=31   drift(ticks)=-1
+delaySeconds=  0.3333333333333333 delay(f32)=0.3333333432674408     active_pass=20   ideal_active_pass=21   drift(ticks)=-1
+```
+
+**Four of the five — `0.05`, `0.3`, `0.5` and `1/3` s — turn active one tick earlier than a
+whole-number-of-ticks reading predicts; only `0.1` lands exactly right.** Note that `0.5` drifts even
+though it is itself exactly representable as a float (`0.5f` is exact): the drift is not in the
+literal, it is in the fact that summing `step` thirty times does not land on exactly `0.5f` — the
+same rounding this fragment's "Why `<= 0f`, not `< 0f`" section already found for `delayTicks = 30`.
+The direction is consistently early by one tick in this sample, but that is an observation about
+these five values, not a proven general bound — I have not shown it can never drift by more than one
+tick or never drift late.
+
+**Two ways out, neither built here — the loader decides:**
+
+1. **Quantise `delaySeconds` to the nearest whole tick when parsing the JSON**, i.e. compute
+   `Math.round(delaySeconds * 60f) * (1f / 60f)` and pass that into `FormationSlot`, so the value
+   `SpawnSystem` backdates `elapsed` to is already an exact multiple of `step` reached the same way
+   `MotionSystem` reaches zero from it. Keeps the JSON authoring surface in seconds, matching every
+   other timestamp in this content (`SpawnEvent.at`, `PlacedPickup.at`).
+2. **Require the JSON to carry a tick count instead of seconds** (e.g. `"delayTicks": 12`, converted
+   to `delayTicks * (1f / 60f)` before constructing `FormationSlot`) — removes the rounding question
+   entirely by construction, at the cost of a delay being authored in a different unit from every
+   other timestamp in the content this project has shipped so far.
+
+Reproduction script (Python, mirroring the `float` arithmetic by hand — nothing here needs the JVM):
+
+```python
+import struct
+def f32(x):
+    return struct.unpack('f', struct.pack('f', x))[0]
+
+step = f32(1.0/60.0)
+for delaySeconds in [0.05, 0.1, 0.3, 0.5, 1.0/3.0]:
+    delay = f32(delaySeconds)
+    elapsed = f32(-delay)
+    pass_n = 0
+    while True:
+        elapsed = f32(elapsed + step)
+        pass_n += 1
+        if elapsed > 0:
+            active_pass = pass_n
+            break
+    ideal_active_pass = round(delaySeconds / (1.0/60.0)) + 1
+    print(delaySeconds, delay, active_pass, ideal_active_pass, active_pass - ideal_active_pass)
+```
+
 ## Acceptance criteria
 
 - [x] A formation slot can carry a delay, and a slot with one traces the same path through the same
-  points as the slot ahead of it — `delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind` in
-  `SpawnSystemTest`, comparing positions at `t` and `t − delay` (see above), not by watching motion.
+  points as the slot ahead of it — `delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind`
+  (`delayTicks = 12`) and `delayedSlotWithOneTickDelayTracesLeaderExactly` (`delayTicks = 1`, the
+  count that actually pins the `<= 0f` boundary, added after `reviewer`'s finding on PR #331) in
+  `SpawnSystemTest`, both comparing positions at `t` and `t − delay` (see above), not by watching
+  motion.
 - [x] Its place in `SystemOrder` is stated and justified above; pinned by every existing
   `SystemPipelineTest`/`SimulationTest` assertion on stage order, which needed no change since
   neither stage moved.
@@ -144,3 +229,12 @@ not; nothing about this issue changes that ordering or needs to.
 - `grep -rn "com.badlogic.gdx\|Math.random\|System.currentTimeMillis\|new Thread\|ExecutorService"
   core/src/main` — the one hit is `Rng`'s own class javadoc explaining why it does *not* use
   `Math.random()`; no other match.
+- Mutation check on the `<= 0f` boundary, per `reviewer`'s finding: manually changed
+  `MotionSystem.advanceTrajectories`'s `elapsed <= 0f` to `elapsed < 0f`, ran
+  `./gradlew :core:test --tests "*SpawnSystemTest*delayedSlot*"` — `delayedSlotWithOneTickDelayTracesLeaderExactly`
+  (`delayTicks = 1`) failed immediately (`AssertionFailedError`),
+  `delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind` (`delayTicks = 12`) stayed green, matching
+  `reviewer`'s own report. Reverted the mutation (`git diff` on `MotionSystem.java` empty afterward),
+  then reran `./gradlew :core:test` — green.
+- `python3` — reproduced the decimal-`delaySeconds` drift table in the loader-facing section above;
+  script and output are inline there.
