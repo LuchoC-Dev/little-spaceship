@@ -102,7 +102,7 @@ playfield, removed at **4.08 s**, out of the bottom. It is the fastest thing in 
 moment it leaves, and it never stops being one motion.
 
 **Its `atX` window:** the in-playfield drift is 106.1, so `single` needs
-`atX >= (106.1 + 4.5) / 208 = 0.54`. The mirror's is **0.46 or less**.
+`atX >= (106.1 + 4.5) / 208 = 0.53`. The mirror's is **0.47 or less**.
 
 **7. `dive-across-right` — `{ "mirrorOf": "dive-across-left" }`.** From `atX 0.15`: 31.3 to 137.4,
 3.12 s on screen, removed at 4.08 s.
@@ -203,6 +203,8 @@ the carrier spawns and one every 3.0 s after that. Both shapes below are built t
 **y = 201.4 from t = 2.20 s to t = 16.20 s**, then falls out; **23.41 s** on screen, removed at
 **27.68 s**. **Five children arrive while it is parked** (t = 3, 6, 9, 12, 15) and two more before it
 leaves — its mechanism happens seven times over, against the one child a four-second shape would give.
+**Counted to the moment it leaves the playfield, not to its later safety-box removal**; counting to
+removal gives nine. The distinction matters because only the first is time the player can act on.
 
 **19. `anchor-and-traverse-left` — `path`,
 `[{0, -34, 2.4}, {wait 6.0}, {-22, 0, 5.0}, {wait 4.0}, {0, -28, 10.0}]`.** Park, **traverse, park
@@ -302,4 +304,26 @@ one direction the file had never used it.
 - **`grind-down` outlives its wave by a wide margin** (26 s on screen). Two of them in one wave is a
   decision about the next wave, not about that one.
 - The `atX` windows above are per shape and per formation; the widest constraints are
-  `grind-and-wheel-*` (spawn on the side it wheels away from) and `dive-across-*` (0.54 / 0.46).
+  `grind-and-wheel-*` (spawn on the side it wheels away from) and `dive-across-*` (0.53 / 0.47).
+
+## Corrected by the coordinator after review, before merge
+
+`reviewer` accepted this branch and found one arithmetic slip. The correction is the coordinator's
+because the worker was already closed. **Prose only — no JSON changed, and no claim about a family,
+a kind or a rule is affected.**
+
+**`dive-across-left`'s `atX` window was rounded the wrong way.** With this file's own drift (106.1)
+and radius (4.5), `(106.1 + 4.5) / 208 = 0.5317`, so the minimum is **0.53**, not 0.54, and the
+mirror's is **0.47 or less**, not 0.46. `reviewer` re-derived it independently by closed-form
+root-finding and got `atX_min = 0.5321`. Corrected in both places it appears.
+
+**Every other `atX` window in this file reproduced exactly** — `descend-and-step-left` 0.25/0.34,
+`grind-and-wheel-left` 0.75, `anchor-and-traverse-left` 0.61/0.39 — so the slip is isolated rather
+than a systematic error in how the windows were derived.
+
+**The carrier's child count now states which clock it counts against.** Seven and eight are counted
+to the moment the carrier leaves the playfield, not to its later safety-box removal, which would give
+nine and more. `reviewer` reproduced both numbers exactly under that convention and could not under
+the other, and the convention was not written down for this claim. It is the right one — a child that
+arrives after its parent is off screen is not pressure the player experiences — but task 6 will read
+these numbers and needed it said.
