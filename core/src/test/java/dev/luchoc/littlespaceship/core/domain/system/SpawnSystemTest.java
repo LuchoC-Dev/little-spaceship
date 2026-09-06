@@ -256,34 +256,26 @@ class SpawnSystemTest {
         assertEquals(0, world.drops().size());
     }
 
-    @Test
-    @DisplayName("a delayed slot holds still, then retraces the leader's own positions exactly, tick for tick, delaySeconds later")
-    void delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind() {
-        assertDelayedSlotTracesLeaderExactly(12);
-    }
-
     /**
-     * Reviewer's finding on PR #331: at {@code delayTicks = 12}, float accumulation of {@code
-     * -delaySeconds += step} never lands on exactly {@code 0.0f} at the crossing tick — it is already
-     * slightly negative — so {@code MotionSystem}'s {@code elapsed <= 0f} check behaves identically to
-     * {@code elapsed < 0f} at that value, and the test above stayed green under that mutation. {@code
-     * delayTicks = 1} is one of the two counts (the other is {@code 2}) where {@code -1*step + 1*step}
-     * is an exact float {@code 0.0f}, so this is the case that actually exercises the {@code == 0}
-     * boundary the javadoc and the status fragment argue for. Confirmed by hand: mutating {@code <= 0f}
-     * to {@code < 0f} in {@code MotionSystem.advanceTrajectories} turns this test red immediately,
-     * while it leaves {@link #delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind} (delayTicks 12)
-     * green.
+     * Issue #337: the earlier version of this test only exercised {@code delayTicks} 1 and 12, and
+     * both happen to fall outside the two bands — 18-40 and 258-300 — where the old float-crossing
+     * design activated a delayed slot one tick early. Sweeping every count in 1..300 is what would
+     * have caught it; kept as one range rather than picking a few more "interesting" values, since
+     * picking values is exactly the mistake that hid the defect for two tasks in a row.
      */
     @Test
-    @DisplayName("a one-tick delay traces the leader exactly — the one count where elapsed lands on exactly zero, so this is what actually pins the <= 0f boundary")
-    void delayedSlotWithOneTickDelayTracesLeaderExactly() {
-        assertDelayedSlotTracesLeaderExactly(1);
+    @DisplayName("a delayed slot traces the leader exactly N ticks behind for every N in 1..300, including the two bands the old float crossing failed")
+    void delayedSlotTracesLeaderExactlyForEveryTickCountInSweptRange() {
+        for (int delayTicks = 1; delayTicks <= 300; delayTicks++) {
+            assertDelayedSlotTracesLeaderExactly(delayTicks);
+        }
     }
 
     /**
-     * Shared by both delay tests above. Issue #330 — a single-file column: both slots at offsetX 0,
+     * Shared by the sweep above. Issue #330 — a single-file column: both slots at offsetX 0,
      * offsetY 0, only the delay differs. The leader and the follower start at the exact same position,
-     * since a delayed slot's decision is about time ({@code Trajectory#elapsed}), never about space.
+     * since a delayed slot's decision is about time ({@code Trajectory#elapsed}/{@code #delayTicks}),
+     * never about space.
      */
     private void assertDelayedSlotTracesLeaderExactly(int delayTicks) {
         float step = 1f / 60f;
@@ -300,23 +292,20 @@ class SpawnSystemTest {
         MotionSystem motion = new MotionSystem();
 
         spawn.update(world, step, InputFrame.IDLE);
-        assertEquals(2, world.entityCount());
+        assertEquals(2, world.entityCount(), "delayTicks=" + delayTicks);
 
-        int leader = -1;
-        int follower = -1;
-        for (int i = 0; i < world.trajectories().size(); i++) {
-            int entity = world.trajectories().entityAt(i);
-            if (world.trajectories().valueAt(i).elapsed < 0f) {
-                follower = entity;
-            } else {
-                leader = entity;
-            }
-        }
-        assertTrue(leader >= 0 && follower >= 0, "one slot should carry the delay, the other none");
+        // Insertion order into a ComponentStore is dense-packed and append-only (see its own class
+        // javadoc), and spawnWave creates entities in slot order — slot 0 (no delay) always lands at
+        // index 0, slot 1 (the delayed one) always at index 1. Unlike the pre-#337 design, {@code
+        // elapsed} never goes negative, so it can no longer tell the two entities apart.
+        int leader = world.trajectories().entityAt(0);
+        int follower = world.trajectories().entityAt(1);
         float spawnX = world.transforms().get(leader).x;
         float spawnY = world.transforms().get(leader).y;
-        assertEquals(spawnX, world.transforms().get(follower).x, "both slots start at the same point");
-        assertEquals(spawnY, world.transforms().get(follower).y, "both slots start at the same point");
+        assertEquals(spawnX, world.transforms().get(follower).x,
+            "both slots start at the same point, delayTicks=" + delayTicks);
+        assertEquals(spawnY, world.transforms().get(follower).y,
+            "both slots start at the same point, delayTicks=" + delayTicks);
 
         int ticks = delayTicks + 40;
         List<float[]> leaderHistory = new java.util.ArrayList<>();
@@ -330,14 +319,18 @@ class SpawnSystemTest {
         }
 
         for (int t = 0; t < delayTicks; t++) {
-            assertEquals(spawnX, followerHistory.get(t)[0], "held still before its own path begins");
-            assertEquals(spawnY, followerHistory.get(t)[1], "held still before its own path begins");
+            assertEquals(spawnX, followerHistory.get(t)[0],
+                "held still before its own path begins, delayTicks=" + delayTicks + " t=" + t);
+            assertEquals(spawnY, followerHistory.get(t)[1],
+                "held still before its own path begins, delayTicks=" + delayTicks + " t=" + t);
         }
         for (int t = delayTicks; t < ticks; t++) {
             float[] expected = leaderHistory.get(t - delayTicks);
             float[] actual = followerHistory.get(t);
-            assertEquals(expected[0], actual[0], "same x the leader had delaySeconds earlier");
-            assertEquals(expected[1], actual[1], "same y the leader had delaySeconds earlier");
+            assertEquals(expected[0], actual[0],
+                "same x the leader had delaySeconds earlier, delayTicks=" + delayTicks + " t=" + t);
+            assertEquals(expected[1], actual[1],
+                "same y the leader had delaySeconds earlier, delayTicks=" + delayTicks + " t=" + t);
         }
     }
 
