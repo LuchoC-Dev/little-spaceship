@@ -259,11 +259,34 @@ class SpawnSystemTest {
     @Test
     @DisplayName("a delayed slot holds still, then retraces the leader's own positions exactly, tick for tick, delaySeconds later")
     void delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind() {
-        // Issue #330 — a single-file column: both slots at offsetX 0, offsetY 0, only the delay
-        // differs. The leader and the follower start at the exact same position, since a delayed
-        // slot's decision is about time (Trajectory#elapsed), never about space.
+        assertDelayedSlotTracesLeaderExactly(12);
+    }
+
+    /**
+     * Reviewer's finding on PR #331: at {@code delayTicks = 12}, float accumulation of {@code
+     * -delaySeconds += step} never lands on exactly {@code 0.0f} at the crossing tick — it is already
+     * slightly negative — so {@code MotionSystem}'s {@code elapsed <= 0f} check behaves identically to
+     * {@code elapsed < 0f} at that value, and the test above stayed green under that mutation. {@code
+     * delayTicks = 1} is one of the two counts (the other is {@code 2}) where {@code -1*step + 1*step}
+     * is an exact float {@code 0.0f}, so this is the case that actually exercises the {@code == 0}
+     * boundary the javadoc and the status fragment argue for. Confirmed by hand: mutating {@code <= 0f}
+     * to {@code < 0f} in {@code MotionSystem.advanceTrajectories} turns this test red immediately,
+     * while it leaves {@link #delayedSlotTracesLeaderPositionsExactlyDelayTicksBehind} (delayTicks 12)
+     * green.
+     */
+    @Test
+    @DisplayName("a one-tick delay traces the leader exactly — the one count where elapsed lands on exactly zero, so this is what actually pins the <= 0f boundary")
+    void delayedSlotWithOneTickDelayTracesLeaderExactly() {
+        assertDelayedSlotTracesLeaderExactly(1);
+    }
+
+    /**
+     * Shared by both delay tests above. Issue #330 — a single-file column: both slots at offsetX 0,
+     * offsetY 0, only the delay differs. The leader and the follower start at the exact same position,
+     * since a delayed slot's decision is about time ({@code Trajectory#elapsed}), never about space.
+     */
+    private void assertDelayedSlotTracesLeaderExactly(int delayTicks) {
         float step = 1f / 60f;
-        int delayTicks = 12;
         float delay = delayTicks * step;
         TestContent content = baseContent()
             .withTrajectory(new ArcTrajectoryDefinition("arc-test", 20f, -80f, 40f))
