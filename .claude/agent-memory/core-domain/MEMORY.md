@@ -25,3 +25,4 @@
 - [Formation slot delay](project_formation-slot-delay.md) — backdating Trajectory.elapsed as the whole mechanism, why the held branch needs `<= 0` not `< 0`, deriving an exact (delta-free) tick-alignment test, existence-vs-deferred decided by invariant 6.
 - [Boss front-clock cycle fraction](project_boss-front-clock-cycle-fraction.md) — N=3 chosen for a "fires in MOVING" test, then N=2 chosen by play-tuning; how the test changed to assert the narrower real property each time.
 - [Seeded Rng first-pick lookup](feedback_seeded-rng-first-pick-lookup.md) — reproduce the xorshift Rng in Python to find seeds by their first draw instead of guessing via gradle.
+- [One-sided bound is vacuous](feedback_one-sided-bound-is-vacuous.md) — a "delta > threshold" test can pass under both the wanted and the unwanted behavior; check where the failing case lands before trusting it, and falsify with a scratch mutation.
