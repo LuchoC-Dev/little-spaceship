@@ -389,10 +389,10 @@ function requiredAtX(traj) {
 
 /**
  * The extent an entity actually sweeps, not the one it starts at. Every shape with a non-zero `vx`
- * drifts out from under the spawn-instant figure, and two of the seven trajectories are veers built
- * to do exactly that — a `veer-right` at `atX 0.85` prints in range and spends its whole arc off
- * screen. Found by task 4's read-back (#186, correction C3) by writing the spawn and looking, which
- * the spawn-instant check could not have found by reading.
+ * drifts out from under the spawn-instant figure — 11c's `veer-left`/`veer-right` (since replaced,
+ * #328) were two trajectories built to do exactly that: a `veer-right` at `atX 0.85` printed in range
+ * and spent its whole arc off screen. Found by task 4's read-back (#186, correction C3) by writing the
+ * spawn and looking, which the spawn-instant check could not have found by reading.
  *
  * A `constant` sweeps `|vx| * screenTime`. An `arc` has the same `vx`, so it sweeps for as long as it
  * is anywhere near the playfield — bounded here by the flight down to the safety box, since
@@ -917,9 +917,10 @@ function buildLevel(levelFile, content) {
   w('whose extent leaves `0 .. 208` spawns partly off screen and nobody is told at runtime.');
   w();
   w('**`x swept` is where it goes**, and for any shape with a `vx` it is the column that matters. A');
-  w('spawn-instant extent is a snapshot: `swoop` carries `vx -10` for 6.9 s, so a formation on it ends');
-  w('69 units left of where it started, and a `veer-right` placed on the right edge spends its whole');
-  w('arc past it. `same` means the shape has no horizontal velocity and the two are identical.');
+  w('spawn-instant extent is a snapshot: any shape that drifts horizontally ends up somewhere else, and');
+  w('one placed on the side it drifts towards can spend its whole flight off screen while still');
+  w('reading in range at the spawn instant. `same` means the shape has no horizontal velocity and the');
+  w('two are identical.');
   w();
   w("**`shape` is resolved, not copied.** A spawn's own `trajectory` key overrides the archetype's");
   w('`motion.trajectory` and is marked *(override)*; every other row is the archetype default.');
@@ -1054,9 +1055,6 @@ function buildLevel(levelFile, content) {
   w("closed form from the entity's own elapsed time (`core/port/ArcTrajectoryDefinition.java`).");
   w(`The player flies at \`playerStartY ${s1(balance.playerStartY)}\` in a ${CODE.playfieldHeight.value}-tall playfield, so a shape whose apex sits`);
   w('far above that band is scenery.');
-  w();
-  w('**The veers spawn on the side they veer away from** — `veer-left` at `atX >= 0.75`, `veer-right`');
-  w("at `atX <= 0.25` — or the shape happens off screen. That constraint is the catalogue's.");
   w();
   if (anyPath) {
     w('**A `path` has no single `vx`/`vy`/`ay`** — its legs are in the last column, in order, a leg in');
@@ -1286,7 +1284,7 @@ function buildLevel(levelFile, content) {
   for (const line of [
     'a spawn whose `at` is past its wave’s duration, which never fires',
     'a formation whose extent at the spawn instant leaves `0 .. 208`',
-    '**a spawn whose swept extent is mostly outside `0 .. 208`**, which the spawn-instant extent cannot see, and the veer-side rule when a veer is the cause',
+    '**a spawn whose swept extent is mostly outside `0 .. 208`**, which the spawn-instant extent cannot see',
     '**an absolutely-authored path (`waypoints`) placed at an `atX` that does not reproduce its entry waypoint**, within the rounding a two-decimal `atX` can introduce',
     'a `dropSlot` past its formation’s slot count',
     'a drop kind outside the six',
@@ -1311,18 +1309,11 @@ function buildLevel(levelFile, content) {
       if (fp.offScreen) {
         findings.push(`\`${wave.id}\`: \`${sp.spawn}\` in \`${sp.formation}\` at \`atX ${s2(sp.atX)}\` occupies ${s1(fp.min)} .. ${s1(fp.max)}, outside 0 .. ${CODE.playfieldWidth.value}. Nothing clamps it.`);
       }
-      // Drift, not the snapshot above. A veer placed on the side it veers towards prints in range
-      // and spends its whole arc off screen; `l1-finale-a`'s swoop at 2.0 s is a real, milder case.
+      // Drift, not the snapshot above. A shape placed on the side it drifts towards prints in range
+      // at the spawn instant and spends its whole flight off screen.
       const swept = sweptExtent(sp, enemy, formations, trajectories);
       if (swept.offScreen && swept.outsideFraction >= 0.5) {
-        // The veer-side rule is the catalogue's and it is about the veers, which are the arcs that
-        // carry a vx — not about any shape that happens to drift. `swoop` drifts by design.
-        const veer = t.kind === 'arc' && t.vx > 0 && sp.atX > 0.25
-          ? ' A veer must spawn on the side it veers away from: `veer-right` at `atX <= 0.25`.'
-          : t.kind === 'arc' && t.vx < 0 && sp.atX < 0.75
-            ? ' A veer must spawn on the side it veers away from: `veer-left` at `atX >= 0.75`.'
-            : '';
-        findings.push(`\`${wave.id}\`: \`${sp.spawn}\` in \`${sp.formation}\` at \`atX ${s2(sp.atX)}\` on \`${t.id}\` sweeps ${s1(swept.min)} .. ${s1(swept.max)} over ${s1(swept.seconds)} s in the playfield — about ${Math.round(swept.outsideFraction * 100)}% of that width is outside 0 .. ${CODE.playfieldWidth.value}. It reads in range at the spawn instant and is not.${veer}`);
+        findings.push(`\`${wave.id}\`: \`${sp.spawn}\` in \`${sp.formation}\` at \`atX ${s2(sp.atX)}\` on \`${t.id}\` sweeps ${s1(swept.min)} .. ${s1(swept.max)} over ${s1(swept.seconds)} s in the playfield — about ${Math.round(swept.outsideFraction * 100)}% of that width is outside 0 .. ${CODE.playfieldWidth.value}. It reads in range at the spawn instant and is not.`);
       }
       // An absolutely-authored path's entry waypoint is a position in the playfield, not a delta
       // from wherever it is placed — #300. `atX` must reproduce it or the path flies somewhere other
