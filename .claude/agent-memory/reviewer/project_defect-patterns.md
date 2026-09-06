@@ -1695,3 +1695,104 @@ pre-pr-check --base phase/11k-level-one-rebuilt` PASS reproduced verbatim.
     dangerous.
 
 Related: [[audit-techniques]].
+
+## PR #326 (`content/level-one-rebuilt`, phase 11k task 6, issue #324) — the level's central rebuild, clean on every mechanical claim, two small narrative slips
+
+`assets/data/{enemies,waves,trajectories}.json` (`level-01.json` genuinely byte-identical, confirmed
+by its absence from `git diff --stat`), both generated docs and `docs/plan/11c-movement-shapes/
+shape-catalogue.md`. Verdict: accept. Reproduced independently rather than trusted: the full 12-wave
+absolute-time chain (`start(n) = max(previousEnd(n-1) + offset(n), levelTime)`, read from
+`SpawnSystem.scheduleNext`) by hand from `waves.json`'s eleven durations and the two negative offsets
+— every one of the twelve beat-start times in the fragment's table (0.0, 9.0, 22.0, 33.0, 45.0, 57.0,
+66.0, 81.0, 91.0, 100.5, 114.5, 120.5, ending 134.0) reproduced exactly; the spawn count (68, summed
+per wave: 2+5+6+7+5+6+4+5+8+7+1+12); the family-resolution claim (all 68 spawns' trajectory, override
+or archetype default, resolved by hand against the six family sets in #320 — zero violations, all
+twenty vocabulary entries used, none unused); the twin-carrier convergence (`anchor-and-traverse-*`'s
+path segments are **velocity, not displacement** — `{-22, 0, 5.0}` is 22 u/s for 5.0 s = 110 units,
+not 22 units, confirmed by matching the vocabulary fragment's own claimed stop-y and end-x — after
+which the two `single`-formation carriers' swept extents, 41.4..181.4 and 26.6..166.6, both land
+fully inside `0..208`, matching the generated document's own per-spawn table exactly and confirming
+no off-screen sweep); the beat-1/14 map correction (`grep -c "l1-intro-flyover\|l1-boss-approach"
+assets/data/waves.json` → `0`, all twelve current wave ids present exactly once); `enemies.json`'s six
+repointed defaults matching the claimed table byte-for-byte; the seven deleted 11c-era trajectory ids
+absent from every file under `assets/data/` (not just `trajectories.json`); `node tools/
+build-level-docs.js` → `unchanged` both docs on a fresh run; `./gradlew :core:test --rerun-tasks` →
+361 tests, 0 failures; `tools/pre-pr-check --base phase/11k-level-one-rebuilt` → PASS, reproduced
+verbatim.
+
+74. **A path-segment tuple's second field can be a velocity in one direction of the shape catalogue's
+    own convention and look like a displacement at a glance, and the distinction is exactly what a
+    "does the swept extent stay on screen" check needs.** `anchor-and-traverse-left`'s traverse leg is
+    `{-22, 0, 5.0}` — reading it as "moves −22 units over 5.0 s" gives a carrier ending at x=144.4
+    from atX 0.80 (166.4−22), which never crosses the centre and would make the two carriers' claimed
+    "converge and cross" false; reading the third field as a duration for a *velocity* (the same
+    convention every other `path` entry in this vocabulary already uses, confirmed against
+    `descend-and-anchor`'s own hold-then-fall arithmetic in #320) gives 22×5.0=110 units of actual
+    displacement, landing at x=56.4 — which is what the generated document's own swept-extent column
+    independently confirms (`26.6 .. 166.6` and `41.4 .. 181.4`, both computed by the tool from the
+    real trajectory, not from the fragment's prose). Whenever a content fragment's claimed end-position
+    for a multi-leg `path` looks inconsistent with a segment's numbers taken as raw displacement, redo
+    the arithmetic as velocity×duration before concluding the claim is wrong — the tool's own output is
+    the tie-breaker, and it agrees with the velocity reading here.
+75. **A beat-by-beat design narrative can misdescribe which one of two concurrent entities' states
+    overlaps, in a way the same fragment's own timeline arithmetic disproves.** #324's beat 10 claims
+    "`advance-the-firing-line` is still standing on its **second** firing line when the `line-5` of
+    basics arrives" — but the firing-line entity spawns at abs 90.0 (wave8's `at:9.0` + wave8's start
+    81.0), holds its first line 91.2–93.7 and its second 94.95–97.45 (both computed from #320's own
+    verified relative offsets, 1.20/3.70 and 4.95/7.45), while the `line-5` spawns at abs 91.0 (wave10
+    `l1-high-pressure`'s own `at:0.0` + its start 91.0, itself confirmed via the offset-chain
+    reconstruction above) — **0.2 s before the first hold even begins**, not during the second. The
+    wave-level overlap itself ("overlapped by two seconds," referring to the `-2.0` offset shrinking
+    wave9's nominal end) is correctly described; the claim about which specific moment in the entity's
+    own path that overlap lands on is not, and it is checkable with the same offset-chain arithmetic
+    the rest of the fragment's beat table survives on. Non-blocking — no JSON is wrong, the beat's
+    actual density and "densest moment on paper" framing hold regardless of which line the shooter is
+    standing on — but worth re-deriving any claim of the form "entity X is doing Y when entity Z
+    arrives" against both entities' own absolute timelines, not just the wave-level offset that
+    produced the overlap.
+76. **A literal, `grep -o`-countable claim in a status fragment can be off by exactly one, in the
+    harmless direction (undercounting a marker the fragment says is never wrong).** #324 claims "26
+    `**leaves**` markers, and not one was tuned away"; `grep -o "\*\*leaves\*\*" docs/levels/
+    level-01.md | wc -l` on the committed, freshly-`unchanged`-confirmed document returns **25**. Every
+    individual per-wave count checked out against the marker's own category list (`cut-across-*`,
+    `plunge-and-cut-*`, `grind-and-wheel-*`, the `vee-5`-widened `dive-across-*` placements, and
+    `advance-the-firing-line`'s left-edge exit) summed to 25 across the ten waves that carry any —
+    including the one the fragment's own category list slightly overstates: `dive-across-*` only earns
+    the marker when a wide formation (`vee-5`) pushes its swept range past an edge, not on its two
+    plain `single` placements (whose swept extents, 66.1..181.3 and 26.7..141.9, sit fully inside
+    `0..208` and carry no marker at all) — so "dive-across-* bends out of the bottom corner" describes
+    the mechanism correctly but not which of its placements the marker actually fires on. Cheap to
+    catch (`grep -o` plus one `wc -l`), worth running on any status fragment that counts an annotation
+    in a generated document rather than trusting the printed number.
+77. **A previously-recorded, explicitly-not-closed balance finding can survive a full content rebuild
+    unchanged in substance and unmentioned in the new fragment, without being a new defect the rebuild
+    introduced.** Phase 11e's coordinator addendum (`docs/plan/11e-level-one-redesigned/status/
+    210-tune-from-play-session.md`) recorded, and left open on the project owner's own decision, that
+    an ideally-firing player at shot level 4 kills a 700 hp carrier in 2.1 s against a 3.0 s `Spawner`
+    interval — the twin-carrier beat's carrier dies before its own mechanism can produce a single
+    child, under ideal play. This rebuild changes none of the three numbers that finding depends on
+    (`enemy-carrier.health` still 700, `spawner.interval` still 3.0, confirmed by reading `enemies.
+    json`) and reproduces the same weapon-upgrade count and near-identical timing before the beat
+    (three drops at abs 9.0/47.0/87.0 here vs 11.0/48.0/86.0 before, all still comfortably before the
+    twin-carrier beat's 100.5 s start) — so the finding's arithmetic still holds verbatim, and #324's
+    fragment does not mention it anywhere, including in its own "what task 6 inherits"/"what I found
+    and did not fix" sections, which name two unrelated documentation gaps instead. Not a fresh defect
+    (the level content this task controls cannot fix a health/interval pair it has no mandate to
+    touch) and not a contradicted claim (the fragment never asserts the beat is closed) — but a known,
+    still-open, numerically-checkable risk that a full rebuild of the very beat it lives in is a natural
+    moment to have re-surfaced and didn't. Worth checking on every future touch of `l1-twin-carriers-
+    attachment` or `enemy-carrier`'s health/spawner pair: recompute ideal-kill-time-vs-first-child-time
+    with whatever shot level the level's own drop schedule delivers by that beat, since neither this
+    task's own verification section nor its "what I found" section is the place that would have caught
+    a regression in either direction.
+
+Everything else checked out clean and is worth naming as the calibration point: the carrier mechanism
+arithmetic (5 children while parked + 2 more before departure = 7, using the "counts to on-screen
+departure, not later safety-box removal" convention #321's correction already established), every
+`atX` window from #320 (corrected `dive-across-*` 0.53/0.47, `grind-and-wheel-*` 0.75/0.25, `anchor-
+and-traverse-*` 0.61/0.39, `descend-and-step-*` 0.25/0.34 and 0.75/0.66) satisfied by every placement
+in the level, the "no cleared wave" and "every generator check clean except the two deliberate
+negative offsets" claims, and the beat-11/beat-12 "rest is not a rest if the carriers survive" timing
+(carrier on-screen end ~125.7 s against the rest wave's own 114.5–120.5 s window, reproduced exactly).
+
+Related: [[audit-techniques]].
