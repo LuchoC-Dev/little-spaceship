@@ -594,18 +594,21 @@ public final class JsonContentSource implements ContentSource {
      * to the identical {@link FormationSlot} it always did.
      *
      * <p>A present value is quantised to the nearest whole tick, {@code Math.round(delaySeconds *
-     * 60f) * TICK_SECONDS}, before it reaches {@link FormationSlot}. This is deliberate, not
-     * incidental: {@code SpawnSystem} backdates {@code Trajectory.elapsed} to {@code -delaySeconds} in
-     * one assignment, and {@code MotionSystem} then reaches zero by adding the fixed step {@code
-     * TICK_SECONDS} once per tick — two different paths to the same target float, which do not
-     * generally agree bit-for-bit. Measured on the {@code core} branch that built this feature: of
-     * five plausible author-typed values (0.05, 0.1, 0.3, 0.5, 1/3 s), four turned the slot active one
-     * tick earlier than a whole-tick reading of the same number would predict. Quantising here means
-     * the seconds a designer types are only ever a label for a tick count — the value {@code core}
-     * actually receives is always an exact multiple of the step, reached the same way {@code
-     * MotionSystem} reaches it, so "traces the leader exactly N ticks behind" holds for what gets
-     * authored, not only for a hand-picked exact multiple. Kept in seconds rather than requiring a
-     * {@code "delayTicks"} count so this stays consistent with every other timestamp this content
+     * 60f) * TICK_SECONDS}, before it reaches {@link FormationSlot}. What that buys is that the
+     * seconds a designer types are only ever a label for a tick count: {@code 0.3}, {@code 0.29} and
+     * {@code 0.305} all mean eighteen ticks, and the ambiguity is resolved here, once, at load,
+     * rather than in whatever arithmetic consumes it later.
+     *
+     * <p><b>Corrected 06/09/2026, issue #337.</b> This javadoc used to justify the quantisation by
+     * describing how {@code core} crossed from waiting to moving — {@code SpawnSystem} backdating
+     * {@code Trajectory.elapsed} to {@code -delaySeconds} in one assignment, {@code MotionSystem}
+     * reaching zero by adding the step once per tick, and the two not agreeing bit-for-bit. **That
+     * mechanism no longer exists**: #337 replaced the float crossing with an integer {@code
+     * delayTicks} countdown, because quantising here did not save it — the mismatch was inside
+     * {@code core} and a delayed slot still activated a tick early across a wide band of tick
+     * counts. The quantisation above was right and needed no change, which is why this file's code
+     * has an empty diff on that fix; only this explanation of it was stale. Kept in seconds rather
+     * than a {@code "delayTicks"} key so it stays consistent with every other timestamp this content
      * authors in seconds ({@code SpawnEvent.at}, a pickup's {@code at}).
      */
     private void loadFormations(JsonReader reader, FileHandle file) {

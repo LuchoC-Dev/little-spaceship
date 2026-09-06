@@ -148,3 +148,33 @@ initial value is still set inside `SpawnSystem` at `SystemOrder.SPAWN` (unchange
 - `grep -rn "com.badlogic.gdx\|Math.random\|System.currentTimeMillis\|new Thread\|ExecutorService"
   core/src/main/java` — no hit outside `Rng`'s own class javadoc explaining why it avoids
   `Math.random()`.
+
+## Corrected by the coordinator after review, before merge
+
+`reviewer` accepted this branch and found one thing left stale. The correction is the coordinator's
+because it is prose in a file this branch deliberately did not change.
+
+**`JsonContentSource.loadFormations`'s javadoc still described the mechanism this fix deleted.** It
+justified quantising at load by explaining how `core` crossed from waiting to moving — backdating
+`elapsed` to `-delaySeconds` in one assignment against a step added once per tick — and that crossing
+no longer exists. Rewritten to say what the quantisation actually buys, with a dated note saying what
+the old explanation claimed and why it went.
+
+**The claim "`JsonContentSource` needed no change" was true and is narrower than it reads.** It is a
+claim about code: the file's diff on this fix is empty, and the end-to-end test proves the loader's
+quantisation was right all along. It is not a claim about the comments in it, and the difference is
+where this one hid.
+
+**This is the fifth instance in phase 11k of the code being right and the prose being wrong** — after
+a javadoc naming a guard that never fired, five removal times short by a collider radius, an `atX`
+window rounded the wrong way, and the boss's cycle order documented backwards. Every one was found by
+someone re-deriving rather than reading, and none by a check.
+
+## Two failure rates for one defect, both real
+
+`reviewer` measured **273 of 300** tick counts failing against the pre-fix code when the delay is
+constructed directly as `delayTicks * step`, where its original finding on #336 reported bands
+totalling about 66 of 300. Both are correct and they measure different inputs to the same crossing:
+the first constructs the delay the way `core`'s own test does, the second the way the loader does
+after quantising. The quantisation narrowed the failure surface substantially and did not close it,
+which is exactly why the fix belonged in `core`.
