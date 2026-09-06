@@ -1929,3 +1929,51 @@ status fragment's claim, not on the code — the code is a defensible choice giv
     careful about this exact boundary the first time.
 
 Related: [[audit-techniques]] for the scratch-fixture-and-sweep technique used here.
+
+## PR #338 (`fix/delay-crossing-in-ticks`, phase 11k, issue #337) — the fix for my own PR #336 finding, and it holds
+
+Round trip on a defect I found myself: `core` swapped the float `elapsed <= 0f` crossing for an
+integer `Trajectory.delayTicks` countdown, `step` threaded through `update`→`spawnDue`→`spawnWave`→
+`applySlotDelay` (single call chain, one caller, no second step value anywhere), and a `game`-module
+end-to-end test added. Verdict: accept, nothing new.
+
+80. **A "the fix resolves it" claim is worth re-proving with your own driver, even when the author's
+    sweep already covers the same range you'd choose.** Reused the audit-techniques scratch-compile
+    trick from the PR #332 entry, but for a whole three-class subsystem rather than one method:
+    copied `Trajectory`/`MotionSystem`/`SpawnSystem` are not needed — the *test's own* `TestContent`/
+    `SimpleFormationDefinition`/`SpawnEvent` support classes are already public and already built, so a
+    from-scratch `Driver.java` reproducing `assertDelayedSlotTracesLeaderExactly`'s body, compiled
+    against `core/build/classes/java/{main,test}` and run standalone, is a five-minute independent
+    reproduction of a 300-iteration sweep with no JUnit and no repo mutation. It found 0/300 failures
+    on the branch, confirming the fix; run again with the pre-fix `MotionSystem`/`SpawnSystem`
+    (`git show <base-branch>:<path>`, compiled to a separate output dir placed *before* the real
+    classes on the classpath so it shadows them) it found **273/300** failing, not the ~66/300
+    ("bands 18–40, 258–300") the earlier memory entry had recorded for the *loader-quantised* variant
+    of the same bug — the two numbers describe different constructions of the same defect
+    (`delayTicks * step` directly vs. quantised-through-JSON) and are not comparable at face value.
+    Worth remembering: a "the old code fails N% of the time" figure is scoped to exactly the
+    construction it was measured against; re-deriving it under a different construction of the same
+    input can legitimately produce a very different percentage without either measurement being wrong.
+81. **A one-line classpath-order mutation test disproves vacuity cheaply for a sweep, not just a single
+    assertion.** Shifting the countdown's threshold by one (`delayTicks > 0` → `> 1`) turned the *entire*
+    swept range red (300/300), proving the test is not accidentally trivial across its full domain, the
+    same way pattern 40's per-case falsification does for one assertion.
+82. **A stale javadoc left behind in an *unmodified* file, describing a mechanism the same PR just
+    replaced, is a real but minor finding distinct from "no change needed."** `JsonContentSource.
+    loadFormations`'s own javadoc still says (unedited by this branch, confirmed by `git diff` on the
+    file being empty) "`SpawnSystem` backdates `Trajectory.elapsed` to `-delaySeconds`... `MotionSystem`
+    then reaches zero by adding the fixed step" — the exact mechanism #337 deleted. The status
+    fragment's claim "`JsonContentSource` needed no change" is true and independently confirmed (the
+    diff really is empty, the end-to-end test really does pass unmodified against the loader's own
+    quantisation) — but "no code change needed" and "every comment in that file still describes the
+    current mechanism" are different claims, and only the first one was checked. Whenever a PR fixes a
+    mechanism in one module and cites "no change needed" in a neighbouring module that only *describes*
+    that mechanism in prose, grep the untouched file for the old mechanism's own vocabulary
+    (`elapsed`, `backdate`, the deleted field/branch name) before accepting the "no change" claim as
+    covering the comments too.
+
+Calibration: the two corrected fragments (`330-`, `334-`) both read exactly as a correction should —
+dated, naming what was false and what replaced it, not rewritten as if always true. The commit hygiene,
+`pre-pr-check`, and `./gradlew build`/`node tools/build-level-docs.js` claims all reproduced independently
+(370 core tests aggregated from the XML, 0 failures/skipped/errors), and no invariant was at risk in the
+touched files (`grep` for gdx/random/clock/threading in the three touched `core` files: zero hits).
