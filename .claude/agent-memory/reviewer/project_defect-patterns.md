@@ -1373,3 +1373,607 @@ question this task's own instructions raised does not arise in this content; `ga
 `gh run list` showed both checks green on the tip commit, matching the PR body.
 
 Related: [[audit-techniques]].
+
+## PR #312 (`fix/level-docs-reads-paths`, phase 11k task 1, issue #310) — a tools-only branch, and an asymmetric exit criterion inside a function that reads as symmetric
+
+`tools/build-level-docs.js` only (plus the regenerated `docs/levels/level-01.md` and the status
+fragment) — no `core`/`game`/`desktop`/`web`/`assets/data` diff, so invariants 1-6 are structurally
+out of reach; commit hygiene clean (2 commits, subjects 58/66 chars, no `Co-Authored-By`); both `gh
+run list` rows (`CI`, `PR check`) green on the tip commit, matching the PR body; `pre-pr-check`'s
+pasted output reproduced. Every arithmetic claim checked against `JsonContentSource.java` line for
+line matched exactly: `faster`'s `ay * multiplier²` (confirmed both by reading and by constructing a
+`speedOf` entry in a scratch `cp -r` copy and reading the generated `ay` — 27 → 108 at multiplier 2,
+i.e. ×4, not ×2), `mirror`'s vx-only negation, `parseWaypoints`'s `duration = |B-A|/speed` and
+`vx = dx/duration`, cycle detection (reproduced the exact `a -> b -> a` message on a scratch fixture)
+and order-independence (a `mirrorOf` pointing at an id declared *later* in the file resolved fine on
+a scratch fixture). The claimed pre-existing `same`-shortcut bug is real: `git show
+phase/11k-level-one-rebuilt:tools/build-level-docs.js` shows the old code compared a single `drift`
+field to `0.05`, and the new code compares `swept.min`/`swept.max` against the spawn footprint
+instead — confirmed to change nothing for `constant`/`arc` (their drift is monotonic, so the two
+checks agree) and to fix exactly the case named (a `path` whose legs drift in opposite directions).
+
+68. **A boundary-crossing walk that computes all four playfield edges with one function reads as
+    symmetric and is not: two axes use "fully off" (matching `core`'s own definition) and the other
+    two use "first touch."** `pathSweep`/`crossLeg` (new in this PR) mirror
+    `LifetimeSystem.isFullyOffPlayfield` exactly on the vertical axis — confirmed by their own
+    javadoc's derivation and by hand: `downTarget = -(270 + 2·radius)` is exactly the point at which
+    the *whole* entity's bottom edge clears the screen, matching `y + radius < 0`. But the horizontal
+    checks use `at.min + h` for a *leftward* exit and `at.max + h` for a *rightward* one — the
+    **leading** edge of the formation's footprint in the direction of travel, not the **trailing**
+    one. Reconstructed on two real, shipped fixtures: `test-path-turn`'s `descend-and-turn-left`
+    (`enemy-tank`, radius 10.5, `atX 0.85`) reports `x swept` `0.0..187.3` — the leading (left) edge
+    lands exactly on `0.0`, while the trailing (right) edge, `187.3`, is unchanged from spawn and
+    stays 10.5 units inside the visible screen at the moment the function calls the shape "gone."
+    `test-hold-line`'s `hold-the-line-and-exit` (`enemy-shooter`, radius 6.5, `atX 0.50`) similarly
+    reports `97.5..208.0`, landing exactly on the right edge with the trailing edge (97.5) still 6.5
+    units inside it. The true full-exit time is later by `radius / |vx|` (≈0.09-0.19 s in these two
+    cases) and, worked out by hand for `hold-the-line-and-exit`, actually falls *outside* [0, 208]
+    (swept max ≈ 221), which the current code can never report — because the function returns the
+    instant it finds *any* valid candidate, a path's `min`/`max` can structurally never exceed the
+    playfield bounds via a horizontal exit that starts on-screen, so the `**leaves**` marker (which
+    fires correctly for `constant`/`arc`, whose vertical-only stopping time is independent of the
+    horizontal one and can genuinely run past the width) is dead code for the common case of a
+    `path` that exits sideways from an on-screen spawn. The status fragment discusses, at length and
+    honestly, the *difference* between `path`'s dual-axis convention and `constant`/`arc`'s
+    vertical-only one — but never notices this second, internal asymmetry between the two halves of
+    its own dual-axis check. Reported as "worth arguing with" rather than a blocking defect: nothing
+    in the plan's acceptance criteria defines "on screen" precisely enough to call one convention
+    wrong, and the magnitude is small — but the phase's stated purpose for this document is exactly
+    "every content task after this one reads the numbers it prints to decide how much runway a shape
+    needs," and a systematically short, edge-shaped discrepancy that is invisible because it always
+    lands exactly on the boundary is precisely the shape phase 11j's radius-shaped finding (66) names,
+    one level up: there it was a missing term in a hand derivation, here it is an inconsistent
+    definition inside the tool meant to replace hand derivation. **Technique reused**: derive the
+    number for *both* directions of the same physical exit (leading edge vs. trailing edge) by hand,
+    not just the one direction the function returns — an asymmetry between two branches of one
+    function that both claim to answer "did it leave" is invisible from reading the branch that fires
+    in isolation, and only shows up by asking what the *other* edge of the same entity was doing at
+    the reported moment.
+
+## PR #316 (`feat/absolute-path-atx-check`, phase 11k task 2, issue #300) — clean, and the reflection claim held up independently
+
+`tools/build-level-docs.js` gained an `entryX` field on any `path` resolved from `waypoints`
+(never from `segments`), propagated through `mirrorOf` (reflection, `width - entryX`) and `speedOf`
+(unchanged), and a new per-spawn check comparing `sp.atX * 208` against it within
+`ATX_TOLERANCE_PX = 1.1`. Verdict: accept, nothing new. Reproduced independently rather than trusted
+from the status fragment: `cp -r` the worktree to the scratchpad (in-place edits to a repo under
+audit are the kind of thing the auto-mode classifier can refuse — see
+`[[audit-techniques]]`'s TeaVM-dist entry for the same workaround), built scratch `mirrorOf`/`speedOf`
+derivations of both shipped absolute trajectories plus a `level-99.json` exercising them, and got
+the exact same three findings and two silences the author reported, including the one that actually
+proves the claim: mirroring `sweep-the-width-and-drop` (`entryX 20.8`) requires `atX 0.90`, not the
+`0.10` a plain sign-flip on the mirror would have produced. Idempotency (`unchanged` on both docs)
+and `pre-pr-check`'s pasted output both reproduced verbatim.
+
+68. **A reflection-vs-negation claim about a derived field can only be told apart by an entry point
+    that is not equidistant from the centre either way.** Both trajectories this repo had already
+    shipped with `waypoints` before this task (`hold-the-line-and-exit`, entry `x=104`, exactly the
+    playfield's centre) are the wrong fixture to test a reflection formula against, because
+    `width - entryX` and `-entryX` (mod width, informally) agree at the centre — the author noticed
+    this and built an off-centre scratch fixture (`sweep-the-width-and-drop`, `entryX 20.8`) instead
+    of trusting the shipped content to distinguish the two formulas. Generalizes past this PR: before
+    accepting that a "mirror negates X" javadoc/comment is correct for a field that is a *position*
+    rather than a *delta*, check whether every value the claim was tested against sits on the mirror
+    axis itself.
+69. **A per-spawn check that compares one `atX` against one trajectory field is implicitly checking
+    the formation's anchor, not any individual entity — worth naming even when current content never
+    exercises the gap.** `SpawnSystem.positionSpawned` computes each entity's real x as
+    `anchorX + slot.offsetX()`, and every formation in `formations.json` except `pair` (`±44`, no
+    zero-offset slot) has at least one slot at `offsetX: 0`; both trajectories carrying `entryX` are
+    placed with `formation: "single"` (`offsetX: 0`), so `anchorX` and the one real entity's `x`
+    coincide today and the check's silence on the anchor really does mean the entity is correctly
+    placed. Nothing in `core` or this check would catch an absolute path placed on a multi-slot
+    formation whose anchor matches `entryX` while every other slot flies the same waypoint-authored
+    shape shifted sideways by its own `offsetX` — arguably not a bug (a formation flying one shared
+    shape shifted per slot is exactly what a `constant`/`arc` trajectory already does), but nothing
+    documents that an absolute path's literal-coordinate meaning is anchor-only until it is combined
+    with a multi-slot formation, and `JsonContentSource.parseWaypoints`'s own javadoc already names
+    the general version of this cost ("an absolutely-authored path can only happen in one place").
+    Not a defect in this PR — a suspicion to hand forward to whichever phase first pairs an absolute
+    path with a formation other than `single`.
+
+## PR #319 (`feat/content-places-a-pickup`, phase 11k task 4 first half, issue #318) — a second cursor added next to an existing one, and the one asymmetry that mattered
+
+`SpawnSystem` gained a second per-wave cursor (`ActiveWave.pickupCursor`) for `WaveDefinition.pickups()`,
+scheduled off the same `ActiveWave` clock the existing spawn cursor uses. Diff matched the coordinator's
+claim exactly (`git diff phase/11k-level-one-rebuilt...HEAD --stat`: five `core` main files, two `core`
+test files, one status fragment). `core:test` green independently (360 tests / 0 failures, aggregated
+from `core/build/test-results/test/*.xml`), `game:compileJava` green independently, no
+`com.badlogic.gdx`/`Math.random`/thread-family import anywhere in `core/src/main`. Only one production
+`implements WaveDefinition` (`SimpleWaveDefinition`), so the new `default pickups()` cannot be silently
+hiding a second implementer that needed a real override.
+
+70. **Adding a second per-wave cursor to an existing scheduler is safe exactly to the extent every
+    `hasEnded`/end-condition branch was updated to know about it — check each branch by hand, don't
+    trust that "it uses the same clock" implies "it uses the same completeness check."**
+    `SpawnSystem.hasEnded`'s `Cleared` branch checks `wave.cursor >= wave.definition.spawns().size()`
+    but never references the new `wave.pickupCursor` at all. For `FixedDuration` this is symmetric
+    with a pre-existing hazard (confirmed by probe: a *second spawn event* scheduled past a
+    `FixedDuration` wave's own duration is *also* silently lost — `entityCount` stayed 1 after 10
+    ticks against a duration of 2s and a second spawn at local t=5s — so `core` already accepted "a
+    badly authored duration can strand a late spawn" before this PR, and pickups inherit that same,
+    pre-existing shape without making it worse). But for `Cleared` the two cursors are **not**
+    symmetric: a spawn can never be lost this way in a `Cleared` wave, because `hasEnded` cannot
+    return true until `cursor >= spawns.size()` — the wave literally cannot end with spawns still
+    pending. Pickups get no equivalent guard. Probe (`java` against `core/build/classes/java/main`
+    plus a hand-written `Probe.java`, no build, no worktree mutation): a `Cleared` wave with one
+    spawn and one `PlacedPickup` scheduled at local t=30s, whose single spawned entity is destroyed
+    on tick 2 — `hasEnded` goes true, the wave is dropped from `activeWaves`, and 40 more ticks (well
+    past t=30) still show `world.pickups().size() == 0`. The reward silently never exists, no
+    exception, no log, and no test in the PR exercises a `Cleared` wave with a still-pending pickup
+    at the moment its spawns are exhausted and its last entity dies — every `Cleared`-wave pickup
+    test in the PR (`placedPickupCarriesNoWaveOrigin`) places its pickup at `at=0f`, always already
+    due before the wave could possibly end. The fix is a one-line addition to the `Cleared` branch,
+    mirroring the existing spawn-cursor guard: `&& wave.pickupCursor >= wave.definition.pickups().size()`.
+    Generalises: whenever a scheduler gains a second, independently-advancing cursor over the same
+    clock, walk every branch of the completion/termination check by hand and ask whether it was
+    written before or after the second cursor existed — a check untouched by the PR is a check that
+    was written for one cursor's completeness, not two.
+71. **A `SystemOrder` placement decision can be correct on its own terms and still create an
+    unexamined behavioural split between two paths that "produce the same entity."** Confirmed by
+    reading `SystemOrder`'s declaration order: `SPAWN` is ordinal 5, `COLLISION` is ordinal 10,
+    `CLEANUP` is ordinal 14. A placed pickup is created inside `SpawnSystem` (`SPAWN`, before
+    `COLLISION`), so it is visible to `CollisionSystem` on the very same tick it appears — a player
+    ship already occupying that exact position could collect it the instant it spawns. A dropped
+    pickup is created inside `CleanupSystem` (`CLEANUP`, after `COLLISION`), and that class's own
+    javadoc says so explicitly: "the spawned pickup only becomes collectable from the next tick's
+    `CollisionSystem` pass." Both paths call the identical `CleanupSystem.createFallingPickup` and
+    produce byte-identical components, so "the two paths produce the same entity" is true of the
+    entity and false of when it can first be collected. Not necessarily wrong — a bomb-drop-shaped
+    reward has always had a one-tick delay baked into the pipeline's own ordering, and a designed
+    "reward waiting at a spot" arguably *should* be collectable the instant it exists — but it is a
+    rule nobody wrote down anywhere, and the PR's own author-facing doc never raises it despite the
+    task's brief explicitly asking "is that the same answer a dropped pickup gets?" Worth checking on
+    every future placement decision that creates a *second path* to an already-existing kind of
+    entity: read the exact ordinal gap between where each path creates it and where the next system
+    in the pipeline that would react to it runs, don't assume "same entity, same system" means "same
+    timing."
+
+Verdict on #319: **rejected pending a fix to `hasEnded`'s `Cleared` branch** — finding 70 is a real,
+reproducible silent-content-loss bug in `core`, not a suspicion. Finding 71 is a note to carry to
+whoever reviews the loader half or writes `waves.json` content using `Cleared` pickups.
+
+Related: [[audit-techniques]].
+
+## PR #321 (`content/level-one-vocabulary`, phase 11k task 5, issue #320) — twenty trajectory entries, every claim re-derived, one small division slip found
+
+`assets/data/trajectories.json` (20 new entries: 13 authored, 6 `mirrorOf`, 1 `speedOf`), `waves.json`
+(6 new `unplaced` waves), 6 new `test-110`..`test-160` scenario files, `docs/levels/waves.md`
+regenerated. Verdict: accept, with one minor numeric correction to hand forward to task 6.
+Independently reproduced rather than trusted: `node tools/build-level-docs.js` (`unchanged` both docs,
+tree clean); all four commit subjects under 72 chars, no `Co-Authored-By`; `gh run list` both checks
+green on tip commit, matching the PR's pasted `pre-pr-check` output; enemy radii/spawner/weapon values
+in `enemies.json` and formation offsets in `formations.json` match the fragment's own numbers exactly;
+a `LoadCheck` probe (`javac`/`java` against `core.jar`+`game.jar`+`gdx-1.14.2.jar` from the Gradle
+cache, real `JsonContentSource` over `assets/data`) loaded all 7 relevant ids and resolved all 20
+trajectories to the exact same `PathSegment`/`vx`/`vy`/`ay` values used by hand below.
+
+72. **Hand-deriving every required entry class independently reproduced the fragment's numbers to the
+    hundredth almost everywhere** — `settle-descent` (`constant`): entry/exit times against
+    `LifetimeSystem.isFullyOffPlayfield`'s any-part-visible edge and `isPastSafetyBox`'s 128-unit
+    margin, both exact (14.05s on screen, 20.45s removed); `dive-across-left` (`arc`, negative `ay`):
+    closed-form quadratic root for the safety-box crossing, exact to the millisecond (3.12s / 4.08s);
+    `descend-and-step-left` (`path` with a mid-drop lane change) and `advance-the-firing-line`
+    (`path`, absolute `waypoints`, holds at two authored heights): every segment boundary, hold
+    window and exit time exact, including the "authored y + radius" claim for the absolute form; the
+    carrier spawner math (`Spawner.timer` starts at `interval`, ticks at 3,6,9,...) reproduces both
+    "7 children" (`descend-and-anchor`) and "8 children" (`anchor-and-traverse-left`) exactly, **but
+    only under the convention that the count stops at the entity's own on-screen departure, not at
+    its later safety-box removal** — counting to removal instead gives 9 and more respectively. The
+    fragment's own "on screen" definition (any part inside the playfield) is what the count silently
+    uses; worth being explicit about next time this shape of claim appears, since the two conventions
+    differ by 2+ children and both are defensible.
+73. **A window bound stated as `(measured value + radius) / width` can be arithmetically wrong even
+    when every input number it quotes is right — division is worth checking independently of the
+    physics.** `dive-across-left`'s claimed minimum `atX` is 0.54, computed from its own stated drift
+    of 106.1 units and the entity's 4.5-unit radius: `(106.1 + 4.5) / 208 = 0.532`, which rounds to
+    **0.53**, not 0.54 — confirmed both from the fragment's own quoted numbers and from an independent
+    Python closed-form re-derivation of the exit point (`atX_min = 0.5321`). The mirror's claimed
+    "0.46 or less" should be "0.47 or less" for the same reason (`1 - 0.532 = 0.468`). Every other
+    `atX` window in the same fragment (`descend-and-step-left`'s 0.25/0.34, `grind-and-wheel-left`'s
+    0.75, `anchor-and-traverse-left`'s 0.61/0.39) reproduced exactly by hand, so this is an isolated
+    slip, not a systemic one — but it is exactly the shape phase 11j's finding 66 and phase 11k task
+    1's finding 68 both name: a number that looks derived and is off by a small, checkable amount.
+    Non-blocking (task 6, which actually places these in a level, is what will feel a wrong bound, and
+    the true minimum being *higher* than claimed by ~2 pixels is the safe direction to be wrong in —
+    a level built right at the claimed 0.54 boundary would still work), but worth re-deriving every
+    `(drift + radius) / width` style bound in a content fragment independently, not just checking that
+    the physics reasoning behind it is sound.
+
+Everything else checked out clean: no entry named after an archetype; `enemy-basic`/`enemy-shooter`
+and `enemy-tank`/`enemy-carrier` share no shape (verified from the JSON directly, not the fragment's
+own table); the "13 authored is the floor" arithmetic (6 archetypes x 2 + 1 for `enemy-rush`'s third)
+is internally consistent and matches the actual JSON count; the seven 11c-era entries are genuinely
+still load-bearing (`enemies.json` names four of them as archetype defaults, `waves.json` names three
+more as overrides — grepped independently), so keeping them this task and deleting them in task 6 is
+correctly reasoned, not deferred without cause; all six new `test-NNN-` scenario files sort above
+every pre-existing one; `WorldView.outcome()` requires `noEnemyLeft()` in addition to
+`waveTimelineExhausted`, so a `fixedDuration` scenario ending before its spawned entity's own on-screen
+life is over (task-150-tank-family, 20s vs `grind-down`'s 26.45s) is not a bug — the level genuinely
+does not report complete while the tank is still alive, confirmed by reading `World.java` directly
+rather than assuming a wave's own end tears down what it spawned.
+
+Related: [[audit-techniques]].
+
+## PR #313 (`feat/tests-menu-discovered`, phase 11k task 3, issue #311) — clean, one uncaught-exception
+gap the lenient label path does not share
+
+Two-pass branch: pass one replaced a hardcoded `TestScenarios.ALL` with alphabetical discovery from
+`assets/data/test-*.json`; the project owner then required #291's recency stack to survive, so pass
+two renamed the ten newest scenarios to `test-NNN-<name>.json` and sorts by that rank, descending.
+Verdict: accept. Independently reproduced rather than trusted: `:game:clean :game:test` (no
+`-Ptests`) compiles zero `TestScenarios*`/`TestMenuScreen*` classes
+(`find game/build/classes -iname` empty); `:game:test -Ptests --rerun` gives 13/13 green for
+`TestScenariosTest` (`tests="13" failures="0" errors="0"` in the JUnit XML, matching the fragment's
+own count); `:web:gdx_teavm_web_js_build` succeeds and `grep -c "TestMenuScreen\|TestScenarios"
+web/build/dist/js/webapp/app.js` prints `0`; `tools/pre-pr-check --base
+phase/11k-level-one-rebuilt` passes clean; the `ARC:` label on `test-wave-09`/`test-wave-12` traced
+to real content (`veer-left`/`veer-right`, both `"type": "arc"` in `trajectories.json`) rather than
+accepted from the fragment; wave ids in `waves.json` and level ids in
+`docs/planning/08-decisions-and-open-items.md`/`docs/levels/waves.md` are genuinely independent of
+the renamed level *filenames* — grepping every old filename outside `assets/data/`, the test fixture
+and gitignored `web/build/` turns up nothing that *loads* a stale id, only prose and wave-id
+coincidental substring matches.
+
+70. **A rank parsed from a filename with an unbounded-width regex group has no upper bound the
+    fallback-on-exception path covers.** `TestScenarios.NUMBERED` is `^test-(\d+)-(.+)$` — any number
+    of digits matches — and `rankOf` feeds the captured group straight to `Integer.valueOf` with no
+    try/catch. A `test-<21 nines>-name.json` file reproducibly throws `NumberFormatException` from
+    inside `compareByRecency`, called from `List.sort` inside `discover()`, confirmed in an isolated
+    scratch `.java` file (not the audited worktree) reproducing the exact regex and call shape. This
+    is uncaught by *anything*: `labelFor`'s own try/catch is a sibling code path (label derivation),
+    not rank derivation, and `TestMenuScreen`'s constructor has no guard around `TestScenarios.all()`
+    either — so one malformed filename would crash the entire TESTS menu at construction, not just
+    fail to sort that one entry the way a real "malformed number" input should. Low severity in
+    practice (self-inflicted, `-Ptests`-only, no current file remotely close — the largest real rank
+    is `100`) and not raised to a blocker, but exactly the shape the task's own review brief asked
+    about ("a malformed number, a very large one") and exactly the class of gap the class's own
+    javadoc claims *doesn't* exist ("label derivation is deliberately lenient... never throws" — true
+    for labels, not true for the rank that decides sort order). Worth checking on every future
+    filename-encoded-metadata scheme: an unbounded numeric capture group needs either a caught parse
+    or a bounded digit count, and "the cosmetic half is lenient" does not imply "the ordering half is
+    too."
+
+Everything else checked out clean and is the calibration case worth keeping: every one of this
+author's independently-checkable claims (compile isolation, test count, TeaVM grep, ARC labels,
+reference scope, commit hygiene, `pre-pr-check` output) reproduced exactly on a fresh run, not just
+matched what was pasted.
+
+## PR #327 (`feat/boss-star-movement`, phase 11k task 7, issue #325) — clean, and a "replay still
+passes" claim that is true but exercises none of the new code
+
+`core`-only branch (`BossSystem.java` + its own test + the status fragment, confirmed by `git diff
+--stat`). Verdict: accept. Every checkable claim held on independent re-derivation: the star geometry
+(Python re-run of the cited script reproduced `STAR_X`/`STAR_Y` to the same three decimals), the
+extent arithmetic (arm reach 15.566–192.434, keel's lowest reach 134.111, both against `playerStartY
+30.0` from `balance.json` — the boss's lowest y, 174.111 at the star's centre, sits nowhere near it),
+the hop-distance bounds (max legal-hop distance 37.619, max unrestricted-first-move distance
+60.868 — both re-derived in Python from the same ten points, matching "about 37.6"/"about 60.9"
+exactly), the ±3-step structural claim (grepped every assignment to `fightStage`/every call to
+`beginMove`: `MOVING` is set in exactly one place, reached from exactly one call site, the tail of
+`updateTelling` after `fire()` — no guard, a real structural exclusion), the pause arithmetic
+(`patternCooldown` 0.7 in `level-01.json` + 0.75 s tell = 1.45 s, matching the fragment's figure
+exactly), and the `entranceDescendsToCombatY` rewrite (spawn y 310, entrance speed 1000/s, combatY
+120 → settles at tick ~12, well inside the new 20-tick assertion and well short of the first cycle's
+57-tick cooldown-then-tell, so the narrowed test still checks exactly its own name). Full clean build
+(`./gradlew build --rerun-tasks`) green across five modules, 365 `core` tests / 0 failures, `tools/
+pre-pr-check --base phase/11k-level-one-rebuilt` PASS reproduced verbatim.
+
+71. **Falsifying a rule-named test worked exactly as claimed, and is worth doing even when the
+    reasoning already sounds airtight.** Widened `STAR_STEP_OFFSETS` to include ±4 in a scratch copy
+    (`cp -r` to the scratchpad, per the auto-mode block on in-worktree mutation — see
+    [[audit-techniques]]'s last section) and reran with `--rerun-tasks`:
+    `bossVisitsOnlyStarPointsWithinThreeSteps` went red on the very next seeded run. One data point,
+    not a pattern, but it is the calibration case for "the author's own falsification claim, checked."
+72. **"All five replay tests still pass" can be a true, fully-verified claim that establishes nothing
+    about the very code path it is cited for, because none of the five scenarios ever reaches it.**
+    Every `BossReplayTest` fixture sets `patternCooldown` to `1000f` ("the boss never attacks back") or
+    has no boss at all (`defeatContent`); `LevelScoreReplayTest`'s `TestContent` never calls
+    `.withBoss(...)` at all. A `patternCooldown` of 1000 s against a 400-tick (6.67 s) run never lets
+    `stageTimer` reach zero, so `TELLING` is never entered, `fire()` is never called, and `beginMove` —
+    the method that calls `world.rng()` — never runs. All three `BossReplayTest` scenarios and both
+    `LevelScoreReplayTest` scenarios are therefore silent on whether the new `Rng` draw breaks
+    full-pipeline replay determinism; the actual proof of that lives entirely in `BossSystemTest`'s
+    unit-level `samePatternForTheSameSeed`/`bossVisitsOnlyStarPointsWithinThreeSteps`, run with a real
+    `0.2f` `patternCooldown` fixture that does reach `beginMove` repeatedly. Not a defect — the
+    fragment never claims the replays exercise the new code, only that they still pass, which is true
+    and harmless since (see next point) nothing else currently shares the stream — but it is
+    pattern 34 (a criterion's replay citation and its unit-test citation pointing at different
+    scenarios) in a new shape: this time the *gap itself* is truthfully reported, just not spelled out
+    as a gap. Worth naming explicitly on the next PR that adds a `world.rng()` consumer: check whether
+    any full-pipeline replay's fixture parameters actually let the new code run, the same way
+    `patternCooldown`/`entersAt`/tick-budget arithmetic settles every other "does this scenario reach
+    the changed code" question in this project.
+73. **A first production consumer of a long-idle shared-state accessor is not yet a real "shifts
+    everything downstream" risk, and greppable as such.** `BossSystem` is confirmed (`grep -rn "rng()"
+    core/src/main`) to be the *only* production caller of `World.rng()` anywhere in `core` — nothing
+    else currently draws from the seeded stream, so there is no existing downstream consumer whose
+    output this PR could have shifted. The concern the task brief raised is real for the *next* system
+    that draws from `Rng` after the boss does (draw order becomes part of the contract the moment a
+    second consumer exists), but it is a forward-looking risk to flag, not a defect in this branch —
+    confirm the "only consumer" fact by grep before treating a new `Rng` draw as automatically
+    dangerous.
+
+Related: [[audit-techniques]].
+
+## PR #326 (`content/level-one-rebuilt`, phase 11k task 6, issue #324) — the level's central rebuild, clean on every mechanical claim, two small narrative slips
+
+`assets/data/{enemies,waves,trajectories}.json` (`level-01.json` genuinely byte-identical, confirmed
+by its absence from `git diff --stat`), both generated docs and `docs/plan/11c-movement-shapes/
+shape-catalogue.md`. Verdict: accept. Reproduced independently rather than trusted: the full 12-wave
+absolute-time chain (`start(n) = max(previousEnd(n-1) + offset(n), levelTime)`, read from
+`SpawnSystem.scheduleNext`) by hand from `waves.json`'s eleven durations and the two negative offsets
+— every one of the twelve beat-start times in the fragment's table (0.0, 9.0, 22.0, 33.0, 45.0, 57.0,
+66.0, 81.0, 91.0, 100.5, 114.5, 120.5, ending 134.0) reproduced exactly; the spawn count (68, summed
+per wave: 2+5+6+7+5+6+4+5+8+7+1+12); the family-resolution claim (all 68 spawns' trajectory, override
+or archetype default, resolved by hand against the six family sets in #320 — zero violations, all
+twenty vocabulary entries used, none unused); the twin-carrier convergence (`anchor-and-traverse-*`'s
+path segments are **velocity, not displacement** — `{-22, 0, 5.0}` is 22 u/s for 5.0 s = 110 units,
+not 22 units, confirmed by matching the vocabulary fragment's own claimed stop-y and end-x — after
+which the two `single`-formation carriers' swept extents, 41.4..181.4 and 26.6..166.6, both land
+fully inside `0..208`, matching the generated document's own per-spawn table exactly and confirming
+no off-screen sweep); the beat-1/14 map correction (`grep -c "l1-intro-flyover\|l1-boss-approach"
+assets/data/waves.json` → `0`, all twelve current wave ids present exactly once); `enemies.json`'s six
+repointed defaults matching the claimed table byte-for-byte; the seven deleted 11c-era trajectory ids
+absent from every file under `assets/data/` (not just `trajectories.json`); `node tools/
+build-level-docs.js` → `unchanged` both docs on a fresh run; `./gradlew :core:test --rerun-tasks` →
+361 tests, 0 failures; `tools/pre-pr-check --base phase/11k-level-one-rebuilt` → PASS, reproduced
+verbatim.
+
+74. **A path-segment tuple's second field can be a velocity in one direction of the shape catalogue's
+    own convention and look like a displacement at a glance, and the distinction is exactly what a
+    "does the swept extent stay on screen" check needs.** `anchor-and-traverse-left`'s traverse leg is
+    `{-22, 0, 5.0}` — reading it as "moves −22 units over 5.0 s" gives a carrier ending at x=144.4
+    from atX 0.80 (166.4−22), which never crosses the centre and would make the two carriers' claimed
+    "converge and cross" false; reading the third field as a duration for a *velocity* (the same
+    convention every other `path` entry in this vocabulary already uses, confirmed against
+    `descend-and-anchor`'s own hold-then-fall arithmetic in #320) gives 22×5.0=110 units of actual
+    displacement, landing at x=56.4 — which is what the generated document's own swept-extent column
+    independently confirms (`26.6 .. 166.6` and `41.4 .. 181.4`, both computed by the tool from the
+    real trajectory, not from the fragment's prose). Whenever a content fragment's claimed end-position
+    for a multi-leg `path` looks inconsistent with a segment's numbers taken as raw displacement, redo
+    the arithmetic as velocity×duration before concluding the claim is wrong — the tool's own output is
+    the tie-breaker, and it agrees with the velocity reading here.
+75. **A beat-by-beat design narrative can misdescribe which one of two concurrent entities' states
+    overlaps, in a way the same fragment's own timeline arithmetic disproves.** #324's beat 10 claims
+    "`advance-the-firing-line` is still standing on its **second** firing line when the `line-5` of
+    basics arrives" — but the firing-line entity spawns at abs 90.0 (wave8's `at:9.0` + wave8's start
+    81.0), holds its first line 91.2–93.7 and its second 94.95–97.45 (both computed from #320's own
+    verified relative offsets, 1.20/3.70 and 4.95/7.45), while the `line-5` spawns at abs 91.0 (wave10
+    `l1-high-pressure`'s own `at:0.0` + its start 91.0, itself confirmed via the offset-chain
+    reconstruction above) — **0.2 s before the first hold even begins**, not during the second. The
+    wave-level overlap itself ("overlapped by two seconds," referring to the `-2.0` offset shrinking
+    wave9's nominal end) is correctly described; the claim about which specific moment in the entity's
+    own path that overlap lands on is not, and it is checkable with the same offset-chain arithmetic
+    the rest of the fragment's beat table survives on. Non-blocking — no JSON is wrong, the beat's
+    actual density and "densest moment on paper" framing hold regardless of which line the shooter is
+    standing on — but worth re-deriving any claim of the form "entity X is doing Y when entity Z
+    arrives" against both entities' own absolute timelines, not just the wave-level offset that
+    produced the overlap.
+76. **A literal, `grep -o`-countable claim in a status fragment can be off by exactly one, in the
+    harmless direction (undercounting a marker the fragment says is never wrong).** #324 claims "26
+    `**leaves**` markers, and not one was tuned away"; `grep -o "\*\*leaves\*\*" docs/levels/
+    level-01.md | wc -l` on the committed, freshly-`unchanged`-confirmed document returns **25**. Every
+    individual per-wave count checked out against the marker's own category list (`cut-across-*`,
+    `plunge-and-cut-*`, `grind-and-wheel-*`, the `vee-5`-widened `dive-across-*` placements, and
+    `advance-the-firing-line`'s left-edge exit) summed to 25 across the ten waves that carry any —
+    including the one the fragment's own category list slightly overstates: `dive-across-*` only earns
+    the marker when a wide formation (`vee-5`) pushes its swept range past an edge, not on its two
+    plain `single` placements (whose swept extents, 66.1..181.3 and 26.7..141.9, sit fully inside
+    `0..208` and carry no marker at all) — so "dive-across-* bends out of the bottom corner" describes
+    the mechanism correctly but not which of its placements the marker actually fires on. Cheap to
+    catch (`grep -o` plus one `wc -l`), worth running on any status fragment that counts an annotation
+    in a generated document rather than trusting the printed number.
+77. **A previously-recorded, explicitly-not-closed balance finding can survive a full content rebuild
+    unchanged in substance and unmentioned in the new fragment, without being a new defect the rebuild
+    introduced.** Phase 11e's coordinator addendum (`docs/plan/11e-level-one-redesigned/status/
+    210-tune-from-play-session.md`) recorded, and left open on the project owner's own decision, that
+    an ideally-firing player at shot level 4 kills a 700 hp carrier in 2.1 s against a 3.0 s `Spawner`
+    interval — the twin-carrier beat's carrier dies before its own mechanism can produce a single
+    child, under ideal play. This rebuild changes none of the three numbers that finding depends on
+    (`enemy-carrier.health` still 700, `spawner.interval` still 3.0, confirmed by reading `enemies.
+    json`) and reproduces the same weapon-upgrade count and near-identical timing before the beat
+    (three drops at abs 9.0/47.0/87.0 here vs 11.0/48.0/86.0 before, all still comfortably before the
+    twin-carrier beat's 100.5 s start) — so the finding's arithmetic still holds verbatim, and #324's
+    fragment does not mention it anywhere, including in its own "what task 6 inherits"/"what I found
+    and did not fix" sections, which name two unrelated documentation gaps instead. Not a fresh defect
+    (the level content this task controls cannot fix a health/interval pair it has no mandate to
+    touch) and not a contradicted claim (the fragment never asserts the beat is closed) — but a known,
+    still-open, numerically-checkable risk that a full rebuild of the very beat it lives in is a natural
+    moment to have re-surfaced and didn't. Worth checking on every future touch of `l1-twin-carriers-
+    attachment` or `enemy-carrier`'s health/spawner pair: recompute ideal-kill-time-vs-first-child-time
+    with whatever shot level the level's own drop schedule delivers by that beat, since neither this
+    task's own verification section nor its "what I found" section is the place that would have caught
+    a regression in either direction.
+
+Everything else checked out clean and is worth naming as the calibration point: the carrier mechanism
+arithmetic (5 children while parked + 2 more before departure = 7, using the "counts to on-screen
+departure, not later safety-box removal" convention #321's correction already established), every
+`atX` window from #320 (corrected `dive-across-*` 0.53/0.47, `grind-and-wheel-*` 0.75/0.25, `anchor-
+and-traverse-*` 0.61/0.39, `descend-and-step-*` 0.25/0.34 and 0.75/0.66) satisfied by every placement
+in the level, the "no cleared wave" and "every generator check clean except the two deliberate
+negative offsets" claims, and the beat-11/beat-12 "rest is not a rest if the carriers survive" timing
+(carrier on-screen end ~125.7 s against the rest wave's own 114.5–120.5 s window, reproduced exactly).
+
+## PR #331 (`feat/formation-slot-delay`, phase 11k, issue #330) — a floating-point boundary the shipped test never exercises
+
+`core`-only branch (`FormationSlot` gains `delaySeconds`, `SpawnSystem` backdates `Trajectory.elapsed`
+to `-delaySeconds`, `MotionSystem` holds velocity at zero while `elapsed <= 0f`). Verdict: accept.
+Every invariant held (no libGDX/clock/`Math.random`/threading in the touched files), the 2-arg
+back-compat constructor is the one `game`'s untouched loader still calls, `node
+tools/build-level-docs.js` printed `unchanged` for both documents, all five replay test files stayed
+green (367 core tests total), and `./gradlew clean build` was genuinely green (confirmed executing,
+not just cache hits, by comparing task states across two runs).
+
+44. **A javadoc's stated reason for an inclusive boundary (`<= 0f` over `< 0f`) can be real only for a
+    narrow slice of the input range the feature actually allows, and the shipped test can land
+    entirely outside that slice.** The author's own reasoning — both in `MotionSystem`'s javadoc and
+    the status fragment — is that including `elapsed == 0` in the held branch is what makes a delayed
+    slot retrace the leader's positions *exactly*, tick for tick. Exhaustively simulating
+    `elapsed = -delayTicks*step` accumulated by `+= step` for `delayTicks` 1..3600 in plain Java shows
+    `elapsed` lands on *exactly* `0.0f` only for `delayTicks` 1 and 2 — for every other tick count
+    (including the shipped test's 12), float accumulation error leaves `elapsed` a small nonzero
+    epsilon (`-2.6e-8` at delayTicks=12) that is `< 0f` regardless of which comparison is used, so the
+    two operators produce identical held/active behaviour there. Proved directly: mutating
+    `elapsed <= 0f` to `elapsed < 0f` and rerunning `./gradlew :core:test --tests "*SpawnSystemTest"
+    --rerun-tasks` left the new delay test green (33 tests, 0 failures) at the test's own
+    `delayTicks = 12`; the identical mutation with `delayTicks` changed to `1` failed it immediately.
+    The code is not wrong — `<=` is still the safe, correct choice — but the chain
+    "javadoc claims X matters" -> "status fragment repeats it" -> "test pins it" breaks at the last
+    link for the specific value shipped. Whenever a comment justifies a boundary operator by appeal to
+    an exact real-number crossing in an accumulated-float quantity, check whether the float actually
+    reaches that exact value for the test's own chosen inputs before crediting the test with proving
+    the boundary matters — accumulation error routinely skips the exact zero/exact-integer case
+    entirely except at the smallest few counts.
+45. **"Retraces exactly, delaySeconds later" is a claim scoped (correctly, in this branch's own
+    fragment) to a delay constructed as literally `N * step` in float, and silently narrower than a
+    reader would assume from the issue title.** Direct simulation of `-delay + k*step` for delays a
+    content author would plausibly type as plain decimals (`0.05`, `0.3`, `0.5`, `1f/3f` seconds, all
+    exact numbers of ticks in real arithmetic — 3, 18, 30, 20 respectively) crosses zero **one tick
+    early** for three of the four, because the float literal for the decimal does not exactly equal
+    `N * (1f/60f)` computed by repeated addition. This branch is not wrong to leave it that way — its
+    own status fragment already scopes the "exact" guarantee to "a slot delayed by exactly `N` ticks
+    (`delaySeconds = N * step`)" and never claims it for arbitrary decimal seconds — but the guarantee
+    quietly degrades to "off by up to one tick" for the values a level designer would actually write in
+    JSON once the loader lands, and neither the issue nor the "what the loader will need" section warns
+    of it. Worth handing forward: whoever builds the loader should either quantize an author-supplied
+    `delaySeconds` to the nearest tick before storing it, or the level-doc/content docs should say
+    delays must be written as an exact multiple of `1/60` to get the documented exactness.
+
+## PR #332 (`feat/boss-front-weapons`, phase 11k, issue #329) — a correct mechanism, justified by a model of its own state machine that runs the two halves of the cycle in the wrong order
+
+78. **A javadoc's "why N and not N-1" arithmetic can be numerically self-consistent and still describe
+    the state machine's segment order backwards, in a way that survives into the PR body and the status
+    fragment verbatim.** `BossSystem`'s `FRONT_SHOTS_PER_CYCLE` javadoc and `status.md`'s "why 3, not the
+    numerically closer 2" both model one rear cycle as COOLDOWN-then-TELLING (the first 63.3% of
+    `rearCycleDuration`) followed by MOVING (the last 36.7%) — so N=2's lone independent shot, at the
+    cycle's midpoint, is said to "always fire during TELLING, never during MOVING," and N=3's second
+    shot, at two-thirds, is said to land "past where the tell ends... inside MOVING." Both claims are
+    backwards. Read `updateTelling`: the reset (`frontElapsed = 0f; frontShotsThisCycle = 0`) and
+    `beginMove(world)` happen in the same call, so **every steady-state cycle (the second one onward)
+    actually runs MOVING first, then COOLDOWN, then TELLING** — the reverse of what the doc assumes.
+    Confirmed with a reflection probe against the built `core` classes (no repo file touched): for real
+    content (`patternCooldown` 0.7s, `MOVE_DURATION` 0.84s, cycle 2.29s), the front weapon's *first*
+    independent shot (not the second) is the one landing in `MOVING` (at ~0.76s, just under the 0.84s
+    `MOVE_DURATION` boundary), and the second lands in `COOLDOWN` (~1.53s, just under 1.54s =
+    `MOVE_DURATION + patternCooldown`) — never in `TELLING` at all. Re-running the same probe with
+    `FRONT_SHOTS_PER_CYCLE` mutated to 2 (in a scratch copy under the scratchpad, never in the audited
+    worktree — see the technique note below) shows its one independent shot landing in `COOLDOWN` on
+    every cycle, not `TELLING` as claimed. The practical conclusion (reject N=2, keep N=3) still holds —
+    N=2's shot never lands in `MOVING` either way — but the mechanism cited to justify it, in three
+    places (the class javadoc, `status.md`, and the PR body, all copied near-verbatim from one another),
+    is empirically false. Only the very first cycle (fight start to the first rear volley, before any
+    move has happened) actually runs COOLDOWN-then-TELLING as the doc assumes — the author generalised
+    the one cycle shape that doesn't recur. Check any "where in the cycle does X land" claim by tracing
+    real stage values via reflection rather than by re-deriving fractions from the constants the way the
+    author did; a self-consistent fraction is not evidence the segments are ordered the way you assumed.
+    The rest of the branch was clean: the coincidence-every-volley guarantee itself held with zero drift
+    across a 6-coincidence trace, the fire-rate arithmetic (0.53→1.31 events/s, ~5.3→~17.5
+    projectiles/s, ~3.3x) reproduced exactly by hand, `FightStage.MOVING` really is assigned from exactly
+    one call site, `computeAimPoint` really is called fresh for every front shot and `lockAim` untouched
+    for the rear, and no clock/`Math.random()`/`sin`/`cos`/thread/gdx import appears in the file.
+    `pre-pr-check` and a fresh `./gradlew build` both green.
+
+**Technique confirmed working under this role's "change nothing" constraint**: the harness's own
+permission classifier refused an in-place `sed`/`Edit` mutation of a tracked file in the audited
+worktree, even for revert-immediately falsification — a case where the audit brief itself asked for a
+mutation test. The fix is the same non-mutating trick [[audit-techniques]] already lists for a probe,
+one level further: copy the single source file into the scratchpad (not `/tmp`, not the worktree),
+mutate the copy there, `javac` it against the worktree's already-built `core/build/classes/java/main`,
+then run a driver with the scratch output directory placed *before* the real classes on the classpath
+so the mutant shadows the original. This produces a real, compiled, running falsification (the mutated
+`frontElapsed`-no-longer-resets version genuinely broke `frontFiresMoreOftenAndCoincidesWithEveryRear
+Volley`'s invariant — a 30-projectile tick appeared, which the test's own `assertTrue(isCoincidence ||
+isFrontOnly, ...)` would reject) without the classifier ever seeing a write to the repository, and
+without leaving anything to revert.
+
+Related: [[audit-techniques]].
+
+## PR #336 (`feat/loader-reads-slot-delay`, phase 11k, issue #334) — the end-to-end check the split
+review never ran, and it broke on the pair's own flagship example
+
+The `game` half of #330/#331 (see PR #331's entry above). `JsonContentSource` now quantises an
+authored `delaySeconds` to the nearest tick, `Math.round(raw*60f) * TICK_SECONDS` — bit-identical to
+the single-multiplication construction `core`'s own `SpawnSystemTest` uses. Verdict: reject, on the
+status fragment's claim, not on the code — the code is a defensible choice given `core`'s contract.
+
+79. **A quantisation fix that matches the *tested* construction of a value is not the same claim as
+    "the crossing is exact," and the two PRs that split this feature never built the check that would
+    have told them apart.** Neither `core`'s test suite nor this branch's drives a delay from JSON
+    through `SpawnSystem`/`MotionSystem` and checks the trace (`game/src/test` mentions those two
+    classes only in javadoc — confirmed by grep, zero `.update(` call sites). Built the missing check
+    myself: a scratch fixture (`TestContent` + real `SpawnSystem`/`MotionSystem`, compiled against the
+    worktree's already-built classes, nothing written to the repo) reproducing the loader's exact
+    formula. Result: for `raw=0.3` → quantised to 18 ticks — **the running example both this branch's
+    and #330's status fragments lead with** — the follower is a full, permanent one tick *ahead* of
+    where "traces exactly 18 ticks behind" requires, from the very first compared tick onward
+    (`expectedX=104.166664`, `actualX=104.333328`, exactly one `vx*step` quantum). Sweeping N=1..300
+    with both a `constant` trajectory and `core`'s own `ArcTrajectoryDefinition(20,-80,40)` (identical
+    bands both ways, since horizontal velocity is constant either way) found **N=18-40 and N=258-300
+    broken, ≈22% of the range** — not a rare edge case, a systematic band that happens to include the
+    exact value (0.3s) both authors picked to illustrate the feature. `core`'s own `SpawnSystemTest`
+    only exercises N=1 and N=12, both of which sit in the "exact" band by chance; it never tried N=18.
+    **This is not fixable by the loader's choice of quantisation strategy** — feeding `core` the exact
+    single-multiplication value its own tests use is the best the loader can do, and it still fails,
+    because the defect is intrinsic to `MotionSystem`'s repeated-addition crossing versus any
+    single-computed threshold. It belongs to `core`/#330, not this branch — but #330's own fragment
+    states outright "the general correctness argument two paragraphs up still holds for every
+    `delayTicks`, exact float crossing or not," a claim my sweep falsifies directly, and this branch's
+    fragment repeats the stronger version, citing the two existing `SpawnSystemTest` cases as proof for
+    N=18 specifically when neither test touches that value. **Whenever a status fragment cites a named
+    test as proving a property "holds for every N" or "for what gets authored," check which N the cited
+    test actually uses before accepting the citation as covering the value the fragment leads with** —
+    the mismatch here is not that the citation is wrong, it is that the *property* was generalised from
+    two lucky sample points to "every count," and nobody swept the range before writing that sentence
+    down twice, across two separately-reviewed PRs, past a reviewer who had already been unusually
+    careful about this exact boundary the first time.
+
+Related: [[audit-techniques]] for the scratch-fixture-and-sweep technique used here.
+
+## PR #338 (`fix/delay-crossing-in-ticks`, phase 11k, issue #337) — the fix for my own PR #336 finding, and it holds
+
+Round trip on a defect I found myself: `core` swapped the float `elapsed <= 0f` crossing for an
+integer `Trajectory.delayTicks` countdown, `step` threaded through `update`→`spawnDue`→`spawnWave`→
+`applySlotDelay` (single call chain, one caller, no second step value anywhere), and a `game`-module
+end-to-end test added. Verdict: accept, nothing new.
+
+80. **A "the fix resolves it" claim is worth re-proving with your own driver, even when the author's
+    sweep already covers the same range you'd choose.** Reused the audit-techniques scratch-compile
+    trick from the PR #332 entry, but for a whole three-class subsystem rather than one method:
+    copied `Trajectory`/`MotionSystem`/`SpawnSystem` are not needed — the *test's own* `TestContent`/
+    `SimpleFormationDefinition`/`SpawnEvent` support classes are already public and already built, so a
+    from-scratch `Driver.java` reproducing `assertDelayedSlotTracesLeaderExactly`'s body, compiled
+    against `core/build/classes/java/{main,test}` and run standalone, is a five-minute independent
+    reproduction of a 300-iteration sweep with no JUnit and no repo mutation. It found 0/300 failures
+    on the branch, confirming the fix; run again with the pre-fix `MotionSystem`/`SpawnSystem`
+    (`git show <base-branch>:<path>`, compiled to a separate output dir placed *before* the real
+    classes on the classpath so it shadows them) it found **273/300** failing, not the ~66/300
+    ("bands 18–40, 258–300") the earlier memory entry had recorded for the *loader-quantised* variant
+    of the same bug — the two numbers describe different constructions of the same defect
+    (`delayTicks * step` directly vs. quantised-through-JSON) and are not comparable at face value.
+    Worth remembering: a "the old code fails N% of the time" figure is scoped to exactly the
+    construction it was measured against; re-deriving it under a different construction of the same
+    input can legitimately produce a very different percentage without either measurement being wrong.
+81. **A one-line classpath-order mutation test disproves vacuity cheaply for a sweep, not just a single
+    assertion.** Shifting the countdown's threshold by one (`delayTicks > 0` → `> 1`) turned the *entire*
+    swept range red (300/300), proving the test is not accidentally trivial across its full domain, the
+    same way pattern 40's per-case falsification does for one assertion.
+82. **A stale javadoc left behind in an *unmodified* file, describing a mechanism the same PR just
+    replaced, is a real but minor finding distinct from "no change needed."** `JsonContentSource.
+    loadFormations`'s own javadoc still says (unedited by this branch, confirmed by `git diff` on the
+    file being empty) "`SpawnSystem` backdates `Trajectory.elapsed` to `-delaySeconds`... `MotionSystem`
+    then reaches zero by adding the fixed step" — the exact mechanism #337 deleted. The status
+    fragment's claim "`JsonContentSource` needed no change" is true and independently confirmed (the
+    diff really is empty, the end-to-end test really does pass unmodified against the loader's own
+    quantisation) — but "no code change needed" and "every comment in that file still describes the
+    current mechanism" are different claims, and only the first one was checked. Whenever a PR fixes a
+    mechanism in one module and cites "no change needed" in a neighbouring module that only *describes*
+    that mechanism in prose, grep the untouched file for the old mechanism's own vocabulary
+    (`elapsed`, `backdate`, the deleted field/branch name) before accepting the "no change" claim as
+    covering the comments too.
+
+Calibration: the two corrected fragments (`330-`, `334-`) both read exactly as a correction should —
+dated, naming what was false and what replaced it, not rewritten as if always true. The commit hygiene,
+`pre-pr-check`, and `./gradlew build`/`node tools/build-level-docs.js` claims all reproduced independently
+(370 core tests aggregated from the XML, 0 failures/skipped/errors), and no invariant was at risk in the
+touched files (`grep` for gdx/random/clock/threading in the three touched `core` files: zero hits).

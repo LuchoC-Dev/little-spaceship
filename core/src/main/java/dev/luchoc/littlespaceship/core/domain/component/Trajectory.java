@@ -23,14 +23,34 @@ package dev.luchoc.littlespaceship.core.domain.component;
  * identical to the one-time snapshot that shipped before this component was wired in. Issue #164
  * wires this evaluation into {@code MotionSystem.advanceTrajectories}; before that, this component
  * only accumulated {@link #elapsed} and nothing read {@link #trajectoryId}.
+ *
+ * <p>Issue #330 originally reused {@link #elapsed} for a delayed formation slot by starting it
+ * negative and holding the entity still while {@code elapsed <= 0f}. <b>Issue #337 correction:</b>
+ * that compared a value reached by a single multiplication ({@code delayTicks * step}, however it was
+ * constructed) against a value reached by repeated addition ({@code elapsed += step}, once per tick)
+ * — two float paths to the same target that do not generally agree bit-for-bit, so the crossing
+ * landed one tick early for roughly a fifth of all tick counts, swept over 1..300. {@link
+ * #delayTicks} replaces that: an integer countdown, decremented once per tick by {@code MotionSystem},
+ * with no float comparison anywhere near the crossing. {@link #elapsed} now always starts at, and is
+ * held at, {@code 0} for as long as {@link #delayTicks} is positive — it never goes negative — and
+ * only begins accumulating once the countdown reaches zero, at which point its first increment lands
+ * on exactly the same value an undelayed entity's own first increment would.
  */
 public final class Trajectory {
 
     /** Content id of the {@link dev.luchoc.littlespaceship.core.port.TrajectoryDefinition} followed. */
     public String trajectoryId;
 
-    /** Seconds elapsed since this entity was placed, accumulated from the fixed step. */
+    /** Seconds elapsed since this entity started following its shape, accumulated from the fixed step. */
     public float elapsed;
+
+    /**
+     * Whole ticks left to hold this entity still before {@link #elapsed} starts accumulating —
+     * issue #330's delayed formation slot, corrected by issue #337 to count ticks rather than compare
+     * floats at the crossing. {@code 0} for every entity with no delay, which is every trajectory that
+     * predates #330.
+     */
+    public int delayTicks;
 
     /**
      * @param trajectoryId content id of the movement shape this entity follows, never null or empty
@@ -41,5 +61,6 @@ public final class Trajectory {
         }
         this.trajectoryId = trajectoryId;
         this.elapsed = 0f;
+        this.delayTicks = 0;
     }
 }

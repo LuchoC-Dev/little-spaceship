@@ -77,6 +77,40 @@ public final class MotionSystem implements GameSystem {
      * tick's integration already uses this tick's velocity. An entity with a {@link Trajectory} but
      * no {@link Motion} is left alone: nothing to write the evaluated velocity into, and nothing in
      * the catalogue attaches one without the other.
+     *
+     * <p><b>Issue #330 — a formation slot delayed in time.</b> {@code SpawnSystem} sets a delayed
+     * slot's {@link Trajectory#delayTicks} to the number of ticks it should hold still at spawn.
+     * While {@code delayTicks} is still positive, the entity is <em>present</em> (it has a {@code
+     * Transform}, a {@code Collider}, a {@code WaveOrigin}: it can be hit, it counts against a
+     * {@code cleared} wave, the safety box can see it) but holds perfectly still, {@link Motion#vx}
+     * and {@link Motion#vy} pinned to zero, and {@code delayTicks} decrements by exactly one — never
+     * touching {@link Trajectory#elapsed}, which stays at its starting {@code 0} for as long as the
+     * countdown runs. That is the decision this issue asked to be made and pinned: a delayed slot
+     * exists from tick zero, it simply does not move yet. The alternative — not existing until the
+     * delay elapses — would need a second spawn-scheduling mechanism alongside {@code SpawnSystem}'s
+     * own wave timeline, and invariant 6's "no abstraction without a case" refuses exactly that for
+     * the one column this issue asks for.
+     *
+     * <p><b>Issue #337 correction.</b> The original design compared {@link Trajectory#elapsed}
+     * against zero to decide the crossing, backdating it to {@code -delaySeconds} and holding the
+     * entity still while {@code elapsed <= 0f}. That held-branch predicate was a float comparison
+     * between two different arithmetic paths to the same target value — the delay itself, formed by a
+     * single multiplication, against {@code elapsed}'s own repeated addition of {@code step} — and
+     * those do not generally agree bit-for-bit. Swept over delays of 1..300 ticks, about a fifth of
+     * them (the bands 18–40 and 258–300) crossed zero one tick earlier than the delay actually called
+     * for, permanently misaligning the traced path. Counting down an integer {@code delayTicks}
+     * instead removes the float entirely from the decision: the countdown reaches exactly zero after
+     * exactly {@code delayTicks} ticks, with no accumulation and no comparison against a target that
+     * could itself carry rounding error.
+     *
+     * <p>Once {@code delayTicks} reaches zero, {@code elapsed} begins accumulating from {@code 0} the
+     * same way an undelayed entity's always has, so a slot delayed by exactly {@code N} ticks
+     * reproduces, from tick {@code N} onward, the identical sequence of velocity evaluations — and
+     * therefore the identical sequence of Euler integration steps in {@link #integrate} — that the
+     * undelayed slot produced from tick zero. A slot with no delay is entirely unaffected: its {@code
+     * delayTicks} starts at {@code 0}, so this branch never fires for it and {@code elapsed}
+     * accumulates on the very first tick exactly as it always did — which is what keeps every
+     * formation that predates this issue byte-for-byte identical.
      */
     private static void advanceTrajectories(World world, float step) {
         ComponentStore<Trajectory> trajectories = world.trajectories();
@@ -85,8 +119,16 @@ public final class MotionSystem implements GameSystem {
         for (int i = 0; i < trajectories.size(); i++) {
             int entity = trajectories.entityAt(i);
             Trajectory trajectory = trajectories.valueAt(i);
-            trajectory.elapsed += step;
             Motion motion = motions.get(entity);
+            if (trajectory.delayTicks > 0) {
+                trajectory.delayTicks--;
+                if (motion != null) {
+                    motion.vx = 0f;
+                    motion.vy = 0f;
+                }
+                continue;
+            }
+            trajectory.elapsed += step;
             if (motion == null) {
                 continue;
             }

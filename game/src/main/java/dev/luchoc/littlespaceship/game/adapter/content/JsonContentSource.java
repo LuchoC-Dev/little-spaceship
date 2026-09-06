@@ -66,6 +66,15 @@ public final class JsonContentSource implements ContentSource {
      */
     private static final float PLAYFIELD_HEIGHT = 270f;
 
+    /**
+     * The fixed step, in seconds — duplicated from {@code core.application.GameLoop#STEP} for the
+     * same reason {@link #PLAYFIELD_WIDTH} is. Used only to quantise a formation slot's authored
+     * {@code delaySeconds} to the nearest whole tick before it reaches {@link FormationSlot} — see
+     * {@link #loadFormations} for why an un-quantised decimal cannot be trusted to reproduce the tick
+     * count a designer actually typed, once {@code core} accumulates this same step onto it.
+     */
+    private static final float TICK_SECONDS = 1f / 60f;
+
     private final BalanceValues balance;
     private final Map<String, EnemyDefinition> enemies = new HashMap<>();
     private final Map<String, TrajectoryDefinition> trajectories = new HashMap<>();
@@ -579,15 +588,48 @@ public final class JsonContentSource implements ContentSource {
         }
     }
 
+    /**
+     * Reads {@code formations.json}. A slot's {@code "delaySeconds"} (issue #330/#334) is optional
+     * and defaults to {@code 0} — every formation shipped before this issue has none, and must load
+     * to the identical {@link FormationSlot} it always did.
+     *
+     * <p>A present value is quantised to the nearest whole tick, {@code Math.round(delaySeconds *
+     * 60f) * TICK_SECONDS}, before it reaches {@link FormationSlot}. What that buys is that the
+     * seconds a designer types are only ever a label for a tick count: {@code 0.3}, {@code 0.29} and
+     * {@code 0.305} all mean eighteen ticks, and the ambiguity is resolved here, once, at load,
+     * rather than in whatever arithmetic consumes it later.
+     *
+     * <p><b>Corrected 06/09/2026, issue #337.</b> This javadoc used to justify the quantisation by
+     * describing how {@code core} crossed from waiting to moving — {@code SpawnSystem} backdating
+     * {@code Trajectory.elapsed} to {@code -delaySeconds} in one assignment, {@code MotionSystem}
+     * reaching zero by adding the step once per tick, and the two not agreeing bit-for-bit. **That
+     * mechanism no longer exists**: #337 replaced the float crossing with an integer {@code
+     * delayTicks} countdown, because quantising here did not save it — the mismatch was inside
+     * {@code core} and a delayed slot still activated a tick early across a wide band of tick
+     * counts. The quantisation above was right and needed no change, which is why this file's code
+     * has an empty diff on that fix; only this explanation of it was stale. Kept in seconds rather
+     * than a {@code "delayTicks"} key so it stays consistent with every other timestamp this content
+     * authors in seconds ({@code SpawnEvent.at}, a pickup's {@code at}).
+     */
     private void loadFormations(JsonReader reader, FileHandle file) {
         inFile(file, () -> {
             for (JsonValue entry : reader.parse(file).get("formations")) {
+                String id = entry.getString("id");
                 List<FormationSlot> slots = new ArrayList<>();
                 for (JsonValue slot : entry.get("slots")) {
-                    slots.add(new FormationSlot(slot.getFloat("offsetX"), slot.getFloat("offsetY")));
+                    requireOnlyKeys(slot, "formation '" + id + "' slot", "offsetX", "offsetY",
+                        "delaySeconds");
+                    float rawDelaySeconds = slot.getFloat("delaySeconds", 0f);
+                    float delaySeconds = Math.round(rawDelaySeconds * 60f) * TICK_SECONDS;
+                    try {
+                        slots.add(new FormationSlot(
+                            slot.getFloat("offsetX"), slot.getFloat("offsetY"), delaySeconds));
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalArgumentException(
+                            "formation '" + id + "': " + e.getMessage(), e);
+                    }
                 }
-                FormationDefinition formation = new SimpleFormationDefinition(
-                    entry.getString("id"), slots);
+                FormationDefinition formation = new SimpleFormationDefinition(id, slots);
                 formations.put(formation.id(), formation);
             }
             return null;

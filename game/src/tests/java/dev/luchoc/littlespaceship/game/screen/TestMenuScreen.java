@@ -53,7 +53,7 @@ final class TestMenuScreen extends BaseUiScreen {
         content.add(scrollPane).expand().fill();
 
         List<KeyboardFocusable> focusables = new ArrayList<>();
-        for (TestScenarios.Scenario scenario : TestScenarios.ALL) {
+        for (TestScenarios.Scenario scenario : TestScenarios.all()) {
             addScrollingEntry(entries, scrollPane, game, scenario.label(), () -> {
                 game.overrideLevelId(scenario.levelId());
                 game.setScreen(new PlayScreen(game));
