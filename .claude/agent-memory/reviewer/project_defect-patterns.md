@@ -1888,3 +1888,44 @@ isFrontOnly, ...)` would reject) without the classifier ever seeing a write to t
 without leaving anything to revert.
 
 Related: [[audit-techniques]].
+
+## PR #336 (`feat/loader-reads-slot-delay`, phase 11k, issue #334) — the end-to-end check the split
+review never ran, and it broke on the pair's own flagship example
+
+The `game` half of #330/#331 (see PR #331's entry above). `JsonContentSource` now quantises an
+authored `delaySeconds` to the nearest tick, `Math.round(raw*60f) * TICK_SECONDS` — bit-identical to
+the single-multiplication construction `core`'s own `SpawnSystemTest` uses. Verdict: reject, on the
+status fragment's claim, not on the code — the code is a defensible choice given `core`'s contract.
+
+79. **A quantisation fix that matches the *tested* construction of a value is not the same claim as
+    "the crossing is exact," and the two PRs that split this feature never built the check that would
+    have told them apart.** Neither `core`'s test suite nor this branch's drives a delay from JSON
+    through `SpawnSystem`/`MotionSystem` and checks the trace (`game/src/test` mentions those two
+    classes only in javadoc — confirmed by grep, zero `.update(` call sites). Built the missing check
+    myself: a scratch fixture (`TestContent` + real `SpawnSystem`/`MotionSystem`, compiled against the
+    worktree's already-built classes, nothing written to the repo) reproducing the loader's exact
+    formula. Result: for `raw=0.3` → quantised to 18 ticks — **the running example both this branch's
+    and #330's status fragments lead with** — the follower is a full, permanent one tick *ahead* of
+    where "traces exactly 18 ticks behind" requires, from the very first compared tick onward
+    (`expectedX=104.166664`, `actualX=104.333328`, exactly one `vx*step` quantum). Sweeping N=1..300
+    with both a `constant` trajectory and `core`'s own `ArcTrajectoryDefinition(20,-80,40)` (identical
+    bands both ways, since horizontal velocity is constant either way) found **N=18-40 and N=258-300
+    broken, ≈22% of the range** — not a rare edge case, a systematic band that happens to include the
+    exact value (0.3s) both authors picked to illustrate the feature. `core`'s own `SpawnSystemTest`
+    only exercises N=1 and N=12, both of which sit in the "exact" band by chance; it never tried N=18.
+    **This is not fixable by the loader's choice of quantisation strategy** — feeding `core` the exact
+    single-multiplication value its own tests use is the best the loader can do, and it still fails,
+    because the defect is intrinsic to `MotionSystem`'s repeated-addition crossing versus any
+    single-computed threshold. It belongs to `core`/#330, not this branch — but #330's own fragment
+    states outright "the general correctness argument two paragraphs up still holds for every
+    `delayTicks`, exact float crossing or not," a claim my sweep falsifies directly, and this branch's
+    fragment repeats the stronger version, citing the two existing `SpawnSystemTest` cases as proof for
+    N=18 specifically when neither test touches that value. **Whenever a status fragment cites a named
+    test as proving a property "holds for every N" or "for what gets authored," check which N the cited
+    test actually uses before accepting the citation as covering the value the fragment leads with** —
+    the mismatch here is not that the citation is wrong, it is that the *property* was generalised from
+    two lucky sample points to "every count," and nobody swept the range before writing that sentence
+    down twice, across two separately-reviewed PRs, past a reviewer who had already been unusually
+    careful about this exact boundary the first time.
+
+Related: [[audit-techniques]] for the scratch-fixture-and-sweep technique used here.
