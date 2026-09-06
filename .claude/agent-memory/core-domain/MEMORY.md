@@ -21,3 +21,4 @@
 - [Path trajectory and mirroring](project_path-trajectory-and-mirroring.md) — bounding as the dissolve mechanism, mirroring pushed to content-load composition with no new sealed permit, the single last-segment check answering rule 3.
 - [Pickup fall and lifetime](project_pickup-fall-and-lifetime.md) — LifetimeSystem silently excluded PICKUP from expiry, MotionSystem.integrate needed no change, default-method trade repeats on BalanceValues.
 - [Placed pickup design](project_placed-pickup-design.md) — pickups() lives on WaveDefinition not a level list, no-WaveOrigin avoids stalling a Cleared wave, package-private reuse across SpawnSystem/CleanupSystem, "at load" usually means spawn-time in this codebase.
+- [Boss star movement](project_boss-star-movement.md) — serializing fire/move via state-machine dispatch, fixing a stale immobility test by shrinking its tick budget, package-private literals for test visibility, reusing an existing timer as the "pause."
