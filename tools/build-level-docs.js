@@ -563,21 +563,41 @@ function pathSweep(traj, radius, at) {
 
 /**
  * How long an `arc` spends inside the playfield. It spawns its own radius above the top edge and
- * descends; `ay` is positive, so it turns at `-vy / ay` and climbs back. Two ways out, and the first
- * one that happens is the answer:
+ * descends. What happens next depends on the sign of `ay` — `ArcTrajectoryDefinition`'s own javadoc
+ * is explicit that all three are legitimate, and none is clamped or rejected here:
  *
- * - **down**, past the bottom edge — the positive root of `ay/2 t^2 + vy t + (270 + 2r) = 0`, which
- *   has none when the apex is shallower than the playfield, i.e. when the shape turns before reaching
- *   the bottom;
- * - **up**, back out of the top it came from, at `-2 vy / ay` by symmetry.
+ * - **`ay > 0`** turns at `-vy / ay` and climbs back. Two ways out, and the first one that happens is
+ *   the answer: **down**, past the bottom edge — the positive root of `ay/2 t^2 + vy t + (270 + 2r) =
+ *   0`, which has none when the apex is shallower than the playfield, i.e. when the shape turns before
+ *   reaching the bottom; or **up**, back out of the top it came from, at `-2 vy / ay` by symmetry.
+ * - **`ay < 0` steepens instead of turning** — `vy + ay*t` only grows more negative, so the shape never
+ *   climbs back and the "up" root above is not a second exit, it is not an exit at all. The same
+ *   quadratic's down root is still exactly the time it reaches the bottom (issue #322): with `a = ay/2
+ *   < 0`, `-4a` is positive, so the discriminant `vy^2 - 4a*(270+2r)` is `vy^2` plus a positive term
+ *   and is never negative — this shape always has a down root, and it is the only one that means
+ *   anything.
+ * - **`ay = 0` degenerates to a straight run at the fixed `vy`** — `ArcTrajectoryDefinition`'s own
+ *   javadoc calls this "a coincidence of the maths, not a reason to route a constant shape through
+ *   this record instead", so it is content the catalogue accepts rather than a mistake to flag here.
+ *   The quadratic itself divides by zero (`a = 0`), so this is solved as the linear equation it
+ *   actually is: `target / |vy|`, mirroring how `screenTime` already treats a `constant`'s `vy`
+ *   direction-agnostically. `vy = 0` alongside it means the shape never moves at all, so there is no
+ *   playfield time to give — `screenTime` returns `null` for that same case on a true `constant`.
  *
  * This is the window in which being off screen horizontally is what matters, which is why it is the
  * playfield rather than the safety box `LifetimeSystem` finally removes the entity at.
  */
 function arcPlayfieldTime(traj, radius) {
-  const up = (-2 * traj.vy) / traj.ay;
+  const target = CODE.playfieldHeight.value + 2 * radius;
+
+  if (traj.ay === 0) return traj.vy === 0 ? null : target / Math.abs(traj.vy);
+
   const a = traj.ay / 2;
-  const disc = traj.vy * traj.vy - 4 * a * (CODE.playfieldHeight.value + 2 * radius);
+  const disc = traj.vy * traj.vy - 4 * a * target;
+
+  if (traj.ay < 0) return (-traj.vy - Math.sqrt(disc)) / (2 * a);
+
+  const up = (-2 * traj.vy) / traj.ay;
   if (disc >= 0) {
     const down = (-traj.vy - Math.sqrt(disc)) / (2 * a);
     if (down > 0) return Math.min(down, up);
@@ -1008,14 +1028,23 @@ function buildLevel(levelFile, content) {
       continue;
     }
     const arc = t.kind === 'arc';
+    // A turn and an apex are properties of a shape that pulls out of its dive — true only for
+    // `ay > 0`. `ay <= 0` never turns (it either steepens or holds a straight `vy` forever, issue
+    // #322), so printing `-vy/ay` or `vy^2/(2*ay)` there would be a negative time or an inverted
+    // apex: a number that looks plausible and is not, exactly the failure mode this table exists to
+    // avoid. Say so in words instead.
+    const turnsAfter = arc && t.ay > 0 ? `${s1(-t.vy / t.ay)} s`
+      : arc ? 'no turn — never pulls out' : '—';
+    const apexDepth = arc && t.ay > 0 ? `${s1((t.vy * t.vy) / (2 * t.ay))} below spawn`
+      : arc ? 'no apex' : '—';
     shapeRows.push([
       `\`${id}\``,
       arc ? '`arc`' : '`constant`',
       s1(t.vx),
       s1(t.vy),
       arc ? s1(t.ay) : '—',
-      arc ? `${s1(-t.vy / t.ay)} s` : '—',
-      arc ? `${s1((t.vy * t.vy) / (2 * t.ay))} below spawn` : '—',
+      turnsAfter,
+      apexDepth,
       '—',
     ]);
   }
