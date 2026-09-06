@@ -37,3 +37,4 @@
 - [pathSweep leading-vs-trailing edge trap](project_pathsweep-leading-vs-trailing-edge.md) — #314: which footprint edge a boundary check must use, derived from LifetimeSystem, not guessed.
 - [Absolute path atX check](project_absolute-path-atx-check.md) — #300: entryX reflects (not negates) under mirrorOf; tolerance derived from authoring-decimal-precision, not a bare epsilon; use the off-centre fixture to tell reflection from negation.
 - [Arc negative-ay fix and literal "unchanged" acceptance bar](project_arc-negative-ay-and-unchanged-literalness.md) — #322: only ay<0/0 branch was wrong; a watch-out saying "must print unchanged" is byte-literal, not just numbers-preserved.
+- [Formation slot delay quantisation](project_formation-slot-delay-quantisation.md) — #334: quantise-on-parse over a tick-count key; a drift table's direction is easy to invert from memory; no per-slot requireOnlyKeys existed before this.
