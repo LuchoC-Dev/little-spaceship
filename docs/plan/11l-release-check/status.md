@@ -1,6 +1,7 @@
 # Phase 11l — the check that fails every release · status
 
-**State:** **complete on the branch, open as a pull request against `dev`.**
+**State:** **done, and on `dev`.** Merged in [#348](https://github.com/LuchoC-Dev/little-spaceship/pull/348)
+on 06/09/2026, with the project owner's direct approval.
 **Updated:** 06/09/2026
 
 One defect, found by doing the thing it breaks.
