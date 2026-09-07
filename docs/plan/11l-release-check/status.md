@@ -54,7 +54,15 @@ release before it failed earlier for a different reason. Each fix uncovers the n
 The last is the rule this exemption is carved out of, and it was produced by committing a second
 fragment, running the check and resetting it away.
 
-## A coordinator error, recorded rather than corrected quietly
+## Two coordinator errors, recorded rather than corrected quietly
+
+**This file's first version was committed directly on the phase branch**, which the regime forbids —
+the coordinator reaches a phase branch by merging, never by committing. **Phase 11g and phase 11h
+each recorded the same error**, on 02/09 and 03/09, and this is the third time. No tool catches it:
+`pre-pr-check` runs on a branch about to open a pull request, and a commit straight onto the phase
+branch never opens one. That is the whole difference between a rule a tool enforces and a rule
+someone has to remember, and this one is still the second kind. The commit stands — history is not
+rewritten here — and this paragraph reached the file the way it should have in the first place.
 
 **The fix was first opened as a `fix/` branch straight against `dev`**, which the regime forbids —
 only a phase branch or a documentation branch opens against `dev`. `pr-check` caught it
