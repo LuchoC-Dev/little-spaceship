@@ -58,8 +58,25 @@ echo
 
 # 1. main and dev are not worked on directly. main only ever receives a pull
 #    request from dev, and that merge belongs to the project owner.
+#
+#    The one exception is that merge itself: a release IS dev, as a head, against
+#    main. Added on 31/08/2026 for issue #177, which found this check's other half
+#    failing every release — and this half was worse, because it had never been
+#    observed failing at all: pr-check.yml exits at its first step, so the step
+#    that runs this script never ran on #176. Reproduced by hand on the branch
+#    that fixed it, standing on dev: `tools/pre-pr-check --base origin/main
+#    --branch dev --no-build` printed "the work is on 'dev' itself".
+#
+#    Narrow on purpose. An agent that committed on dev and ran this check the
+#    normal way — with no --base, so the base is dev — still fails, and so does
+#    dev against anything that is not main.
 case "$BRANCH" in
-  main|dev) fail "the work is on '$BRANCH' itself. Branch first; main and dev are never worked on directly." ;;
+  dev)
+    case "$BASE" in
+      main|origin/main) pass "branch name: dev against main — the release, and the one time dev is a head" ;;
+      *) fail "the work is on 'dev' itself. Branch first; main and dev are never worked on directly." ;;
+    esac ;;
+  main) fail "the work is on '$BRANCH' itself. Branch first; main and dev are never worked on directly." ;;
   phase/*) pass "branch name: phase branch, so it opens its pull request against dev" ;;
   */*) pass "branch name: $BRANCH" ;;
   *) fail "branch '$BRANCH' is not 'type/description'" ;;
@@ -222,6 +239,21 @@ if [ "$NON_DOCS" -gt 0 ]; then
   FRAGMENT_COUNT="$(printf '%s
 ' "$FRAGMENTS" | grep -c . || true)"
   case "$BRANCH" in
+    # The release carries every fragment of every phase in it — sixty, the first
+    # time this was observed. "Exactly one" is the sub-branch's rule and this is
+    # not a sub-branch. Narrow on purpose, exactly like the branch-name check
+    # above: dev against anything that is not main still falls through to the
+    # general case and fails. Added on 06/09/2026 for issue #345, which is the
+    # half of #177 that fix did not reach — this check had never been observed on
+    # a release at all, because the release before it failed earlier for a
+    # different reason.
+    dev)
+      case "$BASE" in
+        main|origin/main)
+          pass "$FRAGMENT_COUNT status fragment(s), one per task of every phase in this release" ;;
+        *)
+          fail "the work is on 'dev' itself, so its fragments cannot be judged" ;;
+      esac ;;
     # A phase branch aggregates every task in the phase, so it carries one
     # fragment per task. "Exactly one" is the sub-branch's rule, not this one.
     # A named category, not an escape hatch anyone can claim.

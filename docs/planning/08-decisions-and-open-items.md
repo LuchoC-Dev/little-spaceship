@@ -257,6 +257,255 @@ of `docs/plan/10c-architecture-review/decision.md`. **Not built:** nothing below
   is a written design or a shipped need, not an expectation."* The standard did not change when the
   MVP shipped; only the sentence's subject did.
 
+### Level 1 played, 01/09/2026
+
+Decided by the project owner after playing phase 11e's candidate on the desktop target. The session
+itself is recorded in `docs/plan/11e-level-one-redesigned/status/201-play-session.md`; only what it
+decided is here.
+
+- **Level 1 is fourteen beats, and twelve of them carry a wave.** **This reopens phase 11e's own
+  acceptance criterion**, which read *"Level 1 is fourteen waves, one per beat"*. The owner played the
+  candidate and found enemies at the very start and enemies still arriving as the boss entered, and
+  called both wrong. Beat 1, the audiovisual introduction, and beat 14, the boss, therefore carry no
+  wave of their own — which is what `docs/plan/11c-movement-shapes/shape-catalogue.md`'s original beat
+  map had already said for those two beats before 11e began. `assets/data/waves.json` cannot express
+  the alternative: `JsonContentSource.loadWaves` rejects a wave with no spawns, so a beat that occupies
+  time and spawns nothing has no representation. **A beat is a unit of design; a wave is a unit of
+  content, and the two do not have to be one-to-one.**
+- **Enemy health comes down across the board, one session after it went up.** `enemy-basic` 30 to 20,
+  `enemy-light` loses its `health` component entirely, `enemy-shooter` 40 to 30, `enemy-tank` 300 to
+  200, `enemy-carrier` 1000 to 700. The owner's report: the basic took three shots and the level was
+  hard until the first weapon upgrade; after it, the difficulty was high **but acceptable for the
+  genre**, and that half is deliberately untouched. `enemy-light` loses the component rather than
+  taking a low number, because `DamageSystem` makes any value at or below `weaponProjectileDamage`
+  behave exactly like no component at all.
+- **The boss's design is right and only its projectile speed moves.** The owner called the fight's
+  difficulty *ideal* — neither too hard nor too easy — one session after the same boss was diagnosed as
+  trivially beatable from screen centre. `spreadProjectileSpeed` 95 to 85 and `sweepProjectileSpeed`
+  140 to 125, and nothing else: the aim locked at tell-start, the tell itself, `patternCooldown 0.7`,
+  the part health and the entrance all stand. **The 21/08 decision holds** — one phase, two alternating
+  patterns, a clear tell.
+- **The three-minute target from 27/08 is met and stays met.** The owner's verdict on the length was
+  that the first level is right as played. The number is not restated here as a figure, because the
+  rule since 22/08 is that it is fixed by playing; the figure lives in the level and in the session
+  record.
+
+**Still open, and deliberately.** Whether `enemy-basic` reads as firing less often than
+`enemy-shooter` was answered **"se nota poco"** — it is hinted at and not clear — and it is recorded
+that way rather than resolved. Whether the boss's spread and sweep still read as two distinct patterns
+now that both fan around an aimed direction was not answered in this session and remains open.
+
+### In-game options, 01/09/2026
+
+Decided while closing [#42](https://github.com/LuchoC-Dev/little-spaceship/issues/42), found by
+playing the deployed build on 25/08/2026: the pause panel offered only RESUME and QUIT TO MENU, so
+changing volume mid-run meant abandoning it. This changes what section "Pause" of
+`02-mvp-functional-spec.md` says the pause panel offers.
+
+- **The pause panel gains an OPTIONS entry, and it opens an inline panel rebuilt in place inside
+  `PlayScreen`'s own pause `Stage`, not the existing `OptionsScreen`.** `OptionsScreen` is a full
+  `Screen`; showing it over a paused run would mean either running two stages at once or replacing
+  `PlayScreen` outright, and `LittleSpaceshipGame#setScreen` disposes the outgoing screen the moment a
+  new one is set — the same reason `OptionsScreen`'s own BACK button already takes a `Supplier<Screen>`
+  rather than a screen instance. Replacing `PlayScreen` to show a slider would tear down the run's
+  `Simulation` to change a number. The pause panel's `Table` swaps its own children between the
+  RESUME/OPTIONS/QUIT state and the volume state instead, so the playfield stays frozen, the pause
+  `Stage`'s pointer-lock and input-processor state are untouched, and there is nothing to restore on
+  the way back.
+- **Only master, music and effects volume are exposed in-game.** Issue #42 names volume as the one
+  setting that costs a run to reach; nothing else was asked for. Mouse control is excluded because it
+  changes what `InputAdapter#sample` reads while a live pointer-lock state is in effect, which is a
+  different, riskier claim than a volume slider and not the one #42 makes. Credits and licences are
+  excluded because they have no relationship to a paused run and are already one click from the main
+  menu. Both stay exactly where `OptionsScreen` already puts them.
+
+Implemented in `game/src/main/java/dev/luchoc/littlespaceship/game/screen/PlayScreen.java`.
+
+### Menu and screens, 01/09/2026
+
+Decided by the project owner while closing [#40](https://github.com/LuchoC-Dev/little-spaceship/issues/40),
+found by playing the deployed build on 25/08/2026.
+
+- **On the web target, QUIT keeps its slot and means something else: it opens a farewell screen with a
+  way back to the menu.** `game/screen/MenuScreen.java` branches on
+  `Gdx.app.getType() == ApplicationType.WebGL`, and the screen is
+  `game/screen/FarewellScreen.java`, modelled on `CreditsScreen`. **On desktop QUIT still exits**, and
+  the entry, its label and its position are identical on both targets.
+
+  `MenuScreen` wired QUIT to `Gdx.app::exit`, which closes the window on desktop and **can do nothing
+  in a browser**: JavaScript may not close a tab it did not open. `02-mvp-functional-spec.md` asks for
+  Play/Options/Quit and was written for a desktop game, so this changes what that section means rather
+  than correcting a mistake in it.
+
+  Two alternatives were put to the project owner and refused: hiding the entry on web, which leaves
+  the main menu different on each target for a reason the player cannot see; and repurposing the slot
+  as a fullscreen toggle, which stops being a meaning for QUIT and becomes a different button.
+
+  **The farewell screen carries no score, deliberately.** QUIT lives on the main menu, where no run is
+  in progress, and `game/GameSettings.java` persists only volumes and the mouse toggle — there is no
+  stored score to show. Adding one would be a design decision nobody has taken. This was put to the
+  project owner as a weakness of the option before they chose it.
+
+  Verified from the backend source rather than assumed: `WebApplication.java:440-441` of
+  `gdx-teavm` 1.6.1 returns `ApplicationType.WebGL` as a constant, so the branch is reached.
+  **Not checked:** the deployed build, which is the project owner's.
+
+### An active shield is drawn on the ship, 02/09/2026
+
+- **The plate is no longer the only place a shield shows.** `docs/design/04-hud-layout.md` said the
+  ship shows exactly three grace periods and that "a shield is active" belongs to the left plate's
+  `STATE` block alone; [#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) followed that
+  and `reviewer` upheld it. The project owner played level 1 on 02/09/2026, saw `icon-shield` lit
+  with nothing on the ship, and overruled the document ([#236](https://github.com/LuchoC-Dev/little-spaceship/issues/236)).
+- **A ring around the ship**, chosen over two alternatives that were put to the owner and refused:
+  tinting or pulsing `ship-basic` with no new art, which collides with the language the grace
+  periods already use; and a soft halo, which cannot be kept clean at 480x270 with nearest-neighbour.
+- The art is `fx-shield`, 21x23, green, static, authored in `docs/design/mockups/src/01-sprites.js`
+  and packed by `docs/design/atlas/build-atlas.js`. It differs from the `C1` invulnerability aura in
+  shape, colour and proportion at once; the reasoning is in `docs/design/04-hud-layout.md`.
+- The three grace periods did **not** move. This decision adds one state to the ship, it does not
+  reopen the section.
+
+### Level 1 carries a shield, 02/09/2026
+
+Decided by the project owner in phase 11g, and **verified by playing on 02/09/2026**. It reopens the
+level signed off the day before, deliberately and by one pickup.
+
+- **Level 1 carries a `shield` drop at 37.0 s** — `l1-combined-formations`, `enemy-basic` in
+  `line-3`, slot 1, the middle of the three. Added so that the `icon-shield` HUD element wired by
+  [#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) is reachable at all: the icon was
+  correct and the level contained no `shield` drop, only `weapon-upgrade` x3, `extra-life`,
+  `attachment` and `bomb-recharge`.
+
+  **It is placed before the beats it defends against, not beside them.** The first half of the level
+  held one reward and the 11.0 s to 48.0 s gap was its longest drought; `l1-combined-formations` is
+  the level's first density spike at 1.77/s, not exceeded again until 88.0 s. Three alternatives were
+  refused with reasons, recorded in `docs/plan/11g-shield-and-test-harness/status/230-shield-drop-level-one.md`
+  — 22.0 s is too early for a marker with no durability, 46.0 s sits two seconds from a
+  `weapon-upgrade` and leaves the drought intact, and beat 6 cannot carry a drop at all because
+  `core/domain/system/LifetimeSystem.java` strips `Drop` from an escaping enemy.
+
+  **The cost, accepted:** one free hit carried into beats 5-8, a stretch tuned across two sessions
+  without it. Bounded — `core/domain/system/PickupSystem.java`'s `applyShield` grants points rather
+  than a second shield if one is already up, so it cannot stack. The project owner played it and
+  reported the placement correct and the reward cadence still fine.
+
+### An active shield is drawn on the ship, 02/09/2026
+
+Decided by the project owner on 02/09/2026, after playing the drop above and finding `icon-shield`
+lit in the HUD with nothing on the ship.
+
+- **This overrules `docs/design/04-hud-layout.md` as it stood.** That document says invulnerability is
+  shown on the ship and names exactly three sources — respawn, damage absorbed, and the
+  invulnerability power-up — and *"a shield is currently active"* was deliberately not one of them; it
+  lived in the left plate's `STATE` block alone.
+  [#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) followed that faithfully and
+  `reviewer` upheld the reading. The document was not wrong about what the code did; it was wrong
+  about what the game should do.
+- **A ring, not a tint and not a halo.** `fx-shield`, 21x23, a rounded shell in four plates, green,
+  static, drawn behind `ship-basic` and in front of the `C1` aura by
+  `game/adapter/render/WorldRenderer.java`'s `drawShield`, gated on
+  `core/port/PlayerStatus.shieldActive()` — the same value the plate reads, so the ship and the plate
+  cannot disagree. Two alternatives were put to the project owner and refused: tinting or pulsing
+  `ship-basic` with no new art, which collides with the visual language the invulnerability grace
+  periods already own, and a soft halo, which does not survive nearest-neighbour at 480x270.
+- **Green, and the reasoning is a rule worth keeping.** Cyan was already spent twice near the hull —
+  the ship's own engine and the `C1` aura — so a cyan shell reads as the ship glowing rather than as a
+  thing around it. Green is the colour of the capsule that granted it, hostile fire owns hues 320-350
+  so no enemy shot can be green, and no background may carry `G2` or `G3` at all.
+- **Verified by playing on 02/09/2026**: the shell appears on pickup, follows the ship, and vanishes
+  on the hit.
+
+### A test mode, and what level 1's depth means, 03/09/2026
+
+Decided by the project owner in the conversation that opened phase 11h. Two things: what "more depth
+in level 1" is, and the tool that has to exist before it can be worked on.
+
+**What depth means, and what it does not.** Level 1 gets more depth through **movement and
+grouping** — how enemies enter, move and combine. Three things are ruled out in the same breath:
+
+- **The boss moves as little as possible.** *"El jefe está bastante bien."* This does not reopen the
+  21/08 decision or the 01/09 speed tuning; it narrows what may touch them to nothing.
+- **No new enemy archetypes.** Existing ones may be modified. The roster in
+  `02-mvp-functional-spec.md` stands.
+- **Obstacles wait for the story and the final background.** This is the one axis of
+  `01-vision-and-scope.md:89` deliberately deferred rather than unused, and it is deferred to a
+  dependency rather than to a date.
+
+**A test mode, as a build flavour rather than a hidden feature.** `./gradlew :desktop:run -Ptests`
+carries a fourth main-menu entry, TESTS, listing named scenarios that start the game in one wave or
+at the boss. The ordinary build does not have it, and neither does anything that reaches `main`.
+
+- **The criterion is absence, not concealment.** A runtime flag would leave the test screens compiled
+  into the published `app.js`. `game/build.gradle.kts` instead swaps two mutually exclusive source
+  directories, `game/src/tests/java` and `game/src/teststub/java`, which define the same class
+  `TestMode` — one real, one a no-op. Verified by `reviewer` against the emitted `app.js` from
+  `./gradlew :web:gdx_teavm_web_js_build`: zero occurrences of `TestMenuScreen` or `TestScenarios`.
+- **A scenario is a level file, and the format needed nothing added.**
+  `game/adapter/content/JsonContentSource.java:349` accepts `boss`, `events` and `waves` and rejects
+  everything else, so a file naming one wave placement already *is* "start at that wave".
+  `assets/data/test-wave-04.json`, `test-wave-09.json`, `test-wave-12.json` and `test-boss.json`.
+- **The level format cannot express a starting player state, and no key was invented for it.**
+  `Simulation.java:66` fixes `PLAYER_INITIAL_SHOT_LEVEL = 1`. `test-boss.json` reaches weapon level 4
+  through content instead — a prelude of three overlapping `l1-first-basics` placements, whose
+  `weapon-upgrade` drops arrive before the boss enters at 26.0 s. The three wave scenarios start cold
+  at weapon level 1, on the argument that movement and grouping read the same at any weapon level.
+- **The rule that this tool does not relax:** an agent may launch the game only to confirm it starts.
+  A wave being reachable in five seconds is not permission to play it. Judging the game by playing is
+  the project owner's, as decided on 01/09/2026.
+
+### Paths, and what scaling a shape costs, 04/09/2026
+
+Decided by the project owner in phase 11i — the first three while planning it, the rest after playing
+its five path scenarios and approving the system.
+
+- **A movement shape may be an ordered list of bounded segments**, with waits and repeats.
+  `core/port/PathTrajectoryDefinition.java`, `"type": "path"`, `segments: [{vx, vy, duration}]`, a
+  `{"wait": seconds}` shorthand, and optional `loopStart`/`loopCount`.
+- **Loops and waits are bounded, never indefinite.** The owner's own reasoning: *"por ahí sería más
+  fácil dejarla que se repita x veces y después que se vaya"*. An indefinite wait is a large number;
+  a permanent loop is a large count. **This is what keeps the catalogue's rule 3 true** — every
+  expressible path still leaves the playfield in finite time — so `LifetimeSystem` needed no change
+  and `Cleared` stays usable rather than being poisoned by shapes that can deadlock it.
+- **Two of `shape-catalogue.md`'s eight refusals move, and not in the same way.** Waypoints were
+  refused over *"per-entity path state beyond the elapsed-time clock"*, and bounded segments do not
+  cost that — a path is still a pure function of `elapsed`, and `Trajectory` still holds only
+  `trajectoryId` and `elapsed`. **Dissolved.** `enterAndHold` was refused because a resting entity
+  never leaves; **genuinely reopened**, by a written case that did not exist, and answered by bounding.
+  Both struck through and dated in that file.
+- **A mirror costs no second definition.** `{"mirrorOf": "<id>"}`, resolved at content load in
+  `game/adapter/content/JsonContentSource.java` — no new `core` API and no fourth kind. It replaces
+  the pattern `assets/data/formations.json` still shows, where `diagonal` and `diagonal-mirror` are
+  two hand-written entries.
+- **A dropped pickup falls**, at `pickupFallSpeed` in `assets/data/balance.json`, and one that reaches
+  the bottom uncollected is destroyed with no event. **This changes level 1**, which the owner had
+  approved: five drops become five drops that can be missed.
+- **Raising a path's speed scales the shape, and that is accepted as a feature.** A segment is
+  velocity × duration, so doubling velocities doubles every distance: an L becomes a bigger L with the
+  same angles. The owner's reading, and their reason for keeping it. **It has a ceiling nobody had
+  stated**: the playfield is 208×270, so a shape already crossing half the screen leaves it when
+  doubled.
+- **A loop is always the tail of a path.** The range is `[loopStart, segments.size())`, so nothing can
+  follow it. A zero-drift oscillation therefore leaves sideways by necessity, not by choice, and
+  *"circle three times and then dive"* cannot be expressed.
+  [#280](https://github.com/LuchoC-Dev/little-spaceship/issues/280) records it as a limit rather than a
+  defect; no sketch the owner has drawn needs it yet.
+
+**Deferred to phase 11j, together with level 1's redesign**, and named here so the next planner does
+not re-derive them:
+
+- **An absolute authoring syntax, which costs nothing in `core`.** *"Entry point, exit point, speed"*
+  is a reparameterization — `direction = normalize(B − A)`, `duration = |B − A| / speed` — that the
+  loader resolves into the same `PathSegment`. The same category as `mirrorOf` and `wait`. **The cost
+  to accept knowingly: an absolutely-authored path can only happen in one place**, because a wave's
+  `atX` stops meaning anything for it.
+- **A speed multiplier, once it is settled which "faster" is meant** — the same shape *bigger*, or the
+  same shape at the same size traversed sooner (velocities up **and** durations down). **Open.**
+- **Curves.** A semicircle of constant-velocity segments is a polygon, unreadable in JSON past a few
+  segments. True circular motion needs a rotating velocity, i.e. sin/cos — and `BossSystem` was
+  deliberately built from vector arithmetic and `Math.sqrt` instead, *"so that determinism survives
+  TeaVM"*. **Its own decision, with a constraint this project has already measured once.**
+
 ### Campaign and progression
 
 - Permanent ship/attachment unlocks.

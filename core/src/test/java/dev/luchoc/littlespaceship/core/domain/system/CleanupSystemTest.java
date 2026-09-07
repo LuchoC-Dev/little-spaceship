@@ -9,6 +9,7 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
+import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
 import dev.luchoc.littlespaceship.core.domain.event.EnemyDestroyed;
@@ -83,6 +84,23 @@ class CleanupSystemTest {
         assertEquals(77f, transform.x);
         assertEquals(133f, transform.y);
         assertEquals(CollisionLayer.PICKUP, world.colliders().get(pickup).layer);
+    }
+
+    @Test
+    @DisplayName("a spawned pickup falls, at the speed read from balance")
+    void spawnedPickupFalls() {
+        int enemy = world.createEntity();
+        world.transforms().set(enemy, new Transform(77f, 133f));
+        world.drops().set(enemy, new Drop("shield"));
+        world.markForDestruction(enemy);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        int pickup = findPickup();
+        Motion motion = world.motions().get(pickup);
+        assertEquals(0f, motion.vx, "a pickup falls straight down, with no horizontal drift");
+        assertEquals(-world.content().balance().pickupFallSpeed(), motion.vy,
+            "a pickup's fall speed comes from balance, negated since Transform.y grows upward");
     }
 
     @Test

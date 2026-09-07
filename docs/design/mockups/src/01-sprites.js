@@ -473,6 +473,49 @@ const SPRITES = {
     '.kOk.',
     '..k..'
   ] },
+  // An active shield, drawn around the ship for as long as it holds. It has to be told apart from
+  // the invulnerability aura `WorldRenderer` already draws, and it differs on three axes at once,
+  // none of which depends on the player remembering anything: the aura is a hard 21x21 *square*
+  // outline in `C1` cyan, this is a rounded 21x23 shell in green. Cyan was already spent twice over
+  // -- it is the ship's own engine and fire, and it is the aura -- so a cyan ring hugging the hull
+  // would read as the ship glowing rather than as a second thing around it. Green is the colour of
+  // the capsule that granted it (`pickup-shield`'s shell is G2/G3), no enemy fire can be green
+  // because hostile fire owns hues 320-350, and no background may hold G2 or G3 at all.
+  //
+  // Four plates with a seam on each diagonal, rather than a closed circle: at this size a closed
+  // 1 px ellipse reads as a hoop, and the seams are what say "energy shell". G3 across each plate,
+  // G2 at the two pixels running into a seam, so the break looks drawn rather than dropped.
+  //
+  // Static, one frame. `core.domain.component.Shield` is a bare marker with no durability, so there
+  // is no partial state to animate; the whole animation is that it is there or it is not.
+  //
+  // 21x23 leaves 3 px of clearance on every side of the 15x17 ship, which is what keeps the shell
+  // outside the silhouette without covering the bullets the player has to read next to it.
+  'fx-shield': { w: 21, h: 23, art: [
+    '........GGGGG........',
+    '.....GGG.....GGG.....',
+    '....g...........g....',
+    '.....................',
+    '.....................',
+    '..g...............g..',
+    '.G.................G.',
+    '.G.................G.',
+    'G...................G',
+    'G...................G',
+    'G...................G',
+    'G...................G',
+    'G...................G',
+    'G...................G',
+    'G...................G',
+    '.G.................G.',
+    '.G.................G.',
+    '..g...............g..',
+    '.....................',
+    '.....................',
+    '....g...........g....',
+    '.....GGG.....GGG.....',
+    '........GGGGG........'
+  ] },
   // The attachment, one per side. No collider of its own, so it is drawn small and quiet and its
   // cyan core is what says it belongs to the player rather than to whatever it is flying past.
   'module-satellite': { w: 7, h: 9, art: [

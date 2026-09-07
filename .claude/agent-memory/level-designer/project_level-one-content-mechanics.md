@@ -19,14 +19,33 @@ every other slot ends up higher by the difference. Consequences worth designing 
   wave being written half off-screen; it just spawns there. Check every `atX` against the widest slot
   of its formation and the archetype's own radius.
 
-## Motion is archetype data, not event data
+## Motion is archetype data, with a per-spawn override since 11c
+
+**Corrected 31/08/2026.** The paragraph below was true until phase 11c: a spawn entry now takes an
+optional `"trajectory"` key that replaces the archetype's default
+(`JsonContentSource.parseSpawnEvent`, `SpawnSystem.spawnWave` via `SpawnEvent.hasTrajectoryOverride`).
+So "the same archetype enters differently at second 30 and at second 200" is content, not a code
+change. `grep -c trajectory assets/data/waves.json` returned 0 on 31/08/2026 — the lever exists and
+nothing uses it yet.
+
+### What was true before 11c
 
 `enemies.json` binds one trajectory per archetype. "A tank on the rush's trajectory is a data change"
 is true only in the sense that it means editing `enemies.json` — there is no per-event trajectory
 override on `SpawnEvent`. With four trajectories and six archetypes, the levers a level actually has
 are formation, `atX`, timing and simultaneity. Plan the curve around those.
 
-## Nothing despawns except projectiles
+## Enemies despawn now, and an escaping one gives nothing
+
+**Corrected 31/08/2026.** `LifetimeSystem` removes enemies as well as projectiles: an optional
+per-archetype `Lifetime` (no archetype in `enemies.json` carries one) plus a fixed safety box 128
+units past every playfield edge, and neither ever removes an enemy still visible. An escaping enemy
+has its `ScoreValue`, `Drop` and `Collider` stripped before destruction, by the project owner's
+decision of 28/08/2026 — so **a drop on a fast fragile archetype is lost outright if the player misses
+it**, which is a real pacing lever and a real trap. The screen-time arithmetic below is unchanged and
+is still the pacing lever it was.
+
+### What was true before that
 
 `LifetimeSystem` only expires the two projectile layers. An enemy that reaches the bottom keeps
 existing and keeps moving down forever. Harmless for correctness, but it means a slow archetype's
@@ -68,7 +87,18 @@ whose lowest point sits above ~80 never really threatens, low enough that a shap
 ~50 lands on top of the player without overrunning them. Worth checking a number against this before
 proposing it — it is the same check `combatY` needs for the boss, from the other end of the screen.
 
-## `dropSlot` and the boss block are written but not yet parsed
+## Unknown JSON keys are rejected now, not ignored
+
+**Corrected 31/08/2026.** `JsonContentSource.requireOnlyKeys` rejects any key a block's schema does
+not name, for the level file, the boss block, a wave, a wave's end condition, a spawn entry, a
+placement and a trajectory entry. The "content lands ahead of its parser and loads silently wrong"
+failure below is closed for those blocks — it fails loudly instead. It is **not** closed for
+`enemies.json` components: `JsonComponentSpecs.parse` passes every field through to
+`ComponentFactoryRegistry`, so an unknown field there still depends on that registry to complain.
+The practical consequence for a designer is the opposite of before: a new content field cannot be
+landed ahead of the parser at all, so a format change is never content-only.
+
+### What was true before that
 
 As of this pass, `JsonContentSource.loadLevel` reads five fields and uses `SpawnEvent`'s
 five-argument constructor, so `dropSlot` silently defaults to 0, and no code reads a `"boss"` object

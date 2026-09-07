@@ -11,14 +11,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Expires projectiles once they leave the playfield, and removes an escaped enemy from the
- * simulation by two independent mechanisms, per the project owner's decision recorded in {@code
- * docs/planning/08-decisions-and-open-items.md} ("The 11 group, 27/08/2026") and closing issue #84.
+ * Expires projectiles and fallen pickups once they leave the playfield, and removes an escaped
+ * enemy from the simulation by two independent mechanisms, per the project owner's decision recorded
+ * in {@code docs/planning/08-decisions-and-open-items.md} ("The 11 group, 27/08/2026") and closing
+ * issue #84.
  *
- * <p><b>Projectiles</b> are expired by a position check with a small {@link #PROJECTILE_MARGIN} past
- * the playfield edge, unchanged from before this issue: a run does not accumulate an unbounded number
- * of them over a level lasting several minutes, and every MVP projectile is a straight line, so "has
- * it left the playfield" is a position check, not a countdown.
+ * <p><b>Projectiles and pickups</b> are expired by the same position check, with a small {@link
+ * #PROJECTILE_MARGIN} past the playfield edge, unchanged from before this issue: a run does not
+ * accumulate an unbounded number of them over a level lasting several minutes, and every MVP
+ * projectile is a straight line, so "has it left the playfield" is a position check, not a countdown.
+ * A pickup joined this check in issue #252, once it started falling with a {@code Motion} of its own
+ * — before that it never moved, so it could never leave the playfield unclaimed. A pickup that
+ * reaches the bottom uncollected is a reward the player missed, not a leak left for something else to
+ * clean up.
  *
  * <p><b>Enemies</b> get two mechanisms, and the rule the whole thing exists to protect is the same
  * for both: neither ever removes an enemy still visible on screen.
@@ -63,9 +68,11 @@ import java.util.List;
 public final class LifetimeSystem implements GameSystem {
 
     /**
-     * Extra distance past the playfield edge before a projectile is expired, in logical units.
-     * Generous on purpose: an entity is destroyed only once every pixel of it, not just its centre,
-     * is off screen, so the margin has to clear the largest projectile radius the MVP defines.
+     * Extra distance past the playfield edge before a projectile or a fallen pickup is expired, in
+     * logical units. Generous on purpose: an entity is destroyed only once every pixel of it, not
+     * just its centre, is off screen, so the margin has to clear the largest radius among them — a
+     * pickup's {@code pickupRadius} (6 units in {@code balance.json} as of issue #252) is well inside
+     * it.
      */
     private static final float PROJECTILE_MARGIN = 16f;
 
@@ -84,7 +91,7 @@ public final class LifetimeSystem implements GameSystem {
     @Override
     public void update(World world, float step, InputFrame input) {
         tickLifetimes(world, step);
-        expireProjectiles(world);
+        expireProjectilesAndPickups(world);
         expireEnemies(world);
     }
 
@@ -95,14 +102,15 @@ public final class LifetimeSystem implements GameSystem {
         }
     }
 
-    private static void expireProjectiles(World world) {
+    private static void expireProjectilesAndPickups(World world) {
         ComponentStore<Collider> colliders = world.colliders();
         ComponentStore<Transform> transforms = world.transforms();
         for (int i = 0; i < colliders.size(); i++) {
             int entity = colliders.entityAt(i);
             Collider collider = colliders.valueAt(i);
             if (collider.layer != CollisionLayer.PLAYER_PROJECTILE
-                && collider.layer != CollisionLayer.ENEMY_PROJECTILE) {
+                && collider.layer != CollisionLayer.ENEMY_PROJECTILE
+                && collider.layer != CollisionLayer.PICKUP) {
                 continue;
             }
             Transform transform = transforms.get(entity);

@@ -16,6 +16,7 @@ import dev.luchoc.littlespaceship.core.port.FormationSlot;
 import dev.luchoc.littlespaceship.core.port.InputFrame;
 import dev.luchoc.littlespaceship.core.port.LevelOutcome;
 import dev.luchoc.littlespaceship.core.port.MapComponentSpec;
+import dev.luchoc.littlespaceship.core.port.PlacedPickup;
 import dev.luchoc.littlespaceship.core.port.SimpleEnemyDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleFormationDefinition;
 import dev.luchoc.littlespaceship.core.port.SimpleTrajectoryDefinition;
@@ -253,6 +254,84 @@ class SpawnSystemTest {
         system.update(world, 1f, InputFrame.IDLE);
 
         assertEquals(0, world.drops().size());
+    }
+
+    /**
+     * Issue #337: the earlier version of this test only exercised {@code delayTicks} 1 and 12, and
+     * both happen to fall outside the two bands — 18-40 and 258-300 — where the old float-crossing
+     * design activated a delayed slot one tick early. Sweeping every count in 1..300 is what would
+     * have caught it; kept as one range rather than picking a few more "interesting" values, since
+     * picking values is exactly the mistake that hid the defect for two tasks in a row.
+     */
+    @Test
+    @DisplayName("a delayed slot traces the leader exactly N ticks behind for every N in 1..300, including the two bands the old float crossing failed")
+    void delayedSlotTracesLeaderExactlyForEveryTickCountInSweptRange() {
+        for (int delayTicks = 1; delayTicks <= 300; delayTicks++) {
+            assertDelayedSlotTracesLeaderExactly(delayTicks);
+        }
+    }
+
+    /**
+     * Shared by the sweep above. Issue #330 — a single-file column: both slots at offsetX 0,
+     * offsetY 0, only the delay differs. The leader and the follower start at the exact same position,
+     * since a delayed slot's decision is about time ({@code Trajectory#elapsed}/{@code #delayTicks}),
+     * never about space.
+     */
+    private void assertDelayedSlotTracesLeaderExactly(int delayTicks) {
+        float step = 1f / 60f;
+        float delay = delayTicks * step;
+        TestContent content = baseContent()
+            .withTrajectory(new ArcTrajectoryDefinition("arc-test", 20f, -80f, 40f))
+            .withFormation(new SimpleFormationDefinition("column", List.of(
+                new FormationSlot(0f, 0f),
+                new FormationSlot(0f, 0f, delay))))
+            .withSingleWave(LEVEL, List.of(
+                new SpawnEvent(0f, "enemy-basic", "column", 0.5f, null, 0, "arc-test")));
+        World world = worldOf(content);
+        SpawnSystem spawn = new SpawnSystem(LEVEL);
+        MotionSystem motion = new MotionSystem();
+
+        spawn.update(world, step, InputFrame.IDLE);
+        assertEquals(2, world.entityCount(), "delayTicks=" + delayTicks);
+
+        // Insertion order into a ComponentStore is dense-packed and append-only (see its own class
+        // javadoc), and spawnWave creates entities in slot order — slot 0 (no delay) always lands at
+        // index 0, slot 1 (the delayed one) always at index 1. Unlike the pre-#337 design, {@code
+        // elapsed} never goes negative, so it can no longer tell the two entities apart.
+        int leader = world.trajectories().entityAt(0);
+        int follower = world.trajectories().entityAt(1);
+        float spawnX = world.transforms().get(leader).x;
+        float spawnY = world.transforms().get(leader).y;
+        assertEquals(spawnX, world.transforms().get(follower).x,
+            "both slots start at the same point, delayTicks=" + delayTicks);
+        assertEquals(spawnY, world.transforms().get(follower).y,
+            "both slots start at the same point, delayTicks=" + delayTicks);
+
+        int ticks = delayTicks + 40;
+        List<float[]> leaderHistory = new java.util.ArrayList<>();
+        List<float[]> followerHistory = new java.util.ArrayList<>();
+        for (int t = 0; t < ticks; t++) {
+            motion.update(world, step, InputFrame.IDLE);
+            Transform lt = world.transforms().get(leader);
+            Transform ft = world.transforms().get(follower);
+            leaderHistory.add(new float[] {lt.x, lt.y});
+            followerHistory.add(new float[] {ft.x, ft.y});
+        }
+
+        for (int t = 0; t < delayTicks; t++) {
+            assertEquals(spawnX, followerHistory.get(t)[0],
+                "held still before its own path begins, delayTicks=" + delayTicks + " t=" + t);
+            assertEquals(spawnY, followerHistory.get(t)[1],
+                "held still before its own path begins, delayTicks=" + delayTicks + " t=" + t);
+        }
+        for (int t = delayTicks; t < ticks; t++) {
+            float[] expected = leaderHistory.get(t - delayTicks);
+            float[] actual = followerHistory.get(t);
+            assertEquals(expected[0], actual[0],
+                "same x the leader had delaySeconds earlier, delayTicks=" + delayTicks + " t=" + t);
+            assertEquals(expected[1], actual[1],
+                "same y the leader had delaySeconds earlier, delayTicks=" + delayTicks + " t=" + t);
+        }
     }
 
     @Test
@@ -621,6 +700,155 @@ class SpawnSystemTest {
             }
         }
         return firstTick;
+    }
+
+    @Test
+    @DisplayName("a placed pickup exists at the tick it was scheduled for, at the position it was given")
+    void placedPickupExistsAtItsScheduledTimeAndPosition() {
+        TestContent content = baseContent()
+            .withWave(new SimpleWaveDefinition(WAVE, List.of(
+                new SpawnEvent(100f, "enemy-basic", "single-unused", 0.5f, null)),
+                List.of(new PlacedPickup(1f, PickupSystem.KIND_SHIELD, 0.25f, 0.75f)),
+                new WaveEndCondition.FixedDuration(1000f)))
+            .withFormation(new SimpleFormationDefinition("single-unused", List.of(new FormationSlot(0f, 0f))))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(1, world.pickups().size());
+        int entity = world.pickups().entityAt(0);
+        assertEquals(PickupSystem.KIND_SHIELD, world.pickups().valueAt(0).kind);
+        Transform transform = world.transforms().get(entity);
+        assertEquals(0.25f * MotionSystem.PLAYFIELD_WIDTH, transform.x);
+        assertEquals(0.75f * SpawnSystem.PLAYFIELD_HEIGHT, transform.y);
+    }
+
+    @Test
+    @DisplayName("a placed pickup not due yet does not exist")
+    void placedPickupNotDueYetDoesNotExist() {
+        TestContent content = baseContent()
+            .withWave(new SimpleWaveDefinition(WAVE, List.of(
+                new SpawnEvent(100f, "enemy-basic", "single-unused", 0.5f, null)),
+                List.of(new PlacedPickup(10f, PickupSystem.KIND_SHIELD, 0.25f, 0.75f)),
+                new WaveEndCondition.FixedDuration(1000f)))
+            .withFormation(new SimpleFormationDefinition("single-unused", List.of(new FormationSlot(0f, 0f))))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(0, world.pickups().size());
+    }
+
+    @Test
+    @DisplayName("a placed pickup with no enemy involved needs no enemy or formation to exist")
+    void placedPickupNeedsNoEnemyOrFormation() {
+        TestContent content = new TestContent()
+            .withWave(new SimpleWaveDefinition(WAVE, List.of(
+                new SpawnEvent(1000f, "enemy-never-spawns", "formation-never-used", 0.5f, null)),
+                List.of(new PlacedPickup(1f, PickupSystem.KIND_EXTRA_LIFE, 0.5f, 0.5f)),
+                new WaveEndCondition.FixedDuration(1000f)))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(1, world.pickups().size());
+    }
+
+    @Test
+    @DisplayName("a placed pickup falls like an enemy's dropped one, per issue #252's fix")
+    void placedPickupFallsLikeADroppedOne() {
+        TestContent content = baseContent()
+            .withWave(new SimpleWaveDefinition(WAVE, List.of(
+                new SpawnEvent(1000f, "enemy-basic", "single-unused", 0.5f, null)),
+                List.of(new PlacedPickup(1f, PickupSystem.KIND_SHIELD, 0.5f, 0.5f)),
+                new WaveEndCondition.FixedDuration(1000f)))
+            .withFormation(new SimpleFormationDefinition("single-unused", List.of(new FormationSlot(0f, 0f))))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(1, world.motions().size());
+        assertTrue(world.motions().valueAt(0).vy < 0f);
+    }
+
+    @Test
+    @DisplayName("a placed pickup carries no WaveOrigin, so a Cleared wave never waits on it")
+    void placedPickupCarriesNoWaveOrigin() {
+        TestContent content = new TestContent()
+            .withWave(new SimpleWaveDefinition(WAVE, List.of(
+                new SpawnEvent(1000f, "enemy-never-spawns", "formation-never-used", 0.5f, null)),
+                List.of(new PlacedPickup(0f, PickupSystem.KIND_SHIELD, 0.5f, 0.5f)),
+                new WaveEndCondition.Cleared()))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+
+        assertEquals(1, world.pickups().size());
+        assertEquals(0, world.waveOrigins().size(),
+            "a placed pickup with no WaveOrigin lets a Cleared wave end without the player ever "
+                + "collecting it");
+    }
+
+    @Test
+    @DisplayName("a Cleared wave does not end while a placed pickup scheduled later is still pending")
+    void clearedWaveWaitsForAPendingPlacedPickup() {
+        // One spawn at local time 0, destroyed on the second tick — every entity the wave itself
+        // spawned is gone well before the pickup, scheduled at local time 30s, is due. A Cleared
+        // wave must not resolve on entity-clearance alone while its own pickup cursor still has
+        // pickups left to place, the same structural guard spawns() already gets from cursor.
+        TestContent content = baseContent()
+            .withFormation(new SimpleFormationDefinition("single", List.of(new FormationSlot(0f, 0f))))
+            .withWave(new SimpleWaveDefinition(WAVE,
+                List.of(new SpawnEvent(0f, "enemy-basic", "single", 0.5f, null)),
+                List.of(new PlacedPickup(30f, PickupSystem.KIND_SHIELD, 0.5f, 0.5f)),
+                new WaveEndCondition.Cleared()))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        system.update(world, 1f, InputFrame.IDLE);
+        int enemy = world.colliders().entityAt(0);
+        world.destroyEntity(enemy);
+
+        // Forty more one-second ticks reach local time 41s, well past the pickup's own 30s — every
+        // enemy the wave spawned has been gone since tick 2, but the pickup must still appear.
+        for (int i = 0; i < 40; i++) {
+            system.update(world, 1f, InputFrame.IDLE);
+        }
+
+        assertEquals(1, world.pickups().size(),
+            "the placed pickup at 30s must still spawn even though the wave's own entities cleared "
+                + "well before it was due");
+    }
+
+    @Test
+    @DisplayName("an unrecognised placed pickup kind fails naming the wave and the timestamp")
+    void unrecognisedPlacedPickupKindFailsWithMessage() {
+        TestContent content = new TestContent()
+            .withWave(new SimpleWaveDefinition(WAVE, List.of(
+                new SpawnEvent(1000f, "enemy-never-spawns", "formation-never-used", 0.5f, null)),
+                List.of(new PlacedPickup(1f, "typo-shiled", 0.5f, 0.5f)),
+                new WaveEndCondition.FixedDuration(1000f)))
+            .withSingleWavePlacement(LEVEL, WAVE);
+        World world = worldOf(content);
+        SpawnSystem system = new SpawnSystem(LEVEL);
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> system.update(world, 1f, InputFrame.IDLE));
+
+        assertTrue(e.getMessage().contains(WAVE));
+        assertTrue(e.getMessage().contains("typo-shiled"));
+        assertEquals(0, world.pickups().size());
     }
 
     @Test

@@ -52,6 +52,7 @@ distance, so 4.5 costs exactly what 4 costs.
 | Ship | 15x17 | **3.0** | `ship-basic` | the 6 px hitbox is the fuselage, not the wings |
 | Ship explosion | 31x31 | — | `fx-explosion-player` | |
 | Attachment satellite | 7x9 | — | `module-*` | one per side, flanking; no collider of its own |
+| Active shield shell | 21x23 | — | `fx-shield` | drawn around the ship while a shield is up; 3 px of clearance on every side |
 
 The ship's hitbox is 40% of its width. That is the whole "smaller than the sprite, but not a single
 point" rule from `../planning/02-mvp-functional-spec.md` turned into a number: forgiving enough for

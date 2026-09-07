@@ -47,6 +47,26 @@ class LifetimeSystemTest {
     }
 
     @Test
+    @DisplayName("a pickup still inside the playfield is not marked for destruction")
+    void keepsAPickupInsideThePlayfield() {
+        int pickup = pickup(100f, 150f);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertFalse(world.pendingDestruction().contains(pickup));
+    }
+
+    @Test
+    @DisplayName("a pickup that has fallen past the bottom of the playfield is expired")
+    void expiresAPickupThatFellPastTheBottom() {
+        int pickup = pickup(100f, -100f);
+
+        system.update(world, STEP, InputFrame.IDLE);
+
+        assertTrue(world.pendingDestruction().contains(pickup));
+    }
+
+    @Test
     @DisplayName("an enemy well inside the playfield is never touched, with or without a lifetime")
     void keepsAnEnemyInsideThePlayfield() {
         int withoutLifetime = enemy(100f, 150f, 4f);
@@ -168,6 +188,13 @@ class LifetimeSystemTest {
         int entity = world.createEntity();
         world.transforms().set(entity, new Transform(x, y));
         world.colliders().set(entity, new Collider(1.5f, CollisionLayer.PLAYER_PROJECTILE));
+        return entity;
+    }
+
+    private int pickup(float x, float y) {
+        int entity = world.createEntity();
+        world.transforms().set(entity, new Transform(x, y));
+        world.colliders().set(entity, new Collider(6f, CollisionLayer.PICKUP));
         return entity;
     }
 }

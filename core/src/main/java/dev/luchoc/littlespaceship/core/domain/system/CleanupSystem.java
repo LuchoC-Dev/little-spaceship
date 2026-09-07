@@ -4,6 +4,7 @@ import dev.luchoc.littlespaceship.core.domain.World;
 import dev.luchoc.littlespaceship.core.domain.component.Collider;
 import dev.luchoc.littlespaceship.core.domain.component.CollisionLayer;
 import dev.luchoc.littlespaceship.core.domain.component.Drop;
+import dev.luchoc.littlespaceship.core.domain.component.Motion;
 import dev.luchoc.littlespaceship.core.domain.component.Pickup;
 import dev.luchoc.littlespaceship.core.domain.component.Sprite;
 import dev.luchoc.littlespaceship.core.domain.component.Transform;
@@ -71,12 +72,40 @@ public final class CleanupSystem implements GameSystem {
         if (source == null) {
             return;
         }
+        createFallingPickup(world, source.x, source.y, drop.pickupId);
+    }
+
+    /**
+     * Builds the entity a pickup always is — {@code Transform}, {@code Collider}, {@code Sprite},
+     * {@code Pickup} and the falling {@code Motion} issue #252 gave every pickup — regardless of
+     * whether an enemy's death produced it, here, or content placed it directly through {@link
+     * SpawnSystem#update}. Package-private rather than duplicated: the two call sites differ only in
+     * where {@code x}/{@code y} and {@code kind} come from, never in what a pickup entity is made of.
+     * Carries no {@code WaveOrigin}, on either path — a level's {@code Cleared} end condition must
+     * never wait on a pickup the player has no obligation to collect.
+     *
+     * <p><b>The two call sites do not put the entity in front of {@code CollisionSystem} at the same
+     * tick.</b> A dropped pickup is only collectable from the <em>next</em> tick's pass, per this
+     * class's own javadoc above — it is created here, at {@code SystemOrder.CLEANUP} (14), after
+     * {@code COLLISION} (10) already ran this tick. A placed pickup is created by {@code SpawnSystem}
+     * at {@code SystemOrder.SPAWN} (5), before {@code COLLISION} runs, so it is collectable the very
+     * same tick it appears — one tick earlier than a dropped pickup at the same position would be.
+     * Nobody has decided this difference should exist; it is a direct, unavoidable consequence of the
+     * fixed {@link SystemOrder} each path runs at, not a divergence in what this method builds — the
+     * entity itself is byte-identical either way. Recorded here because whoever writes the loader or
+     * authors content needs to know it, not discover it on screen.
+     */
+    static void createFallingPickup(World world, float x, float y, String kind) {
         BalanceValues balance = world.content().balance();
         int pickup = world.createEntity();
-        world.transforms().set(pickup, new Transform(source.x, source.y));
+        world.transforms().set(pickup, new Transform(x, y));
         world.colliders().set(pickup, new Collider(balance.pickupRadius(), CollisionLayer.PICKUP));
-        world.sprites().set(pickup, new Sprite(new SpriteId("pickup-" + drop.pickupId)));
-        world.pickups().set(pickup, new Pickup(drop.pickupId));
+        world.sprites().set(pickup, new Sprite(new SpriteId("pickup-" + kind)));
+        world.pickups().set(pickup, new Pickup(kind));
+        // A pickup falls like everything else the scroll carries past the player (issue #252) — with
+        // no Motion it hangs exactly where it entered, reading as pinned to the window rather than
+        // part of a moving world. Negative because Transform.y grows upward.
+        world.motions().set(pickup, new Motion(0f, -balance.pickupFallSpeed()));
     }
 
     /**

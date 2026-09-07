@@ -78,6 +78,14 @@ path refuses and only a deliberate admin override gets through.
 1. the phase's `status.md` **`State:` line**, to what the phase actually is now, naming the PR;
 2. the phase table in `docs/STATUS.md`, which describes what is on `dev` rather than what a branch claims.
 
+**Both of them happen when the merge happens, in their own pull request against `dev`.** Not later,
+and **not carried on the next phase's branch** — that shortcut looks tidy, it saves the project owner
+one approval, and it works right up until there is no next phase. It was tried through 11e, 11f and
+11g and broke on the third: 11g merged into `dev` while `docs/STATUS.md` on `dev` still said its pull
+request was open and unmerged. Decided by the project owner on 02/09/2026, who pointed out that the
+write belongs to the moment of approval and that deferring it is what produced the drift. The extra
+approval is the price and it is small.
+
 Then read back over the `status.md` you just closed and strike out anything in it written in the
 future tense — "remains", "whoever merges should", "not yet" — that the merge has answered. A status
 file is a dated record and stays one; a *forward-looking* sentence in it is read as current by the
@@ -129,6 +137,59 @@ build on it.
 
 `docs/design/04-hud-layout.md` and `HudRenderer` are what it looks like done properly — the most
 accurate document/code pair in the repository, and the one where each side quotes the other by name.
+
+## Running the game is not playing it
+
+**An agent may launch the game only to confirm it starts** — the window opens and the menu renders — and nothing beyond that. It does not play it, does not steer to reach a wave, does not try to trigger a drop, and does not try to survive long enough to see an effect.
+
+Decided by the project owner on 01/09/2026, when a `game-presentation` agent on
+[#43](https://github.com/LuchoC-Dev/little-spaceship/issues/43) began driving the game to see the
+shield and the attachment for itself.
+
+**Judging the game by playing it is the project owner's role, and it is reserved on purpose.** Phase
+11e was built around that: agents produce a candidate, the owner plays it, and
+[`11e-level-one-redesigned/plan.md`](11e-level-one-redesigned/plan.md) states that the candidate is
+not the deliverable and that a balance verdict from anything but a session does not satisfy the
+acceptance criteria. An agent driving the game is neither a build check nor a play session — it is
+slow, it demonstrates very little, and it produces claims nobody should rely on.
+
+**What an agent does instead**, and all three of these are legitimate observations under the evidence
+rule in `CLAUDE.md`:
+
+- **compile, and cite the command and its output** — `./gradlew build`, the web build, `tools/pre-pr-check`;
+- **launch once, at most, to confirm it starts**, and say that is what was done;
+- **write "not checked" for everything else**, together with the exact steps the project owner would
+  follow to see it. `CLAUDE.md` already says "not checked" is always an acceptable answer and is never
+  treated as a failure. **Claiming to have seen something the agent drove the game to reach is worse
+  than saying it did not look.**
+
+This is the same boundary phase 11f's plan draws for the web target from the other direction: headless
+Chrome cannot validate the web runtime, so CI proves the build compiles and a human proves it runs.
+
+### And the half that is the coordinator's
+
+**An acceptance criterion that cannot be verified without playing is a criterion badly written.** The
+rule above talks to the agent — *do not play* — and for a long time that was all of it. It is not
+enough, because the agent is not the only one who can break it.
+
+Phase 11j broke it twice, and the second time the cause was upstream: issue
+[#291](https://github.com/LuchoC-Dev/little-spaceship/issues/291) asked that the TESTS menu "shows
+PATH: OSCILLATE first and WAVE 4 last", and the launch prompt said *"you may launch the game once to
+confirm the order"*. Nine entries, about six fit on screen. **The criterion could not be met without
+scrolling the menu**, so the agent scrolled it and took screenshots — and it had a memory file of its
+own, from the first time this happened on 01/09, saying not to. Between its own memory and an
+instruction from the coordinator, the instruction won, which is the right way round.
+
+So when you write a criterion, split it:
+
+- **What the code says** — the order of a list, the value a loader returns, the ids that exist — is
+  read from the source or asserted by a test. An agent can satisfy it, and should be told to.
+- **What the screen shows** — that it looks right, reads right, feels right — is the project owner's,
+  always. Write it as theirs, not as something to be confirmed.
+
+Mixing the two in one sentence is what puts an agent in the position of either disobeying the rule or
+failing the task. **The first instance was recorded as the agent's error. The second was the
+coordinator's, and it is recorded that way.**
 
 ## Two failures and you stop
 

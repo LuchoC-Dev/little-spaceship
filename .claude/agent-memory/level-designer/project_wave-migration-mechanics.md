@@ -20,7 +20,9 @@ level 1) get placed three times at 86.0s, 126.5s and 297.0s with real subsequent
 and "nothing, it's last" — duration pinned at 1.0s, offsets of 5.0 and 1.5 made up the difference
 after the first two.
 
-**A negative `WavePlacement` offset is a no-op in the implementation as it stands** — checked by
+**A negative `WavePlacement` offset was a no-op when this was written, and no longer is.** Re-checked 31/08/2026 on `phase/11d-per-level-document`: `SpawnSystem.scheduleChain` now resolves a `FixedDuration` wave's follower *predictively*, at the instant the wave starts, and only the reactive `Cleared` path clamps forward to `levelTime` — so a negative offset genuinely overlaps two `FixedDuration` waves and both sit in `activeWaves` at once. The paragraph below records what was observed during 11b and is kept because the reasoning about the clamp is still how the `Cleared` case behaves.
+
+**As of 11b (superseded above):** a negative offset was a no-op — checked by
 reading `SpawnSystem.scheduleNext`/`resolveEnded`: `scheduleNext`'s `previousEndTime` argument is
 always exactly the current `levelTime` at the instant it's called (either the explicit `0f` at level
 start, or `levelTime` passed straight through from `resolveEnded`), so `Math.max(previousEndTime +

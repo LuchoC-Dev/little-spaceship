@@ -70,9 +70,62 @@ on 22/08 and on 25/08.
    the difficult encounter that hands over the attachment — is exactly what it breaks. 11a should have
    caught it with a test; this is the phase that depends on it being right.
 
+## The running order
+
+Decided by the project owner on 31/08/2026, when the phase opened. It is here rather than in
+`status.md` because it is a decision about how the phase is run, not a record of how far it has got —
+and because a coordinator who loses the session needs it before anything else.
+
+**The phase cannot close without a play session, and no agent can supply one.** The acceptance
+criteria say the verdict comes from playing; `docs/STATUS.md` calls playing *"the only source this
+project trusts for balance"*; and all four of task 5's watch-items are questions about how something
+reads in play. So the phase runs in two halves:
+
+| Half | What happens | Who |
+|---|---|---|
+| **Build the candidate** | Tasks 1, 3, 4, 6, 7 — the fourteen waves, the stat changes, the boss change, the regenerated document, and #23 confirmed | `level-designer` on `assets/data/` and the beats; `core-domain` on the boss and on any rule a stat change touches; the coordinator on `tools/` and the merges |
+| **Play, then tune** | Tasks 2 and 5, and whatever the session changes | **the project owner plays**; `level-designer` tunes from what they report |
+
+**The candidate is not the deliverable.** It is a level built from arithmetic and from the fourteen
+beats, and this project has refused arithmetic as a verdict twice, on 22/08 and 25/08. It must not be
+merged into `dev` as though the phase were done — an unplayed batch of numbers reaching the published
+site is what the four-level branch regime exists to prevent.
+
+**The session to ask for, when the candidate is ready.** `./gradlew :desktop:run`, and these five
+questions, four of them inherited from `docs/STATUS.md` and the fifth being the phase's own goal:
+
+1. Does `enemy-basic` read as firing less often than `enemy-shooter`, or does it just die too fast to
+   tell? (This is what the candidate `Health` of 2–3 on the basic is meant to answer.)
+2. Does the boss at `patternCooldown 0.7` feel like a boss — and after task 4's change, is the tell
+   still honest?
+3. Does `enemy-rush`'s single likely shot per pass read as "shoots little" rather than "does not
+   shoot"?
+4. Is `enemy-light`'s 130 u/s projectile dodgeable?
+5. Is the length right? The target is around three minutes against 302 s today, and the number is
+   fixed by playing.
+
+**"Still not clear" is an acceptable answer to any of them** and the acceptance criteria say so. It is
+recorded as that, not resolved by guessing.
+
+## What is already answered, so nobody re-derives it
+
+**Task 7 is done.** [#23](https://github.com/LuchoC-Dev/little-spaceship/issues/23) is closed and the
+rule is tested: `core/domain/system/SpawnSystem.java` attaches the `Drop` only when
+`i == event.dropSlot()`, and `SpawnSystemTest.designedDropAttachesToExactlyOneSlot` asserts
+`world.drops().size() == 1` and checks the surviving entity's x against the named slot's offset.
+`dropSlotOutsideFormationFails` covers the typo. It is recorded in `status.md` with that evidence;
+confirming it does not need its own branch.
+
 ## Acceptance criteria
 
-- Level 1 is fourteen waves, one per beat, and each wave's id names its beat.
+- ~~Level 1 is fourteen waves, one per beat, and each wave's id names its beat.~~ **Reopened by the
+  project owner on 01/09/2026, after playing the candidate.** Level 1 is **fourteen beats, twelve of
+  which carry a wave**, and each wave's id names its beat. Beat 1 (audiovisual introduction) and beat
+  14 (boss) carry none: the session found enemies at the very start and enemies still arriving as the
+  boss entered, and called both wrong. `shape-catalogue.md`'s original beat map had already said "none"
+  for those two, and `JsonContentSource.loadWaves` rejects a wave with no spawns, so the alternative
+  has no representation in `assets/data/`. Recorded in `docs/planning/08-decisions-and-open-items.md`
+  under "Level 1 played, 01/09/2026".
 - The boss enters at the decided time, and the decided time is written down with the session that
   produced it.
 - **The verdict comes from playing.** A session played, what it felt like, what changed as a result.

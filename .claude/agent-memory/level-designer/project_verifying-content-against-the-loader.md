@@ -32,3 +32,15 @@ only form available, and that is a limitation of the module, not a shortcut bein
 still loads and resolves; it is not dead content when the mechanism that selects it is a separate,
 later issue. Say so plainly in the status fragment rather than letting the reader assume the game
 already flies it.
+
+**A third Windows detail, 03/09/2026:** Git Bash mangles a multi-entry `-cp` argument even when it is
+quoted, and `javac` then reports `package com.badlogic.gdx.files does not exist` as if the jar were
+missing. `export MSYS2_ARG_CONV_EXCL='*'` before the `javac`/`java` calls fixes it. Same symptom as
+the POSIX-path trap above, different cause, so check both.
+
+**A fourth, 04/09/2026 (phase 11i, #271):** `MSYS2_ARG_CONV_EXCL='*'` did *not* fix it that day —
+the same `package com.badlogic.gdx.files does not exist` persisted through both an absolute `C:/`
+path and a jar copied into the scratchpad, while `core.jar` on the same `-cp` string resolved fine.
+What worked was a **javac/java argument file**: write `-cp "a.jar;b.jar;c.jar"` (and `-d ...`) into a
+text file and pass `@path/to/args.txt`. The shell never sees the `;` list at all. Reach for the
+argfile first; it is one extra line and it removes the whole class of problem.

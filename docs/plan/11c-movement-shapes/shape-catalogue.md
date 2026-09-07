@@ -115,24 +115,56 @@ The four that exist, unchanged, plus three new ones. An entry is content — a n
 
 Level 1's fourteen beats, from `docs/planning/04-campaign-and-levels.md` → "Provisional sequence",
 against the waves in `assets/data/waves.json` that carry them today. **This is a map of what asks for
-a shape, not a level edit** — redesigning level 1 is [11e](../11e-level-one-redesigned/plan.md).
+a shape, not a level edit** — level 1 was last rebuilt in
+[11k](../11k-level-one-rebuilt/plan.md).
 
 | # | Beat | Wave today | Shape it points at |
 |---|---|---|---|
-| 1 | audiovisual introduction | — | none; no enemies |
-| 2 | initial calm | `l1-basic-intro` | `slow-descent` |
-| 3 | first isolated basics | `l1-basic-intro` | `slow-descent` |
-| 4 | light/fast | `l1-light-intro` | `swoop` — plain, so the archetype is readable before it is combined |
-| 5 | combined formations | `l1-basic-light-mix` | `slow-descent`, `swoop` |
-| 6 | tanks and shifts in priority | `l1-tank-solo`, `l1-tank-intro-b` | `crawl` — the shift in priority *is* the 30 s of screen time |
-| 7 | super-fast | `l1-rush-intro-a`, then `-b` | `dive` first, then **`strike-run`** |
-| 8 | one or two heavy carriers | `l1-carrier-intro` | `crawl` |
-| 9 | evolved basics/shooters | `l1-shooter-intro` | `slow-descent` |
-| 10 | high-pressure combinations | `l1-veteran-mix` | **`veer-left`, `veer-right`** across descending basics |
-| 11 | difficult encounter → attachment | `l1-carrier-pair` | `crawl` carriers plus **`strike-run`** rushes |
-| 12 | brief rest | `l1-rest-basic` | `slow-descent` |
-| 13 | final escalation | `l1-finale-a` | everything, **`strike-run`** and both veers included |
-| 14 | boss | — | out of scope: `BossSystem` is its own problem ([#88](https://github.com/LuchoC-Dev/little-spaceship/issues/88)) |
+| 1 | audiovisual introduction | *(no wave)* | not built; nothing in `waves.json` carries it |
+| 2 | initial calm | `l1-opening-calm` | `settle-descent` — one basic at a time, slow enough to outrun sideways |
+| 3 | first isolated basics | `l1-first-basics` | `settle-descent`, then **`descend-and-step-left`/`-right`** — the same fall with one lane change in it |
+| 4 | light/fast | `l1-light-and-fast` | `cut-across-left`/`-right`, then **`dive-across-left`/`-right`** — the straight crossing before the steepening one |
+| 5 | combined formations | `l1-combined-formations` | `settle-descent` and both step shapes under crossing lights |
+| 6 | tanks and shifts in priority | `l1-tanks-and-priority` | `grind-down`, then **`grind-and-wheel-left`** — the shift in priority *is* the screen time |
+| 7 | super-fast | `l1-super-fast` | `plunge`, then **`plunge-and-cut-left`/`-right`** and **`strike-and-withdraw`** |
+| 8 | one or two heavy carriers | `l1-heavy-carrier` | `descend-and-anchor` — one carrier parked for fourteen seconds, five children while parked |
+| 9 | evolved basics/shooters | `l1-evolved-shooters` | `descend-hold-descend`, then **`advance-the-firing-line`** (absolute, `atX 0.50`) |
+| 10 | high-pressure combinations | `l1-high-pressure` | `dive-across-*` and `plunge-and-cut-*` across descending basics and a shooter line |
+| 11 | difficult encounter → attachment | `l1-twin-carriers-attachment` | **`anchor-and-traverse-left`/`-right`** carriers crossing over each other, with rush cuts under them |
+| 12 | brief rest | `l1-brief-rest` | `settle-descent` |
+| 13 | final escalation | `l1-final-escalation` | everything, both `grind-and-wheel`s and `plunge-harder` included |
+| 14 | boss | *(no wave)* | `BossSystem`'s, entering at 134.5 s over no wave ([#88](https://github.com/LuchoC-Dev/little-spaceship/issues/88)) |
+
+**Updated 06/09/2026, in phase 11k ([#324](https://github.com/LuchoC-Dev/little-spaceship/issues/324)).**
+The "Shape it points at" column was replaced entirely: the seven shapes 11c authored —
+`slow-descent`, `swoop`, `dive`, `crawl`, `strike-run`, `veer-left`, `veer-right` — were **deleted
+from `assets/data/trajectories.json`** by that task, and every beat now points at the vocabulary
+[#320](https://github.com/LuchoC-Dev/little-spaceship/issues/320) wrote per archetype. The twelve
+wave ids did not move.
+
+**Beats 1 and 14 were already wrong before this edit**, and that is the finding this update also
+carries: the row for beat 1 named `l1-intro-flyover` and beat 14 named `l1-boss-approach`, and
+`grep -c "l1-intro-flyover\|l1-boss-approach" assets/data/waves.json` prints `0`. They were removed
+when 11e's fourteen waves became twelve, and **nothing failed** — exactly what
+[#208](https://github.com/LuchoC-Dev/little-spaceship/issues/208) is about. Both rows now say
+*(no wave)* rather than naming an id that does not exist.
+
+**Updated 01/09/2026, in phase 11e.** Every wave id in the table above was replaced when
+[#198](https://github.com/LuchoC-Dev/little-spaceship/issues/198) rebuilt level 1 as fourteen waves.
+The table as 11c wrote it named `l1-basic-intro`, `l1-tank-solo`, `l1-carrier-pair` and nine others,
+and **not one of them still existed** the day after the phase that blessed this pointer closed.
+
+That this table needs a dated correction at all is the finding, and it is recorded as **C8** in
+`docs/plan/11d-per-level-document/document-contract.md`. `docs/levels/level-01.md` is generated and
+CI refuses to let it drift; it sends the reader here for the one thing it cannot generate, and here
+is hand-written, so this is the single place in the chain where a level document can be wrong.
+
+**The prose below argues the three `arc` entries 11c shipped, and level 1 no longer flies any of
+them.** It is kept, unedited, as the record of why they were built and what beat asked for each —
+the beats did not move, and the argument is what the next shape has to beat. `strike-run` is
+answered today by `strike-and-withdraw` and `plunge-and-cut-*` on `enemy-rush`; the veers by
+`dive-across-left`/`-right` on `enemy-light`, which is the only entry in the current vocabulary that
+is still an `arc`.
 
 Beat by beat, why each new entry ships:
 
@@ -176,9 +208,9 @@ Invariant 6 in the form the assessment's Part 3 applies it: a case is a written 
 | A `diagonal` kind, the roadmap's 30° | It is `constant` with a chosen `vx`. A second name for one multiplication. |
 | A `logarithmic` / decelerating-entry kind | What the roadmap wanted from it — enter fast, settle, stay a threat — is `arc` with `ay` opposing `vy`. The beat that might have justified a *stopping* version, beat 9's shooters, is not strained: `enemy-shooter` on `slow-descent` already has `(270 + 6.5) / 18 ≈ 15 s` of screen time against a `rate` of 1.8 and a `firstShotDelay` of 0.7 (`assets/data/enemies.json`). It dwells plenty. |
 | A `sine` / weaving kind | Nothing written points at one. It is the **first candidate to revisit** if 11e plays beat 10 and finds that crossing arcs do not move the safe corridor enough. Named here so the next person does not have to re-derive it. |
-| `enterAndHold` / station-keeping | No beat asks, and it is the one shape that can break something: an entity that comes to rest inside the playfield never goes off screen, so `LifetimeSystem` never removes it and a `cleared` wave behind it cannot end unless the player kills it. If it is ever built it must be hold-*then*-resume, with the resume in the data, not optional. |
+| ~~`enterAndHold` / station-keeping~~ | ~~No beat asks, and it is the one shape that can break something: an entity that comes to rest inside the playfield never goes off screen, so `LifetimeSystem` never removes it and a `cleared` wave behind it cannot end unless the player kills it. If it is ever built it must be hold-*then*-resume, with the resume in the data, not optional.~~ **Reopened, 04/09/2026, phase 11i.** The hazard was correctly identified and still holds for the *unbounded* case; what changed is a written case that did not exist here — the project owner's own path sketches, which want a wait mid-path and a trailing loop. Phase 11i answers by **bounding**: every wait is a segment with a finite duration (an "indefinite" one is simply a very large number), every loop repeats a fixed, counted number of times, and `PathTrajectoryDefinition`'s constructor refuses outright any path whose *last* segment would hold still — the one shape that could still reproduce this hazard. See `core/port/PathTrajectoryDefinition.java` and its test `everyPathMustLeaveThePlayfield_pathThatEndsAtRestIsUnconstructible`. This refusal was right when written for the unbounded case it named; it does not generalize to a bounded one, which is why it needed reopening rather than silently ceasing to apply. |
 | Horizontal acceleration (`ax`) on `arc` | No beat asks for a curve that flattens or sharpens sideways. `vx` constant is what the three entries above need. |
-| Waypoints, splines, segment lists | No case, and each costs per-entity path state well beyond the elapsed-time clock #161 is building. |
+| ~~Waypoints, splines, segment lists~~ | ~~No case, and each costs per-entity path state well beyond the elapsed-time clock #161 is building.~~ **Dissolved, not overridden, 04/09/2026, phase 11i.** The cost this refusal named — "per-entity path state well beyond the elapsed-time clock" — stopped applying the moment phase 11i bounded every segment's duration and every loop's repeat count: with those fixed at content-load time, which segment is active at a given `elapsedSeconds` is arithmetic on the definition's own parameters, exactly like `arc`'s closed form, and `Trajectory` still needs only `trajectoryId` and `elapsed`. No waypoint index, no repeat counter, nothing cached on the entity. Splines and per-segment conditions remain refused: nothing bounds them the way a fixed segment list is bounded, and no beat asks for either. |
 | Formation-relative shapes (rotating or orbiting a formation's centre) | No case. Formations are placement, and `08-decisions-and-open-items.md` says formations and the layer above them "do not blur". |
 | Anything reading the player | Out of bounds by #162 itself. It is homing, it is a game rule nobody has decided, and the answer is to ask. |
 

@@ -14,6 +14,7 @@
   "weaponFireCooldown": 0.15,
   "weaponProjectileSpeed": 220,
   "pickupRadius": 6.0,
+  "pickupFallSpeed": 20.0,
   "invulnerabilityPickupDuration": 3.0,
   "lifeCompletionBonus": 1000,
   "bombCompletionBonus": 300,

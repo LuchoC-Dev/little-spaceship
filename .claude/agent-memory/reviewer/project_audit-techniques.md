@@ -260,3 +260,103 @@ Related: [[defect-patterns]], [[review-tooling-and-memory-placement]].
   a file a Bash `cp`/`cat` wrote — `/tmp/foo.json` from bash and `open('/tmp/foo.json')` from `python3`
   are two different filesystems here. Bash sees the scratchpad fine via its `/c/...` mount, so writing
   there from both sides is the one path that works for both tools.
+
+## For auditing a "vanishes on the same frame" claim about a per-frame-recomputed status field
+
+- **Trust it only after tracing three points: the component's removal, the status record's
+  construction, and the caller's ordering between tick and draw.** Phase 11g's shield ring
+  (issue #236, PR #239): `WorldView.player()` (`core/domain/World.java`) calls
+  `shields.has(entity)` fresh on every invocation rather than caching a flag, `DamageSystem`
+  (`resolvePlayerHit`) removes the `Shield` component and grants `DAMAGE` invulnerability in the
+  same method call, and `PlayScreen.render` calls `loop.advance` (which runs the tick) strictly
+  before `drawView.player()`/`worldRenderer.draw` for that same frame. All three together are what
+  make "the ring disappears the instant the shield is spent" true instead of merely claimed — a
+  cached/stale-by-one-frame field would fail exactly this chain, at the second or third point.
+- **A renderer field set once per `draw(...)` call and read only from inside the same call's
+  visitor callbacks cannot be stale**, including on the first frame, if the field has a real default
+  (not left uninitialised) and nothing else can trigger the callback. Checked for
+  `WorldRenderer.playerStatus`: default `PlayerStatus.NONE`, assigned before `view.forEachSprite(this)`
+  runs, and `accept()` has no other caller. Two greps (constructor/field default, call sites of
+  `accept`) settle it without a build.
+
+## For verifying an ASCII pixel-art sprite's claimed palette letters instead of eyeballing the grid
+
+- **Map each art character through the same `CHARS`/`NAMES` arrays the mockup renderer uses**,
+  rather than trusting a status fragment's colour claim by reading the ASCII rows visually.
+  `docs/design/mockups/src/00-palette.js`'s `CHARS` maps a letter to an index into `NAMES`
+  (`'g': 26 -> NAMES[26] = 'G2'`, `'G': 27 -> NAMES[27] = 'G3'`). A short Node one-liner counting
+  occurrences of each letter in the sprite's `art` array (phase 11g's `fx-shield`, 8 `g` + 44 `G`,
+  no `k`/outline character at all) turned "G3 across each plate, G2 on the seam pixels, no outline"
+  from a plausible-sounding claim into an exact, reproducible confirmation — same rows/width as
+  `docs/design/mockups/src/01-sprites.js` itself, no need to run the mockup build.
+
+## Calibration: a fully clean pair audited together (phase 11g, PR #239 + retrospective PR #237)
+
+Both passed on first read: draw order correct by tracing `accept()` top to bottom, vanish condition
+correct by the three-point trace above, no boundary violation (`WorldRenderer` only imports
+`core.port`, never `core.domain`), sprite claims verified exactly against the palette arrays, docs
+corrections properly struck-through-and-dated, decisions-log entry matching its neighbours' form,
+merge onto the phase branch clean, `./gradlew build` and `pre-pr-check` both green. Worth keeping
+as a second reference point next to the three MVP branches for what "nothing to report" looks like
+here — the absence of findings was earned by checking each claim, not assumed from a tidy diff.
+
+## For reproducing a `JsonContentSource` "LoadCheck" claim independently
+
+- **There is no `jar` binary on this machine's PATH** (`which jar` finds nothing, even though
+  `javac`/`java` 25 do resolve). `jar tf <file>` then silently prints nothing instead of erroring —
+  read that as "command not found," not "empty jar." Use Python's `zipfile` to list jar contents
+  instead, and give it a Windows-style path (`C:\Users\...`), not the Git-Bash `/c/Users/...` form —
+  native Windows Python can't resolve the latter (matches the existing `/tmp` note, same root cause).
+- **`JsonContentSource`'s constructor is `(FileHandle dataDir, String levelId)`, scoped to one level
+  id, not a directory-wide loader.** A probe needs a fresh instance per level id
+  (`new JsonContentSource(dir, id)`), not one shared instance queried by id — confirmed at
+  `JsonContentSource.java:79`, `loadLevel(reader, dataDir.child(levelId + ".json"), levelId)` runs
+  once, in the constructor.
+- **`javac`/`java` classpath with `;`-joined jars works fine through this Bash tool once the jar
+  paths themselves are right** — the practical way to get a Windows absolute path for a jar under
+  the current repo is `$(pwd -W)/core/build/libs/core.jar`, and for a Gradle cache jar, just the
+  literal `C:\Users\...` path. Confirmed compiling and running a `LoadCheck` main against
+  `core.jar`, `game.jar` and a located `gdx-1.14.2.jar` from `~/.gradle/caches/modules-2`, reproducing
+  PR #246's exact claimed output.
+
+## For checking CI on a PR when `gh run list --branch <branch>` looks green
+
+- **`gh run list --branch <branch>` can miss a red check that only fires on the `pull_request`
+  event.** Since 28/08/2026, `.github/workflows/pr-check.yml` runs on `pull_request: [opened,
+  reopened, synchronize, ready_for_review, edited]`, separately from `ci.yml`'s push-triggered
+  build. Both show up in `gh run list --branch <name>` (it lists by branch, not by trigger), but a
+  PR body that only quotes one run's id/conclusion — e.g. "one run, completed success, on the tip
+  commit" — can be truthfully describing `ci.yml` while `pr-check.yml` sits red right next to it in
+  the same `gh run list` output. Read every row the command prints, not just the one the author
+  pointed at; a `gh run view <id>` on any row not accounted for in the PR body is the tell. Caught
+  on PR #288: `pr-check` failed with "FAIL opened ready rather than as a draft" 3 seconds after the
+  PR's own `createdAt`, because it was opened ready instead of as a draft — a real, current,
+  unmentioned red check, not something the review triggered (timestamps confirm it predates the
+  audit). `tools/pre-pr-check` cannot catch this itself: it runs on a branch before a pull request
+  exists, so draft state is genuinely outside what it can check — that split is deliberate, per
+  `pr-check.yml`'s own header comment, and is not itself a defect.
+- **Mutating production code to falsify a named test is faster in an already-existing worktree
+  checked out to the exact branch under review** (`git worktree list` first) than re-adding one:
+  `git checkout -- <file>` restores cleanly afterward with no risk of touching the reviewer's own
+  main-checkout branch state. Confirmed on PR #288 (`little-spaceship-abs` worktree, already on
+  `feat/absolute-path-syntax`): flipped `hasSegments == hasWaypoints` to `!hasSegments &&
+  !hasWaypoints` to prove the mixed-form-refusal test alone catches it, then restored; swapped
+  `dx`/`dy` in the `PathSegment` construction to prove the equivalence test alone catches it, then
+  restored — `git status --short` empty both times before moving on.
+
+Related: [[defect-patterns]].
+
+## Update: mutating the audited worktree in place can now be blocked outright
+
+- **The auto-mode permission classifier can refuse an in-place edit of a file inside the repo under
+  audit, even when the plan is to revert it immediately.** Hit this on PR #298 (phase 11j task 2):
+  a `python3 -c` (via heredoc) that opened `game/.../JsonContentSource.java` for in-place mutation in
+  the actual reviewed worktree was denied by the classifier before it ran, independent of the earlier
+  scratchpad-backup workflow above. When this happens, don't negotiate with the classifier or try a
+  different tool to reach the same file — **`cp -r <repo-root> /tmp/<scratch-name>`, mutate and run
+  `./gradlew` entirely inside the copy, then `rm -rf` it.** Proves the identical claim (a mutation
+  reddens exactly the tests the author says) without ever writing to the worktree a reviewer is
+  supposed to leave untouched — cleaner than the scratchpad-backup approach anyway, since there is
+  nothing to restore afterward and no risk of forgetting to. Prefer this over the in-place approach
+  by default now; only fall back to editing in place if disk space or `cp -r` time (a multi-module
+  Gradle tree with a populated `build/` per module can be large) makes the copy impractical.
