@@ -4,6 +4,11 @@ Last updated: 06/09/2026.
 
 Read this first if you are picking the project up. It says where things stand and what comes next; `CLAUDE.md` says how to work here.
 
+**The project went into standby on 06/09/2026, after phase 11k.** If you are returning after that, read
+[`RESUMING.md`](RESUMING.md) before this file: it carries what a status document does not — the state the
+tree was left in, which of the open issues are already finished, what is half-built on purpose, and the
+traps that have already cost hours.
+
 ## Where we are
 
 **`main` is now the whole picture, and the game is finished except for shipping it.** The three branches
